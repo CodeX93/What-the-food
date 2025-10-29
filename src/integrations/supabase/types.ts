@@ -14,7 +14,268 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      daily_scan_counts: {
+        Row: {
+          count: number
+          id: string
+          scan_date: string
+          user_id: string | null
+        }
+        Insert: {
+          count?: number
+          id?: string
+          scan_date?: string
+          user_id?: string | null
+        }
+        Update: {
+          count?: number
+          id?: string
+          scan_date?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_scan_counts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      scans: {
+        Row: {
+          analysis_data: Json | null
+          calories: number | null
+          carbs: number | null
+          created_at: string
+          dish_name: string | null
+          fat: number | null
+          fiber: number | null
+          id: string
+          image_url: string | null
+          ingredients: Json | null
+          protein: number | null
+          scan_number: number
+          serving_size: string | null
+          sodium: number | null
+          sugar: number | null
+          user_id: string | null
+        }
+        Insert: {
+          analysis_data?: Json | null
+          calories?: number | null
+          carbs?: number | null
+          created_at?: string
+          dish_name?: string | null
+          fat?: number | null
+          fiber?: number | null
+          id?: string
+          image_url?: string | null
+          ingredients?: Json | null
+          protein?: number | null
+          scan_number?: number
+          serving_size?: string | null
+          sodium?: number | null
+          sugar?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          analysis_data?: Json | null
+          calories?: number | null
+          carbs?: number | null
+          created_at?: string
+          dish_name?: string | null
+          fat?: number | null
+          fiber?: number | null
+          id?: string
+          image_url?: string | null
+          ingredients?: Json | null
+          protein?: number | null
+          scan_number?: number
+          serving_size?: string | null
+          sodium?: number | null
+          sugar?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          billing_cycle: string | null
+          created_at: string
+          current_period_end: string | null
+          id: string
+          is_active: boolean
+          stripe_customer_id: string | null
+          stripe_price_id: string | null
+          stripe_subscription_id: string | null
+          subscription_type: Database["public"]["Enums"]["subscription_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          billing_cycle?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          is_active?: boolean
+          stripe_customer_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_type?: Database["public"]["Enums"]["subscription_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          billing_cycle?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          is_active?: boolean
+          stripe_customer_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_type?: Database["public"]["Enums"]["subscription_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      widget_settings: {
+        Row: {
+          border_radius: string | null
+          branding_visible: boolean
+          created_at: string
+          custom_text: string | null
+          id: string
+          primary_color: string | null
+          updated_at: string
+          user_id: string
+          widget_id: string
+        }
+        Insert: {
+          border_radius?: string | null
+          branding_visible?: boolean
+          created_at?: string
+          custom_text?: string | null
+          id?: string
+          primary_color?: string | null
+          updated_at?: string
+          user_id: string
+          widget_id: string
+        }
+        Update: {
+          border_radius?: string | null
+          branding_visible?: boolean
+          created_at?: string
+          custom_text?: string | null
+          id?: string
+          primary_color?: string | null
+          updated_at?: string
+          user_id?: string
+          widget_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "widget_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      widget_subscriptions: {
+        Row: {
+          billing_cycle: string | null
+          created_at: string
+          current_period_end: string | null
+          id: string
+          is_active: boolean
+          site_limit: number
+          stripe_customer_id: string | null
+          stripe_price_id: string | null
+          stripe_subscription_id: string | null
+          subscription_type: Database["public"]["Enums"]["widget_subscription_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          billing_cycle?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          is_active?: boolean
+          site_limit?: number
+          stripe_customer_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_type?: Database["public"]["Enums"]["widget_subscription_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          billing_cycle?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          id?: string
+          is_active?: boolean
+          site_limit?: number
+          stripe_customer_id?: string | null
+          stripe_price_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_type?: Database["public"]["Enums"]["widget_subscription_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "widget_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +284,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      subscription_type: "free" | "premium"
+      widget_subscription_type: "free" | "plan1" | "plan2" | "plan3"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +412,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      subscription_type: ["free", "premium"],
+      widget_subscription_type: ["free", "plan1", "plan2", "plan3"],
+    },
   },
 } as const
