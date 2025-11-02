@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { getPostAuthNavigationPath } from "@/utils/auth-navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { getUrl } from "@/utils/url";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -99,7 +100,7 @@ const Auth = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: getUrl('/auth/callback'),
         },
       });
 

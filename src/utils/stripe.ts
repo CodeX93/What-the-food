@@ -1,4 +1,5 @@
 import { loadStripe } from '@stripe/stripe-js';
+import { getUrl } from './url';
 
 // Initialize Stripe with publishable key
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
@@ -79,8 +80,8 @@ export async function createCheckoutSessionSupabase(
     }
 
     // Call Supabase Edge Function to create checkout session
-    const successUrl = `${window.location.origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`;
-    const cancelUrl = `${window.location.origin}/plans`;
+    const successUrl = `${getUrl('/checkout/success')}?session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = getUrl('/plans');
     
     try {
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
