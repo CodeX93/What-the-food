@@ -105,16 +105,63 @@ export async function createCheckoutSessionSupabase(
           supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
         });
         
+        // Try to extract error from response body
+        let errorMessage = error.message || 'Failed to create checkout session';
+        let errorDetails = '';
+        let errorHint = '';
+        
+        // Check if error.context has a Response object
+        if (error.context && typeof error.context.json === 'function') {
+          try {
+            const errorBody = await error.context.json();
+            console.error('Parsed error body from response:', errorBody);
+            if (errorBody?.error) {
+              errorMessage = errorBody.error;
+              errorDetails = errorBody.details || '';
+              errorHint = errorBody.hint || '';
+            }
+          } catch (e) {
+            console.error('Error parsing response JSON:', e);
+            // Try to get text instead
+            try {
+              const errorText = await error.context.text();
+              console.error('Error response text:', errorText);
+              try {
+                const parsed = JSON.parse(errorText);
+                if (parsed.error) {
+                  errorMessage = parsed.error;
+                  errorDetails = parsed.details || '';
+                  errorHint = parsed.hint || '';
+                }
+              } catch (parseError) {
+                // Not JSON, use the text as error message
+                errorMessage = errorText || errorMessage;
+              }
+            } catch (textError) {
+              console.error('Error getting response text:', textError);
+            }
+          }
+        }
+        
+        // Construct final error message
+        let finalMessage = errorMessage;
+        if (errorDetails) {
+          finalMessage += `: ${errorDetails}`;
+        }
+        if (errorHint) {
+          finalMessage += ` (${errorHint})`;
+        }
+        
         // Provide more specific error messages
-        if (error.message?.includes('Function not found') || error.message?.includes('404')) {
+        if (errorMessage.includes('Function not found') || errorMessage.includes('404')) {
           throw new Error('Checkout service is not configured. The Edge Function "create-checkout-session" is not deployed. Please deploy it first or contact support.');
         }
         
-        if (error.message?.includes('Failed to send') || error.message?.includes('network')) {
+        if (errorMessage.includes('Failed to send') || errorMessage.includes('network')) {
           throw new Error('Network error: Unable to reach the checkout service. Please check your internet connection and try again. If the problem persists, the Edge Function may not be deployed.');
         }
         
-        throw new Error(error.message || 'Failed to create checkout session. The Edge Function may not be deployed or configured correctly.');
+        throw new Error(finalMessage);
       }
 
       if (!data) {

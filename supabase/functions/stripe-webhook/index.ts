@@ -87,24 +87,64 @@ serve(async (req) => {
       case 'checkout.session.completed': {
         const session = event.data.object as any;
         const userId = session.metadata?.userId;
+        const subscriptionType = session.metadata?.subscriptionType || 'main'; // 'widget' or 'main'
 
         if (userId && session.subscription) {
           // Get subscription details from Stripe
           const subscription = await stripe.subscriptions.retrieve(session.subscription);
           const priceId = subscription.items.data[0]?.price?.id;
           
-          // Update subscription in database
+          // Determine subscription table and type
+          const isWidgetSubscription = subscriptionType === 'widget';
+          const subscriptionTable = isWidgetSubscription ? 'widget_subscriptions' : 'subscriptions';
+          
+          // Map price ID to subscription type (for widgets: plan1, plan2, plan3)
+          let subscriptionTypeValue = 'premium';
+          let siteLimit = 1;
+          
+          if (isWidgetSubscription) {
+            // Determine widget plan from price ID
+            // This should match your Stripe price IDs
+            // You can improve this by storing plan mapping in environment or database
+            if (priceId.includes('plan1') || priceId.includes('widget-plan1')) {
+              subscriptionTypeValue = 'plan1';
+              siteLimit = 1;
+            } else if (priceId.includes('plan2') || priceId.includes('widget-plan2')) {
+              subscriptionTypeValue = 'plan2';
+              siteLimit = 3;
+            } else if (priceId.includes('plan3') || priceId.includes('widget-plan3')) {
+              subscriptionTypeValue = 'plan3';
+              siteLimit = 999999; // Unlimited
+            } else {
+              subscriptionTypeValue = 'plan1'; // Default
+              siteLimit = 1;
+            }
+          }
+          
+          // Update subscription in appropriate table
+          const updateData: any = {
+            stripe_subscription_id: session.subscription,
+            stripe_price_id: priceId,
+            billing_cycle: session.metadata?.billingCycle || subscription.items.data[0]?.price?.recurring?.interval || 'monthly',
+            is_active: subscription.status === 'active',
+            current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          };
+          
+          if (isWidgetSubscription) {
+            updateData.subscription_type = subscriptionTypeValue;
+            updateData.site_limit = siteLimit;
+          } else {
+            updateData.subscription_type = subscriptionTypeValue;
+          }
+          
           const { error: updateError } = await supabaseClient
-            .from('subscriptions')
-            .update({
-              subscription_type: 'premium',
-              stripe_subscription_id: session.subscription,
-              stripe_price_id: priceId,
-              billing_cycle: session.metadata?.billingCycle || subscription.items.data[0]?.price?.recurring?.interval || 'monthly',
-              is_active: subscription.status === 'active',
-              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-            })
-            .eq('user_id', userId);
+            .from(subscriptionTable)
+            .upsert({
+              user_id: userId,
+              ...updateData,
+            }, {
+              onConflict: 'user_id',
+            });
 
           if (updateError) {
             console.error('Error updating subscription:', updateError);
@@ -118,17 +158,52 @@ serve(async (req) => {
         const subscription = event.data.object as any;
 
         if (subscription.id) {
-          const { error: updateError } = await supabaseClient
+          // Check which table has this subscription ID
+          const { data: mainSub } = await supabaseClient
             .from('subscriptions')
-            .update({
-              is_active: subscription.status === 'active',
-              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-              subscription_type: subscription.status === 'active' ? 'premium' : 'free',
-            })
-            .eq('stripe_subscription_id', subscription.id);
+            .select('user_id, subscription_type')
+            .eq('stripe_subscription_id', subscription.id)
+            .maybeSingle();
 
-          if (updateError) {
-            console.error('Error updating subscription:', updateError);
+          const { data: widgetSub } = await supabaseClient
+            .from('widget_subscriptions')
+            .select('user_id, subscription_type')
+            .eq('stripe_subscription_id', subscription.id)
+            .maybeSingle();
+
+          // Update the appropriate table(s)
+          if (mainSub) {
+            const { error: updateError } = await supabaseClient
+              .from('subscriptions')
+              .update({
+                is_active: subscription.status === 'active',
+                current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+                subscription_type: subscription.status === 'active' ? 'premium' : 'free',
+              })
+              .eq('stripe_subscription_id', subscription.id);
+
+            if (updateError) {
+              console.error('Error updating main subscription:', updateError);
+            }
+          }
+
+          if (widgetSub) {
+            const subscriptionType = subscription.status === 'active' 
+              ? widgetSub.subscription_type || 'plan1'
+              : 'free';
+            
+            const { error: updateError } = await supabaseClient
+              .from('widget_subscriptions')
+              .update({
+                is_active: subscription.status === 'active',
+                current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+                subscription_type: subscription.status === 'active' ? subscriptionType : 'free',
+              })
+              .eq('stripe_subscription_id', subscription.id);
+
+            if (updateError) {
+              console.error('Error updating widget subscription:', updateError);
+            }
           }
         }
         break;

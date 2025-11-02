@@ -23,6 +23,10 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import Refund from "./pages/Refund";
 import Widget from "./pages/Widget";
+import WidgetEmbed from "./pages/WidgetEmbed";
+import WidgetDashboard from "./pages/WidgetDashboard";
+import WidgetPlans from "./pages/WidgetPlans";
+import WidgetAdmin from "./pages/WidgetAdmin";
 import WallOfLove from "./pages/WallOfLove";
 import Blog from "./pages/Blog";
 import NotFound from "./pages/NotFound";
@@ -56,6 +60,10 @@ const App = () => (
           <Route path="/terms" element={<Terms />} />
           <Route path="/refund" element={<Refund />} />
           <Route path="/widget" element={<Widget />} />
+          <Route path="/widget/embed" element={<WidgetEmbed />} />
+          <Route path="/widget/dashboard" element={<WidgetDashboard />} />
+          <Route path="/widget/plans" element={<WidgetPlans />} />
+          <Route path="/widget/admin" element={<WidgetAdmin />} />
           <Route path="/wall-of-love" element={<WallOfLove />} />
           <Route path="/blog" element={<Blog />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

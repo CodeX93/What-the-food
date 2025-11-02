@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import TopBar from "@/components/Layout/TopBar";
 import Header from "@/components/Layout/Header";
 import Footer from "@/components/Layout/Footer";
@@ -5,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Code } from "lucide-react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 const widgetPlans = [
   {
@@ -65,6 +69,48 @@ const widgetPlans = [
 ];
 
 const Widget = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        // Check if user is logged in
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          // Check if user has a widget subscription
+          const { data: subscription } = await supabase
+            .from("widget_subscriptions")
+            .select("*")
+            .eq("user_id", session.user.id)
+            .maybeSingle();
+
+          // If subscription exists (even if not active yet), redirect to dashboard
+          if (subscription) {
+            navigate("/widget/dashboard", { replace: true });
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Error checking subscription:", error);
+        // Continue to show the landing page on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkSubscription();
+  }, [navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
       <TopBar />
@@ -79,7 +125,7 @@ const Widget = () => {
                 Perfect for food bloggers, nutrition sites, and health platforms.
               </p>
               <Button size="lg" className="bg-primary hover:bg-primary-hover" asChild>
-                <Link to="/auth">Get Your Widget</Link>
+                <Link to="/widget/plans">Get Your Widget</Link>
               </Button>
             </div>
           </div>
@@ -181,7 +227,7 @@ const Widget = () => {
                       size="sm"
                       asChild
                     >
-                      <Link to="/auth">{plan.cta}</Link>
+                      <Link to="/widget/plans">{plan.cta}</Link>
                     </Button>
                   </CardFooter>
                 </Card>

@@ -17,6 +17,7 @@ const CheckoutSuccess = () => {
   const [subscription, setSubscription] = useState<any>(null);
 
   const sessionId = searchParams.get('session_id');
+  const subscriptionType = searchParams.get('type'); // 'widget' or null (main subscription)
 
   useEffect(() => {
     const verifySubscription = async () => {
@@ -39,59 +40,98 @@ const CheckoutSuccess = () => {
           return;
         }
 
-        // Verify subscription with backend or Supabase Edge Function
-        // The backend should verify the Stripe session and update the subscription
-        const { data, error } = await supabase.functions.invoke('verify-stripe-session', {
-          body: { sessionId },
-        });
-
-        if (error) {
-          console.error('Error verifying session:', error);
-          // Try to fetch subscription directly from database
-          const { data: subData } = await supabase
-            .from("subscriptions")
+        // Wait for webhook to process - poll subscription status
+        const tableName = subscriptionType === 'widget' ? 'widget_subscriptions' : 'subscriptions';
+        let attempts = 0;
+        const maxAttempts = 10; // Wait up to 10 seconds (1 second intervals)
+        
+        const checkSubscription = async (): Promise<boolean> => {
+          const { data: subData, error } = await supabase
+            .from(tableName)
             .select("*")
             .eq("user_id", session.user.id)
             .maybeSingle();
 
-          if (subData && subData.is_active && subData.subscription_type === 'premium') {
-            setSubscription(subData);
-            setLoading(false);
-            return;
+          if (error) {
+            console.error('Error fetching subscription:', error);
+            return false;
           }
 
-          throw error;
+          if (subData && subData.is_active) {
+            setSubscription(subData);
+            return true;
+          }
+
+          return false;
+        };
+
+        // Try immediately first
+        let subscriptionActive = await checkSubscription();
+        
+        // Poll if not active yet (webhook might be processing)
+        while (!subscriptionActive && attempts < maxAttempts) {
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+          subscriptionActive = await checkSubscription();
+          
+          if (subscriptionActive) {
+            console.log(`Subscription activated after ${attempts} attempts`);
+            break;
+          }
         }
 
-        // Refresh subscription from database
-        const { data: subData } = await supabase
-          .from("subscriptions")
-          .select("*")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-
-        if (subData) {
-          setSubscription(subData);
+        if (subscriptionActive) {
+          toast({
+            title: "Success!",
+            description: subscriptionType === 'widget' 
+              ? "Your widget subscription is now active. You can now create your widget!"
+              : "Your Premium subscription is now active.",
+          });
+          
+          // Redirect to dashboard after short delay
+          setTimeout(() => {
+            if (subscriptionType === 'widget') {
+              navigate("/widget/dashboard");
+            } else {
+              navigate("/dashboard");
+            }
+          }, 1500);
+        } else {
+          // Subscription not active yet - redirect anyway and show message
+          toast({
+            title: "Subscription Processing",
+            description: "Your subscription is being processed. You'll have access shortly. If this persists, please contact support.",
+          });
+          
+          // Redirect to dashboard - let it handle the check
+          setTimeout(() => {
+            if (subscriptionType === 'widget') {
+              navigate("/widget/dashboard");
+            } else {
+              navigate("/dashboard");
+            }
+          }, 2000);
         }
-
-        toast({
-          title: "Success!",
-          description: "Your Premium subscription is now active.",
-        });
 
         setLoading(false);
       } catch (error: any) {
         console.error('Error verifying subscription:', error);
         toast({
           title: "Verification error",
-          description: "We're verifying your subscription. Please refresh in a moment.",
+          description: "We're verifying your subscription. Redirecting to dashboard...",
           variant: "destructive",
         });
         
         // Still redirect to dashboard after a delay
         setTimeout(() => {
-          navigate("/dashboard");
-        }, 3000);
+          if (subscriptionType === 'widget') {
+            navigate("/widget/dashboard");
+          } else {
+            navigate("/dashboard");
+          }
+        }, 2000);
+        
+        setLoading(false);
       }
     };
 
@@ -143,14 +183,17 @@ const CheckoutSuccess = () => {
                 </div>
               )}
               
-              <Button className="w-full" onClick={() => navigate("/dashboard")}>
+              <Button 
+                className="w-full" 
+                onClick={() => navigate(subscriptionType === 'widget' ? "/widget/dashboard" : "/dashboard")}
+              >
                 Go to Dashboard
               </Button>
               
               <Button 
                 variant="outline" 
                 className="w-full" 
-                onClick={() => navigate("/plans")}
+                onClick={() => navigate(subscriptionType === 'widget' ? "/widget/plans" : "/plans")}
               >
                 View Plans
               </Button>
