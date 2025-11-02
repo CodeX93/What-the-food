@@ -11,10 +11,10 @@ import Footer from "@/components/Layout/Footer";
 
 const Index = () => {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background dark:bg-[#000000] transition-colors duration-300">
       <TopBar />
       <Header />
-      <main>
+      <main className="scroll-snap-proximity overflow-y-auto overflow-x-hidden" style={{ height: 'calc(100vh - 6rem)' }}>
         <Hero />
         <Features />
         <HowItWorks />
@@ -22,8 +22,8 @@ const Index = () => {
         <PricingTable />
         <FAQ />
         <BlogPreview />
+        <Footer />
       </main>
-      <Footer />
     </div>
   );
 };

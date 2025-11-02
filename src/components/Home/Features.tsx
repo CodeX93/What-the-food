@@ -36,27 +36,30 @@ const features = [
 
 const Features = () => {
   return (
-    <section id="features" className="py-20 bg-muted/30">
-      <div className="container mx-auto px-4">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-4xl font-bold mb-4">Powerful Features for Healthy Living</h2>
-          <p className="text-lg text-muted-foreground">
+    <section id="features" className="min-h-screen flex items-center overflow-y-auto relative snap-start snap-proximity bg-[#F9FCFB] dark:bg-[#0A0A0A] transition-colors duration-300">
+      <div className="container mx-auto px-4 sm:px-6 w-full relative z-10 py-8 sm:py-0">
+        <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Powerful Features for Healthy Living</h2>
+          <p className="text-base sm:text-lg text-muted-foreground">
             Everything you need to understand and improve your nutrition
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
-            <Card key={index} className="hover:shadow-medium transition-shadow">
-              <CardHeader>
-                <feature.icon className="h-10 w-10 text-primary mb-2" />
-                <CardTitle>{feature.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">{feature.description}</p>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {features.map((feature, index) => {
+            const IconComponent = feature.icon;
+            return (
+              <Card key={index} className="h-full">
+                <CardHeader className="p-4 sm:p-6">
+                  <IconComponent className="h-8 w-8 sm:h-10 sm:w-10 text-primary mb-2" />
+                  <CardTitle className="text-base sm:text-lg">{feature.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 sm:p-6 pt-0">
+                  <p className="text-sm sm:text-base text-muted-foreground">{feature.description}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </div>
     </section>

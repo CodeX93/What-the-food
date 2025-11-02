@@ -111,7 +111,37 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  /* Smooth scroll snap similar to Apple.com */
+  .scroll-snap-proximity {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+  
+  /* Proximity snap on desktop only */
+  @media (min-width: 768px) {
+    .scroll-snap-proximity {
+      scroll-snap-type: y proximity;
+    }
+  }
+  
+  /* Better mobile touch scrolling - no snap on mobile */
+  @media (max-width: 767px) {
+    .scroll-snap-proximity {
+      scroll-snap-type: none;
+    }
   }
 }
