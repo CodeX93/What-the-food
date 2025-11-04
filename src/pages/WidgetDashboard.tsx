@@ -72,12 +72,22 @@ const WidgetDashboard = () => {
 
         setUser(session.user);
 
-        // Load subscription
-        const { data: sub } = await supabase
-          .from("widget_subscriptions")
-          .select("*")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
+        // Load subscription and widgets in parallel
+        const [subRes, widgetsRes] = await Promise.all([
+          supabase
+            .from("widget_subscriptions")
+            .select("*")
+            .eq("user_id", session.user.id)
+            .maybeSingle(),
+          supabase
+            .from("widget_settings")
+            .select("*")
+            .eq("user_id", session.user.id)
+            .order("created_at", { ascending: false }),
+        ]);
+
+        const sub = subRes.data;
+        const widgets = widgetsRes.data;
 
         // Check if subscription exists
         if (!sub) {
@@ -86,13 +96,6 @@ const WidgetDashboard = () => {
         }
 
         setSubscription(sub);
-
-        // Load all saved widgets
-        const { data: widgets } = await supabase
-          .from("widget_settings")
-          .select("*")
-          .eq("user_id", session.user.id)
-          .order("created_at", { ascending: false });
 
         if (widgets && widgets.length > 0) {
           setSavedWidgets(widgets);
@@ -104,40 +107,39 @@ const WidgetDashboard = () => {
           setIsCreating(true);
         }
 
-        // Load widget sites (will be filtered by current widget when one is selected)
-        // Initially load all sites, but we'll filter by widget_id when a widget is selected
-        const { data: sites } = await supabase
-          .from("widget_sites")
-          .select("*")
-          .eq("user_id", session.user.id)
-          .order("created_at", { ascending: false });
+        // Load API stats using count-only queries to avoid transferring all rows
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
-        if (sites) {
-          setWidgetSites(sites);
-        }
+        const [totalRes, todayRes, monthRes, successRes] = await Promise.all([
+          supabase
+            .from("widget_api_calls")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", session.user.id),
+          supabase
+            .from("widget_api_calls")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", session.user.id)
+            .gte("created_at", startOfToday.toISOString()),
+          supabase
+            .from("widget_api_calls")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", session.user.id)
+            .gte("created_at", startOfMonth.toISOString()),
+          supabase
+            .from("widget_api_calls")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", session.user.id)
+            .eq("status", "success"),
+        ]);
 
-        // Load API stats
-        const { data: stats } = await supabase
-          .from("widget_api_calls")
-          .select("*")
-          .eq("user_id", session.user.id);
-
-        if (stats) {
-          const today = new Date().toDateString();
-          const todayCalls = stats.filter(
-            (call) => new Date(call.created_at).toDateString() === today
-          ).length;
-          const thisMonthCalls = stats.filter(
-            (call) => new Date(call.created_at).getMonth() === new Date().getMonth()
-          ).length;
-
-          setApiStats({
-            total: stats.length,
-            today: todayCalls,
-            thisMonth: thisMonthCalls,
-            successful: stats.filter((s) => s.status === "success").length,
-          });
-        }
+        setApiStats({
+          total: (totalRes.count as number) || 0,
+          today: (todayRes.count as number) || 0,
+          thisMonth: (monthRes.count as number) || 0,
+          successful: (successRes.count as number) || 0,
+        });
       } catch (error: any) {
         console.error("Error loading data:", error);
         toast({

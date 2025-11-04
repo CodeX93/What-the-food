@@ -1,3 +1,7 @@
+// ============================================
+// CLEAN DASHBOARD PAGE
+// ============================================
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TopBar from "@/components/Layout/TopBar";
@@ -8,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Camera, TrendingUp, Clock, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getPlatformSubscription } from "@/utils/subscription";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -20,7 +25,7 @@ const Dashboard = () => {
     const fetchUserData = async () => {
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
+
         if (sessionError || !session?.user) {
           navigate("/auth");
           return;
@@ -28,15 +33,14 @@ const Dashboard = () => {
 
         setUser(session.user);
 
-        // Fetch subscription
-        const { data: subData, error: subError } = await supabase
-          .from("subscriptions")
-          .select("*")
-          .eq("user_id", session.user.id)
-          .single();
+        // Fetch platform subscription
+        const sub = await getPlatformSubscription(session.user.id);
+        setSubscription(sub);
 
-        if (!subError && subData) {
-          setSubscription(subData);
+        // If user is on free plan, redirect to plans page
+        if (!sub || sub.subscription_type === 'free') {
+          navigate("/plans");
+          return;
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -78,41 +82,26 @@ const Dashboard = () => {
           </div>
 
           {/* Subscription Status */}
-          {subscription && (
+          {subscription && subscription.subscription_type === 'premium' && (
             <Card className="mb-8">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Current Plan</CardTitle>
-                    <CardDescription>
-                      {subscription.subscription_type === "premium"
-                        ? "Premium Plan - Full Access"
-                        : "Free Plan - Limited Access"}
-                    </CardDescription>
+                    <CardTitle>Premium Plan</CardTitle>
+                    <CardDescription>Full Access - Unlimited Scans</CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        subscription.subscription_type === "premium"
-                          ? "bg-primary/10 text-primary"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {subscription.subscription_type === "premium" ? (
-                        <Sparkles className="h-4 w-4 inline mr-1" />
-                      ) : null}
-                      {subscription.subscription_type.charAt(0).toUpperCase() +
-                        subscription.subscription_type.slice(1)}
+                    <span className="px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary">
+                      <Sparkles className="h-4 w-4 inline mr-1" />
+                      Premium
                     </span>
-                    {subscription.subscription_type === "free" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate("/plans")}
-                      >
-                        Upgrade
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate("/plans")}
+                    >
+                      Change Plan
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
@@ -188,4 +177,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-

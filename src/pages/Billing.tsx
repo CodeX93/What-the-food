@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CreditCard, Calendar, Sparkles, Download, AlertCircle } from "lucide-react";
-import { createCheckoutSessionSupabase, redirectToCheckout } from "@/utils/stripe";
+import { createCheckoutSession, redirectToCheckout } from "@/utils/stripe";
 
 const Billing = () => {
   const navigate = useNavigate();
@@ -65,7 +65,7 @@ const Billing = () => {
         throw new Error("Premium plan price ID not configured");
       }
 
-      const checkoutUrl = await createCheckoutSessionSupabase(
+      const checkoutUrl = await createCheckoutSession(
         premiumMonthlyPriceId,
         "monthly"
       );

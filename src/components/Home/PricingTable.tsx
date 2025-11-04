@@ -1,7 +1,9 @@
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const plans = [
   {
@@ -42,6 +44,33 @@ const plans = [
 ];
 
 const PricingTable = () => {
+  const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session);
+    };
+    checkAuth();
+    
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsLoggedIn(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handlePlanClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isLoggedIn) {
+      navigate("/plans");
+    } else {
+      navigate("/auth");
+    }
+  };
+
   return (
     <section className="min-h-screen flex items-center overflow-y-auto relative bg-white dark:bg-[#000000] snap-start snap-proximity transition-colors duration-300">
       <div className="container mx-auto px-4 sm:px-6 w-full relative z-10 py-8 sm:py-0">
@@ -89,9 +118,9 @@ const PricingTable = () => {
                 <Button 
                   className={`w-full text-sm sm:text-base ${plan.popular ? 'bg-primary hover:bg-primary-hover' : ''}`}
                   variant={plan.popular ? 'default' : 'outline'}
-                  asChild
+                  onClick={handlePlanClick}
                 >
-                  <Link to="/auth">{plan.cta}</Link>
+                  {plan.cta}
                 </Button>
               </CardFooter>
             </Card>

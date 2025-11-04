@@ -26,6 +26,7 @@ const Auth = () => {
   const [signupStep, setSignupStep] = useState<1 | 2>(1);
   const [signupEmail, setSignupEmail] = useState("");
   const [signupUserId, setSignupUserId] = useState<string | null>(null);
+  const [signupSession, setSignupSession] = useState<any>(null);
   const [bioData, setBioData] = useState({
     fullName: "",
     bio: "",
@@ -55,7 +56,6 @@ const Auth = () => {
       // Check subscription status and navigate accordingly
       const redirectPath = await getPostAuthNavigationPath();
       navigate(redirectPath);
-      window.location.reload(); // Reload to update auth state
     } catch (error: any) {
       toast({
         title: "Error signing in",
@@ -84,16 +84,18 @@ const Auth = () => {
       if (error) throw error;
 
       if (data.user) {
-        // Store email and user ID for next step
+        // Store values (kept for future if needed)
         setSignupEmail(email);
         setSignupUserId(data.user.id);
-        // Move to step 2 (bio)
-        setSignupStep(2);
-        
+        setSignupSession(data.session);
+
+        // With confirmations ON, ask user to verify then sign in
         toast({
-          title: "Account created!",
-          description: "Now let's add some basic information about you.",
+          title: "Verify your email",
+          description: "We sent you a verification link. Please verify, then sign in to continue.",
         });
+
+        setTabValue("signin");
       } else {
         toast({
           title: "Error creating account",
@@ -121,23 +123,35 @@ const Auth = () => {
         throw new Error("User ID not found. Please start over.");
       }
 
-      // Update profile with bio information (upsert in case profile doesn't exist)
-      const { error } = await supabase
-        .from("profiles")
-        .upsert({
-          id: signupUserId,
+      // Ensure session is available - required for RLS
+      let session = signupSession;
+      if (!session) {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        session = currentSession;
+      }
+      
+      // Call Edge Function to upsert profile using service role (bypasses RLS safely)
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('complete-profile', {
+        body: {
+          userId: signupUserId,
           email: signupEmail,
           full_name: bioData.fullName,
           bio: bioData.bio,
-        }, {
-          onConflict: "id",
-        });
+        },
+      });
 
-      if (error) throw error;
+      const error = fnError ? new Error(fnError.message || 'Failed to save profile') : null;
+
+      if (error) {
+        // If RLS error, provide more helpful message
+        // Provide clearer message with fallback path
+        throw new Error("Unable to save profile right now. Please sign in and complete your profile from the Profile page.");
+        throw error;
+      }
 
       // Check if email is confirmed
-      const { data: { session } } = await supabase.auth.getSession();
-      const isEmailConfirmed = session?.user?.email_confirmed_at;
+      const currentSession = session || (await supabase.auth.getSession()).data.session;
+      const isEmailConfirmed = currentSession?.user?.email_confirmed_at;
 
       toast({
         title: "Profile completed!",
@@ -495,6 +509,7 @@ const Auth = () => {
                             setBioData({ fullName: "", bio: "" });
                             setSignupUserId(null);
                             setSignupEmail("");
+                            setSignupSession(null);
                           }}
                         >
                           Back

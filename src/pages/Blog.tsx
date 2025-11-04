@@ -2,8 +2,11 @@ import TopBar from "@/components/Layout/TopBar";
 import Header from "@/components/Layout/Header";
 import Footer from "@/components/Layout/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useBlogPosts } from "@/hooks/useBlogPosts";
 
 const Blog = () => {
+  const { data, isLoading, isError } = useBlogPosts(9);
   return (
     <div className="min-h-screen">
       <TopBar />
@@ -17,23 +20,49 @@ const Blog = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i} className="hover:shadow-medium transition-shadow">
-                <div className="aspect-video bg-gradient-card" />
-                <CardHeader>
-                  <CardTitle className="line-clamp-2">
-                    Blog post from blog.whatthefood.io
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground line-clamp-3">
-                    Posts from your WordPress blog will automatically populate here via RSS feed integration.
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {isLoading && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i} className="hover:shadow-medium transition-shadow">
+                  <div className="aspect-video bg-muted" />
+                  <CardHeader>
+                    <div className="h-5 w-3/4 bg-muted rounded" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-4 w-full bg-muted rounded mb-2" />
+                    <div className="h-4 w-2/3 bg-muted rounded" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {!isLoading && isError && (
+            <p className="text-center text-muted-foreground">Failed to load blog posts. Please try again later.</p>
+          )}
+
+          {!isLoading && data && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {data.posts.map((post) => (
+                <Card key={post.id} className="hover:shadow-medium transition-shadow">
+                  {post.image ? (
+                    <img src={post.image} alt={post.title} className="aspect-video object-cover w-full" />
+                  ) : (
+                    <div className="aspect-video bg-gradient-card" />
+                  )}
+                  <CardHeader>
+                    <CardTitle className="line-clamp-2">{post.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground line-clamp-3 mb-3">{post.excerpt}</p>
+                    <Button asChild variant="link" className="p-0 h-auto">
+                      <a href={post.url} target="_blank" rel="noopener noreferrer">Read article →</a>
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
 
           <div className="mt-12 text-center">
             <p className="text-muted-foreground">

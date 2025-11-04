@@ -1,3 +1,7 @@
+// ============================================
+// CLEAN CHECKOUT SUCCESS PAGE
+// ============================================
+
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import TopBar from "@/components/Layout/TopBar";
@@ -17,7 +21,7 @@ const CheckoutSuccess = () => {
   const [subscription, setSubscription] = useState<any>(null);
 
   const sessionId = searchParams.get('session_id');
-  const subscriptionType = searchParams.get('type'); // 'widget' or null (main subscription)
+  const subscriptionType = searchParams.get('type'); // 'widget' or 'platform'
 
   useEffect(() => {
     const verifySubscription = async () => {
@@ -34,17 +38,17 @@ const CheckoutSuccess = () => {
       try {
         // Get current user
         const { data: { session } } = await supabase.auth.getSession();
-        
+
         if (!session?.user) {
           navigate("/auth");
           return;
         }
 
         // Wait for webhook to process - poll subscription status
-        const tableName = subscriptionType === 'widget' ? 'widget_subscriptions' : 'subscriptions';
+        const tableName = subscriptionType === 'widget' ? 'widget_subscriptions' : 'platform_subscriptions';
         let attempts = 0;
-        const maxAttempts = 10; // Wait up to 10 seconds (1 second intervals)
-        
+        const maxAttempts = 10; // Wait up to 10 seconds
+
         const checkSubscription = async (): Promise<boolean> => {
           const { data: subData, error } = await supabase
             .from(tableName)
@@ -67,13 +71,13 @@ const CheckoutSuccess = () => {
 
         // Try immediately first
         let subscriptionActive = await checkSubscription();
-        
+
         // Poll if not active yet (webhook might be processing)
         while (!subscriptionActive && attempts < maxAttempts) {
           attempts++;
           await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
           subscriptionActive = await checkSubscription();
-          
+
           if (subscriptionActive) {
             console.log(`Subscription activated after ${attempts} attempts`);
             break;
@@ -83,11 +87,11 @@ const CheckoutSuccess = () => {
         if (subscriptionActive) {
           toast({
             title: "Success!",
-            description: subscriptionType === 'widget' 
+            description: subscriptionType === 'widget'
               ? "Your widget subscription is now active. You can now create your widget!"
               : "Your Premium subscription is now active.",
           });
-          
+
           // Redirect to dashboard after short delay
           setTimeout(() => {
             if (subscriptionType === 'widget') {
@@ -97,13 +101,11 @@ const CheckoutSuccess = () => {
             }
           }, 1500);
         } else {
-          // Subscription not active yet - redirect anyway and show message
           toast({
             title: "Subscription Processing",
-            description: "Your subscription is being processed. You'll have access shortly. If this persists, please contact support.",
+            description: "Your subscription is being processed. You'll have access shortly.",
           });
-          
-          // Redirect to dashboard - let it handle the check
+
           setTimeout(() => {
             if (subscriptionType === 'widget') {
               navigate("/widget/dashboard");
@@ -118,11 +120,10 @@ const CheckoutSuccess = () => {
         console.error('Error verifying subscription:', error);
         toast({
           title: "Verification error",
-          description: "We're verifying your subscription. Redirecting to dashboard...",
+          description: "We're verifying your subscription. Redirecting...",
           variant: "destructive",
         });
-        
-        // Still redirect to dashboard after a delay
+
         setTimeout(() => {
           if (subscriptionType === 'widget') {
             navigate("/widget/dashboard");
@@ -130,13 +131,13 @@ const CheckoutSuccess = () => {
             navigate("/dashboard");
           }
         }, 2000);
-        
+
         setLoading(false);
       }
     };
 
     verifySubscription();
-  }, [sessionId, navigate, toast]);
+  }, [sessionId, subscriptionType, navigate, toast]);
 
   if (loading) {
     return (
@@ -167,14 +168,20 @@ const CheckoutSuccess = () => {
               </div>
               <CardTitle className="text-2xl">Payment Successful!</CardTitle>
               <CardDescription>
-                Your Premium subscription is now active
+                {subscriptionType === 'widget'
+                  ? "Your widget subscription is now active"
+                  : "Your Premium subscription is now active"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {subscription && (
                 <div className="bg-muted p-4 rounded-lg">
                   <p className="text-sm text-muted-foreground mb-1">Current Plan</p>
-                  <p className="font-semibold">Premium - Active</p>
+                  <p className="font-semibold">
+                    {subscriptionType === 'widget'
+                      ? `Widget Plan ${subscription.subscription_type} - Active`
+                      : "Premium - Active"}
+                  </p>
                   {subscription.current_period_end && (
                     <p className="text-xs text-muted-foreground mt-1">
                       Next billing: {new Date(subscription.current_period_end).toLocaleDateString()}
@@ -182,17 +189,17 @@ const CheckoutSuccess = () => {
                   )}
                 </div>
               )}
-              
-              <Button 
-                className="w-full" 
+
+              <Button
+                className="w-full"
                 onClick={() => navigate(subscriptionType === 'widget' ? "/widget/dashboard" : "/dashboard")}
               >
                 Go to Dashboard
               </Button>
-              
-              <Button 
-                variant="outline" 
-                className="w-full" 
+
+              <Button
+                variant="outline"
+                className="w-full"
                 onClick={() => navigate(subscriptionType === 'widget' ? "/widget/plans" : "/plans")}
               >
                 View Plans
@@ -207,4 +214,3 @@ const CheckoutSuccess = () => {
 };
 
 export default CheckoutSuccess;
-
