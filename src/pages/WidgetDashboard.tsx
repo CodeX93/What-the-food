@@ -38,7 +38,8 @@ const WidgetDashboard = () => {
   const [subscription, setSubscription] = useState<any>(null);
   const [savedWidgets, setSavedWidgets] = useState<any[]>([]);
   const [widgetSites, setWidgetSites] = useState<any[]>([]);
-  const [apiStats, setApiStats] = useState<any>(null);
+  const [apiStats, setApiStats] = useState<any>({ total: 0, today: 0, thisMonth: 0, successful: 0 });
+  const [statsLoading, setStatsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   
   // Current widget being edited/viewed
@@ -72,18 +73,19 @@ const WidgetDashboard = () => {
 
         setUser(session.user);
 
-        // Load subscription and widgets in parallel
+        // Load subscription and widgets in parallel - critical data first
         const [subRes, widgetsRes] = await Promise.all([
           supabase
             .from("widget_subscriptions")
-            .select("*")
+            .select("id, subscription_type, site_limit, is_active")
             .eq("user_id", session.user.id)
             .maybeSingle(),
           supabase
             .from("widget_settings")
-            .select("*")
+            .select("id, widget_id, widget_name, widget_description, primary_color, border_radius, is_default, created_at")
             .eq("user_id", session.user.id)
-            .order("created_at", { ascending: false }),
+            .order("created_at", { ascending: false })
+            .limit(50), // Limit to prevent loading too many widgets
         ]);
 
         const sub = subRes.data;
@@ -97,22 +99,27 @@ const WidgetDashboard = () => {
 
         setSubscription(sub);
 
+        // Set loading to false early so UI can render
+        setLoading(false);
+
+        // Load widgets and setup default widget (non-blocking)
         if (widgets && widgets.length > 0) {
           setSavedWidgets(widgets);
-          // Load first widget as default
+          // Load first widget as default (don't await - load sites in background)
           const defaultWidget = widgets.find((w) => w.is_default) || widgets[0];
-          await loadWidgetForEditing(defaultWidget);
+          loadWidgetForEditing(defaultWidget);
         } else {
           // No widgets exist, start with a new widget
           setIsCreating(true);
         }
 
-        // Load API stats using count-only queries to avoid transferring all rows
+        // Load API stats in background (non-blocking) - don't wait for this
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
         const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
-        const [totalRes, todayRes, monthRes, successRes] = await Promise.all([
+        // Load stats in parallel but don't block UI
+        Promise.all([
           supabase
             .from("widget_api_calls")
             .select("id", { count: "exact", head: true })
@@ -132,23 +139,26 @@ const WidgetDashboard = () => {
             .select("id", { count: "exact", head: true })
             .eq("user_id", session.user.id)
             .eq("status", "success"),
-        ]);
-
-        setApiStats({
-          total: (totalRes.count as number) || 0,
-          today: (todayRes.count as number) || 0,
-          thisMonth: (monthRes.count as number) || 0,
-          successful: (successRes.count as number) || 0,
+        ]).then(([totalRes, todayRes, monthRes, successRes]) => {
+          setApiStats({
+            total: (totalRes.count as number) || 0,
+            today: (todayRes.count as number) || 0,
+            thisMonth: (monthRes.count as number) || 0,
+            successful: (successRes.count as number) || 0,
+          });
+          setStatsLoading(false);
+        }).catch((error) => {
+          console.error("Error loading API stats:", error);
+          setStatsLoading(false);
         });
       } catch (error: any) {
         console.error("Error loading data:", error);
+        setLoading(false);
         toast({
           title: "Error",
           description: "Failed to load dashboard data.",
           variant: "destructive",
         });
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -156,6 +166,7 @@ const WidgetDashboard = () => {
   }, [navigate, toast]);
 
   const loadWidgetForEditing = async (widget: any) => {
+    // Set widget data immediately (don't wait for sites)
     setCurrentWidget(widget);
     setIsCreating(false);
     setWidgetName(widget.widget_name || "");
@@ -173,20 +184,23 @@ const WidgetDashboard = () => {
     // Switch to settings tab when editing
     setActiveTab("settings");
     
-    // Load sites for this specific widget
+    // Load sites for this specific widget in background (non-blocking)
+    // Only load if we're on the sites tab or if needed
     const currentUser = user || (await supabase.auth.getSession()).data.session?.user;
     if (widget.widget_id && currentUser) {
-      const { data: sites } = await supabase
+      // Load sites asynchronously - don't block UI
+      supabase
         .from("widget_sites")
-        .select("*")
+        .select("id, site_url, site_name, created_at")
         .eq("widget_id", widget.widget_id)
-        .order("created_at", { ascending: false });
-      
-      if (sites) {
-        setWidgetSites(sites);
-      } else {
-        setWidgetSites([]);
-      }
+        .order("created_at", { ascending: false })
+        .then(({ data: sites }) => {
+          setWidgetSites(sites || []);
+        })
+        .catch((error) => {
+          console.error("Error loading widget sites:", error);
+          setWidgetSites([]);
+        });
     } else {
       setWidgetSites([]);
     }
@@ -449,10 +463,24 @@ const WidgetDashboard = () => {
   // Can toggle branding if user has premium plan (and not on free plan)
   const canToggleBranding = canRemoveBranding && !isFreePlan;
 
+  // Show minimal loading state - render UI as soon as subscription and widgets are loaded
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/20">
+        <TopBar />
+        <Header />
+        <main className="flex-1 flex items-center justify-center py-20">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Code className="h-6 w-6 text-primary animate-pulse" />
+              </div>
+            </div>
+            <p className="text-muted-foreground animate-pulse">Loading widget dashboard...</p>
+          </div>
+        </main>
+        <Footer />
       </div>
     );
   }
@@ -477,7 +505,13 @@ const WidgetDashboard = () => {
                 <CardTitle className="text-sm font-medium">Total API Calls</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{apiStats?.total || 0}</div>
+                <div className="text-2xl font-bold">
+                  {statsLoading ? (
+                    <span className="inline-block h-7 w-12 bg-muted animate-pulse rounded"></span>
+                  ) : (
+                    apiStats?.total || 0
+                  )}
+                </div>
               </CardContent>
             </Card>
             <Card>
@@ -485,7 +519,13 @@ const WidgetDashboard = () => {
                 <CardTitle className="text-sm font-medium">Today</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{apiStats?.today || 0}</div>
+                <div className="text-2xl font-bold">
+                  {statsLoading ? (
+                    <span className="inline-block h-7 w-12 bg-muted animate-pulse rounded"></span>
+                  ) : (
+                    apiStats?.today || 0
+                  )}
+                </div>
               </CardContent>
             </Card>
             <Card>
@@ -493,7 +533,13 @@ const WidgetDashboard = () => {
                 <CardTitle className="text-sm font-medium">This Month</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{apiStats?.thisMonth || 0}</div>
+                <div className="text-2xl font-bold">
+                  {statsLoading ? (
+                    <span className="inline-block h-7 w-12 bg-muted animate-pulse rounded"></span>
+                  ) : (
+                    apiStats?.thisMonth || 0
+                  )}
+                </div>
               </CardContent>
             </Card>
             <Card>

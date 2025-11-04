@@ -16,8 +16,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { User, Mail, Calendar, Save, Camera, CheckCircle2, Crown, CreditCard, ArrowRight } from "lucide-react";
-import { getPlatformSubscription } from "@/utils/subscription";
+import { User, Mail, Calendar, Save, Camera, CheckCircle2, Crown, CreditCard, ArrowRight, Code } from "lucide-react";
+import { getPlatformSubscription, getWidgetSubscription } from "@/utils/subscription";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -26,8 +26,10 @@ const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<any>(null);
+  const [widgetSubscription, setWidgetSubscription] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   const [planName, setPlanName] = useState<string | null>(null);
+  const [widgetPlanName, setWidgetPlanName] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [userInitials, setUserInitials] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
@@ -68,7 +70,7 @@ const Profile = () => {
         const sub = await getPlatformSubscription(session.user.id);
         setSubscription(sub);
 
-        // Resolve plan name
+        // Resolve platform plan name
         if (sub?.platform_plan_id) {
           const { data: planRow } = await supabase
             .from("platform_plans")
@@ -76,6 +78,21 @@ const Profile = () => {
             .eq("id", sub.platform_plan_id)
             .maybeSingle();
           if (planRow?.name) setPlanName(planRow.name);
+        }
+
+        // Fetch widget subscription
+        const widgetSub = await getWidgetSubscription(session.user.id);
+        setWidgetSubscription(widgetSub);
+
+        // Resolve widget plan name (map subscription_type to display name)
+        if (widgetSub?.subscription_type) {
+          const planNames: Record<string, string> = {
+            'free': 'Free',
+            'plan1': 'Premium Plan 1',
+            'plan2': 'Premium Plan 2',
+            'plan3': 'Premium Plan 3',
+          };
+          setWidgetPlanName(planNames[widgetSub.subscription_type] || widgetSub.subscription_type);
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -338,6 +355,7 @@ const Profile = () => {
   }
 
   const isPremium = subscription?.subscription_type === 'premium';
+  const isWidgetPremium = widgetSubscription?.subscription_type !== 'free' && widgetSubscription?.is_active;
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-muted/20">
@@ -346,213 +364,236 @@ const Profile = () => {
       <main className="flex-1">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           <div className="max-w-7xl mx-auto">
-            {/* Header Section */}
+            {/* Header Section with Enhanced Design */}
             <div className="mb-8 sm:mb-12">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <div>
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
                     Profile Settings
                   </h1>
                   <p className="text-muted-foreground text-sm sm:text-base">
-                    Manage your account information and subscription
+                    Manage your account information and subscriptions
                   </p>
                 </div>
-                {isPremium && (
-                  <Badge variant="secondary" className="w-fit px-4 py-2 text-sm">
-                    <Crown className="h-4 w-4 mr-2" />
-                    Premium Member
-                  </Badge>
-                )}
+                <div className="flex flex-wrap gap-2">
+                  {isPremium && (
+                    <Badge variant="secondary" className="px-4 py-2 text-sm shadow-md">
+                      <Crown className="h-4 w-4 mr-2" />
+                      Platform Premium
+                    </Badge>
+                  )}
+                  {isWidgetPremium && (
+                    <Badge variant="secondary" className="px-4 py-2 text-sm shadow-md">
+                      <Code className="h-4 w-4 mr-2" />
+                      Widget Premium
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
-              {/* Profile Information Card - Takes 2 columns on large screens */}
-              <Card className="lg:col-span-2 shadow-lg hover:shadow-xl transition-shadow duration-300 border-2">
-                <CardHeader className="pb-4 sm:pb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <User className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-xl sm:text-2xl">Profile Information</CardTitle>
-                      <CardDescription className="mt-1">Update your personal information</CardDescription>
-                    </div>
+            {/* Profile Information Section */}
+            <Card className="mb-8 shadow-xl border-2 border-primary/10 bg-gradient-to-br from-card via-card to-card/50">
+              <CardHeader className="pb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
+                    <User className="h-6 w-6 text-primary" />
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <form ref={formRef} onSubmit={handleSave} className="space-y-6">
-                    {/* Avatar Section */}
-                    <div className="flex flex-col items-center sm:flex-row gap-6 pb-6 border-b">
-                      <div className="relative group">
-                        <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-primary/20 shadow-lg ring-4 ring-primary/10 transition-all duration-300 group-hover:ring-primary/20 group-hover:scale-105">
-                          <AvatarImage src={profile?.avatar_url} className="object-cover" />
-                          <AvatarFallback className="text-3xl sm:text-4xl bg-gradient-to-br from-primary to-secondary text-primary-foreground font-bold">
-                            {userInitials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center cursor-pointer">
+                  <div>
+                    <CardTitle className="text-2xl sm:text-3xl">Profile Information</CardTitle>
+                    <CardDescription className="mt-1 text-base">Update your personal information</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <form ref={formRef} onSubmit={handleSave} className="space-y-6">
+                  {/* Enhanced Avatar Section */}
+                  <div className="flex flex-col items-center sm:flex-row gap-8 pb-8 border-b-2 border-dashed">
+                    <div className="relative group">
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-full blur-xl opacity-30 group-hover:opacity-50 transition-opacity"></div>
+                      <Avatar className="relative h-32 w-32 sm:h-40 sm:w-40 border-4 border-primary/30 shadow-2xl ring-4 ring-primary/10 transition-all duration-300 group-hover:ring-primary/30 group-hover:scale-110">
+                        <AvatarImage src={profile?.avatar_url} className="object-cover" />
+                        <AvatarFallback className="text-4xl sm:text-5xl bg-gradient-to-br from-primary via-primary to-secondary text-primary-foreground font-bold">
+                          {userInitials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center cursor-pointer backdrop-blur-sm">
+                        <div className="bg-white/20 backdrop-blur-md rounded-full p-3">
                           <Camera className="h-6 w-6 text-white" />
                         </div>
                       </div>
-                      <div className="text-center sm:text-left flex-1">
-                        <h3 className="font-semibold text-lg mb-1">{profile?.full_name || 'Your Name'}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">{email}</p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="text-xs"
-                          onClick={() => {
-                            // TODO: Implement avatar upload
-                            toast({
-                              title: "Coming Soon",
-                              description: "Avatar upload feature will be available soon.",
-                            });
-                          }}
-                        >
-                          <Camera className="h-3 w-3 mr-2" />
-                          Change Photo
-                        </Button>
-                      </div>
                     </div>
-
-                    {/* Form Fields */}
-                    <div className="space-y-5">
-                      <div className="space-y-2">
-                        <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
+                    <div className="text-center sm:text-left flex-1 space-y-3">
+                      <div>
+                        <h3 className="font-bold text-2xl mb-1">{profile?.full_name || 'Your Name'}</h3>
+                        <p className="text-muted-foreground flex items-center justify-center sm:justify-start gap-2">
                           <Mail className="h-4 w-4" />
-                          Email Address
-                        </Label>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                          <Input
-                            id="email"
-                            type="email"
-                            value={email}
-                            disabled
-                            className="pl-10 h-11 bg-muted/50 border-2 focus-visible:ring-2 focus-visible:ring-primary/20"
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">Email cannot be changed</p>
+                          {email}
+                        </p>
                       </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="full_name" className="text-sm font-medium flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          Full Name
-                        </Label>
-                        <div className="relative">
-                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                          <Input
-                            id="full_name"
-                            name="full_name"
-                            type="text"
-                            defaultValue={profile?.full_name || ""}
-                            placeholder="Enter your full name"
-                            className="pl-10 h-11 border-2 focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="bio" className="text-sm font-medium">Bio</Label>
-                        <Textarea
-                          id="bio"
-                          name="bio"
-                          rows={5}
-                          defaultValue={profile?.bio || ""}
-                          placeholder="Tell us about yourself..."
-                          className="resize-none border-2 focus-visible:ring-2 focus-visible:ring-primary/20 transition-all min-h-[120px]"
-                        />
-                        <p className="text-xs text-muted-foreground">Share a brief description about yourself</p>
-                      </div>
-                    </div>
-
-                    {/* Save Button */}
-                    <div className="pt-4 border-t">
                       <Button
-                        type="submit"
-                        className="w-full h-11 text-base font-semibold shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
-                        disabled={saving}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="shadow-md hover:shadow-lg transition-all"
+                        onClick={() => {
+                          toast({
+                            title: "Coming Soon",
+                            description: "Avatar upload feature will be available soon.",
+                          });
+                        }}
                       >
-                        {saving ? (
-                          <>
-                            <Save className="mr-2 h-4 w-4 animate-spin" />
-                            Saving Changes...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="mr-2 h-4 w-4" />
-                            Save Changes
-                          </>
-                        )}
+                        <Camera className="h-3 w-3 mr-2" />
+                        Change Photo
                       </Button>
                     </div>
-                  </form>
-                </CardContent>
-              </Card>
+                  </div>
 
-              {/* Subscription Card - Takes 1 column on large screens */}
-              <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 border-2 bg-gradient-to-br from-card to-card/50">
-                <CardHeader className="pb-4 sm:pb-6">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${isPremium ? 'bg-primary/20' : 'bg-muted'}`}>
-                      <CreditCard className={`h-5 w-5 ${isPremium ? 'text-primary' : 'text-muted-foreground'}`} />
+                  {/* Enhanced Form Fields */}
+                  <div className="grid sm:grid-cols-2 gap-6">
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label htmlFor="email" className="text-sm font-semibold flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-primary" />
+                        Email Address
+                      </Label>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          id="email"
+                          type="email"
+                          value={email}
+                          disabled
+                          className="pl-12 h-12 bg-muted/50 border-2 focus-visible:ring-2 focus-visible:ring-primary/20 text-base"
+                        />
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1.5">Email cannot be changed</p>
                     </div>
-                    <div>
-                      <CardTitle className="text-xl sm:text-2xl">Subscription</CardTitle>
-                      <CardDescription className="mt-1">Your current plan details</CardDescription>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="full_name" className="text-sm font-semibold flex items-center gap-2">
+                        <User className="h-4 w-4 text-primary" />
+                        Full Name
+                      </Label>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                        <Input
+                          id="full_name"
+                          name="full_name"
+                          type="text"
+                          defaultValue={profile?.full_name || ""}
+                          placeholder="Enter your full name"
+                          className="pl-12 h-12 border-2 focus-visible:ring-2 focus-visible:ring-primary/20 transition-all text-base"
+                        />
+                      </div>
                     </div>
+
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label htmlFor="bio" className="text-sm font-semibold">Bio</Label>
+                      <Textarea
+                        id="bio"
+                        name="bio"
+                        rows={5}
+                        defaultValue={profile?.bio || ""}
+                        placeholder="Tell us about yourself..."
+                        className="resize-none border-2 focus-visible:ring-2 focus-visible:ring-primary/20 transition-all min-h-[140px] text-base"
+                      />
+                      <p className="text-xs text-muted-foreground">Share a brief description about yourself</p>
+                    </div>
+                  </div>
+
+                  {/* Enhanced Save Button */}
+                  <div className="pt-6 border-t-2">
+                    <Button
+                      type="submit"
+                      className="w-full h-12 text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <>
+                          <Save className="mr-2 h-5 w-5 animate-spin" />
+                          Saving Changes...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-5 w-5" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Subscriptions Section - Side by Side */}
+            <div className="grid lg:grid-cols-2 gap-6 sm:gap-8">
+              {/* Platform Subscription Card */}
+              <Card className="shadow-xl border-2 border-primary/10 bg-gradient-to-br from-card via-card to-card/50 hover:border-primary/20 transition-all">
+                <CardHeader className="pb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-3 rounded-xl ${isPremium ? 'bg-gradient-to-br from-primary/30 to-primary/10' : 'bg-muted/50'}`}>
+                        <CreditCard className={`h-6 w-6 ${isPremium ? 'text-primary' : 'text-muted-foreground'}`} />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl sm:text-2xl">Platform Subscription</CardTitle>
+                        <CardDescription className="mt-1">Your main app plan</CardDescription>
+                      </div>
+                    </div>
+                    {isPremium && (
+                      <Badge variant="default" className="shadow-md">
+                        <Crown className="h-3 w-3 mr-1" />
+                        Active
+                      </Badge>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
                   {subscription ? (
                     <div className="space-y-6">
-                      {/* Plan Type Badge */}
-                      <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border-2 border-dashed">
-                        <div className="flex items-center gap-3">
-                          {isPremium ? (
-                            <Crown className="h-5 w-5 text-primary" />
-                          ) : (
-                            <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
-                          )}
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Current Plan</p>
-                            <p className="font-bold text-lg capitalize">
-                              {subscription.subscription_type === 'premium' ? 'Premium' : 'Free'}
-                            </p>
+                      {/* Enhanced Plan Type Badge */}
+                      <div className={`relative overflow-hidden p-5 rounded-xl border-2 ${isPremium ? 'bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border-primary/30' : 'bg-muted/50 border-dashed'}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className={`p-3 rounded-lg ${isPremium ? 'bg-primary/20' : 'bg-muted'}`}>
+                              {isPremium ? (
+                                <Crown className="h-6 w-6 text-primary" />
+                              ) : (
+                                <CheckCircle2 className="h-6 w-6 text-muted-foreground" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1 font-medium">Current Plan</p>
+                              <p className="font-bold text-xl capitalize">
+                                {subscription.subscription_type === 'premium' ? 'Premium' : 'Free'}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                        {isPremium && (
-                          <Badge variant="default" className="ml-auto">
-                            Active
-                          </Badge>
-                        )}
                       </div>
 
-                      {/* Plan Details */}
-                      <div className="space-y-4">
+                      {/* Enhanced Plan Details */}
+                      <div className="space-y-3">
                         {planName && (
-                          <div className="p-3 rounded-lg bg-muted/30 border">
-                            <p className="text-xs text-muted-foreground mb-1.5">Plan Name</p>
-                            <p className="font-semibold text-base">{planName}</p>
+                          <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-primary/10 hover:border-primary/20 transition-all">
+                            <p className="text-xs text-muted-foreground mb-2 font-medium">Plan Name</p>
+                            <p className="font-bold text-lg">{planName}</p>
                           </div>
                         )}
 
                         {subscription.billing_cycle && (
-                          <div className="p-3 rounded-lg bg-muted/30 border">
-                            <p className="text-xs text-muted-foreground mb-1.5">Billing Cycle</p>
+                          <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-primary/10 hover:border-primary/20 transition-all">
+                            <p className="text-xs text-muted-foreground mb-2 font-medium">Billing Cycle</p>
                             <p className="font-semibold text-base capitalize flex items-center gap-2">
-                              <Calendar className="h-4 w-4" />
+                              <Calendar className="h-5 w-5 text-primary" />
                               {subscription.billing_cycle}
                             </p>
                           </div>
                         )}
 
                         {subscription.current_period_end && (
-                          <div className="p-3 rounded-lg bg-muted/30 border">
-                            <p className="text-xs text-muted-foreground mb-1.5">Next Billing Date</p>
+                          <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-primary/10 hover:border-primary/20 transition-all">
+                            <p className="text-xs text-muted-foreground mb-2 font-medium">Next Billing Date</p>
                             <p className="font-semibold text-base">
                               {new Date(subscription.current_period_end).toLocaleDateString('en-US', {
                                 month: 'short',
@@ -564,44 +605,168 @@ const Profile = () => {
                         )}
                       </div>
 
-                      {/* Action Button */}
-                      <div className="pt-4 border-t">
+                      {/* Enhanced Action Button */}
+                      <div className="pt-4 border-t-2">
                         <Button
                           variant={isPremium ? "outline" : "default"}
-                          className="w-full h-11 font-semibold transition-all duration-300 hover:scale-[1.02] shadow-md hover:shadow-lg"
+                          className="w-full h-12 font-semibold transition-all duration-300 hover:scale-[1.02] shadow-lg hover:shadow-xl"
                           onClick={() => navigate('/plans')}
                         >
                           {isPremium ? (
                             <>
                               Change Plan
-                              <ArrowRight className="ml-2 h-4 w-4" />
+                              <ArrowRight className="ml-2 h-5 w-5" />
                             </>
                           ) : (
                             <>
                               Upgrade Plan
-                              <Crown className="ml-2 h-4 w-4" />
+                              <Crown className="ml-2 h-5 w-5" />
                             </>
                           )}
                         </Button>
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center py-8 space-y-4">
-                      <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                        <CreditCard className="h-8 w-8 text-muted-foreground" />
+                    <div className="text-center py-12 space-y-4">
+                      <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center shadow-lg">
+                        <CreditCard className="h-10 w-10 text-muted-foreground" />
                       </div>
                       <div>
-                        <p className="text-muted-foreground mb-2 font-medium">No subscription found</p>
-                        <p className="text-xs text-muted-foreground mb-4">
+                        <p className="text-muted-foreground mb-2 font-semibold">No subscription found</p>
+                        <p className="text-sm text-muted-foreground mb-6">
                           Choose a plan to get started
                         </p>
                       </div>
                       <Button
                         onClick={() => navigate('/plans')}
-                        className="w-full h-11 font-semibold shadow-md hover:shadow-lg transition-all duration-300 hover:scale-[1.02]"
+                        className="w-full h-12 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
                       >
                         View Plans
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Widget Subscription Card */}
+              <Card className="shadow-xl border-2 border-primary/10 bg-gradient-to-br from-card via-card to-card/50 hover:border-primary/20 transition-all">
+                <CardHeader className="pb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-3 rounded-xl ${isWidgetPremium ? 'bg-gradient-to-br from-primary/30 to-primary/10' : 'bg-muted/50'}`}>
+                        <Code className={`h-6 w-6 ${isWidgetPremium ? 'text-primary' : 'text-muted-foreground'}`} />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl sm:text-2xl">Widget Subscription</CardTitle>
+                        <CardDescription className="mt-1">Your widget plan</CardDescription>
+                      </div>
+                    </div>
+                    {isWidgetPremium && (
+                      <Badge variant="default" className="shadow-md">
+                        <Code className="h-3 w-3 mr-1" />
+                        Active
+                      </Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {widgetSubscription ? (
+                    <div className="space-y-6">
+                      {/* Enhanced Plan Type Badge */}
+                      <div className={`relative overflow-hidden p-5 rounded-xl border-2 ${isWidgetPremium ? 'bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border-primary/30' : 'bg-muted/50 border-dashed'}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className={`p-3 rounded-lg ${isWidgetPremium ? 'bg-primary/20' : 'bg-muted'}`}>
+                              {isWidgetPremium ? (
+                                <Crown className="h-6 w-6 text-primary" />
+                              ) : (
+                                <CheckCircle2 className="h-6 w-6 text-muted-foreground" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1 font-medium">Current Plan</p>
+                              <p className="font-bold text-xl">
+                                {widgetPlanName || widgetSubscription.subscription_type}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Enhanced Plan Details */}
+                      <div className="space-y-3">
+                        {widgetSubscription.site_limit && (
+                          <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-primary/10 hover:border-primary/20 transition-all">
+                            <p className="text-xs text-muted-foreground mb-2 font-medium">Site Limit</p>
+                            <p className="font-bold text-lg">
+                              {widgetSubscription.site_limit === 999999 ? 'Unlimited' : widgetSubscription.site_limit} {widgetSubscription.site_limit === 1 ? 'site' : 'sites'}
+                            </p>
+                          </div>
+                        )}
+
+                        {widgetSubscription.billing_cycle && (
+                          <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-primary/10 hover:border-primary/20 transition-all">
+                            <p className="text-xs text-muted-foreground mb-2 font-medium">Billing Cycle</p>
+                            <p className="font-semibold text-base capitalize flex items-center gap-2">
+                              <Calendar className="h-5 w-5 text-primary" />
+                              {widgetSubscription.billing_cycle}
+                            </p>
+                          </div>
+                        )}
+
+                        {widgetSubscription.current_period_end && (
+                          <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-primary/10 hover:border-primary/20 transition-all">
+                            <p className="text-xs text-muted-foreground mb-2 font-medium">Next Billing Date</p>
+                            <p className="font-semibold text-base">
+                              {new Date(widgetSubscription.current_period_end).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Enhanced Action Button */}
+                      <div className="pt-4 border-t-2">
+                        <Button
+                          variant={isWidgetPremium ? "outline" : "default"}
+                          className="w-full h-12 font-semibold transition-all duration-300 hover:scale-[1.02] shadow-lg hover:shadow-xl"
+                          onClick={() => navigate('/widget/plans')}
+                        >
+                          {isWidgetPremium ? (
+                            <>
+                              Change Plan
+                              <ArrowRight className="ml-2 h-5 w-5" />
+                            </>
+                          ) : (
+                            <>
+                              View Widget Plans
+                              <Code className="ml-2 h-5 w-5" />
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 space-y-4">
+                      <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center shadow-lg">
+                        <Code className="h-10 w-10 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground mb-2 font-semibold">No widget subscription</p>
+                        <p className="text-sm text-muted-foreground mb-6">
+                          Choose a widget plan to get started
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => navigate('/widget/plans')}
+                        className="w-full h-12 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                      >
+                        View Widget Plans
+                        <ArrowRight className="ml-2 h-5 w-5" />
                       </Button>
                     </div>
                   )}

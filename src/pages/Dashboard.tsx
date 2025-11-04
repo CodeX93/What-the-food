@@ -37,11 +37,8 @@ const Dashboard = () => {
         const sub = await getPlatformSubscription(session.user.id);
         setSubscription(sub);
 
-        // If user is on free plan, redirect to plans page
-        if (!sub || sub.subscription_type === 'free') {
-          navigate("/plans");
-          return;
-        }
+        // Allow access to dashboard for all users (free and premium)
+        // Users can still upgrade from the dashboard if needed
       } catch (error) {
         console.error("Error fetching user data:", error);
         toast({

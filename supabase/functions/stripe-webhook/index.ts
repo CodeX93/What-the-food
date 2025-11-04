@@ -475,14 +475,16 @@ async function updateWidgetSubscription(
   };
 
   // Upsert subscription
-  const { error } = await supabase
+  const { data: subscriptionData, error } = await supabase
     .from('widget_subscriptions')
     .upsert({
       user_id: userId,
       ...updateData,
     }, {
       onConflict: 'user_id',
-    });
+    })
+    .select('id')
+    .single();
 
   if (error) {
     console.error('Error updating widget subscription:', error);
@@ -490,4 +492,23 @@ async function updateWidgetSubscription(
   }
 
   console.log('Widget subscription updated successfully');
+
+  // Manually update profile as fallback (trigger should handle this, but we do it manually too)
+  if (subscriptionData?.id) {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({
+        widget_subscription_id: subscriptionData.id,
+        widget_subscription_type: widgetPlanType,
+        widget_site_limit: siteLimit,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId);
+
+    if (profileError) {
+      console.warn('Profile sync failed (trigger should handle it):', profileError);
+    } else {
+      console.log('Profile synced with widget subscription');
+    }
+  }
 }

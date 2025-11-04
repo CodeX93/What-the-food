@@ -9,7 +9,7 @@ import Header from "@/components/Layout/Header";
 import Footer from "@/components/Layout/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Sparkles, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { createCheckoutSession, redirectToCheckout } from "@/utils/stripe";
@@ -300,9 +300,17 @@ const Plans = () => {
             <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-hero bg-clip-text text-transparent">
               Choose Your Plan
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-lg text-muted-foreground mb-6">
               Select a plan that works best for you. You can upgrade or downgrade at any time.
             </p>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/dashboard')}
+              className="mx-auto"
+            >
+              Keep using the plan
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
