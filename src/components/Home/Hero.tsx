@@ -1,9 +1,46 @@
 import { Button } from "@/components/ui/button";
-import { Upload } from "lucide-react";
+import { Upload, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { analyzeFood, saveScanHistory, uploadFoodImage } from "@/utils/foodScan";
 
 const Hero = () => {
+  const [uploading, setUploading] = useState(false);
+  const navigate = useNavigate();
+
+  const onChooseFile = async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/png, image/jpeg, image/jpg, image/heic, image/heif";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        setUploading(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        const userId = session?.user?.id;
+        if (!userId) {
+          navigate("/auth");
+          return;
+        }
+        // Upload to Storage
+        const { path, publicUrl, signedUrl } = await uploadFoodImage(file, userId);
+        // Analyze via Edge Function (default serving 1)
+        const analysis = await analyzeFood(signedUrl || publicUrl, 1);
+        // Save history and open results page
+        const scanId = await saveScanHistory({ userId, imagePath: path, imageUrl: signedUrl || publicUrl, serving: 1, result: analysis });
+        navigate(`/food-results?id=${scanId}`);
+      } catch (e) {
+        console.error("Hero upload error", e);
+        alert("Failed to analyze image. Please try again.");
+      } finally {
+        setUploading(false);
+      }
+    };
+    input.click();
+  };
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden bg-white dark:bg-[#000000] snap-start snap-proximity transition-colors duration-300">
       <div className="absolute inset-0 bg-gradient-hero opacity-5 dark:opacity-10" />
@@ -43,8 +80,8 @@ const Hero = () => {
                     Drop an image here or click to browse
                   </p>
                   <div className="flex justify-center">
-                    <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base">
-                      Choose File
+                    <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" onClick={onChooseFile} disabled={uploading}>
+                      {uploading ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Analyzing...</>) : ("Choose File")}
                     </Button>
                   </div>
                 </div>

@@ -1,0 +1,1074 @@
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import TopBar from "@/components/Layout/TopBar";
+import Header from "@/components/Layout/Header";
+import Footer from "@/components/Layout/Footer";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { scaleNutrients, type FoodAnalysis, getPersonalizedInsights, getImageUrl } from "@/utils/foodScan";
+import { Loader2, Salad, Share2, ArrowLeft, FileDown, Shield, Wand2, TrendingUp, Lightbulb, CheckCircle2, Flame, Beef, Apple, Droplet, Wheat, Candy, Zap, Target, Heart, Sparkles } from "lucide-react";
+
+const useQuery = () => new URLSearchParams(useLocation().search);
+
+const FoodResults = () => {
+  const q = useQuery();
+  const id = q.get("id");
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [servings, setServings] = useState(1);
+  const [imageUrl, setImageUrl] = useState<string>("");
+  const [imagePath, setImagePath] = useState<string>("");
+  const [baseServing, setBaseServing] = useState<number>(1);
+  const [analysis, setAnalysis] = useState<FoodAnalysis | null>(null);
+  const [age, setAge] = useState<number | "">("");
+  const [gender, setGender] = useState<string>("");
+  const [activity, setActivity] = useState<string>("");
+  const [goal, setGoal] = useState<string>("");
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsText, setInsightsText] = useState<string>("");
+  const [upgradeRequired, setUpgradeRequired] = useState(false);
+
+  const handleExportPdf = async () => {
+    if (!analysis) return;
+    const title = analysis.dish || "Food Result";
+    const scaledNutrients = scaleNutrients(analysis.nutrients, servings);
+    
+    // Convert image to base64 for PDF compatibility
+    // Try to download directly from Supabase Storage if we have image_path
+    let imageDataUrl = "";
+    
+    if (imagePath) {
+      try {
+        // Download the file directly from Supabase Storage
+        const { data: blobData, error: downloadError } = await supabase.storage
+          .from("FoodScans")
+          .download(imagePath);
+        
+        if (!downloadError && blobData) {
+          // Convert blob to base64
+          imageDataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              if (reader.result && typeof reader.result === 'string') {
+                resolve(reader.result);
+              } else {
+                reject(new Error("Failed to convert image"));
+              }
+            };
+            reader.onerror = () => reject(new Error("FileReader error"));
+            reader.readAsDataURL(blobData);
+          });
+        } else {
+          // Fallback: try generating a fresh signed URL
+          const { data: signed } = await supabase.storage
+            .from("FoodScans")
+            .createSignedUrl(imagePath, 60 * 5);
+          
+          if (signed?.signedUrl) {
+            const response = await fetch(signed.signedUrl);
+            if (response.ok) {
+              const blob = await response.blob();
+              imageDataUrl = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  if (reader.result && typeof reader.result === 'string') {
+                    resolve(reader.result);
+                  } else {
+                    reject(new Error("Failed to convert image"));
+                  }
+                };
+                reader.onerror = () => reject(new Error("FileReader error"));
+                reader.readAsDataURL(blob);
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Failed to convert image:", e);
+        // If conversion fails, we'll show a placeholder in the PDF
+        imageDataUrl = "";
+      }
+    } else if (imageUrl) {
+      // Fallback: try using the existing imageUrl if no path available
+      try {
+        const response = await fetch(imageUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          imageDataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              if (reader.result && typeof reader.result === 'string') {
+                resolve(reader.result);
+              } else {
+                reject(new Error("Failed to convert image"));
+              }
+            };
+            reader.onerror = () => reject(new Error("FileReader error"));
+            reader.readAsDataURL(blob);
+          });
+        }
+      } catch (e) {
+        console.error("Failed to convert image from URL:", e);
+        imageDataUrl = "";
+      }
+    }
+    
+    // Format insights if available
+    let insightsHtml = "";
+    if (parsedInsights) {
+      if (parsedInsights.healthContext) {
+        insightsHtml += `
+          <div style="border: 2px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 20px 0; background: linear-gradient(to bottom right, #f3f4f6, #e5e7eb);">
+            <div style="display: flex; align-items: flex-start; gap: 16px;">
+              <div style="padding: 8px; border-radius: 8px; background: rgba(59, 130, 246, 0.2);">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #3b82f6;">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                  <polyline points="17 6 23 6 23 12"></polyline>
+                </svg>
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                  <h4 style="font-size: 18px; font-weight: 700; margin: 0;">Personalized Health Context</h4>
+                  ${parsedInsights.demographics ? `<span style="font-size: 11px; color: #6b7280; background: white; padding: 4px 12px; border-radius: 999px; border: 1px solid #e5e7eb;">${parsedInsights.demographics}</span>` : ""}
+                </div>
+                <p style="font-size: 14px; line-height: 1.6; color: #1f2937; margin: 0; white-space: pre-wrap;">${parsedInsights.healthContext.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+              </div>
+            </div>
+          </div>`;
+      }
+      
+      if (parsedInsights.substitutions.length > 0) {
+        insightsHtml += `
+          <div style="margin: 20px 0;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
+              <div style="padding: 8px; border-radius: 8px; background: rgba(59, 130, 246, 0.1);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #3b82f6;">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+                </svg>
+              </div>
+              <h4 style="font-size: 18px; font-weight: 700; margin: 0;">Smart Substitution Suggestions</h4>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+              ${parsedInsights.substitutions.map((sub, idx) => `
+                <div style="display: flex; align-items: flex-start; gap: 12px; padding: 16px; border-radius: 8px; border: 2px solid #e5e7eb; background: linear-gradient(to bottom right, #f9fafb, #f3f4f6);">
+                  <div style="flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; background: rgba(59, 130, 246, 0.1); display: flex; align-items: center; justify-content: center;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #3b82f6;">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                  </div>
+                  <div style="flex: 1;">
+                    ${sub.title ? `<h5 style="font-size: 14px; font-weight: 600; margin: 0 0 8px;">${sub.title.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h5>` : ""}
+                    <p style="font-size: 13px; color: #6b7280; line-height: 1.5; margin: 0;">${sub.description.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+          </div>`;
+      }
+    }
+    
+    const printable = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${title} - WhatTheFood</title>
+  <style>
+    @media print {
+      @page { margin: 20mm; }
+      body { margin: 0; }
+    }
+    * { box-sizing: border-box; }
+    body { 
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, sans-serif; 
+      margin: 0; 
+      padding: 24px; 
+      color: #0a0a0a; 
+      background: #ffffff;
+    }
+    .header { 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      margin-bottom: 24px; 
+      padding-bottom: 16px;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    h1 { 
+      font-size: 28px; 
+      margin: 0; 
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+      font-weight: 700; 
+    }
+    .subtitle { color: #6b7280; font-size: 14px; margin-top: 4px; }
+    .confidence-badge { 
+      display: inline-block; 
+      padding: 4px 12px; 
+      border-radius: 999px; 
+      background: #eef2ff; 
+      color: #4338ca; 
+      font-size: 12px; 
+      font-weight: 600;
+    }
+    .main-content { 
+      display: grid; 
+      grid-template-columns: 1fr 2fr; 
+      gap: 24px; 
+      margin-bottom: 24px;
+    }
+    .image-section { 
+      border: 1px solid #e5e7eb; 
+      border-radius: 12px; 
+      overflow: hidden; 
+    }
+    .image-section img { 
+      width: 100%; 
+      height: auto; 
+      display: block; 
+    }
+    .image-footer { 
+      padding: 12px; 
+      background: #f9fafb; 
+      border-top: 1px solid #e5e7eb;
+    }
+    .image-footer div { 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      font-size: 12px; 
+    }
+    .progress-bar { 
+      height: 8px; 
+      background: #e5e7eb; 
+      border-radius: 999px; 
+      overflow: hidden; 
+      margin-top: 8px;
+    }
+    .progress-fill { 
+      height: 100%; 
+      background: #3b82f6; 
+      transition: width 0.3s;
+    }
+    .nutrition-card { 
+      border: 1px solid #e5e7eb; 
+      border-radius: 12px; 
+      padding: 20px; 
+      margin-bottom: 24px;
+    }
+    .nutrition-header { 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      margin-bottom: 16px;
+    }
+    .nutrition-header h2 { 
+      font-size: 20px; 
+      margin: 0; 
+      font-weight: 700;
+    }
+    .nutrition-desc { 
+      color: #6b7280; 
+      font-size: 12px; 
+      margin-top: 4px;
+    }
+    .serving-info {
+      font-size: 12px;
+      color: #6b7280;
+      background: #f9fafb;
+      padding: 6px 12px;
+      border-radius: 6px;
+    }
+    .nutrition-grid { 
+      display: grid; 
+      grid-template-columns: repeat(3, 1fr); 
+      gap: 12px; 
+    }
+    .nutrient-card { 
+      padding: 16px; 
+      border-radius: 8px; 
+      border: 1px solid #e5e7eb; 
+    }
+    .nutrient-card-orange { background: linear-gradient(to bottom right, #fff7ed, #fed7aa); }
+    .nutrient-card-red { background: linear-gradient(to bottom right, #fef2f2, #fecaca); }
+    .nutrient-card-yellow { background: linear-gradient(to bottom right, #fefce8, #fde68a); }
+    .nutrient-card-blue { background: linear-gradient(to bottom right, #eff6ff, #bfdbfe); }
+    .nutrient-card-green { background: linear-gradient(to bottom right, #f0fdf4, #bbf7d0); }
+    .nutrient-card-pink { background: linear-gradient(to bottom right, #fdf2f8, #fbcfe8); }
+    .nutrient-label { 
+      display: flex; 
+      align-items: center; 
+      gap: 6px; 
+      margin-bottom: 8px; 
+      font-size: 11px; 
+      font-weight: 600;
+      color: #6b7280;
+    }
+    .nutrient-value { 
+      font-size: 24px; 
+      font-weight: 700; 
+    }
+    .nutrient-value-orange { color: #ea580c; }
+    .nutrient-value-red { color: #dc2626; }
+    .nutrient-value-yellow { color: #ca8a04; }
+    .nutrient-value-blue { color: #2563eb; }
+    .nutrient-value-green { color: #16a34a; }
+    .nutrient-value-pink { color: #db2777; }
+    .nutrient-unit { font-size: 14px; font-weight: 400; margin-left: 4px; }
+    .two-col { 
+      display: grid; 
+      grid-template-columns: repeat(2, 1fr); 
+      gap: 16px; 
+      margin-bottom: 24px;
+    }
+    .info-card { 
+      border: 1px solid #e5e7eb; 
+      border-radius: 12px; 
+      padding: 20px; 
+    }
+    .info-card h3 { 
+      font-size: 18px; 
+      margin: 0 0 8px 0; 
+      display: flex; 
+      align-items: center; 
+      gap: 8px; 
+      font-weight: 700;
+    }
+    .info-card p { 
+      color: #6b7280; 
+      font-size: 12px; 
+      margin: 0 0 12px 0;
+    }
+    .ingredient-list { 
+      list-style: none; 
+      padding: 0; 
+      margin: 0;
+    }
+    .ingredient-list li { 
+      display: flex; 
+      align-items: flex-start; 
+      gap: 8px; 
+      margin-bottom: 8px; 
+      font-size: 14px;
+    }
+    .instruction-list { 
+      list-style: none; 
+      padding: 0; 
+      margin: 0;
+    }
+    .instruction-list li { 
+      display: flex; 
+      gap: 12px; 
+      margin-bottom: 12px; 
+      font-size: 14px;
+    }
+    .step-number { 
+      flex-shrink: 0; 
+      width: 24px; 
+      height: 24px; 
+      border-radius: 50%; 
+      background: rgba(59, 130, 246, 0.1); 
+      color: #3b82f6; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      font-size: 12px; 
+      font-weight: 600;
+    }
+    .check-icon { 
+      flex-shrink: 0; 
+      width: 16px; 
+      height: 16px; 
+      color: #3b82f6; 
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>🍽️ ${title}</h1>
+      <div class="subtitle">${analysis.servingSize || "Per serving"}</div>
+    </div>
+    <div class="confidence-badge">Confidence: ${Math.round((analysis.confidence || 0) * 100)}%</div>
+  </div>
+
+  <div class="main-content">
+    <div class="image-section">
+      ${imageDataUrl ? `<img src="${imageDataUrl}" alt="${title}" style="max-width: 100%; height: auto; display: block;" onerror="this.parentElement.innerHTML='<div style=\\'height: 300px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; color: #9ca3af;\\'>Image not available</div>'"/>` : '<div style="height: 300px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; color: #9ca3af;">Image not available</div>'}
+      <div class="image-footer">
+        <div>
+          <span style="color: #6b7280;">Confidence</span>
+          <span style="font-weight: 600; margin-left: 8px;">${Math.round((analysis.confidence || 0) * 100)}%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: ${Math.round((analysis.confidence || 0) * 100)}%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="nutrition-card">
+        <div class="nutrition-header">
+          <div>
+            <h2>Nutrition Summary</h2>
+            <div class="nutrition-desc">${analysis.servingSize || "Per serving"}</div>
+          </div>
+          <div class="serving-info">Servings: ${servings}</div>
+        </div>
+        <div class="nutrition-grid">
+          <div class="nutrient-card nutrient-card-orange">
+            <div class="nutrient-label">🔥 Calories</div>
+            <div class="nutrient-value nutrient-value-orange">${scaledNutrients.calories ?? "-"}</div>
+          </div>
+          <div class="nutrient-card nutrient-card-red">
+            <div class="nutrient-label">🥩 Protein</div>
+            <div class="nutrient-value nutrient-value-red">${scaledNutrients.protein_g ?? "-"}<span class="nutrient-unit">g</span></div>
+          </div>
+          <div class="nutrient-card nutrient-card-yellow">
+            <div class="nutrient-label">🌾 Carbs</div>
+            <div class="nutrient-value nutrient-value-yellow">${scaledNutrients.carbohydrates_g ?? "-"}<span class="nutrient-unit">g</span></div>
+          </div>
+          <div class="nutrient-card nutrient-card-blue">
+            <div class="nutrient-label">💧 Fat</div>
+            <div class="nutrient-value nutrient-value-blue">${scaledNutrients.fat_g ?? "-"}<span class="nutrient-unit">g</span></div>
+          </div>
+          <div class="nutrient-card nutrient-card-green">
+            <div class="nutrient-label">🍎 Fiber</div>
+            <div class="nutrient-value nutrient-value-green">${scaledNutrients.fiber_g ?? "-"}<span class="nutrient-unit">g</span></div>
+          </div>
+          <div class="nutrient-card nutrient-card-pink">
+            <div class="nutrient-label">🍬 Sugar</div>
+            <div class="nutrient-value nutrient-value-pink">${scaledNutrients.sugar_g ?? "-"}<span class="nutrient-unit">g</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="info-card">
+          <h3>🍎 Ingredients</h3>
+          <p>Detected/estimated ingredients</p>
+          <ul class="ingredient-list">
+            ${(analysis.ingredients || []).map((ing) => `
+              <li>
+                <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                ${ing.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
+              </li>
+            `).join("")}
+          </ul>
+        </div>
+
+        <div class="info-card">
+          <h3>⚡ How to Prepare</h3>
+          <p>Step-by-step instructions</p>
+          <ol class="instruction-list">
+            ${(analysis.instructions || []).map((step, i) => `
+              <li>
+                <span class="step-number">${i + 1}</span>
+                <span>${step.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
+              </li>
+            `).join("")}
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  ${insightsHtml}
+
+  <div style="text-align: center; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
+    Generated by WhatTheFood • ${new Date().toLocaleDateString()}
+  </div>
+</body>
+</html>`;
+    const win = window.open("", "_blank", "noopener,noreferrer");
+    if (!win) {
+      alert("Please allow popups to export PDF");
+      return;
+    }
+    
+    win.document.open();
+    win.document.write(printable);
+    win.document.close();
+    
+    // Wait for content to load before triggering print
+    win.onload = () => {
+      setTimeout(() => {
+        try {
+          win.print();
+        } catch (e) {
+          console.error("Print error:", e);
+          // If print fails, at least show the content
+          win.focus();
+        }
+      }, 500);
+    };
+    
+    // Fallback if onload doesn't fire
+    setTimeout(() => {
+      try {
+        win.print();
+      } catch (e) {
+        console.error("Print error:", e);
+        win.focus();
+      }
+    }, 1000);
+  };
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        if (!id) {
+          navigate("/dashboard");
+          return;
+        }
+        const { data, error } = await supabase
+          .from("food_scans")
+          .select("image_url, image_path, serving, result_json")
+          .eq("id", id)
+          .maybeSingle();
+        if (error || !data) {
+          navigate("/dashboard");
+          return;
+        }
+        setBaseServing(data.serving || 1);
+        setServings(data.serving || 1);
+        setAnalysis(data.result_json as FoodAnalysis);
+        setImagePath(data.image_path || "");
+        // Always generate fresh signed URL from image_path (never expires)
+        const freshUrl = await getImageUrl(data.image_path, 60 * 60);
+        setImageUrl(freshUrl || (data.image_url as string) || "");
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [id, navigate]);
+
+  const scaled = useMemo(() => analysis ? scaleNutrients(analysis.nutrients, servings) : null, [analysis, servings]);
+
+  // Parse insights text into structured sections
+  const parsedInsights = useMemo(() => {
+    if (!insightsText) return null;
+    
+    const sections = {
+      healthContext: "",
+      substitutions: [] as Array<{ title: string; description: string }>,
+      demographics: "",
+    };
+
+    // Extract Personalized Health Context section - more flexible regex
+    // First, try to find the section with demographics in parentheses
+    const contextWithDemoMatch = insightsText.match(/Personalized Health Context\s*\(([^)]+)\)[:\s]*(.*?)(?=Smart Substitution Suggestions|$)/is);
+    if (contextWithDemoMatch) {
+      sections.demographics = contextWithDemoMatch[1].trim();
+      let contextText = contextWithDemoMatch[2].trim();
+      
+      // Remove duplicate demographics if they appear at the start of the context
+      contextText = contextText.replace(/^[^:]*:\s*[^,]+(?:,\s*[^:]+:\s*[^,]+)*\)?\s*:/i, "").trim();
+      sections.healthContext = contextText;
+    } else {
+      // Fallback: try without demographics in parentheses
+      const contextMatch = insightsText.match(/Personalized Health Context[^:]*:\s*(.*?)(?=Smart Substitution Suggestions|$)/is);
+      if (contextMatch) {
+        let contextText = contextMatch[1].trim();
+        
+        // Try to extract demographics from the content itself (look for "Age:" pattern)
+        const demoPattern = /Age:\s*[^,]+(?:,\s*[^:]+:\s*[^,]+)*/i;
+        const demoMatch = contextText.match(demoPattern);
+        if (demoMatch) {
+          sections.demographics = demoMatch[0].trim();
+          // Remove demographics from the health context text (including if it appears after a colon and closing paren)
+          contextText = contextText
+            .replace(new RegExp(demoMatch[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[):]?\\s*', 'i'), "")
+            .trim();
+        }
+        
+        sections.healthContext = contextText;
+      }
+    }
+
+    // Clean up health context - remove any trailing numbers, formatting marks, or duplicate patterns
+    sections.healthContext = sections.healthContext
+      .replace(/^\d+\)\s*/, "") // Remove leading "2)"
+      .replace(/^\d+\.\s*/, "") // Remove leading "2."
+      .replace(/\s+\d+\)\s*$/, "") // Remove trailing "2)"
+      .replace(/\s+\d+\.\s*$/, "") // Remove trailing "2."
+      .replace(/^\s*[^a-zA-Z]*\s*/, "") // Remove any leading non-alphabetic chars
+      .trim();
+    
+    // Clean up demographics - remove any trailing patterns
+    if (sections.demographics) {
+      sections.demographics = sections.demographics
+        .replace(/\)\s*$/, "") // Remove trailing closing paren
+        .trim();
+    }
+
+    // Extract Smart Substitution Suggestions
+    const subsMatch = insightsText.match(/Smart Substitution Suggestions:?\s*(.*?)$/is);
+    if (subsMatch) {
+      const subsText = subsMatch[1].trim();
+      
+      // Split by markdown bullets (* **Title** or - **Title**)
+      // Pattern: "* **Title**: Description. * **Title2**: Description2."
+      // We split on "* **" or "- **" to separate items
+      let items: string[] = [];
+      
+      // First try: Split by "* **" or "- **" pattern
+      const splitPattern = /(?=[*-]\s*\*\*)/;
+      const splitItems = subsText.split(splitPattern).filter(item => item.trim());
+      
+      if (splitItems.length > 1) {
+        items = splitItems;
+      } else {
+        // Fallback: Try numbered items (1., 2., 3.)
+        items = subsText.split(/(?=\d+\.\s*(?:\*\*|))/).filter(item => item.trim());
+        
+        // If still no split, try splitting by any bullet (* or -)
+        if (items.length <= 1) {
+          items = subsText.split(/(?=[*-]\s*\*\*)/).filter(item => item.trim());
+        }
+      }
+      
+      sections.substitutions = items.map(item => {
+        // Extract markdown bullet format: "* **Title**: Description" or "- **Title**: Description"
+        // Handle cases where there might be text before the bullet (from previous item)
+        const markdownMatch = item.match(/[*-]\s*\*\*([^*]+)\*\*[:\s]*(.*?)(?=\s*[*-]\s*\*\*|$)/s);
+        if (markdownMatch) {
+          return { 
+            title: markdownMatch[1].trim(), 
+            description: markdownMatch[2].trim().replace(/\.\s*$/, "") // Remove trailing period
+          };
+        }
+        
+        // Extract numbered format: "1. **Title**: Description"
+        const numberedBoldMatch = item.match(/\d+\.\s*\*\*([^*]+)\*\*[:\s]*(.*?)(?=\s*\d+\.\s*\*\*|$)/s);
+        if (numberedBoldMatch) {
+          return { 
+            title: numberedBoldMatch[1].trim(), 
+            description: numberedBoldMatch[2].trim().replace(/\.\s*$/, "")
+          };
+        }
+        
+        // Extract numbered plain format: "1. Title: Description"
+        const numberedPlainMatch = item.match(/\d+\.\s*([^:]+):\s*(.*?)(?=\s*\d+\.|$)/s);
+        if (numberedPlainMatch) {
+          return { 
+            title: numberedPlainMatch[1].trim(), 
+            description: numberedPlainMatch[2].trim().replace(/\.\s*$/, "")
+          };
+        }
+        
+        // Extract plain bullet format: "* Title: Description" or "- Title: Description"
+        const plainBulletMatch = item.match(/[*-]\s*([^:]+):\s*(.*?)(?=\s*[*-]|$)/s);
+        if (plainBulletMatch) {
+          return { 
+            title: plainBulletMatch[1].trim(), 
+            description: plainBulletMatch[2].trim().replace(/\.\s*$/, "")
+          };
+        }
+        
+        // Last resort: clean and use whole item as description
+        const cleaned = item.replace(/^[*-]\s*|\d+\.\s*/, "").replace(/\*\*/g, "").trim();
+        return { title: "", description: cleaned };
+      }).filter(item => item.description && item.description.length > 0);
+    }
+
+    return sections;
+  }, [insightsText]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary"></div>
+            <Salad className="h-8 w-8 text-primary absolute inset-0 m-auto animate-pulse" />
+          </div>
+          <p className="text-muted-foreground">Loading your food analysis...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analysis) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/20">
+        <Card className="max-w-md">
+          <CardContent className="pt-6 text-center">
+            <Salad className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+            <p className="text-muted-foreground">No result found.</p>
+            <Button onClick={() => navigate("/dashboard")} className="mt-4">Go to Dashboard</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/20">
+      <TopBar />
+      <Header />
+      <main className="flex-1">
+        <div className="container mx-auto px-4 py-6 md:py-8 max-w-7xl">
+          {/* Hero Header */}
+          <div className="mb-6 md:mb-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <Button variant="ghost" onClick={() => navigate(-1)} className="px-2">
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <div>
+                  <h1 className="text-2xl md:text-4xl font-bold flex items-center gap-2">
+                    <Salad className="h-6 w-6 md:h-8 md:w-8 text-primary" />
+                    {analysis.dish || "Food Result"}
+                  </h1>
+                  <p className="text-sm md:text-base text-muted-foreground mt-1">{analysis.servingSize || "Per serving"}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => navigator.clipboard.writeText(window.location.href)}>
+                  <Share2 className="h-4 w-4 mr-2" /> Share
+                </Button>
+                <Button size="sm" onClick={handleExportPdf}>
+                  <FileDown className="h-4 w-4 mr-2" /> PDF
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid lg:grid-cols-12 gap-6">
+            {/* Left Column - Image */}
+            <div className="lg:col-span-4">
+              <Card className="overflow-hidden sticky top-6">
+                {imageUrl ? (
+                  <div className="aspect-square relative overflow-hidden">
+                    <img src={imageUrl} alt={analysis.dish || "Food"} className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="aspect-square flex items-center justify-center text-muted-foreground bg-muted">
+                    <Salad className="h-16 w-16 opacity-30" />
+                  </div>
+                )}
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Confidence</span>
+                    <span className="font-semibold">{Math.round((analysis.confidence || 0) * 100)}%</span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full mt-2 overflow-hidden">
+                    <div className="h-full bg-primary transition-all" style={{ width: `${Math.round((analysis.confidence || 0) * 100)}%` }} />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Column - Content */}
+            <div className="lg:col-span-8 space-y-6">
+              {/* Nutrition Summary - Enhanced */}
+              <Card>
+                <CardHeader>
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                      <CardTitle className="text-xl">Nutrition Summary</CardTitle>
+                      <CardDescription>{analysis.servingSize || "Per serving"}</CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Servings</span>
+                      <input
+                        type="number"
+                        className="border rounded-lg px-3 py-2 w-24 text-center font-medium"
+                        min={1}
+                        max={20}
+                        value={servings}
+                        onChange={(e) => setServings(Math.max(1, Math.min(20, parseInt(e.target.value || "1", 10))))}
+                      />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="p-4 rounded-lg border bg-gradient-to-br from-orange-50 to-orange-100/50 dark:from-orange-950/20 dark:to-orange-900/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Flame className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                        <span className="text-xs font-medium text-muted-foreground">Calories</span>
+                      </div>
+                      <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{scaled?.calories ?? "-"}</div>
+                    </div>
+                    <div className="p-4 rounded-lg border bg-gradient-to-br from-red-50 to-red-100/50 dark:from-red-950/20 dark:to-red-900/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Beef className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        <span className="text-xs font-medium text-muted-foreground">Protein</span>
+                      </div>
+                      <div className="text-2xl font-bold text-red-600 dark:text-red-400">{scaled?.protein_g ?? "-"}<span className="text-sm font-normal ml-1">g</span></div>
+                    </div>
+                    <div className="p-4 rounded-lg border bg-gradient-to-br from-yellow-50 to-yellow-100/50 dark:from-yellow-950/20 dark:to-yellow-900/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Wheat className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                        <span className="text-xs font-medium text-muted-foreground">Carbs</span>
+                      </div>
+                      <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{scaled?.carbohydrates_g ?? "-"}<span className="text-sm font-normal ml-1">g</span></div>
+                    </div>
+                    <div className="p-4 rounded-lg border bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/20 dark:to-blue-900/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Droplet className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span className="text-xs font-medium text-muted-foreground">Fat</span>
+                      </div>
+                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{scaled?.fat_g ?? "-"}<span className="text-sm font-normal ml-1">g</span></div>
+                    </div>
+                    <div className="p-4 rounded-lg border bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/20 dark:to-green-900/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Apple className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <span className="text-xs font-medium text-muted-foreground">Fiber</span>
+                      </div>
+                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">{scaled?.fiber_g ?? "-"}<span className="text-sm font-normal ml-1">g</span></div>
+                    </div>
+                    <div className="p-4 rounded-lg border bg-gradient-to-br from-pink-50 to-pink-100/50 dark:from-pink-950/20 dark:to-pink-900/10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Candy className="h-4 w-4 text-pink-600 dark:text-pink-400" />
+                        <span className="text-xs font-medium text-muted-foreground">Sugar</span>
+                      </div>
+                      <div className="text-2xl font-bold text-pink-600 dark:text-pink-400">{scaled?.sugar_g ?? "-"}<span className="text-sm font-normal ml-1">g</span></div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Ingredients & Instructions */}
+              <div className="grid md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Apple className="h-5 w-5 text-primary" />
+                      <CardTitle>Ingredients</CardTitle>
+                    </div>
+                    <CardDescription>Detected/estimated ingredients</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {analysis.ingredients?.map((ing, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">{ing}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-5 w-5 text-primary" />
+                      <CardTitle>How to Prepare</CardTitle>
+                    </div>
+                    <CardDescription>Step-by-step instructions</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ol className="space-y-3">
+                      {analysis.instructions?.map((step, i) => (
+                        <li key={i} className="flex gap-3">
+                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium">
+                            {i + 1}
+                          </span>
+                          <span className="text-sm leading-relaxed">{step}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Personalized Health Context (Premium-gated by backend) */}
+              <Card className="border-primary/20">
+                <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Target className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="flex items-center gap-2">Personalized Health Context</CardTitle>
+                        <CardDescription>Demographic-aware insights tailored to your goals</CardDescription>
+                      </div>
+                    </div>
+                    {upgradeRequired && (
+                      <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full flex items-center gap-1 border border-primary/20">
+                        <Sparkles className="h-3 w-3" /> Premium
+                      </span>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Age</label>
+                      <input type="number" placeholder="e.g., 25" min={1} className="border rounded-lg px-3 py-2 w-full text-sm" value={age as any} onChange={(e) => setAge(e.target.value ? parseInt(e.target.value, 10) : "")} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Gender</label>
+                      <select className="border rounded-lg px-3 py-2 w-full text-sm" value={gender} onChange={(e) => setGender(e.target.value)}>
+                        <option value="">Select</option>
+                        <option value="female">Female</option>
+                        <option value="male">Male</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Activity</label>
+                      <select className="border rounded-lg px-3 py-2 w-full text-sm" value={activity} onChange={(e) => setActivity(e.target.value)}>
+                        <option value="">Select</option>
+                        <option value="sedentary">Sedentary</option>
+                        <option value="light">Light</option>
+                        <option value="moderate">Moderate</option>
+                        <option value="active">Active</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Goal</label>
+                      <select className="border rounded-lg px-3 py-2 w-full text-sm" value={goal} onChange={(e) => setGoal(e.target.value)}>
+                        <option value="">Select</option>
+                        <option value="weight_loss">Weight loss</option>
+                        <option value="muscle_gain">Muscle gain</option>
+                        <option value="maintenance">Maintenance</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      disabled={insightsLoading || !age || !gender || !activity || !goal}
+                      onClick={async () => {
+                        if (!id) return;
+                        try {
+                          setInsightsLoading(true);
+                          setUpgradeRequired(false);
+                          const res = await getPersonalizedInsights({ scanId: id, age: age as any, gender, activity, goal, optimize: false });
+                          if (res.upgrade) { setUpgradeRequired(true); setInsightsText(""); return; }
+                          setInsightsText(res.insights || "");
+                        } finally {
+                          setInsightsLoading(false);
+                        }
+                      }}
+                    >
+                      {insightsLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin"/> : <Heart className="h-4 w-4 mr-2"/>} Generate Insights
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={insightsLoading || !age || !gender || !activity || !goal}
+                      onClick={async () => {
+                        if (!id) return;
+                        try {
+                          setInsightsLoading(true);
+                          setUpgradeRequired(false);
+                          const res = await getPersonalizedInsights({ scanId: id, age: age as any, gender, activity, goal, optimize: true });
+                          if (res.upgrade) { setUpgradeRequired(true); setInsightsText(""); return; }
+                          setInsightsText(res.insights || "");
+                        } finally {
+                          setInsightsLoading(false);
+                        }
+                      }}
+                    >
+                      <Wand2 className="h-4 w-4 mr-2"/> Make It Healthier
+                    </Button>
+                  </div>
+
+                  {upgradeRequired && (
+                    <div className="mt-6 p-4 rounded-lg border border-primary/20 bg-primary/5">
+                      <div className="flex items-start gap-3">
+                        <Shield className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium mb-1">Premium Feature</p>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            Upgrade to Premium to unlock personalized insights and smart substitutions tailored to your goals.
+                          </p>
+                          <Button size="sm" onClick={() => navigate("/plans")}>
+                            <Sparkles className="h-4 w-4 mr-2" /> Upgrade Now
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {parsedInsights && (
+                    <div className="mt-6 space-y-6">
+                      {/* Personalized Health Context */}
+                      {parsedInsights.healthContext && (
+                        <div className="rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-5">
+                          <div className="flex items-start gap-4">
+                            <div className="p-2 rounded-lg bg-primary/20 flex-shrink-0">
+                              <TrendingUp className="h-6 w-6 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+                                <h4 className="font-bold text-lg">Personalized Health Context</h4>
+                                {parsedInsights.demographics && (
+                                  <span className="text-xs font-medium text-muted-foreground bg-background px-3 py-1 rounded-full border border-primary/20">
+                                    {parsedInsights.demographics}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="prose prose-sm max-w-none">
+                                <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap break-words">
+                                  {parsedInsights.healthContext}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Smart Substitution Suggestions */}
+                      {parsedInsights.substitutions.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-4">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                              <Lightbulb className="h-5 w-5 text-primary" />
+                            </div>
+                            <h4 className="font-bold text-lg">Smart Substitution Suggestions</h4>
+                          </div>
+                          <div className="grid md:grid-cols-2 gap-4">
+                            {parsedInsights.substitutions.map((sub, idx) => (
+                              <div key={idx} className="flex items-start gap-3 p-4 rounded-lg border-2 bg-gradient-to-br from-muted/50 to-muted/30 hover:border-primary/30 transition-colors">
+                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                                </div>
+                                <div className="flex-1">
+                                  {sub.title && (
+                                    <h5 className="font-semibold mb-2 text-base">{sub.title}</h5>
+                                  )}
+                                  <p className="text-sm text-muted-foreground leading-relaxed">{sub.description}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Fallback: Show raw text if parsing didn't work */}
+                      {!parsedInsights.healthContext && !parsedInsights.substitutions.length && insightsText && (
+                        <div className="rounded-lg border p-4 bg-muted/30">
+                          <div className="whitespace-pre-wrap text-sm leading-relaxed">{insightsText}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
+export default FoodResults;
+
+

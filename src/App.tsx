@@ -30,6 +30,9 @@ import WidgetAdmin from "./pages/WidgetAdmin";
 import WallOfLove from "./pages/WallOfLove";
 import Blog from "./pages/Blog";
 import NotFound from "./pages/NotFound";
+import FoodResults from "./pages/FoodResults";
+import ScanHistories from "./pages/ScanHistories";
+import MyFoodAnalytics from "./pages/MyFoodAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +51,10 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/food-results" element={<FoodResults />} />
+          <Route path="/foot-results" element={<FoodResults />} />
+          <Route path="/scan-histories" element={<ScanHistories />} />
+          <Route path="/my-foot-analytics" element={<MyFoodAnalytics />} />
           <Route path="/plans" element={<Plans />} />
           <Route path="/checkout/success" element={<CheckoutSuccess />} />
           <Route path="/profile" element={<Profile />} />
