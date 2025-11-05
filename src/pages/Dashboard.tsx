@@ -173,60 +173,129 @@ const Dashboard = () => {
               <CardDescription>PNG, JPG, JPEG, HEIC</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="border-2 border-dashed border-primary/30 rounded-lg p-10 cursor-pointer bg-muted/30 text-center">
-                <Upload className="h-14 w-14 text-primary mx-auto mb-4" />
-                <p className="text-lg font-medium mb-2">Upload Your Food Photo</p>
-                <p className="text-sm text-muted-foreground mb-4">Drop an image here or click to browse</p>
-                {!uploadedFile ? (
-                  <Button
-                    onClick={() => {
-                      const input = document.createElement("input");
-                      input.type = "file";
-                      input.accept = "image/png, image/jpeg, image/jpg, image/heic, image/heif";
-                      input.onchange = async () => {
-                        const file = input.files?.[0];
-                        if (!file || !user) return;
-                        try {
-                          const { path, publicUrl, signedUrl } = await uploadFoodImage(file, user.id);
-                          setUploadedFile(file);
-                          setUploadedImageUrl(signedUrl || publicUrl);
-                          setUploadedImagePath(path);
-                        } catch (e) {
-                          console.error(e);
-                          toast({ title: "Error", description: "Failed to upload image.", variant: "destructive" });
-                        }
-                      };
-                      input.click();
-                    }}
-                  >
+              {!uploadedFile ? (
+                <div className="border-2 border-dashed border-primary/30 rounded-lg p-10 cursor-pointer bg-muted/30 text-center hover:border-primary/50 transition-colors"
+                  onClick={() => {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.accept = "image/png, image/jpeg, image/jpg, image/heic, image/heif";
+                    input.onchange = async () => {
+                      const file = input.files?.[0];
+                      if (!file || !user) return;
+                      try {
+                        const { path, publicUrl, signedUrl } = await uploadFoodImage(file, user.id);
+                        setUploadedFile(file);
+                        setUploadedImageUrl(signedUrl || publicUrl);
+                        setUploadedImagePath(path);
+                      } catch (e) {
+                        console.error(e);
+                        toast({ title: "Error", description: "Failed to upload image.", variant: "destructive" });
+                      }
+                    };
+                    input.click();
+                  }}
+                >
+                  <Upload className="h-14 w-14 text-primary mx-auto mb-4" />
+                  <p className="text-lg font-medium mb-2">Upload Your Food Photo</p>
+                  <p className="text-sm text-muted-foreground mb-4">Drop an image here or click to browse</p>
+                  <Button>
                     Choose File
                   </Button>
-                ) : (
-                  <Button
-                    disabled={analyzing}
-                    onClick={async () => {
-                      if (!uploadedImageUrl || !user || !uploadedImagePath) return;
-                      try {
-                        setAnalyzing(true);
-                        const result = await analyzeFood(uploadedImageUrl, servings);
-                        const scanId = await saveScanHistory({ userId: user.id, imagePath: uploadedImagePath, imageUrl: uploadedImageUrl, serving: servings, result: result.analysis });
-                        navigate(`/food-results?id=${scanId}`);
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Image Preview */}
+                  <div className="relative rounded-lg overflow-hidden border-2 border-primary/20 bg-muted/30">
+                    <div className="aspect-video relative">
+                      {uploadedImageUrl ? (
+                        <img 
+                          src={uploadedImageUrl} 
+                          alt="Uploaded food" 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : uploadedFile ? (
+                        <div className="w-full h-full flex items-center justify-center bg-muted">
+                          <Camera className="h-12 w-12 text-muted-foreground" />
+                        </div>
+                      ) : null}
+                      {/* Overlay with change button */}
+                      <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            const input = document.createElement("input");
+                            input.type = "file";
+                            input.accept = "image/png, image/jpeg, image/jpg, image/heic, image/heif";
+                            input.onchange = async () => {
+                              const file = input.files?.[0];
+                              if (!file || !user) return;
+                              try {
+                                const { path, publicUrl, signedUrl } = await uploadFoodImage(file, user.id);
+                                setUploadedFile(file);
+                                setUploadedImageUrl(signedUrl || publicUrl);
+                                setUploadedImagePath(path);
+                              } catch (e) {
+                                console.error(e);
+                                toast({ title: "Error", description: "Failed to upload image.", variant: "destructive" });
+                              }
+                            };
+                            input.click();
+                          }}
+                        >
+                          Change Image
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Analyze Button */}
+                  <div className="flex items-center justify-center gap-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
                         setUploadedFile(null);
                         setUploadedImageUrl(null);
                         setUploadedImagePath(null);
-                        setServings(1);
-                      } catch (e) {
-                        console.error(e);
-                        toast({ title: "Error", description: "Failed to analyze image.", variant: "destructive" });
-                      } finally {
-                        setAnalyzing(false);
-                      }
-                    }}
-                  >
-                    {analyzing ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Analyzing...</>) : ("Analyze Now")}
-                  </Button>
-                )}
-              </div>
+                      }}
+                    >
+                      Remove
+                    </Button>
+                    <Button
+                      disabled={analyzing}
+                      onClick={async () => {
+                        if (!uploadedImageUrl || !user || !uploadedImagePath) return;
+                        try {
+                          setAnalyzing(true);
+                          const result = await analyzeFood(uploadedImageUrl, servings);
+                          const scanId = await saveScanHistory({ userId: user.id, imagePath: uploadedImagePath, imageUrl: uploadedImageUrl, serving: servings, result: result.analysis });
+                          navigate(`/food-results?id=${scanId}`);
+                          setUploadedFile(null);
+                          setUploadedImageUrl(null);
+                          setUploadedImagePath(null);
+                          setServings(1);
+                        } catch (e) {
+                          console.error(e);
+                          toast({ title: "Error", description: "Failed to analyze image.", variant: "destructive" });
+                        } finally {
+                          setAnalyzing(false);
+                        }
+                      }}
+                      className="flex-1"
+                    >
+                      {analyzing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin"/>
+                          Analyzing...
+                        </>
+                      ) : (
+                        "Analyze Now"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
