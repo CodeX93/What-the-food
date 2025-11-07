@@ -131,7 +131,7 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <CardTitle className="text-lg">New Scan</CardTitle>
-                    <CardDescription>Upload food photo</CardDescription>
+                    <CardDescription>Upload Food Photo</CardDescription>
                   </div>
                 </div>
               </CardHeader>
