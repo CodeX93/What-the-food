@@ -50,13 +50,13 @@ const steps = [
 
 const HowItWorks = () => {
   return (
-    <div className="min-h-screen">
+    <div>
       <TopBar />
       <Header />
-      <main>
+      <main className="scroll-snap-proximity">
         {/* Hero Section */}
-        <section className="relative py-20 overflow-hidden bg-gradient-to-br from-primary/10 via-background to-primary/5">
-          <div className="container mx-auto px-4 relative">
+        <section className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-primary/10 via-background to-primary/5 snap-start">
+          <div className="container mx-auto px-4 relative py-12 sm:py-16 md:py-20">
             <div className="max-w-4xl mx-auto text-center">
               <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-hero bg-clip-text text-transparent">
                 How It Works
@@ -72,7 +72,7 @@ const HowItWorks = () => {
         </section>
 
         {/* Timeline Steps Section */}
-        <section className="py-20 bg-background">
+        <section className="h-screen flex items-center justify-center bg-background snap-start overflow-auto">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               <div className="relative">
@@ -142,8 +142,8 @@ const HowItWorks = () => {
         </section>
 
         {/* Benefits Section */}
-        <section className="py-20 bg-muted/30">
-          <div className="container mx-auto px-4">
+        <section className="h-screen flex items-center justify-center bg-muted/30 snap-start">
+          <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
             <div className="max-w-5xl mx-auto">
               <div className="text-center mb-12">
                 <h2 className="text-4xl font-bold mb-4">Why Choose WhatTheFood?</h2>
@@ -188,8 +188,8 @@ const HowItWorks = () => {
         </section>
 
         {/* CTA Section */}
-        <section className="py-20 bg-muted/30">
-          <div className="container mx-auto px-4">
+        <section className="h-screen flex items-center justify-center bg-muted/30 snap-start">
+          <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-4xl font-bold mb-4">Ready to Start Tracking?</h2>
               <p className="text-lg text-muted-foreground mb-8">

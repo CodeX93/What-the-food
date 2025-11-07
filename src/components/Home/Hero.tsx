@@ -42,13 +42,13 @@ const Hero = () => {
     input.click();
   };
   return (
-    <section className="relative min-h-screen flex items-center overflow-hidden bg-white dark:bg-[#000000] snap-start snap-proximity transition-colors duration-300">
+    <section className="relative h-screen flex items-center overflow-hidden bg-white dark:bg-[#000000] snap-start snap-proximity transition-colors duration-300">
       <div className="absolute inset-0 bg-gradient-hero opacity-5 dark:opacity-10" />
       
-      <div className="container mx-auto px-4 sm:px-6 relative w-full z-10 py-8 sm:py-0">
-        <div className="grid lg:grid-cols-2 gap-8 sm:gap-12 items-center max-w-6xl mx-auto">
-          {/* Left Section - Value Proposition */}
-          <div className="text-center lg:text-left">
+      <div className="container mx-auto px-4 relative w-full z-10 py-12 sm:py-16 md:py-20">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-8 sm:gap-12 lg:gap-16">
+          {/* Left Section - Value Proposition (aligned with logo) */}
+          <div className="flex-1 text-center lg:text-left max-w-2xl lg:max-w-none">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight">
               Know What's Really in Your Food
             </h1>
@@ -69,9 +69,9 @@ const Hero = () => {
             </p>
           </div>
 
-          {/* Right Section - Upload Placeholder */}
-          <div className="lg:flex lg:justify-end mt-8 lg:mt-0">
-            <Card className="shadow-strong max-w-lg w-full mx-auto lg:mx-0">
+          {/* Right Section - Upload Placeholder (aligned with profile) */}
+          <div className="flex-1 w-full max-w-lg lg:max-w-xl">
+            <Card className="shadow-strong">
               <CardContent className="p-4 sm:p-6 md:p-8">
                 <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card">
                   <Upload className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />

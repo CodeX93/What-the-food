@@ -72,7 +72,7 @@ const PricingTable = () => {
   };
 
   return (
-    <section className="min-h-screen flex items-center overflow-y-auto relative bg-white dark:bg-[#000000] snap-start snap-proximity transition-colors duration-300">
+    <section className="h-screen flex items-center overflow-y-auto relative bg-white dark:bg-[#000000] snap-start snap-proximity transition-colors duration-300">
       <div className="container mx-auto px-4 sm:px-6 w-full relative z-10 py-8 sm:py-0">
         <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Simple, Transparent Pricing</h2>

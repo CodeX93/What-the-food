@@ -6,10 +6,10 @@ import FAQ from "@/components/Home/FAQ";
 
 const Pricing = () => {
   return (
-    <div className="min-h-screen">
+    <div>
       <TopBar />
       <Header />
-      <main>
+      <main className="scroll-snap-proximity">
         <PricingTable />
         <FAQ />
       </main>

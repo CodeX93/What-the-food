@@ -114,12 +114,21 @@ All colors MUST be HSL.
   html {
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   body {
     @apply bg-background text-foreground;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  #root {
+    min-height: 100vh;
+    overflow-x: hidden;
   }
 }
 

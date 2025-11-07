@@ -77,14 +77,14 @@ const features = [
 
 const Features = () => {
   return (
-    <div className="min-h-screen">
+    <div>
       <TopBar />
       <Header />
-      <main>
+      <main className="scroll-snap-proximity">
         {/* Hero Section */}
-        <section className="relative py-24 overflow-hidden bg-gradient-hero/5">
+        <section className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-hero/5 snap-start">
           <div className="absolute inset-0 bg-gradient-hero opacity-5" />
-          <div className="container mx-auto px-4 relative">
+          <div className="container mx-auto px-4 relative py-12 sm:py-16 md:py-20">
             <div className="max-w-3xl mx-auto text-center">
               <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-hero bg-clip-text text-transparent">
                 Powerful Features for Healthy Living
@@ -105,8 +105,8 @@ const Features = () => {
         </section>
 
         {/* Features Grid */}
-        <section className="py-20">
-          <div className="container mx-auto px-4">
+        <section className="h-screen flex items-center justify-center snap-start overflow-auto">
+          <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
               {features.map((feature, index) => {
                 const IconComponent = feature.icon;
@@ -137,8 +137,8 @@ const Features = () => {
         </section>
 
         {/* CTA Section */}
-        <section className="py-20 bg-muted/30">
-          <div className="container mx-auto px-4">
+        <section className="h-screen flex items-center justify-center bg-muted/30 snap-start">
+          <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
             <div className="max-w-3xl mx-auto text-center">
               <h2 className="text-4xl font-bold mb-4">Ready to Get Started?</h2>
               <p className="text-lg text-muted-foreground mb-8">
