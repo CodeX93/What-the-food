@@ -781,14 +781,41 @@ const FoodResults = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-muted-foreground">Servings</span>
-                      <input
-                        type="number"
-                        className="border rounded-lg px-3 py-2 w-24 text-center font-medium"
-                        min={1}
-                        max={20}
+                      <select
+                        className="border rounded-lg px-3 py-2 w-24 text-center font-medium bg-background"
                         value={servings}
-                        onChange={(e) => setServings(Math.max(1, Math.min(20, parseInt(e.target.value || "1", 10))))}
-                      />
+                        onChange={async (e) => {
+                          const newValue = parseFloat(e.target.value);
+                          setServings(newValue);
+                          
+                          // Update scan history in database
+                          if (id) {
+                            try {
+                              await supabase
+                                .from("food_scans")
+                                .update({ serving: newValue })
+                                .eq("id", id);
+                            } catch (error) {
+                              console.error("Failed to update serving in database:", error);
+                            }
+                          }
+                        }}
+                      >
+                        <option value="0.5">0.5</option>
+                        <option value="1">1</option>
+                        <option value="1.5">1.5</option>
+                        <option value="2">2</option>
+                        <option value="2.5">2.5</option>
+                        <option value="3">3</option>
+                        <option value="3.5">3.5</option>
+                        <option value="4">4</option>
+                        <option value="4.5">4.5</option>
+                        <option value="5">5</option>
+                        <option value="5.5">5.5</option>
+                        <option value="6">6</option>
+                        <option value="6.5">6.5</option>
+                        <option value="7">7</option>
+                      </select>
                     </div>
                   </div>
                 </CardHeader>

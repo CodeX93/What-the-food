@@ -290,7 +290,7 @@ const Dashboard = () => {
                           Analyzing...
                         </>
                       ) : (
-                        "Analyze Now"
+                        "Analyze Food"
                       )}
                     </Button>
                   </div>
