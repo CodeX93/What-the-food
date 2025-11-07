@@ -29,57 +29,5 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     
-    <script type="text/javascript">
-    var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-    // Prevent Tawk from changing the page title
-    (function() {
-      var originalTitle = document.title;
-      var titleElement = document.querySelector('title');
-      
-      // Override document.title setter
-      Object.defineProperty(document, 'title', {
-        get: function() {
-          return titleElement ? titleElement.textContent : '';
-        },
-        set: function(val) {
-          // Block title changes that include message notifications (from Tawk)
-          if (!val.includes('message') && !val.match(/\d+\s*(message|new)/i)) {
-            if (titleElement) {
-              titleElement.textContent = val;
-            }
-            originalTitle = val;
-          }
-        },
-        configurable: true
-      });
-      
-      // Also watch for direct DOM changes to title element
-      if (titleElement) {
-        var observer = new MutationObserver(function(mutations) {
-          mutations.forEach(function(mutation) {
-            var newTitle = titleElement.textContent;
-            if (newTitle.includes('message') || newTitle.match(/\d+\s*(message|new)/i)) {
-              titleElement.textContent = originalTitle;
-            } else {
-              originalTitle = newTitle;
-            }
-          });
-        });
-        observer.observe(titleElement, {
-          childList: true,
-          subtree: true,
-          characterData: true
-        });
-      }
-    })();
-    (function(){
-    var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
-    s1.async=true;
-    s1.src='https://embed.tawk.to/68fd5017511129194ce14d9a/1j8eo1nmv';
-    s1.charset='UTF-8';
-    s1.setAttribute('crossorigin','*');
-    s0.parentNode.insertBefore(s1,s0);
-    })();
-    </script>
   </body>
 </html>

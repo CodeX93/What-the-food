@@ -2,6 +2,7 @@
 // Edge Function: Analyze Food image using Google Gemini and return structured nutrition JSON
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { jsonrepair } from "https://esm.sh/jsonrepair@3";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -154,12 +155,38 @@ If uncertain, estimate reasonable values and keep the JSON valid.`;
     throw new Error(`Gemini error ${resp.status}: ${text}`);
   }
   const data = await resp.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const parts = data?.candidates?.[0]?.content?.parts || [];
+  const text = parts
+    .map((part: any) => part?.text || "")
+    .join("")
+    .trim();
   if (!text) throw new Error("Empty model response");
 
   // Parse JSON response (always JSON format now)
-  const jsonStr = text.trim().replace(/^```(?:json)?/i, "").replace(/```$/, "");
-  const parsed = JSON.parse(jsonStr);
+  let jsonStr = text
+    .replace(/^```(?:json)?/i, "")
+    .replace(/```$/i, "")
+    .trim();
+
+  // Remove leading/trailing backticks that may remain
+  if (jsonStr.startsWith("````")) {
+    jsonStr = jsonStr.slice(4);
+  }
+  if (jsonStr.endsWith("````")) {
+    jsonStr = jsonStr.slice(0, -4);
+  }
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(jsonStr);
+  } catch (parseErr) {
+    try {
+      const repaired = jsonrepair(jsonStr);
+      parsed = JSON.parse(repaired);
+    } catch (repairErr) {
+      throw new Error(`Failed to parse model JSON: ${(repairErr as Error).message}. Raw response: ${jsonStr.slice(0, 400)}`);
+    }
+  }
   
   // Extract insights if present
   const insights = parsed.insights;

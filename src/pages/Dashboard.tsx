@@ -137,7 +137,7 @@ const Dashboard = () => {
               </CardHeader>
             </Card>
 
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/my-foot-analytics") }>
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate("/my-food-analytics") }>
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <div className="p-3 bg-primary/10 rounded-lg">

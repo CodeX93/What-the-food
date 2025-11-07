@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import TawkWidget from "@/components/Integrations/TawkWidget";
 import Index from "./pages/Index";
 import Features from "./pages/Features";
 import HowItWorks from "./pages/HowItWorks";
@@ -42,6 +43,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <TawkWidget />
         <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
@@ -54,7 +56,7 @@ const App = () => (
           <Route path="/food-results" element={<FoodResults />} />
           <Route path="/foot-results" element={<FoodResults />} />
           <Route path="/scan-histories" element={<ScanHistories />} />
-          <Route path="/my-foot-analytics" element={<MyFoodAnalytics />} />
+          <Route path="/my-food-analytics" element={<MyFoodAnalytics />} />
           <Route path="/plans" element={<Plans />} />
           <Route path="/checkout/success" element={<CheckoutSuccess />} />
           <Route path="/profile" element={<Profile />} />
