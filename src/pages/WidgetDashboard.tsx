@@ -26,6 +26,7 @@ import {
   Edit,
   Save,
   Bookmark,
+  AlertTriangle,
 } from "lucide-react";
 import { getUrl } from "@/utils/url";
 
@@ -61,6 +62,7 @@ const WidgetDashboard = () => {
   // Site management state
   const [newSiteUrl, setNewSiteUrl] = useState("");
   const [newSiteName, setNewSiteName] = useState("");
+  const [siteLimitExceeded, setSiteLimitExceeded] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -195,14 +197,18 @@ const WidgetDashboard = () => {
         .eq("widget_id", widget.widget_id)
         .order("created_at", { ascending: false })
         .then(({ data: sites }) => {
-          setWidgetSites(sites || []);
+          const userSites = sites || [];
+          setWidgetSites(userSites);
+          evaluateSiteLimit(userSites.length);
         })
         .catch((error) => {
           console.error("Error loading widget sites:", error);
           setWidgetSites([]);
+          evaluateSiteLimit(0);
         });
     } else {
       setWidgetSites([]);
+      evaluateSiteLimit(0);
     }
   };
 
@@ -216,6 +222,7 @@ const WidgetDashboard = () => {
     setCustomText("");
     setBrandingVisible(true);
     setOriginalBrandingVisible(true);
+    evaluateSiteLimit(0);
     // Switch to settings tab when creating
     setActiveTab("settings");
   };
@@ -370,26 +377,6 @@ const WidgetDashboard = () => {
   const handleAddSite = async () => {
     if (!newSiteUrl || !currentWidget) return;
 
-    // Check site limit
-    const currentSiteCount = widgetSites.length;
-    const siteLimit =
-      subscription?.subscription_type === "free"
-        ? 1
-        : subscription?.subscription_type === "plan1"
-        ? 1
-        : subscription?.subscription_type === "plan2"
-        ? 3
-        : Infinity;
-
-    if (currentSiteCount >= siteLimit) {
-      toast({
-        title: "Site Limit Reached",
-        description: `Your plan allows ${siteLimit} site(s). Please upgrade to add more sites.`,
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       const { data, error } = await supabase
         .from("widget_sites")
@@ -407,19 +394,54 @@ const WidgetDashboard = () => {
       setWidgetSites([...widgetSites, data]);
       setNewSiteUrl("");
       setNewSiteName("");
+      evaluateSiteLimit(widgetSites.length + 1);
       toast({
         title: "Success!",
         description: "Site added successfully.",
       });
     } catch (error: any) {
       console.error("Error adding site:", error);
+      evaluateSiteLimit(widgetSites.length);
       toast({
         title: "Error",
-        description: "Failed to add site.",
+        description: error?.message || "Failed to add site.",
         variant: "destructive",
       });
     }
   };
+
+  const evaluateSiteLimit = (currentSiteCount: number) => {
+    const limitFromSubscription = subscription?.site_limit;
+
+    if (limitFromSubscription === null) {
+      setSiteLimitExceeded(false);
+      return;
+    }
+
+    const fallbackLimit =
+      subscription?.subscription_type === "plan2"
+        ? 3
+        : subscription?.subscription_type === "plan1" || subscription?.subscription_type === "free"
+        ? 1
+        : subscription?.subscription_type === "plan3"
+        ? null
+        : 1;
+
+    const effectiveLimit =
+      typeof limitFromSubscription === "number" ? limitFromSubscription : fallbackLimit ?? undefined;
+
+    if (effectiveLimit === undefined || effectiveLimit === null) {
+      setSiteLimitExceeded(false);
+      return;
+    }
+
+    setSiteLimitExceeded(currentSiteCount >= effectiveLimit);
+  };
+
+  useEffect(() => {
+    evaluateSiteLimit(widgetSites.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscription, widgetSites.length]);
 
   const handleDeleteSite = async (siteId: string) => {
     try {
@@ -891,7 +913,16 @@ const WidgetDashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-3">
+                    {siteLimitExceeded && (
+                      <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary">
+                        <AlertTriangle className="h-4 w-4" />
+                        <span>
+                          Site limit reached for your current plan. Upgrade to add more sites.
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
                     <Input
                       placeholder="Site URL (e.g., https://example.com)"
                       value={newSiteUrl}
@@ -904,10 +935,11 @@ const WidgetDashboard = () => {
                       onChange={(e) => setNewSiteName(e.target.value)}
                       className="flex-1"
                     />
-                    <Button onClick={handleAddSite} disabled={!currentWidget}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Site
-                    </Button>
+                      <Button onClick={handleAddSite} disabled={!currentWidget || siteLimitExceeded}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Site
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="space-y-2">

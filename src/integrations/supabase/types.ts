@@ -230,7 +230,7 @@ export type Database = {
           current_period_end: string | null
           id: string
           is_active: boolean
-          site_limit: number
+          site_limit: number | null
           stripe_customer_id: string | null
           stripe_price_id: string | null
           stripe_subscription_id: string | null
@@ -244,7 +244,7 @@ export type Database = {
           current_period_end?: string | null
           id?: string
           is_active?: boolean
-          site_limit?: number
+          site_limit?: number | null
           stripe_customer_id?: string | null
           stripe_price_id?: string | null
           stripe_subscription_id?: string | null
@@ -258,7 +258,7 @@ export type Database = {
           current_period_end?: string | null
           id?: string
           is_active?: boolean
-          site_limit?: number
+          site_limit?: number | null
           stripe_customer_id?: string | null
           stripe_price_id?: string | null
           stripe_subscription_id?: string | null

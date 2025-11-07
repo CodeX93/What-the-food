@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { scaleNutrients, type FoodAnalysis, getPersonalizedInsights, getImageUrl } from "@/utils/foodScan";
-import { Loader2, Salad, Share2, ArrowLeft, FileDown, Shield, Wand2, TrendingUp, Lightbulb, CheckCircle2, Flame, Beef, Apple, Droplet, Wheat, Candy, Zap, Target, Heart, Sparkles } from "lucide-react";
+import { hasActivePremiumSubscription } from "@/utils/subscription";
+import { Loader2, Salad, Share2, ArrowLeft, FileDown, Shield, Wand2, TrendingUp, Lightbulb, CheckCircle2, Flame, Beef, Apple, Droplet, Wheat, Candy, Zap, Target, Heart, Sparkles, Crown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const useQuery = () => new URLSearchParams(useLocation().search);
@@ -32,6 +33,8 @@ const FoodResults = () => {
   const [upgradeRequired, setUpgradeRequired] = useState(false);
   const [savingServings, setSavingServings] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
+  const [checkingPremium, setCheckingPremium] = useState(true);
   const { toast } = useToast();
 
   const handleExportPdf = async () => {
@@ -536,7 +539,23 @@ const FoodResults = () => {
         
         // Check authentication status
         const { data: { session } } = await supabase.auth.getSession();
-        setIsAuthenticated(!!session?.user);
+        const user = session?.user;
+        setIsAuthenticated(!!user);
+        if (user) {
+          try {
+            setCheckingPremium(true);
+            const premium = await hasActivePremiumSubscription(user.id);
+            setHasPremiumAccess(premium);
+          } catch (error) {
+            console.error("Failed to determine premium status", error);
+            setHasPremiumAccess(false);
+          } finally {
+            setCheckingPremium(false);
+          }
+        } else {
+          setHasPremiumAccess(false);
+          setCheckingPremium(false);
+        }
         
         const { data, error } = await supabase
           .from("food_scans")
@@ -967,7 +986,7 @@ const FoodResults = () => {
                         <CardDescription>Demographic-aware insights tailored to your goals</CardDescription>
                       </div>
                     </div>
-                    {upgradeRequired && (
+                    {(upgradeRequired || !hasPremiumAccess) && (
                       <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full flex items-center gap-1 border border-primary/20">
                         <Sparkles className="h-3 w-3" /> Premium
                       </span>
@@ -975,157 +994,207 @@ const FoodResults = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Age</label>
-                      <input type="number" placeholder="e.g., 25" min={1} className="border rounded-lg px-3 py-2 w-full text-sm" value={age as any} onChange={(e) => setAge(e.target.value ? parseInt(e.target.value, 10) : "")} />
+                  {checkingPremium ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Gender</label>
-                      <select className="border rounded-lg px-3 py-2 w-full text-sm" value={gender} onChange={(e) => setGender(e.target.value)}>
-                        <option value="">Select</option>
-                        <option value="female">Female</option>
-                        <option value="male">Male</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Activity</label>
-                      <select className="border rounded-lg px-3 py-2 w-full text-sm" value={activity} onChange={(e) => setActivity(e.target.value)}>
-                        <option value="">Select</option>
-                        <option value="sedentary">Sedentary</option>
-                        <option value="light">Light</option>
-                        <option value="moderate">Moderate</option>
-                        <option value="active">Active</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1 block">Goal</label>
-                      <select className="border rounded-lg px-3 py-2 w-full text-sm" value={goal} onChange={(e) => setGoal(e.target.value)}>
-                        <option value="">Select</option>
-                        <option value="weight_loss">Weight loss</option>
-                        <option value="muscle_gain">Muscle gain</option>
-                        <option value="maintenance">Maintenance</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      disabled={insightsLoading || !age || !gender || !activity || !goal}
-                      onClick={async () => {
-                        if (!id) return;
-                        try {
-                          setInsightsLoading(true);
-                          setUpgradeRequired(false);
-                          const res = await getPersonalizedInsights({ scanId: id, age: age as any, gender, activity, goal, optimize: false });
-                          if (res.upgrade) { setUpgradeRequired(true); setInsightsText(""); return; }
-                          setInsightsText(res.insights || "");
-                        } finally {
-                          setInsightsLoading(false);
-                        }
-                      }}
-                    >
-                      {insightsLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin"/> : <Heart className="h-4 w-4 mr-2"/>} Generate Insights
-                    </Button>
-                    <Button
-                      variant="outline"
-                      disabled={insightsLoading || !age || !gender || !activity || !goal}
-                      onClick={async () => {
-                        if (!id) return;
-                        try {
-                          setInsightsLoading(true);
-                          setUpgradeRequired(false);
-                          const res = await getPersonalizedInsights({ scanId: id, age: age as any, gender, activity, goal, optimize: true });
-                          if (res.upgrade) { setUpgradeRequired(true); setInsightsText(""); return; }
-                          setInsightsText(res.insights || "");
-                        } finally {
-                          setInsightsLoading(false);
-                        }
-                      }}
-                    >
-                      <Wand2 className="h-4 w-4 mr-2"/> Make It Healthier
-                    </Button>
-                  </div>
-
-                  {upgradeRequired && (
-                    <div className="mt-6 p-4 rounded-lg border border-primary/20 bg-primary/5">
-                      <div className="flex items-start gap-3">
-                        <Shield className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium mb-1">Premium Feature</p>
-                          <p className="text-sm text-muted-foreground mb-3">
-                            Upgrade to Premium to unlock personalized insights and smart substitutions tailored to your goals.
+                  ) : !hasPremiumAccess ? (
+                    <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-8 text-center">
+                      <div className="absolute inset-0 pointer-events-none opacity-40" aria-hidden>
+                        <div className="absolute -top-10 -right-10 h-32 w-32 bg-primary/30 blur-3xl" />
+                        <div className="absolute -bottom-12 -left-12 h-40 w-40 bg-emerald-400/20 blur-3xl" />
+                      </div>
+                      <div className="relative flex flex-col items-center gap-4">
+                        <div className="p-4 rounded-2xl bg-primary/15 border border-primary/30 shadow-inner">
+                          <Crown className="h-8 w-8 text-primary" />
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="text-2xl font-semibold tracking-tight">Get Premium to unlock this section</h3>
+                          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                            Personalized Health Context provides AI-powered wellness guidance tailored to your unique goals. Upgrade to reveal insights crafted specifically for you.
                           </p>
-                          <Button size="sm" onClick={() => navigate("/plans")}>
-                            <Sparkles className="h-4 w-4 mr-2" /> Upgrade Now
+                        </div>
+                        <div className="flex flex-wrap justify-center gap-3">
+                          {!isAuthenticated && (
+                            <Button variant="outline" onClick={() => navigate("/auth")}>
+                              Sign In
+                            </Button>
+                          )}
+                          <Button className="bg-primary hover:bg-primary-hover" onClick={() => navigate("/plans")}>
+                            <Sparkles className="h-4 w-4 mr-2" /> Explore Premium
                           </Button>
+                        </div>
+                        <div className="mt-6 grid sm:grid-cols-3 gap-4 text-left w-full max-w-3xl">
+                          <div className="rounded-xl border border-primary/10 bg-background/60 p-4">
+                            <h4 className="text-sm font-semibold mb-1 flex items-center gap-2"><Heart className="h-4 w-4 text-primary" /> Tailored Guidance</h4>
+                            <p className="text-xs text-muted-foreground">Receive context-aware advice that adapts to your age, activity level, and health goals.</p>
+                          </div>
+                          <div className="rounded-xl border border-primary/10 bg-background/60 p-4">
+                            <h4 className="text-sm font-semibold mb-1 flex items-center gap-2"><Lightbulb className="h-4 w-4 text-primary" /> Smart Substitutions</h4>
+                            <p className="text-xs text-muted-foreground">Unlock creative ingredient swaps to make every meal healthier without compromising taste.</p>
+                          </div>
+                          <div className="rounded-xl border border-primary/10 bg-background/60 p-4">
+                            <h4 className="text-sm font-semibold mb-1 flex items-center gap-2"><Shield className="h-4 w-4 text-primary" /> Premium Dashboard</h4>
+                            <p className="text-xs text-muted-foreground">Track your progress with advanced analytics and save personalized recommendations.</p>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  )}
-
-                  {parsedInsights && (
-                    <div className="mt-6 space-y-6">
-                      {/* Personalized Health Context */}
-                      {parsedInsights.healthContext && (
-                        <div className="rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-5">
-                          <div className="flex items-start gap-4">
-                            <div className="p-2 rounded-lg bg-primary/20 flex-shrink-0">
-                              <TrendingUp className="h-6 w-6 text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
-                                <h4 className="font-bold text-lg">Personalized Health Context</h4>
-                                {parsedInsights.demographics && (
-                                  <span className="text-xs font-medium text-muted-foreground bg-background px-3 py-1 rounded-full border border-primary/20">
-                                    {parsedInsights.demographics}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="prose prose-sm max-w-none">
-                                <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap break-words">
-                                  {parsedInsights.healthContext}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Smart Substitution Suggestions */}
-                      {parsedInsights.substitutions.length > 0 && (
+                  ) : (
+                    <>
+                      <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                         <div>
-                          <div className="flex items-center gap-2 mb-4">
-                            <div className="p-2 rounded-lg bg-primary/10">
-                              <Lightbulb className="h-5 w-5 text-primary" />
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">Age</label>
+                          <input type="number" placeholder="e.g., 25" min={1} className="border rounded-lg px-3 py-2 w-full text-sm" value={age as any} onChange={(e) => setAge(e.target.value ? parseInt(e.target.value, 10) : "")} />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">Gender</label>
+                          <select className="border rounded-lg px-3 py-2 w-full text-sm" value={gender} onChange={(e) => setGender(e.target.value)}>
+                            <option value="">Select</option>
+                            <option value="female">Female</option>
+                            <option value="male">Male</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">Activity</label>
+                          <select className="border rounded-lg px-3 py-2 w-full text-sm" value={activity} onChange={(e) => setActivity(e.target.value)}>
+                            <option value="">Select</option>
+                            <option value="sedentary">Sedentary</option>
+                            <option value="light">Light</option>
+                            <option value="moderate">Moderate</option>
+                            <option value="active">Active</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">Goal</label>
+                          <select className="border rounded-lg px-3 py-2 w-full text-sm" value={goal} onChange={(e) => setGoal(e.target.value)}>
+                            <option value="">Select</option>
+                            <option value="weight_loss">Weight loss</option>
+                            <option value="muscle_gain">Muscle gain</option>
+                            <option value="maintenance">Maintenance</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          disabled={insightsLoading || !age || !gender || !activity || !goal}
+                          onClick={async () => {
+                            if (!id) return;
+                            try {
+                              setInsightsLoading(true);
+                              setUpgradeRequired(false);
+                              const res = await getPersonalizedInsights({ scanId: id, age: age as any, gender, activity, goal, optimize: false });
+                              if (res.upgrade) { setUpgradeRequired(true); setInsightsText(""); return; }
+                              setInsightsText(res.insights || "");
+                            } finally {
+                              setInsightsLoading(false);
+                            }
+                          }}
+                        >
+                          {insightsLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin"/> : <Heart className="h-4 w-4 mr-2"/>} Generate Insights
+                        </Button>
+                        <Button
+                          variant="outline"
+                          disabled={insightsLoading || !age || !gender || !activity || !goal}
+                          onClick={async () => {
+                            if (!id) return;
+                            try {
+                              setInsightsLoading(true);
+                              setUpgradeRequired(false);
+                              const res = await getPersonalizedInsights({ scanId: id, age: age as any, gender, activity, goal, optimize: true });
+                              if (res.upgrade) { setUpgradeRequired(true); setInsightsText(""); return; }
+                              setInsightsText(res.insights || "");
+                            } finally {
+                              setInsightsLoading(false);
+                            }
+                          }}
+                        >
+                          <Wand2 className="h-4 w-4 mr-2"/> Make It Healthier
+                        </Button>
+                      </div>
+
+                      {upgradeRequired && (
+                        <div className="mt-6 p-4 rounded-lg border border-primary/20 bg-primary/5">
+                          <div className="flex items-start gap-3">
+                            <Shield className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium mb-1">Premium Feature</p>
+                              <p className="text-sm text-muted-foreground mb-3">
+                                Upgrade to Premium to unlock personalized insights and smart substitutions tailored to your goals.
+                              </p>
+                              <Button size="sm" onClick={() => navigate("/plans")}>
+                                <Sparkles className="h-4 w-4 mr-2" /> Upgrade Now
+                              </Button>
                             </div>
-                            <h4 className="font-bold text-lg">Smart Substitution Suggestions</h4>
-                          </div>
-                          <div className="grid md:grid-cols-2 gap-4">
-                            {parsedInsights.substitutions.map((sub, idx) => (
-                              <div key={idx} className="flex items-start gap-3 p-4 rounded-lg border-2 bg-gradient-to-br from-muted/50 to-muted/30 hover:border-primary/30 transition-colors">
-                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                  <CheckCircle2 className="h-5 w-5 text-primary" />
-                                </div>
-                                <div className="flex-1">
-                                  {sub.title && (
-                                    <h5 className="font-semibold mb-2 text-base">{sub.title}</h5>
-                                  )}
-                                  <p className="text-sm text-muted-foreground leading-relaxed">{sub.description}</p>
-                                </div>
-                              </div>
-                            ))}
                           </div>
                         </div>
                       )}
 
-                      {/* Fallback: Show raw text if parsing didn't work */}
-                      {!parsedInsights.healthContext && !parsedInsights.substitutions.length && insightsText && (
-                        <div className="rounded-lg border p-4 bg-muted/30">
-                          <div className="whitespace-pre-wrap text-sm leading-relaxed">{insightsText}</div>
+                      {parsedInsights && (
+                        <div className="mt-6 space-y-6">
+                          {/* Personalized Health Context */}
+                          {parsedInsights.healthContext && (
+                            <div className="rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-5">
+                              <div className="flex items-start gap-4">
+                                <div className="p-2 rounded-lg bg-primary/20 flex-shrink-0">
+                                  <TrendingUp className="h-6 w-6 text-primary" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+                                    <h4 className="font-bold text-lg">Personalized Health Context</h4>
+                                    {parsedInsights.demographics && (
+                                      <span className="text-xs font-medium text-muted-foreground bg-background px-3 py-1 rounded-full border border-primary/20">
+                                        {parsedInsights.demographics}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="prose prose-sm max-w-none">
+                                    <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap break-words">
+                                      {parsedInsights.healthContext}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Smart Substitution Suggestions */}
+                          {parsedInsights.substitutions.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-4">
+                                <div className="p-2 rounded-lg bg-primary/10">
+                                  <Lightbulb className="h-5 w-5 text-primary" />
+                                </div>
+                                <h4 className="font-bold text-lg">Smart Substitution Suggestions</h4>
+                              </div>
+                              <div className="grid md:grid-cols-2 gap-4">
+                                {parsedInsights.substitutions.map((sub, idx) => (
+                                  <div key={idx} className="flex items-start gap-3 p-4 rounded-lg border-2 bg-gradient-to-br from-muted/50 to-muted/30 hover:border-primary/30 transition-colors">
+                                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div className="flex-1">
+                                      {sub.title && (
+                                        <h5 className="font-semibold mb-2 text-base">{sub.title}</h5>
+                                      )}
+                                      <p className="text-sm text-muted-foreground leading-relaxed">{sub.description}</p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Fallback: Show raw text if parsing didn't work */}
+                          {!parsedInsights.healthContext && !parsedInsights.substitutions.length && insightsText && (
+                            <div className="rounded-lg border p-4 bg-muted/30">
+                              <div className="whitespace-pre-wrap text-sm leading-relaxed">{insightsText}</div>
+                            </div>
+                          )}
                         </div>
                       )}
-                    </div>
+                    </>
                   )}
                 </CardContent>
               </Card>

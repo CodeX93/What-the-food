@@ -696,11 +696,13 @@ const Profile = () => {
 
                       {/* Enhanced Plan Details */}
                       <div className="space-y-3">
-                        {widgetSubscription.site_limit && (
+                        {widgetSubscription.site_limit !== undefined && (
                           <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-primary/10 hover:border-primary/20 transition-all">
                             <p className="text-xs text-muted-foreground mb-2 font-medium">Site Limit</p>
                             <p className="font-bold text-lg">
-                              {widgetSubscription.site_limit === 999999 ? 'Unlimited' : widgetSubscription.site_limit} {widgetSubscription.site_limit === 1 ? 'site' : 'sites'}
+                              {widgetSubscription.site_limit === null
+                                ? 'Unlimited'
+                                : `${widgetSubscription.site_limit} ${widgetSubscription.site_limit === 1 ? 'site' : 'sites'}`}
                             </p>
                           </div>
                         )}

@@ -6,13 +6,14 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeFood, saveScanHistory, uploadFoodImage } from "@/utils/foodScan";
 import { getRemainingFreeScans, decrementFreeScan, hasFreeScanAvailable, resetFreeScans } from "@/utils/freeScanLimit";
+import { hasActivePremiumSubscription } from "@/utils/subscription";
 import { useToast } from "@/hooks/use-toast";
 
 const Hero = () => {
   const [uploading, setUploading] = useState(false);
   const [remainingScans, setRemainingScans] = useState<number>(5);
   const [user, setUser] = useState<any>(null);
-  const [isPremium, setIsPremium] = useState(false);
+  const [isPremium, setIsPremium] = useState<boolean | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -22,26 +23,25 @@ const Hero = () => {
     // Check authentication and premium status
     const checkAuthAndScans = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        // Check if user is premium
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("subscription_status")
-          .eq("id", session.user.id)
-          .single();
-        
-        const premium = profile?.subscription_status === "active";
-        setIsPremium(premium);
-        
-        // Reset free scan limits for authenticated premium users
-        if (premium) {
-          resetFreeScans();
+      const authUser = session?.user ?? null;
+      setUser(authUser);
+
+      if (authUser) {
+        try {
+          setIsPremium(null);
+          const premium = await hasActivePremiumSubscription(authUser.id);
+          setIsPremium(premium);
+          if (premium) {
+            resetFreeScans();
+          }
+        } catch (error) {
+          console.error("Failed to determine premium status", error);
+          setIsPremium(false);
         }
+      } else {
+        setIsPremium(false);
       }
-      
-      // Update remaining scans display
+
       setRemainingScans(getRemainingFreeScans());
     };
     
@@ -190,8 +190,10 @@ const Hero = () => {
             </div>
             <p className="text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6">
               {user ? (
-                isPremium ? (
-                  "Unlimited scans available"
+                isPremium === null ? (
+                  "Checking benefits..."
+                ) : isPremium ? (
+                  "Unlimited scans per day"
                 ) : (
                   "3 scans per day for free users"
                 )
