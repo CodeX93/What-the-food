@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { scaleNutrients, type FoodAnalysis, getPersonalizedInsights, getImageUrl } from "@/utils/foodScan";
 import { Loader2, Salad, Share2, ArrowLeft, FileDown, Shield, Wand2, TrendingUp, Lightbulb, CheckCircle2, Flame, Beef, Apple, Droplet, Wheat, Candy, Zap, Target, Heart, Sparkles } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const useQuery = () => new URLSearchParams(useLocation().search);
 
@@ -17,6 +18,7 @@ const FoodResults = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [servings, setServings] = useState(1);
+  const [savedServings, setSavedServings] = useState(1);
   const [imageUrl, setImageUrl] = useState<string>("");
   const [imagePath, setImagePath] = useState<string>("");
   const [baseServing, setBaseServing] = useState<number>(1);
@@ -28,6 +30,9 @@ const FoodResults = () => {
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsText, setInsightsText] = useState<string>("");
   const [upgradeRequired, setUpgradeRequired] = useState(false);
+  const [savingServings, setSavingServings] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { toast } = useToast();
 
   const handleExportPdf = async () => {
     if (!analysis) return;
@@ -528,6 +533,11 @@ const FoodResults = () => {
           navigate("/dashboard");
           return;
         }
+        
+        // Check authentication status
+        const { data: { session } } = await supabase.auth.getSession();
+        setIsAuthenticated(!!session?.user);
+        
         const { data, error } = await supabase
           .from("food_scans")
           .select("image_url, image_path, serving, result_json")
@@ -539,6 +549,7 @@ const FoodResults = () => {
         }
         setBaseServing(data.serving || 1);
         setServings(data.serving || 1);
+        setSavedServings(data.serving || 1);
         setAnalysis(data.result_json as FoodAnalysis);
         setImagePath(data.image_path || "");
         // Always generate fresh signed URL from image_path (never expires)
@@ -784,21 +795,9 @@ const FoodResults = () => {
                       <select
                         className="border rounded-lg px-3 py-2 w-24 text-center font-medium bg-background"
                         value={servings}
-                        onChange={async (e) => {
+                        onChange={(e) => {
                           const newValue = parseFloat(e.target.value);
                           setServings(newValue);
-                          
-                          // Update scan history in database
-                          if (id) {
-                            try {
-                              await supabase
-                                .from("food_scans")
-                                .update({ serving: newValue })
-                                .eq("id", id);
-                            } catch (error) {
-                              console.error("Failed to update serving in database:", error);
-                            }
-                          }
                         }}
                       >
                         <option value="0.5">0.5</option>
@@ -816,6 +815,49 @@ const FoodResults = () => {
                         <option value="6.5">6.5</option>
                         <option value="7">7</option>
                       </select>
+                      {isAuthenticated && servings !== savedServings && (
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            if (!id) return;
+                            try {
+                              setSavingServings(true);
+                              const { error } = await supabase
+                                .from("food_scans")
+                                .update({ serving: servings })
+                                .eq("id", id);
+                              
+                              if (error) {
+                                console.error("Failed to update serving in database:", error);
+                                toast({
+                                  title: "Error",
+                                  description: `Failed to save: ${error.message}`,
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+                              
+                              setSavedServings(servings);
+                              toast({
+                                title: "Servings saved",
+                                description: "Your serving size has been updated successfully.",
+                              });
+                            } catch (error: any) {
+                              console.error("Failed to update serving in database:", error);
+                              toast({
+                                title: "Error",
+                                description: error?.message || "Failed to save serving size. Please try again.",
+                                variant: "destructive",
+                              });
+                            } finally {
+                              setSavingServings(false);
+                            }
+                          }}
+                          disabled={savingServings}
+                        >
+                          {savingServings ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
