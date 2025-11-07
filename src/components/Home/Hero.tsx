@@ -2,15 +2,65 @@ import { Button } from "@/components/ui/button";
 import { Upload, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeFood, saveScanHistory, uploadFoodImage } from "@/utils/foodScan";
+import { getRemainingFreeScans, decrementFreeScan, hasFreeScanAvailable, resetFreeScans } from "@/utils/freeScanLimit";
+import { useToast } from "@/hooks/use-toast";
 
 const Hero = () => {
   const [uploading, setUploading] = useState(false);
+  const [remainingScans, setRemainingScans] = useState<number>(5);
+  const [user, setUser] = useState<any>(null);
+  const [isPremium, setIsPremium] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // Check authentication and premium status
+    const checkAuthAndScans = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        // Check if user is premium
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("subscription_status")
+          .eq("id", session.user.id)
+          .single();
+        
+        const premium = profile?.subscription_status === "active";
+        setIsPremium(premium);
+        
+        // Reset free scan limits for authenticated premium users
+        if (premium) {
+          resetFreeScans();
+        }
+      }
+      
+      // Update remaining scans display
+      setRemainingScans(getRemainingFreeScans());
+    };
+    
+    checkAuthAndScans();
+    
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      checkAuthAndScans();
+    });
+    
+    return () => subscription.unsubscribe();
+  }, []);
 
   const onChooseFile = async () => {
+    // Check if user needs to register (no auth and no free scans)
+    if (!user && !hasFreeScanAvailable()) {
+      navigate("/auth");
+      return;
+    }
+
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/png, image/jpeg, image/jpg, image/heic, image/heif";
@@ -19,22 +69,72 @@ const Hero = () => {
       if (!file) return;
       try {
         setUploading(true);
+        
+        // Get user session
         const { data: { session } } = await supabase.auth.getSession();
         const userId = session?.user?.id;
+        
+        // If not authenticated, check free scan limit
         if (!userId) {
-          navigate("/auth");
-          return;
+          if (!hasFreeScanAvailable()) {
+            navigate("/auth");
+            return;
+          }
+          
+          // For non-authenticated users, create a temporary user ID for storage
+          const tempUserId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          
+          // Upload to Storage with temp ID
+          const { path, publicUrl, signedUrl } = await uploadFoodImage(file, tempUserId);
+          
+          // Analyze via Edge Function (default serving 1)
+          const analysis = await analyzeFood(signedUrl || publicUrl, 1);
+          
+          // Decrement free scan count
+          const newCount = decrementFreeScan();
+          setRemainingScans(newCount);
+          
+          // Save history with temp user (won't be retrievable later, just for current session)
+          const scanId = await saveScanHistory({ 
+            userId: tempUserId, 
+            imagePath: path, 
+            imageUrl: signedUrl || publicUrl, 
+            serving: 1, 
+            result: analysis.analysis 
+          });
+          
+          toast({
+            title: "Scan complete!",
+            description: `${newCount} free scan${newCount !== 1 ? 's' : ''} remaining. Sign up to save your history!`,
+          });
+          
+          navigate(`/food-results?id=${scanId}`);
+        } else {
+          // Authenticated user flow
+          // Upload to Storage
+          const { path, publicUrl, signedUrl } = await uploadFoodImage(file, userId);
+          
+          // Analyze via Edge Function (default serving 1)
+          const analysis = await analyzeFood(signedUrl || publicUrl, 1);
+          
+          // Save history and open results page
+          const scanId = await saveScanHistory({ 
+            userId, 
+            imagePath: path, 
+            imageUrl: signedUrl || publicUrl, 
+            serving: 1, 
+            result: analysis.analysis 
+          });
+          
+          navigate(`/food-results?id=${scanId}`);
         }
-        // Upload to Storage
-        const { path, publicUrl, signedUrl } = await uploadFoodImage(file, userId);
-        // Analyze via Edge Function (default serving 1)
-        const analysis = await analyzeFood(signedUrl || publicUrl, 1);
-        // Save history and open results page
-        const scanId = await saveScanHistory({ userId, imagePath: path, imageUrl: signedUrl || publicUrl, serving: 1, result: analysis });
-        navigate(`/food-results?id=${scanId}`);
-      } catch (e) {
+      } catch (e: any) {
         console.error("Hero upload error", e);
-        alert("Failed to analyze image. Please try again.");
+        toast({
+          title: "Error",
+          description: e?.message || "Failed to analyze image. Please try again.",
+          variant: "destructive",
+        });
       } finally {
         setUploading(false);
       }
@@ -65,7 +165,17 @@ const Hero = () => {
               </Button>
             </div>
             <p className="text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6">
-              5 free scans available • No signup required
+              {user ? (
+                isPremium ? (
+                  "Unlimited scans available"
+                ) : (
+                  "3 scans per day for free users"
+                )
+              ) : (
+                <>
+                  {remainingScans} free scan{remainingScans !== 1 ? 's' : ''} available • No signup required
+                </>
+              )}
             </p>
           </div>
 
