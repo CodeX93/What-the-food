@@ -107,7 +107,7 @@ export function WidgetLanding() {
     };
 
     checkSubscription();
-  }, [router]);
+  }, [router, supabaseClient, toast]);
 
   return (
     <main className="overflow-x-hidden bg-white dark:bg-[#000000] transition-colors duration-300">
