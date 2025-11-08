@@ -74,8 +74,8 @@ const features = [
 
 export default function FeaturesPage() {
   return (
-    <div className="scroll-snap-proximity overflow-y-auto overflow-x-hidden">
-      <section className="relative h-screen flex items-center justify-center overflow-hidden bg-gradient-hero/5 snap-start">
+    <div className="scroll-snap-proximity overflow-x-hidden">
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-hero/5 snap-start">
         <div className="absolute inset-0 bg-gradient-hero opacity-5" />
         <div className="container mx-auto px-4 relative py-12 sm:py-16 md:py-20">
           <div className="max-w-3xl mx-auto text-center">
@@ -98,7 +98,7 @@ export default function FeaturesPage() {
         </div>
       </section>
 
-      <section className="h-screen flex items-center justify-center snap-start overflow-auto">
+      <section className="min-h-screen flex items-center justify-center snap-start">
         <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
             {features.map((feature, index) => {
@@ -129,7 +129,7 @@ export default function FeaturesPage() {
         </div>
       </section>
 
-      <section className="h-screen flex items-center justify-center bg-muted/30 snap-start">
+      <section className="min-h-screen flex items-center justify-center bg-muted/30 snap-start">
         <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-4xl font-bold mb-4">Ready to Get Started?</h2>
