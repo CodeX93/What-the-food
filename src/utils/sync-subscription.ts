@@ -11,13 +11,17 @@ export async function syncSubscriptionToProfile(userId?: string): Promise<boolea
     if (!session?.user) return false;
 
     const targetUserId = userId || session.user.id;
+    const supabaseClient = supabase as any;
 
     // Get subscription from platform_subscriptions
-    const { data: subscription, error: subError } = await supabase
-      .from("platform_subscriptions" as any)
+    const { data: subscription, error: subError } = await supabaseClient
+      .from("platform_subscriptions")
       .select("id, subscription_type, platform_plan_id")
       .eq("user_id", targetUserId)
-      .maybeSingle() as { data: { id: string; subscription_type: string; platform_plan_id: string | null } | null; error: any };
+      .maybeSingle() as {
+        data: { id: string; subscription_type: string; platform_plan_id: string | null } | null;
+        error: any;
+      };
 
     if (subError) {
       console.error("Error fetching subscription:", subError);
@@ -27,7 +31,7 @@ export async function syncSubscriptionToProfile(userId?: string): Promise<boolea
 
     if (!subscription) {
       // No subscription found, set profile to free
-      const { error: profileError } = await supabase
+      const { error: profileError } = await supabaseClient
         .from("profiles")
         .update({
           platform_subscription_id: null,
@@ -45,7 +49,7 @@ export async function syncSubscriptionToProfile(userId?: string): Promise<boolea
     }
 
     // Update profile with subscription data
-    const { error: profileError } = await supabase
+    const { error: profileError } = await supabaseClient
       .from("profiles")
       .update({
         platform_subscription_id: subscription.id,

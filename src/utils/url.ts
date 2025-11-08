@@ -4,7 +4,7 @@
  */
 export const getAppUrl = (): string => {
   // Check for environment variable first (for production)
-  const envUrl = import.meta.env.VITE_APP_URL;
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL;
   
   if (envUrl) {
     // Clean and validate the URL
@@ -25,10 +25,10 @@ export const getAppUrl = (): string => {
         new URL(cleanUrl);
         return cleanUrl;
       } else {
-        console.warn('VITE_APP_URL does not start with http:// or https://, using window.location.origin');
+      console.warn('NEXT_PUBLIC_APP_URL does not start with http:// or https://, using window.location.origin');
       }
     } catch (e) {
-      console.warn('VITE_APP_URL is not a valid URL, using window.location.origin:', e);
+      console.warn('NEXT_PUBLIC_APP_URL is not a valid URL, using window.location.origin:', e);
     }
   }
   

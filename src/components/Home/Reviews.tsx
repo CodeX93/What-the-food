@@ -1,4 +1,40 @@
+"use client";
+
+import Script from "next/script";
+import { useEffect } from "react";
+
+declare global {
+  interface Window {
+    SenjaWidget?: {
+      init?: () => void;
+    };
+  }
+}
+
+const SENJA_SCRIPT_ID = "senja-platform-script";
+
 const Reviews = () => {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const triggerInit = () => {
+      if (window.SenjaWidget?.init) {
+        window.SenjaWidget.init();
+      }
+    };
+
+    const scriptElement = document.getElementById(SENJA_SCRIPT_ID) as HTMLScriptElement | null;
+    if (scriptElement?.dataset.loaded === "true") {
+      triggerInit();
+    }
+
+    document.addEventListener("senja-widget-loaded", triggerInit);
+
+    return () => {
+      document.removeEventListener("senja-widget-loaded", triggerInit);
+    };
+  }, []);
+
   return (
     <section className="min-h-screen flex items-center overflow-y-auto relative snap-start snap-proximity bg-[#FFF9E6] dark:bg-[#1C1C1C] transition-colors duration-300">
       <div className="container mx-auto px-4 sm:px-6 w-full relative z-10 py-8 sm:py-0">
@@ -14,6 +50,21 @@ const Reviews = () => {
           data-id="d57c0a6b-f3c8-42a8-ac49-ab0ad78ca7a1" 
           data-mode="shadow" 
           data-lazyload="false"
+        />
+
+        <Script
+          id={SENJA_SCRIPT_ID}
+          src="https://widget.senja.io/widget/d57c0a6b-f3c8-42a8-ac49-ab0ad78ca7a1/platform.js"
+          strategy="lazyOnload"
+          onLoad={() => {
+            if (typeof window !== "undefined") {
+              const element = document.getElementById(SENJA_SCRIPT_ID);
+              if (element) {
+                (element as HTMLScriptElement).dataset.loaded = "true";
+              }
+              window.SenjaWidget?.init?.();
+            }
+          }}
         />
       </div>
     </section>

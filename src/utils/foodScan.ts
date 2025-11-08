@@ -78,7 +78,7 @@ export async function saveScanHistory(params: {
 }): Promise<string>{
   // Store image_path (never expires) and optionally a public URL if available
   // We'll always generate fresh signed URLs when displaying, so stored image_url is just a fallback
-  const { data, error } = await supabase.from("food_scans").insert({
+  const { data, error } = await (supabase as any).from("food_scans").insert({
     user_id: params.userId,
     image_path: params.imagePath, // This is the important one - never expires
     image_url: params.imageUrl, // Store as fallback, but we'll generate fresh URLs when displaying
@@ -125,7 +125,7 @@ export async function getImageUrl(imagePath: string | null, expirySeconds: numbe
 }
 
 export async function fetchRecentScans(userId: string, limit: number = 10){
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("food_scans")
     .select("id, image_url, image_path, serving, result_json, created_at")
     .eq("user_id", userId)
@@ -135,7 +135,14 @@ export async function fetchRecentScans(userId: string, limit: number = 10){
   
   // Generate fresh signed URLs for all scans
   const scansWithUrls = await Promise.all(
-    (data || []).map(async (scan) => {
+    ((data || []) as Array<{
+      id: string;
+      image_url?: string | null;
+      image_path?: string | null;
+      serving?: number | null;
+      result_json?: any;
+      created_at: string;
+    }>).map(async (scan) => {
       let displayUrl: string | null = null;
       
       // Try to generate fresh signed URL from image_path
@@ -167,7 +174,7 @@ export async function getPersonalizedInsights(params: {
   optimize?: boolean;
 }): Promise<{ insights?: string; upgrade?: boolean; message?: string }>{
   // Fetch the scan to get image URL
-  const { data: scan, error: scanError } = await supabase
+  const { data: scan, error: scanError } = await (supabase as any)
     .from("food_scans")
     .select("image_url, image_path, serving")
     .eq("id", params.scanId)

@@ -1,7 +1,10 @@
+'use client';
+
 import { Button } from "@/components/ui/button";
 import { Upload, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Link, useNavigate } from "react-router-dom";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeFood, saveScanHistory, uploadFoodImage } from "@/utils/foodScan";
@@ -16,7 +19,7 @@ const Hero = () => {
   const [isPremium, setIsPremium] = useState<boolean | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const router = useRouter();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -65,7 +68,7 @@ const Hero = () => {
   const onChooseFile = async () => {
     // Check if user needs to register (no auth and no free scans)
     if (!user && !hasFreeScanAvailable()) {
-      navigate("/auth");
+      router.push("/auth");
       return;
     }
 
@@ -97,7 +100,7 @@ const Hero = () => {
       // If not authenticated, check free scan limit
       if (!userId) {
         if (!hasFreeScanAvailable()) {
-          navigate("/auth");
+          router.push("/auth");
           return;
         }
         
@@ -128,7 +131,7 @@ const Hero = () => {
           description: `${newCount} free scan${newCount !== 1 ? 's' : ''} remaining. Sign up to save your history!`,
         });
         
-        navigate(`/food-results?id=${scanId}`);
+        router.push(`/food-results?id=${scanId}`);
       } else {
         // Authenticated user flow
         // Upload to Storage
@@ -146,7 +149,7 @@ const Hero = () => {
           result: analysis.analysis 
         });
         
-        navigate(`/food-results?id=${scanId}`);
+        router.push(`/food-results?id=${scanId}`);
       }
     } catch (e: any) {
       console.error("Hero upload error", e);
@@ -170,11 +173,11 @@ const Hero = () => {
       <div className="absolute inset-0 bg-gradient-hero opacity-5 dark:opacity-10" />
       
       <div className="container mx-auto px-4 relative w-full z-10 py-12 sm:py-16 md:py-20">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-8 sm:gap-12 lg:gap-16">
+        <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-8 sm:gap-12 lg:gap-16 xl:gap-20">
           {/* Left Section - Value Proposition (aligned with logo) */}
-          <div className="flex-1 text-center lg:text-left max-w-2xl lg:max-w-none">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight">
-              Know What's Really in Your Food
+          <div className="w-full text-center lg:text-left max-w-2xl lg:max-w-[34rem] xl:max-w-[38rem] lg:pr-10 xl:pr-12">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight">
+              Know What&apos;s Really in Your Food
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 leading-relaxed">
               Upload a photo of any meal and get instant AI-powered nutritional analysis. 
@@ -182,10 +185,10 @@ const Hero = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
               <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" asChild>
-                <Link to="/auth">Get Started Free</Link>
+                <Link href="/auth">Get Started Free</Link>
               </Button>
               <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
-                <Link to="/how-it-works">Learn More</Link>
+                <Link href="/how-it-works">Learn More</Link>
               </Button>
             </div>
             <p className="text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6">
@@ -206,7 +209,7 @@ const Hero = () => {
           </div>
 
           {/* Right Section - Upload Placeholder (aligned with profile) */}
-          <div className="flex-1 w-full max-w-lg lg:max-w-xl">
+          <div className="w-full max-w-lg lg:max-w-[32rem] xl:max-w-[36rem]">
             <Card className="shadow-strong">
               <CardContent className="p-4 sm:p-6 md:p-8">
                 {!previewUrl ? (

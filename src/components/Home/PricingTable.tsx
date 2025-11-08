@@ -1,7 +1,9 @@
+"use client";
+
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useNavigate } from "react-router-dom";
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -44,7 +46,7 @@ const plans = [
 ];
 
 const PricingTable = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -65,9 +67,9 @@ const PricingTable = () => {
   const handlePlanClick = (e: React.MouseEvent) => {
     e.preventDefault();
     if (isLoggedIn) {
-      navigate("/plans");
+      router.push("/plans");
     } else {
-      navigate("/auth");
+      router.push("/auth");
     }
   };
 

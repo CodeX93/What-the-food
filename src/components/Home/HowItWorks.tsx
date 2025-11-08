@@ -47,7 +47,7 @@ const HowItWorks = () => {
                 <div className="absolute top-0 left-1/2 transform -translate-x-1/2 z-30">
                   <div className="bg-gradient-hero w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center shadow-lg border-2 sm:border-4 border-background">
                     <span className="text-sm sm:text-base md:text-lg font-bold text-white">{index + 1}</span>
-                  </div>
+              </div>
                 </div>
                 
                 <Card className="relative overflow-hidden border-2 border-transparent bg-card/50 backdrop-blur-sm h-full flex flex-col mt-3 sm:mt-4 md:mt-5">
@@ -63,13 +63,13 @@ const HowItWorks = () => {
                     <CardTitle className="text-xl sm:text-2xl md:text-2xl lg:text-3xl text-center font-bold mb-2 sm:mb-3">
                       {step.title}
                     </CardTitle>
-                  </CardHeader>
+              </CardHeader>
                   <CardContent className="px-4 sm:px-6 md:px-8 pb-6 sm:pb-8 md:pb-10">
                     <p className="text-sm sm:text-base md:text-lg text-muted-foreground text-center leading-relaxed">
                       {step.description}
                     </p>
-                  </CardContent>
-                </Card>
+              </CardContent>
+            </Card>
               </div>
             );
           })}

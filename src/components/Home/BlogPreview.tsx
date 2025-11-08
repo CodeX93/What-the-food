@@ -1,15 +1,17 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import { useBlogPosts } from "@/hooks/useBlogPosts";
 
 const BlogPreview = () => {
   const { data, isLoading } = useBlogPosts(6);
 
   return (
-    <section className="h-screen flex items-center justify-center relative bg-white dark:bg-[#000000] snap-start snap-proximity transition-colors duration-300">
-      <div className="container mx-auto px-4 sm:px-6 w-full relative z-10 py-6 sm:py-8 md:py-10">
+    <section className="min-h-screen flex items-center relative bg-white dark:bg-[#000000] snap-start snap-proximity transition-colors duration-300">
+      <div className="container mx-auto px-4 sm:px-6 w-full relative z-10 py-12 sm:py-16 md:py-20">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold mb-1">Latest from Our Blog</h2>
@@ -18,7 +20,7 @@ const BlogPreview = () => {
             </p>
           </div>
           <Button variant="outline" size="sm" asChild className="hidden sm:flex">
-            <Link to="/blog">
+            <Link href="/blog">
               View All Posts
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
@@ -72,7 +74,7 @@ const BlogPreview = () => {
 
         <div className="mt-4 text-center md:hidden">
           <Button variant="outline" size="sm" asChild>
-            <Link to="/blog">
+            <Link href="/blog">
               View All Posts
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
