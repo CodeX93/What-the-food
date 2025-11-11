@@ -43,6 +43,53 @@ export type Database = {
           },
         ]
       }
+      free_scan_sessions: {
+        Row: {
+          created_at: string
+          daily_limit: number | null
+          daily_remaining: number | null
+          id: string
+          last_reset_at: string | null
+          session_id: string | null
+          total_limit: number | null
+          total_remaining: number | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          daily_limit?: number | null
+          daily_remaining?: number | null
+          id?: string
+          last_reset_at?: string | null
+          session_id?: string | null
+          total_limit?: number | null
+          total_remaining?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          daily_limit?: number | null
+          daily_remaining?: number | null
+          id?: string
+          last_reset_at?: string | null
+          session_id?: string | null
+          total_limit?: number | null
+          total_remaining?: number | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "free_scan_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string

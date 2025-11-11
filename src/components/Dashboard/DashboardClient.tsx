@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { getRemainingFreeScans, hasFreeScanAvailable, decrementFreeScan } from "@/utils/freeScanLimit";
 import {
   Camera,
   TrendingUp,
@@ -43,6 +44,7 @@ export function DashboardClient({
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [uploadedImagePath, setUploadedImagePath] = useState<string | null>(null);
+  const [freeScanRemaining, setFreeScanRemaining] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -73,6 +75,13 @@ export function DashboardClient({
             ? initialScans
             : await fetchRecentScans(session.user.id, 6);
         setRecentScans(scans);
+
+        try {
+          const remaining = await getRemainingFreeScans(true);
+          setFreeScanRemaining(remaining);
+        } catch (error) {
+          console.error("Failed to load free scan balance", error);
+        }
       } catch (error) {
         console.error("Error fetching user data:", error);
         toast({
@@ -122,10 +131,17 @@ export function DashboardClient({
               </div>
             ) : (
               <Card className="border-primary/20 bg-primary/5">
-                <CardContent className="py-3 px-4 flex items-center gap-3">
-                  <ShieldCheck className="h-5 w-5 text-primary" />
-                  <div className="text-sm">Unlock unlimited scans with Premium.</div>
-                  <Button size="sm" className="ml-auto" onClick={() => router.push("/plans")}>
+                <CardContent className="py-3 px-4 flex items-center gap-4">
+                  <ShieldCheck className="h-5 w-5 text-primary flex-shrink-0" />
+                  <div className="text-sm flex-1">
+                    <div>Unlock unlimited scans with Premium.</div>
+                    {freeScanRemaining !== null && (
+                      <div className="text-xs text-primary/80 mt-1">
+                        {freeScanRemaining} free scan{freeScanRemaining === 1 ? "" : "s"} remaining today.
+                      </div>
+                    )}
+                  </div>
+                  <Button size="sm" onClick={() => router.push("/plans")}>
                     Upgrade <ArrowRight className="h-4 w-4 ml-1" />
                   </Button>
                 </CardContent>
@@ -282,6 +298,17 @@ export function DashboardClient({
                       if (!uploadedImageUrl || !user || !uploadedImagePath) return;
                       try {
                         setAnalyzing(true);
+                        if (!subscription || subscription.subscription_type !== "premium") {
+                          const available = await hasFreeScanAvailable();
+                          if (!available) {
+                            toast({
+                              title: "Daily limit reached",
+                              description: "You have used all 10 free scans for today. Upgrade to Premium for unlimited scans.",
+                            });
+                            setAnalyzing(false);
+                            return;
+                          }
+                        }
                         const result = await analyzeFood(uploadedImageUrl, servings);
                         const scanId = await saveScanHistory({
                           userId: user.id,
@@ -290,6 +317,14 @@ export function DashboardClient({
                           serving: servings,
                           result: result.analysis,
                         });
+                        if (!subscription || subscription.subscription_type !== "premium") {
+                          try {
+                            const newCount = await decrementFreeScan();
+                            setFreeScanRemaining(newCount);
+                          } catch (error) {
+                            console.error("Failed to decrement free scans", error);
+                          }
+                        }
                         router.push(`/food-results?id=${scanId}`);
                         setUploadedFile(null);
                         setUploadedImageUrl(null);

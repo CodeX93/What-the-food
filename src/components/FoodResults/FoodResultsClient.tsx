@@ -63,6 +63,24 @@ export function FoodResultsClient() {
   const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
   const [checkingPremium, setCheckingPremium] = useState(true);
 
+  const servingApproximation = useMemo(() => {
+    if (!analysis?.servingSize) return null;
+    const size = analysis.servingSize.toLowerCase();
+    const approximations = [
+      { keywords: ["cup"], label: "1 cup", grams: 250 },
+      { keywords: ["slice"], label: "1 slice", grams: 60 },
+      { keywords: ["portion", "serving"], label: "1 portion", grams: 200 },
+      { keywords: ["piece"], label: "1 piece", grams: 50 },
+    ];
+
+    for (const approx of approximations) {
+      if (approx.keywords.some((keyword) => size.includes(keyword))) {
+        return approx;
+      }
+    }
+    return null;
+  }, [analysis?.servingSize]);
+
   const handleExportPdf = async () => {
     if (!analysis) return;
     const title = analysis.dish || "Food Result";
@@ -645,20 +663,24 @@ export function FoodResultsClient() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Servings</span>
-                    <select
-                      className="border rounded-lg px-3 py-2 w-24 text-center font-medium bg-background"
+                    <input
+                      type="number"
+                      min="0.1"
+                      step="0.001"
+                      className="border rounded-lg px-3 py-2 w-28 text-center font-medium bg-background"
                       value={servings}
                       onChange={(e) => {
-                        const newValue = parseFloat(e.target.value);
-                        setServings(newValue);
+                        const value = e.target.value;
+                        if (value === "") {
+                          return;
+                        }
+                        const parsed = parseFloat(value);
+                        if (!Number.isNaN(parsed) && parsed > 0) {
+                          const clamped = Number(parsed.toFixed(3));
+                          setServings(clamped);
+                        }
                       }}
-                    >
-                      {[0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7].map((value) => (
-                        <option key={value} value={value}>
-                          {value}
-                        </option>
-                      ))}
-                    </select>
+                    />
                     {isAuthenticated && servings !== savedServings && (
                       <Button
                         size="sm"
@@ -706,26 +728,33 @@ export function FoodResultsClient() {
                 </div>
               </CardHeader>
               <CardContent>
+                {servingApproximation && (
+                  <div className="mb-4 rounded-lg border border-muted/50 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">{servingApproximation.label}</span> ≈ {servingApproximation.grams} grams. To adjust servings, divide your dish weight (in grams) by {servingApproximation.grams}. For example, 650 g ÷ {servingApproximation.grams} ≈ {(650 / servingApproximation.grams).toFixed(1)} servings.
+                  </div>
+                )}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {[
-                    { icon: Flame, label: "Calories", value: scaled?.calories ?? "-", suffix: "" },
-                    { icon: Beef, label: "Protein", value: scaled?.protein_g ?? "-", suffix: "g" },
-                    { icon: Wheat, label: "Carbs", value: scaled?.carbohydrates_g ?? "-", suffix: "g" },
-                    { icon: Droplet, label: "Fat", value: scaled?.fat_g ?? "-", suffix: "g" },
-                    { icon: Apple, label: "Fiber", value: scaled?.fiber_g ?? "-", suffix: "g" },
-                    { icon: Candy, label: "Sugar", value: scaled?.sugar_g ?? "-", suffix: "g" },
+                    { icon: Flame, label: "Calories", value: scaled?.calories ?? "-", suffix: "", style: "bg-orange-100/90 border-orange-200 text-orange-900" },
+                    { icon: Beef, label: "Protein", value: scaled?.protein_g ?? "-", suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
+                    { icon: Wheat, label: "Carbs", value: scaled?.carbohydrates_g ?? "-", suffix: "g", style: "bg-yellow-100/90 border-yellow-200 text-yellow-900" },
+                    { icon: Droplet, label: "Fat", value: scaled?.fat_g ?? "-", suffix: "g", style: "bg-sky-100/90 border-sky-200 text-sky-900" },
+                    { icon: Apple, label: "Fiber", value: scaled?.fiber_g ?? "-", suffix: "g", style: "bg-emerald-100/90 border-emerald-200 text-emerald-900" },
+                    { icon: Candy, label: "Sugar", value: scaled?.sugar_g ?? "-", suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
                   ].map((item, index) => (
                     <div
                       key={index}
-                      className="p-4 rounded-lg border bg-gradient-to-br from-muted/50 to-muted/30"
+                      className={`border rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm ${item.style}`}
                     >
-                      <div className="flex items-center gap-2 mb-2">
-                        <item.icon className="h-4 w-4 text-primary" />
-                        <span className="text-xs font-medium text-muted-foreground">{item.label}</span>
+                      <div className="p-2 rounded-lg bg-background/40">
+                        <item.icon className="h-5 w-5" />
                       </div>
-                      <div className="text-2xl font-bold text-primary">
-                        {item.value}
-                        {item.suffix && <span className="text-sm font-normal ml-1">{item.suffix}</span>}
+                      <div>
+                        <div className="text-sm text-muted-foreground">{item.label}</div>
+                        <div className="text-xl font-semibold">
+                          {item.value}
+                          {item.value !== "-" ? item.suffix : ""}
+                        </div>
                       </div>
                     </div>
                   ))}

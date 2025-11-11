@@ -14,7 +14,7 @@ const plans = [
     period: "/month",
     description: "Try out WhatTheFood",
     features: [
-      "3 scans per day",
+      "10 scans per day",
       "No scan history",
       "Ads included",
       "No serving adjuster",
@@ -74,9 +74,9 @@ const PricingTable = () => {
   };
 
   return (
-    <section className="min-h-screen flex flex-col md:items-center md:justify-center relative bg-white dark:bg-[#000000] snap-start transition-colors duration-300">
-      <div className="container mx-auto px-4 sm:px-6 w-full relative z-10 py-12 sm:py-16 md:py-20">
-        <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12">
+    <section className="w-full bg-white dark:bg-[#000000] snap-start transition-colors duration-300">
+      <div className="container mx-auto px-4 sm:px-6 w-full relative z-10 py-16 sm:py-20 lg:py-24">
+        <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Simple, Transparent Pricing</h2>
           <p className="text-base sm:text-lg text-muted-foreground">
             Choose the plan that works best for you

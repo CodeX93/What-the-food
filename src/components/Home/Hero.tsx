@@ -1,20 +1,20 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { Upload, Loader2 } from "lucide-react";
+import { Upload, Loader2, Sparkles, ShieldCheck, Timer } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeFood, saveScanHistory, uploadFoodImage } from "@/utils/foodScan";
-import { getRemainingFreeScans, decrementFreeScan, hasFreeScanAvailable, resetFreeScans } from "@/utils/freeScanLimit";
+import { getRemainingFreeScans, decrementFreeScan, hasFreeScanAvailable } from "@/utils/freeScanLimit";
 import { hasActivePremiumSubscription } from "@/utils/subscription";
 import { useToast } from "@/hooks/use-toast";
 
 const Hero = () => {
   const [uploading, setUploading] = useState(false);
-  const [remainingScans, setRemainingScans] = useState<number>(5);
+  const [remainingScans, setRemainingScans] = useState<number>(0);
   const [user, setUser] = useState<any>(null);
   const [isPremium, setIsPremium] = useState<boolean | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -34,9 +34,6 @@ const Hero = () => {
           setIsPremium(null);
           const premium = await hasActivePremiumSubscription(authUser.id);
           setIsPremium(premium);
-          if (premium) {
-            resetFreeScans();
-          }
         } catch (error) {
           console.error("Failed to determine premium status", error);
           setIsPremium(false);
@@ -45,7 +42,12 @@ const Hero = () => {
         setIsPremium(false);
       }
 
-      setRemainingScans(getRemainingFreeScans());
+      try {
+        const remaining = await getRemainingFreeScans(true);
+        setRemainingScans(remaining);
+      } catch (error) {
+        console.error("Failed to load free scan status", error);
+      }
     };
     
     checkAuthAndScans();
@@ -67,7 +69,8 @@ const Hero = () => {
 
   const onChooseFile = async () => {
     // Check if user needs to register (no auth and no free scans)
-    if (!user && !hasFreeScanAvailable()) {
+    const available = await hasFreeScanAvailable();
+    if (!user && !available) {
       router.push("/auth");
       return;
     }
@@ -99,7 +102,7 @@ const Hero = () => {
       
       // If not authenticated, check free scan limit
       if (!userId) {
-        if (!hasFreeScanAvailable()) {
+        if (!(await hasFreeScanAvailable())) {
           router.push("/auth");
           return;
         }
@@ -114,7 +117,7 @@ const Hero = () => {
         const analysis = await analyzeFood(signedUrl || publicUrl, 1);
         
         // Decrement free scan count
-        const newCount = decrementFreeScan();
+        const newCount = await decrementFreeScan();
         setRemainingScans(newCount);
         
         // Save history with temp user (won't be retrievable later, just for current session)
@@ -133,6 +136,17 @@ const Hero = () => {
         
         router.push(`/food-results?id=${scanId}`);
       } else {
+        if (!isPremium) {
+          const available = await hasFreeScanAvailable();
+          if (!available) {
+            toast({
+              title: "Daily limit reached",
+              description: "You have used all 10 free scans for today. Upgrade to Premium for unlimited scans.",
+            });
+            return;
+          }
+        }
+
         // Authenticated user flow
         // Upload to Storage
         const { path, publicUrl, signedUrl } = await uploadFoodImage(selectedFile, userId);
@@ -149,6 +163,15 @@ const Hero = () => {
           result: analysis.analysis 
         });
         
+        if (!isPremium) {
+          try {
+            const newCount = await decrementFreeScan();
+            setRemainingScans(newCount);
+          } catch (error) {
+            console.error("Failed to decrement daily free scan", error);
+          }
+        }
+
         router.push(`/food-results?id=${scanId}`);
       }
     } catch (e: any) {
@@ -169,17 +192,20 @@ const Hero = () => {
     }
   };
   return (
-    <section className="relative h-screen flex items-center overflow-hidden bg-white dark:bg-[#000000] snap-start snap-proximity transition-colors duration-300">
+    <section
+      id="hero"
+      className="relative flex items-center overflow-hidden bg-white dark:bg-[#000000] transition-colors duration-300 min-h-[80vh] lg:min-h-screen"
+    >
       <div className="absolute inset-0 bg-gradient-hero opacity-5 dark:opacity-10" />
       
-      <div className="container mx-auto px-4 relative w-full z-10 py-12 sm:py-16 md:py-20">
-        <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-8 sm:gap-12 lg:gap-16 xl:gap-20">
+      <div className="container mx-auto px-4 relative w-full z-10 py-6 sm:py-10 md:py-12 lg:py-14">
+        <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6 sm:gap-10 lg:gap-14 xl:gap-16">
           {/* Left Section - Value Proposition (aligned with logo) */}
           <div className="w-full text-center lg:text-left max-w-2xl lg:max-w-[34rem] xl:max-w-[38rem] lg:pr-10 xl:pr-12">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight">
               Know What&apos;s Really in Your Food
             </h1>
-            <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed">
               Upload a photo of any meal and get instant AI-powered nutritional analysis. 
               Track calories, macros, and make healthier choices effortlessly.
             </p>
@@ -191,6 +217,29 @@ const Hero = () => {
                 <Link href="/how-it-works">Learn More</Link>
               </Button>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 sm:mt-7 lg:mt-8">
+              <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">AI Accuracy</p>
+                  <p className="text-xs text-muted-foreground">Understands 10k+ foods</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+                <Timer className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">Instant Results</p>
+                  <p className="text-xs text-muted-foreground">Nutrition in seconds</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-white">Health Focused</p>
+                  <p className="text-xs text-muted-foreground">Macros & micronutrients</p>
+                </div>
+              </div>
+            </div>
             <p className="text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6">
               {user ? (
                 isPremium === null ? (
@@ -198,11 +247,11 @@ const Hero = () => {
                 ) : isPremium ? (
                   "Unlimited scans per day"
                 ) : (
-                  "3 scans per day for free users"
+                  "10 scans per day for free users"
                 )
               ) : (
                 <>
-                  {remainingScans} free scan{remainingScans !== 1 ? 's' : ''} available • No signup required
+                  {remainingScans} free scan{remainingScans !== 1 ? 's' : ''} available • Create a free account for 10 scans per day
                 </>
               )}
             </p>

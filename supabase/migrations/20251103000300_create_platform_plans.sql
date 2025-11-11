@@ -35,7 +35,7 @@ INSERT INTO public.platform_plans (name, price_cents, interval, description, fea
 SELECT * FROM (
   VALUES
     ('Free', 0, 'free', 'Perfect for trying out our service',
-      '["3 scans per day","Basic nutritional information","Scan history","Email support"]'::jsonb,
+      '["10 scans per day","Basic nutritional information","Scan history","Email support"]'::jsonb,
       NULL, 'free', TRUE, FALSE),
     ('Premium', 699, 'month', 'Unlimited access to all features',
       '["Unlimited scans","Advanced nutritional analysis","Macro tracking","Meal planning","Export reports","Priority support"]'::jsonb,

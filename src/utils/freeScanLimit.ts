@@ -1,72 +1,86 @@
-// Free scan limit management for non-authenticated users
-const FREE_SCAN_LIMIT_KEY = "wtf_free_scans_remaining";
-const FREE_SCAN_LIMIT = 5;
+type FreeScanType = "unregistered" | "registered";
 
-/**
- * Get the remaining free scans for the current user
- */
-export function getRemainingFreeScans(): number {
+export type FreeScanStatus = {
+  type: FreeScanType;
+  remaining: number;
+};
+
+let cachedStatus: FreeScanStatus | null = null;
+
+const API_ENDPOINT = "/api/free-scans";
+
+async function requestStatus(force = false): Promise<FreeScanStatus> {
+  if (!force && cachedStatus) {
+    return cachedStatus;
+  }
+
+  const response = await fetch(API_ENDPOINT, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body?.error ?? "Unable to fetch free scan status");
+  }
+
+  const data = (await response.json()) as FreeScanStatus;
+  cachedStatus = data;
+  return data;
+}
+
+export async function getRemainingFreeScans(force = false): Promise<number> {
   try {
-    const stored = localStorage.getItem(FREE_SCAN_LIMIT_KEY);
-    if (stored === null) {
-      // First time user - initialize with full limit
-      localStorage.setItem(FREE_SCAN_LIMIT_KEY, FREE_SCAN_LIMIT.toString());
-      return FREE_SCAN_LIMIT;
-    }
-    const count = parseInt(stored, 10);
-    return isNaN(count) ? FREE_SCAN_LIMIT : count;
+    const status = await requestStatus(force);
+    return status.remaining;
   } catch (error) {
-    console.error("Error reading free scan count:", error);
-    return FREE_SCAN_LIMIT;
+    console.error("getRemainingFreeScans error", error);
+    return 0;
   }
 }
 
-/**
- * Decrement the free scan count
- * Returns the new count, or throws if no scans remaining
- */
-export function decrementFreeScan(): number {
-  const remaining = getRemainingFreeScans();
-  if (remaining <= 0) {
-    throw new Error("No free scans remaining");
-  }
-  const newCount = remaining - 1;
-  try {
-    localStorage.setItem(FREE_SCAN_LIMIT_KEY, newCount.toString());
-  } catch (error) {
-    console.error("Error saving free scan count:", error);
-  }
-  return newCount;
+export async function hasFreeScanAvailable(): Promise<boolean> {
+  const remaining = await getRemainingFreeScans();
+  return remaining > 0;
 }
 
-/**
- * Check if user has free scans available
- */
-export function hasFreeScanAvailable(): boolean {
-  return getRemainingFreeScans() > 0;
-}
+export async function decrementFreeScan(): Promise<number> {
+  const response = await fetch(API_ENDPOINT, {
+    method: "POST",
+    credentials: "include",
+  });
 
-/**
- * Reset free scans (used when user logs in or upgrades)
- */
-export function resetFreeScans(): void {
-  try {
-    localStorage.removeItem(FREE_SCAN_LIMIT_KEY);
-  } catch (error) {
-    console.error("Error resetting free scan count:", error);
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body?.error ?? "No free scans remaining");
   }
+
+  const data = (await response.json()) as FreeScanStatus;
+  cachedStatus = data;
+  return data.remaining;
 }
 
-/**
- * Check if user is authenticated and has premium access
- * Returns true if user should bypass free scan limits
- */
+export async function resetFreeScans(): Promise<number> {
+  const response = await fetch(API_ENDPOINT, {
+    method: "PATCH",
+    credentials: "include",
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body?.error ?? "Failed to reset free scans");
+  }
+
+  const data = (await response.json()) as FreeScanStatus;
+  cachedStatus = data;
+  return data.remaining;
+}
+
+export function invalidateFreeScanCache() {
+  cachedStatus = null;
+}
+
 export function shouldBypassFreeScanLimit(user: any, isPremium: boolean): boolean {
-  // Authenticated users with premium get unlimited scans
-  if (user && isPremium) {
-    return true;
-  }
-  // Free authenticated users still have limits (handled elsewhere)
-  return false;
+  return Boolean(user && isPremium);
 }
 

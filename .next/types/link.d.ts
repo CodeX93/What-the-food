@@ -33,30 +33,32 @@ declare namespace __next_route_internal_types__ {
     | `/analytics`
     | `/billing`
     | `/dashboard`
-    | `/food-results`
+    | `/checkout/success`
     | `/history`
-    | `/my-food-analytics`
+    | `/food-results`
     | `/plans`
     | `/profile`
     | `/settings`
     | `/scan-histories`
-    | `/widget/dashboard`
+    | `/my-food-analytics`
     | `/widget/admin`
     | `/widget/embed`
+    | `/widget/dashboard`
     | `/widget/plans`
-    | `/checkout/success`
+    | `/api/auth/signout`
+    | `/api/free-scans`
     | `/auth`
     | `/auth/callback`
     | `/about`
     | `/blog`
     | `/features`
     | `/how-it-works`
-    | `/pricing`
     | `/privacy`
     | `/refund`
-    | `/wall-of-love`
     | `/terms`
+    | `/wall-of-love`
     | `/widget`
+    | `/pricing`
   type DynamicRoutes<T extends string = string> = never
 
   type RouteImpl<T> = 

@@ -74,15 +74,15 @@ const features = [
 
 export default function FeaturesPage() {
   return (
-    <div className="scroll-snap-proximity overflow-x-hidden">
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-hero/5 snap-start">
-        <div className="absolute inset-0 bg-gradient-hero opacity-5" />
-        <div className="container mx-auto px-4 relative py-12 sm:py-16 md:py-20">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-hero bg-clip-text text-transparent">
+    <div className="bg-background">
+      <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-hero/10">
+        <div className="absolute inset-0 bg-gradient-hero opacity-10 pointer-events-none" />
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative py-16 sm:py-20 lg:py-24">
+          <div className="max-w-3xl mx-auto text-center space-y-6">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-hero bg-clip-text text-transparent">
               Powerful Features for Healthy Living
             </h1>
-            <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
+            <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed">
               Everything you need to understand and improve your nutrition. Discover tools designed to help you make
               better food choices and reach your health goals.
             </p>
@@ -98,13 +98,16 @@ export default function FeaturesPage() {
         </div>
       </section>
 
-      <section className="min-h-screen flex items-center justify-center snap-start">
-        <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+      <section className="min-h-screen flex items-center bg-background transition-colors duration-300">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
             {features.map((feature, index) => {
               const IconComponent = feature.icon;
               return (
-                <Card key={index} className="hover:shadow-strong transition-all duration-300 border-2 border-transparent hover:border-primary/20 h-full flex flex-col">
+                <Card
+                  key={index}
+                  className="hover:shadow-strong transition-all duration-300 border border-slate-200/60 dark:border-white/10 hover:border-primary/30 backdrop-blur-sm bg-white/90 dark:bg-white/5 h-full flex flex-col"
+                >
                   <CardHeader className="pb-4">
                     <div className="w-14 h-14 rounded-xl bg-gradient-hero flex items-center justify-center mb-4">
                       <IconComponent className="h-7 w-7 text-white" />
@@ -129,12 +132,12 @@ export default function FeaturesPage() {
         </div>
       </section>
 
-      <section className="min-h-screen flex items-center justify-center bg-muted/30 snap-start">
-        <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-4xl font-bold mb-4">Ready to Get Started?</h2>
-            <p className="text-lg text-muted-foreground mb-8">
-              Join thousands of users who are already tracking their nutrition with WhatTheFood
+      <section className="min-h-screen flex items-center bg-muted/30">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
+          <div className="max-w-3xl mx-auto text-center space-y-6">
+            <h2 className="text-3xl sm:text-4xl font-bold">Ready to Get Started?</h2>
+            <p className="text-base sm:text-lg text-muted-foreground">
+              Join thousands of users who are already tracking their nutrition with WhatTheFood.
             </p>
             <Button size="lg" className="bg-primary hover:bg-primary-hover" asChild>
               <Link href="/auth">Start Your Free Trial</Link>

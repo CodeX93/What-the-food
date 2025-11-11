@@ -21,45 +21,30 @@
       "static/chunks/main-app.js",
       "static/chunks/app/_not-found/page.js"
     ],
-    "/(marketing)/features/page": [
+    "/(app)/food-results/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(marketing)/features/page.js"
+      "static/chunks/app/(app)/food-results/page.js"
     ],
-    "/(marketing)/layout": [
+    "/(auth)/auth/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(marketing)/layout.js"
+      "static/chunks/app/(auth)/auth/page.js"
     ],
-    "/(marketing)/how-it-works/page": [
+    "/(auth)/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(marketing)/how-it-works/page.js"
+      "static/chunks/app/(auth)/layout.js"
     ],
-    "/(marketing)/pricing/page": [
+    "/(app)/dashboard/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(marketing)/pricing/page.js"
+      "static/chunks/app/(app)/dashboard/page.js"
     ],
-    "/(marketing)/privacy/page": [
+    "/(app)/scan-histories/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/(marketing)/privacy/page.js"
-    ],
-    "/(marketing)/blog/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(marketing)/blog/page.js"
-    ],
-    "/(marketing)/widget/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(marketing)/widget/page.js"
-    ],
-    "/(app)/widget/dashboard/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/(app)/widget/dashboard/page.js"
+      "static/chunks/app/(app)/scan-histories/page.js"
     ]
   }
 }

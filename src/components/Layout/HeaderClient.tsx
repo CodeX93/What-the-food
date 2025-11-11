@@ -75,17 +75,47 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
 
   const handleLogout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      // clear client session first
+      const { error: clientError } = await supabase.auth.signOut({ scope: "local" });
+      if (clientError && clientError.message !== "Auth session missing!") {
+        throw clientError;
+      }
+
+      const response = await fetch("/api/auth/signout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+      if (!response.ok && response.status !== 401) {
+        const data = await response.json().catch(() => null);
+        const message = data?.error || "Failed to clear session.";
+        throw new Error(message);
+      }
 
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
       });
 
+      setUser(null);
+
       router.push("/");
       router.refresh();
     } catch (error: any) {
+      if (error?.message === "Auth session missing!") {
+        setUser(null);
+        router.push("/");
+        router.refresh();
+
+        toast({
+          title: "Logged out",
+          description: "You have been successfully logged out.",
+        });
+        return;
+      }
+
       toast({
         title: "Error",
         description: error.message || "Failed to log out.",
@@ -102,7 +132,7 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
 
   return (
     <>
-      <div className="flex items-center space-x-3">
+      <div className="hidden md:flex items-center space-x-3">
         <ThemeToggle />
         {loading ? (
           <div className="w-20 h-9" />

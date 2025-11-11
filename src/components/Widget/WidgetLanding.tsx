@@ -109,6 +109,13 @@ export function WidgetLanding() {
     checkSubscription();
   }, [router, supabaseClient, toast]);
 
+  const handleHeroViewPlans = () => {
+    const pricingSection = document.getElementById("widget-pricing");
+    if (pricingSection) {
+      pricingSection.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <main className="overflow-x-hidden bg-white dark:bg-[#000000] transition-colors duration-300">
       {checkingSubscription && (
@@ -119,10 +126,10 @@ export function WidgetLanding() {
           </div>
         </div>
       )}
-      <section className="relative min-h-screen flex items-center bg-gradient-hero/5 snap-start">
+      <section className="relative min-h-screen flex items-center bg-slate-50 dark:bg-[#050505] snap-start transition-colors duration-300">
         <div className="container mx-auto px-4 w-full">
-          <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-10 lg:gap-16 xl:gap-20">
-            <div className="w-full text-center lg:text-left max-w-3xl lg:max-w-[34rem] xl:max-w-[38rem] lg:pr-10 xl:pr-12">
+          <div className="flex flex-col lg:flex-row items-center lg:items-center justify-between gap-10 lg:gap-16 xl:gap-20">
+            <div className="w-full text-center lg:text-left max-w-3xl lg:max-w-[34rem] xl:max-w-[38rem]">
               <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight">
                 Embeddable Widget for Your Website
               </h1>
@@ -164,8 +171,8 @@ export function WidgetLanding() {
                       </pre>
                     </div>
 
-                    <Button size="lg" className="w-full bg-primary hover:bg-primary-hover" asChild>
-                      <Link href="/widget/plans">View Plans</Link>
+                    <Button size="lg" className="w-full bg-primary hover:bg-primary-hover" onClick={handleHeroViewPlans}>
+                      View Plans
                     </Button>
                   </div>
                 </CardContent>
@@ -175,11 +182,11 @@ export function WidgetLanding() {
         </div>
       </section>
 
-      <section className="min-h-screen flex items-center snap-start">
+      <section className="min-h-screen flex items-center snap-start bg-background transition-colors duration-300">
         <div className="container mx-auto px-4 w-full">
-          <div className="max-w-5xl lg:max-w-6xl">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-8 sm:mb-12 text-left">Widget Features</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+          <div className="max-w-5xl lg:max-w-6xl mx-auto text-center">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-8 sm:mb-12">Widget Features</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 text-left">
               <Card className="h-full">
                 <CardHeader>
                   <Code className="h-10 w-10 text-primary mb-4" />
@@ -234,11 +241,11 @@ export function WidgetLanding() {
         </div>
       </section>
 
-      <section className="min-h-screen flex items-center bg-muted/30 snap-start">
+      <section id="widget-pricing" className="min-h-screen flex items-center bg-muted/30 snap-start">
         <div className="container mx-auto px-4 w-full">
-          <div className="max-w-6xl">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-left">Widget Pricing</h2>
-            <p className="text-muted-foreground mb-10 sm:mb-12 max-w-2xl">
+          <div className="max-w-6xl mx-auto text-center">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Widget Pricing</h2>
+            <p className="text-muted-foreground mb-10 sm:mb-12 max-w-2xl mx-auto">
               Choose the plan that fits your needs—upgrade anytime as your audience grows.
             </p>
 

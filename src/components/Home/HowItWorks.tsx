@@ -24,8 +24,11 @@ const steps = [
 
 const HowItWorks = () => {
   return (
-    <section id="how-it-works" className="min-h-screen flex items-center overflow-y-auto relative bg-white dark:bg-[#000000] snap-start snap-proximity transition-colors duration-300">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 w-full relative z-10 py-12 sm:py-16 lg:py-20">
+    <section
+      id="how-it-works"
+      className="relative w-full bg-white dark:bg-[#000000] transition-colors duration-300 py-16 sm:py-20 lg:py-24"
+    >
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12 md:mb-16">
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 sm:mb-4 bg-gradient-hero bg-clip-text text-transparent">
             How It Works

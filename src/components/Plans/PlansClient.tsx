@@ -239,9 +239,9 @@ export function PlansClient({
             .eq("id", session.user.id);
         }
 
-        toast({
-          title: "Plan selected!",
-          description: "You're now on the Free plan. Enjoy 3 scans per day!",
+        toast.success({
+          title: "Free plan activated",
+          description: "You're now on the Free plan. Enjoy 10 scans per day!",
         });
 
         router.push("/dashboard");

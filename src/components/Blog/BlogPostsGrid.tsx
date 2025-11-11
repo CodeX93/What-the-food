@@ -11,7 +11,7 @@ export default function BlogPostsGrid() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
         {Array.from({ length: 6 }).map((_, i) => (
-          <Card key={i} className="hover:shadow-medium transition-shadow overflow-hidden">
+          <Card key={i} className="hover:shadow-medium transition-shadow overflow-hidden border-2 border-slate-200">
             <div className="aspect-video bg-muted" />
             <CardHeader>
               <div className="h-5 w-3/4 bg-muted rounded" />
@@ -41,7 +41,7 @@ export default function BlogPostsGrid() {
             rel="noopener noreferrer"
             className="block group"
           >
-            <Card className="hover:shadow-strong transition-all duration-300 border-2 border-transparent hover:border-primary/20 h-full overflow-hidden cursor-pointer">
+            <Card className="hover:shadow-strong transition-all duration-300 border-2 border-slate-200 hover:border-primary/40 h-full overflow-hidden cursor-pointer">
               {post.image ? (
                 <img
                   src={post.image}

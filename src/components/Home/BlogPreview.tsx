@@ -10,8 +10,8 @@ const BlogPreview = () => {
   const { data, isLoading } = useBlogPosts(6);
 
   return (
-    <section className="min-h-screen flex items-center relative bg-white dark:bg-[#000000] snap-start snap-proximity transition-colors duration-300">
-      <div className="container mx-auto px-4 sm:px-6 w-full relative z-10 py-12 sm:py-16 md:py-20">
+    <section className="relative w-full bg-white dark:bg-[#000000] transition-colors duration-300 py-16 sm:py-20 lg:py-24">
+      <div className="container mx-auto px-4 sm:px-6 w-full relative z-10">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold mb-1">Latest from Our Blog</h2>
@@ -30,7 +30,7 @@ const BlogPreview = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {isLoading &&
             Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="overflow-hidden">
+              <Card key={i} className="overflow-hidden border-2 border-slate-200">
                 <div className="aspect-video bg-muted" />
                 <CardHeader className="p-3">
                   <div className="h-4 w-3/4 bg-muted rounded" />
@@ -51,7 +51,7 @@ const BlogPreview = () => {
                 rel="noopener noreferrer"
                 className="block group"
               >
-                <Card className="overflow-hidden hover:shadow-strong transition-all duration-300 border-2 border-transparent hover:border-primary/20 cursor-pointer">
+                <Card className="overflow-hidden hover:shadow-strong transition-all duration-300 border-2 border-slate-200 hover:border-primary/40 cursor-pointer">
                   {post.image ? (
                     <img src={post.image} alt={post.title} className="aspect-video object-cover w-full group-hover:scale-105 transition-transform duration-300" />
                   ) : (

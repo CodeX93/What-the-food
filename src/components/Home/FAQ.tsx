@@ -18,7 +18,7 @@ const faqs = [
   },
   {
     question: "How many scans do I get for free?",
-    answer: "Free users get 5 total scans to try the service. After that, you can create a free account for 3 scans per day, or upgrade to Premium for unlimited scans.",
+    answer: "Free users get 10 total scans to try the service. After that, you can create a free account for 10 scans per day, or upgrade to Premium for unlimited scans.",
   },
   {
     question: "Can I export my nutrition data?",
@@ -44,9 +44,9 @@ const faqs = [
 
 const FAQ = () => {
   return (
-    <section className="h-screen flex items-center overflow-y-auto relative snap-start snap-proximity bg-[#F8FAF9] dark:bg-[#111111] transition-colors duration-300">
-      <div className="container mx-auto px-4 sm:px-6 w-full relative z-10 py-8 sm:py-0">
-        <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12">
+    <section className="w-full bg-[#F8FAF9] dark:bg-[#111111] transition-colors duration-300 py-16 sm:py-20 lg:py-24">
+      <div className="container mx-auto px-4 sm:px-6 w-full">
+        <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Frequently Asked Questions</h2>
           <p className="text-base sm:text-lg text-muted-foreground">
             Everything you need to know about WhatTheFood

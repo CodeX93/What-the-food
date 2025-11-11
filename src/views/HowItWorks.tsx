@@ -1,4 +1,4 @@
-import { Upload, Sparkles, TrendingUp, ArrowDown } from "lucide-react";
+import { Upload, Sparkles, TrendingUp, FlaskConical, CalendarDays, Download, ArrowUpRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -48,154 +48,240 @@ const steps = [
 export default function HowItWorksPage() {
   return (
     <div className="scroll-snap-proximity overflow-x-hidden">
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-primary/10 via-background to-primary/5 snap-start">
-        <div className="container mx-auto px-4 relative py-12 sm:py-16 md:py-20">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 bg-gradient-hero bg-clip-text text-transparent">
-              How It Works
+      {/* Hero */}
+      <section className="relative min-h-screen w-full snap-start bg-background">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.08),transparent_70%)] dark:bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.12),transparent_70%)] pointer-events-none" />
+        <div className="container mx-auto flex h-full flex-col items-center justify-center gap-12 px-4 lg:px-12 py-16">
+          <div className="max-w-3xl space-y-6 text-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1 text-xs font-medium uppercase tracking-wide text-primary">
+              Lightning-fast nutrition intelligence
+            </div>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight text-foreground">
+              Snap, scan, and know exactly what&apos;s on your plate
             </h1>
-            <p className="text-base sm:text-xl text-muted-foreground mb-8 leading-relaxed">
-              Get nutritional insights in three simple steps. It&apos;s fast, easy, and accurate - no complicated setup required.
-            </p>
-            <Button size="lg" className="bg-primary hover:bg-primary-hover" asChild>
-              <Link href="/auth">Try It Now - It&apos;s Free</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Timeline Steps Section */}
-      <section className="min-h-screen bg-background snap-start">
-        <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
-          <div className="max-w-4xl mx-auto">
-            <div className="relative">
-              {/* Vertical Timeline Line */}
-              <div className="hidden lg:block absolute left-12 top-0 bottom-0 w-1 bg-gradient-to-b from-primary/30 via-primary/50 to-primary/30" />
-
-              {steps.map((step, index) => {
-                const IconComponent = step.icon;
-                const isLast = index === steps.length - 1;
-                return (
-                  <div key={index} className="relative mb-16 lg:mb-24 last:mb-0">
-                    {/* Timeline Step */}
-                    <div className="flex flex-col lg:flex-row gap-6 lg:gap-10 items-start">
-                      {/* Left Side - Step Number & Icon */}
-                      <div className="relative z-10 flex-shrink-0">
-                        <div
-                          className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full ${step.colorClass} flex items-center justify-center shadow-xl border-4 border-background relative`}
-                        >
-                          <IconComponent className="h-8 w-8 sm:h-10 sm:w-10 text-white" />
-                          <div className="hidden sm:flex absolute -top-2 -right-2 bg-primary text-white rounded-full w-7 h-7 items-center justify-center text-xs font-bold shadow-lg border-2 border-background">
-                            {index + 1}
-                          </div>
-                        </div>
-                        <div className="mt-3 text-sm font-semibold text-primary/60 sm:hidden">{index + 1 < 10 ? `0${index + 1}` : index + 1}</div>
-                      </div>
-
-                      {/* Right Side - Content */}
-                      <div className="flex-1 w-full">
-                        <Card className="border-2 border-primary/20 hover:border-primary/40 transition-all shadow-lg hover:shadow-xl">
-                          <CardContent className="p-6 sm:p-8">
-                            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
-                              <div>
-                                <h3 className="text-2xl md:text-3xl font-bold mb-3 text-foreground">{step.title}</h3>
-                                <p className="text-base md:text-lg text-muted-foreground">{step.description}</p>
-                              </div>
-                              <div className="hidden md:block text-6xl md:text-7xl font-black text-primary/5 md:ml-4">
-                                {step.number}
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              {step.details.map((detail, idx) => (
-                                <div key={idx} className="flex items-start gap-2 text-sm md:text-base">
-                                  <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0" />
-                                  <span className="text-muted-foreground">{detail}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    </div>
-
-                    {/* Arrow Connector (between steps) */}
-                    {!isLast && (
-                      <div className="hidden lg:flex items-center justify-center absolute left-12 -bottom-12">
-                        <ArrowDown className="h-8 w-8 text-primary/40" />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits Section */}
-      <section className="min-h-screen flex items-center justify-center bg-muted/30 snap-start">
-        <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Why Choose WhatTheFood?</h2>
-              <p className="text-base sm:text-lg text-muted-foreground">
-                Fast, accurate, and easy to use - everything you need for better nutrition tracking
-              </p>
-            </div>
-
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              <Card className="text-center border-2 hover:border-primary/30 transition-all">
-                <CardContent className="p-6 sm:p-8">
-                  <div className="text-3xl sm:text-4xl mb-4">⚡</div>
-                  <h3 className="text-xl font-bold mb-2">Lightning Fast</h3>
-                  <p className="text-muted-foreground text-sm sm:text-base">
-                    Get results in under 5 seconds. No waiting, no delays - just instant nutritional insights.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="text-center border-2 hover:border-primary/30 transition-all">
-                <CardContent className="p-6 sm:p-8">
-                  <div className="text-3xl sm:text-4xl mb-4">🎯</div>
-                  <h3 className="text-xl font-bold mb-2">Highly Accurate</h3>
-                  <p className="text-muted-foreground text-sm sm:text-base">
-                    Trained on millions of food images for precise identification and nutritional calculation.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="text-center border-2 hover:border-primary/30 transition-all">
-                <CardContent className="p-6 sm:p-8">
-                  <div className="text-3xl sm:text-4xl mb-4">🆓</div>
-                  <h3 className="text-xl font-bold mb-2">Free to Start</h3>
-                  <p className="text-muted-foreground text-sm sm:text-base">
-                    No account needed. Get 5 free scans daily, with unlimited access available for premium members.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="min-h-screen flex items-center justify-center bg-muted/30 snap-start">
-        <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to Start Tracking?</h2>
-            <p className="text-base sm:text-lg text-muted-foreground mb-8">
-              Join thousands of users discovering what&apos;s really in their food
+            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
+              Skip the manual tracking. WhatTheFood recognizes your meal, estimates portions, and surfaces accurate nutrition instantly.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" className="bg-primary hover:bg-primary-hover" asChild>
-                <Link href="/auth">Get Started Free</Link>
+                <Link href="/#hero">Start Free Scan</Link>
               </Button>
-              <Button size="lg" variant="outline" asChild>
-                <Link href="/features">See All Features</Link>
+              <Button size="lg" variant="outline" className="border-primary/50 text-primary hover:bg-primary/10" asChild>
+                <Link href="/pricing">View Plans</Link>
               </Button>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+              <div className="rounded-2xl border border-slate-200/60 dark:border-white/10 bg-white/80 dark:bg-white/5 p-5 shadow-sm">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Foods detected</p>
+                <p className="text-3xl font-semibold text-primary mt-1">12K+</p>
+              </div>
+              <div className="rounded-2xl border border-slate-200/60 dark:border-white/10 bg-white/80 dark:bg-white/5 p-5 shadow-sm">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Recognition accuracy</p>
+                <p className="text-3xl font-semibold text-primary mt-1">97%</p>
+              </div>
+              <div className="rounded-2xl border border-slate-200/60 dark:border-white/10 bg-white/80 dark:bg-white/5 p-5 shadow-sm">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Time to insight</p>
+                <p className="text-3xl font-semibold text-primary mt-1">30s</p>
+              </div>
+            </div>
+          </div>
+
+          <Card className="w-full max-w-3xl border-primary/20 bg-white/90 dark:bg-white/5 backdrop-blur-md shadow-strong">
+            <CardContent className="p-6 sm:p-8 space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Live Scan Preview</p>
+                  <h2 className="text-2xl font-semibold text-foreground">Mediterranean Bowl</h2>
+                </div>
+                <Button variant="ghost" size="sm" className="text-primary hover:text-primary-hover">
+                  Review Details
+                  <ArrowUpRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                  <p className="text-xs uppercase tracking-wide text-primary/70">Calories</p>
+                  <p className="text-2xl font-bold text-primary">540 kcal</p>
+                  <p className="text-xs text-muted-foreground mt-1">On par with your daily target</p>
+                </div>
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                  <p className="text-xs uppercase tracking-wide text-primary/70">Protein</p>
+                  <p className="text-2xl font-bold text-primary">32 g</p>
+                  <p className="text-xs text-muted-foreground mt-1">Great macro balance</p>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Fiber</p>
+                  <p className="text-lg font-semibold text-foreground">11 g</p>
+                </div>
+                <div className="rounded-lg border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Carbs</p>
+                  <p className="text-lg font-semibold text-foreground">58 g</p>
+                </div>
+                <div className="rounded-lg border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Fats</p>
+                  <p className="text-lg font-semibold text-foreground">18 g</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                  Chickpeas
+                </span>
+                <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                  Quinoa
+                </span>
+                <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                  Olive Oil
+                </span>
+                <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                  Feta
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Process */}
+      <section className="min-h-screen w-full snap-start bg-background">
+        <div className="container mx-auto flex h-full flex-col justify-center gap-10 px-4 lg:px-12 py-16">
+          <div className="max-w-3xl mx-auto text-center space-y-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground">Your meal, decoded in three guided stages</h2>
+            <p className="text-base sm:text-lg text-muted-foreground">
+              Capture, analyze, and act—each scan moves from photo to insights in seconds.
+            </p>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            {steps.map((step, index) => {
+              const IconComponent = step.icon;
+              return (
+                <Card
+                  key={index}
+                  className="relative flex flex-col border border-slate-200/70 dark:border-white/10 bg-white/95 dark:bg-white/5 backdrop-blur-sm shadow-lg"
+                >
+                  <CardContent className="flex flex-1 flex-col gap-5 p-6 sm:p-8">
+                    <div className="flex items-center justify-between">
+                      <div className={`rounded-xl ${step.colorClass} p-3 shadow-lg`}>
+                        <IconComponent className="h-7 w-7 text-white" />
+                      </div>
+                      <span className="text-4xl font-black text-primary/10">{step.number}</span>
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-semibold text-foreground mb-2">{step.title}</h3>
+                      <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">{step.description}</p>
+                    </div>
+                    <div className="space-y-2">
+                      {step.details.map((detail, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-start gap-3 rounded-lg border border-primary/15 bg-primary/5 dark:bg-white/5 px-3 py-2 text-sm text-muted-foreground"
+                        >
+                          <span className="mt-1 block h-2 w-2 rounded-full bg-primary" />
+                          <span>{detail}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+   
+
+      {/* CTA */}
+      <section className="relative min-h-screen w-full snap-start bg-background">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.08),transparent_70%)] dark:bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.12),transparent_70%)] pointer-events-none" />
+        <div className="container mx-auto flex h-full flex-col items-center justify-center gap-10 px-4 lg:px-16 py-16 text-center">
+          <div className="max-w-3xl space-y-6">
+            <span className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1 text-xs font-medium uppercase tracking-wide text-primary">
+              Join the WhatTheFood community
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-foreground">Ready for your most informed meal yet?</h2>
+            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
+              See why athletes, dietitians, and busy professionals trust WhatTheFood to decode every plate and stay on track.
+            </p>
+          </div>
+
+          <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-stretch">
+            <Card className="border border-primary/20 bg-white/95 dark:bg-white/5 backdrop-blur-md shadow-lg h-full">
+              <CardContent className="flex h-full flex-col justify-between gap-6 p-6 sm:p-10 text-left">
+                <div className="space-y-4">
+                  <h3 className="text-2xl font-semibold text-foreground">Start scanning in under 60 seconds</h3>
+                  <ul className="space-y-3 text-sm sm:text-base text-muted-foreground">
+                    <li className="flex items-start gap-3">
+                      <span className="mt-1 block h-2.5 w-2.5 rounded-full bg-primary" />
+                      Upload a meal photo and instantly receive calories, macros, and micronutrients.
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-1 block h-2.5 w-2.5 rounded-full bg-primary" />
+                      Save scans, sync across devices, and keep your nutrition journal organized automatically.
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <span className="mt-1 block h-2.5 w-2.5 rounded-full bg-primary" />
+                      Invite your coach or nutritionist to review your data in real time.
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary-hover" asChild>
+                    <Link href="/auth">Create Free Account</Link>
+                  </Button>
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto border-primary/40 text-primary hover:bg-primary/10" asChild>
+                    <Link href="/pricing">Compare Plans</Link>
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  No credit card required • Cancel anytime • Works on web & mobile
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-primary/25 bg-white/90 dark:bg-white/5 backdrop-blur-md shadow-lg h-full">
+              <CardContent className="flex h-full flex-col gap-5 p-6 sm:p-10">
+                <div className="space-y-3 text-left">
+                  <p className="text-xs uppercase tracking-wide text-primary/70">Loved by experts</p>
+                  <blockquote className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
+                    “Patients finally understand their nutrition. The visual breakdowns keep them engaged between visits.”
+                    <span className="mt-2 block text-xs font-semibold text-primary">Dr. Malik • Registered Dietitian</span>
+                  </blockquote>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2 text-left">
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                    <p className="text-xs uppercase tracking-wide text-primary/70">Weekly time saved</p>
+                    <p className="text-3xl font-semibold text-primary mt-1">4.2 hrs</p>
+                    <p className="text-xs text-muted-foreground mt-1">vs manual logging</p>
+                  </div>
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                    <p className="text-xs uppercase tracking-wide text-primary/70">Habit streaks</p>
+                    <p className="text-3xl font-semibold text-primary mt-1">12 days</p>
+                    <p className="text-xs text-muted-foreground mt-1">Average among power users</p>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/95 dark:bg-white/5 p-4 text-left space-y-2">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Featured meal plans</p>
+                  <div className="flex flex-wrap gap-2">
+                    {["Lean Muscle", "Balanced Vegan", "Diabetic Friendly", "Athlete Fuel"].map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>

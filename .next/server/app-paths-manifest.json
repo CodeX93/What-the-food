@@ -1,7 +1,8 @@
 {
-  "/(app)/widget/dashboard/page": "app/(app)/widget/dashboard/page.js",
-  "/(marketing)/pricing/page": "app/(marketing)/pricing/page.js",
-  "/(marketing)/privacy/page": "app/(marketing)/privacy/page.js",
-  "/(marketing)/how-it-works/page": "app/(marketing)/how-it-works/page.js",
-  "/(marketing)/blog/page": "app/(marketing)/blog/page.js"
+  "/(app)/scan-histories/page": "app/(app)/scan-histories/page.js",
+  "/page": "app/page.js",
+  "/api/free-scans/route": "app/api/free-scans/route.js",
+  "/(app)/food-results/page": "app/(app)/food-results/page.js",
+  "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
+  "/(auth)/auth/page": "app/(auth)/auth/page.js"
 }

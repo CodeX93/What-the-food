@@ -36,8 +36,11 @@ const features = [
 
 const Features = () => {
   return (
-    <section id="features" className="min-h-screen flex items-center overflow-y-auto relative snap-start snap-proximity bg-[#F9FCFB] dark:bg-[#0A0A0A] transition-colors duration-300">
-      <div className="container mx-auto px-4 sm:px-6 w-full relative z-10 py-8 sm:py-0">
+    <section
+      id="features"
+      className="relative w-full bg-[#F9FCFB] dark:bg-[#0A0A0A] transition-colors duration-300 py-16 sm:py-20 lg:py-24"
+    >
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Powerful Features for Healthy Living</h2>
           <p className="text-base sm:text-lg text-muted-foreground">

@@ -14,7 +14,7 @@ const Index = () => {
     <div className="min-h-screen bg-background dark:bg-[#000000] transition-colors duration-300 overflow-x-hidden">
       <TopBar />
       <HeaderServer />
-      <main className="scroll-snap-proximity">
+      <main className="flex flex-col">
         <Hero />
         <Features />
         <HowItWorks />
