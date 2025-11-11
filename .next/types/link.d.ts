@@ -29,36 +29,36 @@ declare namespace __next_route_internal_types__ {
     S extends `${string}${SearchOrHash}` ? never : S
 
   type StaticRoutes = 
-    | `/`
     | `/analytics`
     | `/billing`
-    | `/dashboard`
-    | `/checkout/success`
     | `/history`
+    | `/my-food-analytics`
     | `/food-results`
+    | `/scan-histories`
     | `/plans`
+    | `/dashboard`
     | `/profile`
     | `/settings`
-    | `/scan-histories`
-    | `/my-food-analytics`
-    | `/widget/admin`
+    | `/checkout/success`
     | `/widget/embed`
-    | `/widget/dashboard`
-    | `/widget/plans`
+    | `/`
     | `/api/auth/signout`
     | `/api/free-scans`
+    | `/widget/admin`
+    | `/widget/dashboard`
+    | `/widget/plans`
     | `/auth`
-    | `/auth/callback`
     | `/about`
-    | `/blog`
-    | `/features`
+    | `/auth/callback`
     | `/how-it-works`
+    | `/pricing`
     | `/privacy`
     | `/refund`
     | `/terms`
+    | `/blog`
+    | `/features`
     | `/wall-of-love`
     | `/widget`
-    | `/pricing`
   type DynamicRoutes<T extends string = string> = never
 
   type RouteImpl<T> = 

@@ -239,7 +239,7 @@ export function PlansClient({
             .eq("id", session.user.id);
         }
 
-        toast.success({
+        toast({
           title: "Free plan activated",
           description: "You're now on the Free plan. Enjoy 10 scans per day!",
         });
