@@ -4,7 +4,7 @@ export type FoodAnalysis = {
   dish: string;
   confidence: number;
   servingSize: string;
-  nutrients: {
+  nutrients?: {
     calories?: number;
     protein_g?: number;
     carbohydrates_g?: number;
@@ -57,15 +57,15 @@ export async function analyzeFood(
   };
 }
 
-export function scaleNutrients(base: FoodAnalysis["nutrients"], multiplier: number){
+export function scaleNutrients(base: FoodAnalysis["nutrients"] | undefined, multiplier: number){
   const scale = (v?: number) => (typeof v === "number" ? Math.round(v * multiplier * 10) / 10 : undefined);
   return {
-    calories: scale(base.calories),
-    protein_g: scale(base.protein_g),
-    carbohydrates_g: scale(base.carbohydrates_g),
-    fat_g: scale(base.fat_g),
-    fiber_g: scale(base.fiber_g),
-    sugar_g: scale(base.sugar_g),
+    calories: scale(base?.calories),
+    protein_g: scale(base?.protein_g),
+    carbohydrates_g: scale(base?.carbohydrates_g),
+    fat_g: scale(base?.fat_g),
+    fiber_g: scale(base?.fiber_g),
+    sugar_g: scale(base?.sugar_g),
   };
 }
 
