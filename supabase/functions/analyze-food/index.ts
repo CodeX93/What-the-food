@@ -126,7 +126,7 @@ Insights: Quick analysis for ${age}yo, ${gender}, ${activity} activity, ${goal} 
     const insights = parsed.insights;
     delete parsed.insights;
 
-    return { analysis: parsed, insights };
+    return { analysis: sanitizeAnalysis(parsed), insights };
   } catch (e) {
     clearTimeout(timeoutId);
     throw e;
@@ -148,6 +148,79 @@ async function quickPremiumCheck(userId) {
   } catch {
     return false;
   }
+}
+
+const defaultAnalysis = {
+  dish: "",
+  confidence: 0.75,
+  servingSize: "1 serving",
+  nutrients: {
+    calories: 320,
+    protein_g: 18,
+    carbohydrates_g: 34,
+    fat_g: 12,
+    fiber_g: 6,
+    sugar_g: 8,
+  },
+  ingredients: [],
+  instructions: [],
+};
+
+function sanitizeNumber(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = parseFloat(value.replace(/[^0-9.\-]/g, ""));
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+function sanitizeArray(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") return item.trim();
+        if (item && typeof item === "object" && "text" in item) return String(item.text).trim();
+        return "";
+      })
+      .filter(Boolean);
+  }
+  if (typeof value === "string" && value.trim()) {
+    return value
+      .split(/[\n,]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function sanitizeAnalysis(raw) {
+  const result = JSON.parse(JSON.stringify(defaultAnalysis));
+
+  if (raw && typeof raw === "object") {
+    result.dish = typeof raw.dish === "string" && raw.dish.trim() ? raw.dish.trim() : result.dish;
+    const confidence = sanitizeNumber(raw.confidence);
+    if (typeof confidence === "number") {
+      result.confidence = Math.max(0, Math.min(1, confidence));
+    }
+    result.servingSize = typeof raw.servingSize === "string" && raw.servingSize.trim() ? raw.servingSize.trim() : result.servingSize;
+
+    const nutrients = raw.nutrients && typeof raw.nutrients === "object" ? raw.nutrients : {};
+    const fallback = result.nutrients;
+    result.nutrients = {
+      calories: sanitizeNumber(nutrients.calories) ?? fallback.calories,
+      protein_g: sanitizeNumber(nutrients.protein_g) ?? fallback.protein_g,
+      carbohydrates_g: sanitizeNumber(nutrients.carbohydrates_g) ?? fallback.carbohydrates_g,
+      fat_g: sanitizeNumber(nutrients.fat_g) ?? fallback.fat_g,
+      fiber_g: sanitizeNumber(nutrients.fiber_g) ?? fallback.fiber_g,
+      sugar_g: sanitizeNumber(nutrients.sugar_g) ?? fallback.sugar_g,
+    };
+
+    result.ingredients = sanitizeArray(raw.ingredients);
+    result.instructions = sanitizeArray(raw.instructions);
+  }
+
+  return result;
 }
 
 Deno.serve(async (req) => {
