@@ -2,6 +2,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type FoodAnalysis = {
   dish: string;
+  description?: string;
+  tags?: string[];
+  additionalInfo?: string;
+  servingGuidance?: string;
   confidence: number;
   servingSize: string;
   nutrients?: {
@@ -42,10 +46,16 @@ export async function uploadFoodImage(file: File, userId: string): Promise<{ pat
 export async function analyzeFood(
   imageUrl: string,
   serving: number = 1,
-  insightsParams?: { age?: number; gender?: string; activity?: string; goal?: string; optimize?: boolean }
+  insightsParams?: { age?: number; gender?: string; activity?: string; goal?: string; optimize?: boolean },
+  options?: { overrideIngredients?: string[] }
 ): Promise<{ analysis: FoodAnalysis; insights?: string; upgrade?: boolean }>{
+  const body: Record<string, unknown> = { imageUrl, serving, ...(insightsParams || {}) };
+  if (options?.overrideIngredients && options.overrideIngredients.length > 0) {
+    body.overrideIngredients = options.overrideIngredients;
+  }
+
   const { data, error } = await supabase.functions.invoke("analyze-food", {
-    body: { imageUrl, serving, ...(insightsParams || {}) },
+    body,
   });
   if (error || !data?.ok) {
     throw new Error(data?.error || error?.message || "Analyze failed");

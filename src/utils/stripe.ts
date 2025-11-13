@@ -21,10 +21,16 @@ export async function createCheckoutSession(
     throw new Error('User not authenticated');
   }
 
-  const successUrl = `${getUrl('/checkout/success')}?session_id={CHECKOUT_SESSION_ID}&type=${subscriptionType}`;
-  const cancelUrl = subscriptionType === 'widget' 
-    ? getUrl('/widget/plans')
-    : getUrl('/plans');
+  const origin =
+    typeof window !== "undefined" && window.location.origin
+      ? window.location.origin
+      : getUrl("");
+  const successUrl = `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}&type=${subscriptionType}`;
+  const cancelUrl =
+    origin +
+    (subscriptionType === "widget"
+      ? "/widget/plans"
+      : "/dashboard?checkout=cancelled");
 
   const { data, error } = await supabase.functions.invoke('create-checkout-session', {
     body: {

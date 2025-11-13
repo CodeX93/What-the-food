@@ -241,7 +241,7 @@ export function PlansClient({
 
         toast({
           title: "Free plan activated",
-          description: "You're now on the Free plan. Enjoy 10 scans per day!",
+          description: "You're now on the Free plan. Enjoy 3 scans per day!",
         });
 
         router.push("/dashboard");

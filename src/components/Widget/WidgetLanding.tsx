@@ -126,66 +126,68 @@ export function WidgetLanding() {
           </div>
         </div>
       )}
-      <section className="relative min-h-screen flex items-center bg-slate-50 dark:bg-[#050505] snap-start transition-colors duration-300">
-        <div className="container mx-auto px-4 w-full">
-          <div className="flex flex-col lg:flex-row items-center lg:items-center justify-between gap-10 lg:gap-16 xl:gap-20">
-            <div className="w-full text-center lg:text-left max-w-3xl lg:max-w-[34rem] xl:max-w-[38rem]">
-              <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight">
-                Embeddable Widget for Your Website
-              </h1>
-              <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 leading-relaxed">
-                Add WhatTheFood&apos;s AI-powered food scanning to your blog or website. Perfect for food bloggers,
-                nutrition sites, and health platforms.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
-                <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" asChild>
-                  <Link href="/widget/plans">Get Your Widget</Link>
-                </Button>
-                <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
-                  <Link href="/how-it-works">How It Works</Link>
-                </Button>
+      <section className="relative flex items-center overflow-hidden bg-slate-50 dark:bg-[#050505] transition-colors duration-300 min-h-[80vh] lg:min-h-screen">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative w-full z-10 py-[19px] sm:py-[35px] md:py-[43px] lg:py-[51px]">
+          <div className="w-full max-w-6xl mx-auto">
+            <div className="flex flex-col lg:flex-row items-center lg:items-center justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
+              <div className="w-full text-center lg:text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start">
+                <h1 className="text-4xl sm:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight">
+                  Embeddable Widget for Your Website
+                </h1>
+                <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 leading-relaxed">
+                  Add WhatTheFood&apos;s AI-powered food scanning to your blog or website. Perfect for food bloggers,
+                  nutrition sites, and health platforms.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
+                  <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" asChild>
+                    <Link href="/widget/plans">Get Your Widget</Link>
+                  </Button>
+                  <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
+                    <Link href="/how-it-works">How It Works</Link>
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            <div className="w-full max-w-lg lg:max-w-[32rem] xl:max-w-[36rem]">
-              <Card className="shadow-strong">
-                <CardContent className="p-6 sm:p-8">
-                  <div className="space-y-4">
-                    <div className="text-left">
-                      <CardTitle className="text-2xl">Launch in Minutes</CardTitle>
-                      <CardDescription className="text-base mt-2">
-                        Copy the embed code, paste it into your site, and start offering instant nutrition analysis to
-                        your visitors.
-                      </CardDescription>
-                    </div>
+              <div className="w-full max-w-lg lg:max-w-[32rem] xl:max-w-[36rem] self-start">
+                <Card className="shadow-strong">
+                  <CardContent className="p-6 sm:p-8">
+                    <div className="space-y-4">
+                      <div className="text-left">
+                        <CardTitle className="text-2xl">Launch in Minutes</CardTitle>
+                        <CardDescription className="text-base mt-2">
+                          Copy the embed code, paste it into your site, and start offering instant nutrition analysis to
+                          your visitors.
+                        </CardDescription>
+                      </div>
 
-                    <div className="bg-muted/40 rounded-lg p-4 space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Embed Preview</p>
-                      <pre className="bg-background border rounded-lg p-4 text-xs overflow-x-auto">
-                        {`<iframe
-  src="https://widget.whatthefood.ai/embed?ref=YOUR_ID"
+                      <div className="bg-muted/40 rounded-lg p-4 space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Embed Preview</p>
+                        <pre className="bg-background border rounded-lg p-4 text-xs overflow-x-auto">
+                          {`<iframe
+  src="https://widget.whatthefood.io/embed?ref=YOUR_ID"
   width="100%"
   height="600"
   style="border-radius: 16px; border: none;"
 ></iframe>`}
-                      </pre>
-                    </div>
+                        </pre>
+                      </div>
 
-                    <Button size="lg" className="w-full bg-primary hover:bg-primary-hover" onClick={handleHeroViewPlans}>
-                      View Plans
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                      <Button size="lg" className="w-full bg-primary hover:bg-primary-hover" onClick={handleHeroViewPlans}>
+                        View Plans
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="min-h-screen flex items-center snap-start bg-background transition-colors duration-300">
-        <div className="container mx-auto px-4 w-full">
-          <div className="max-w-5xl lg:max-w-6xl mx-auto text-center">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-8 sm:mb-12">Widget Features</h2>
+      <section className="bg-background transition-colors duration-300">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
+          <div className="w-full max-w-6xl mx-auto text-center">
+            <h2 className="text-3xl sm:text-4xl font-bold mb-8 sm:mb-10">Widget Features</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 text-left">
               <Card className="h-full">
                 <CardHeader>
@@ -241,8 +243,8 @@ export function WidgetLanding() {
         </div>
       </section>
 
-      <section id="widget-pricing" className="min-h-screen flex items-center bg-muted/30 snap-start">
-        <div className="container mx-auto px-4 w-full">
+      <section id="widget-pricing" className="bg-muted/30">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
           <div className="max-w-6xl mx-auto text-center">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">Widget Pricing</h2>
             <p className="text-muted-foreground mb-10 sm:mb-12 max-w-2xl mx-auto">

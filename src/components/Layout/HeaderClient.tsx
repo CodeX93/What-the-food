@@ -174,12 +174,6 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
                   <span>Settings</span>
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/billing" className="cursor-pointer">
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  <span>Billing</span>
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600">
                 <LogOut className="mr-2 h-4 w-4" />
@@ -245,11 +239,6 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
                   <DrawerClose asChild>
                     <Link href="/settings" className="text-base font-medium py-3 px-4 rounded-lg hover:bg-muted transition-colors">
                       Settings
-                    </Link>
-                  </DrawerClose>
-                  <DrawerClose asChild>
-                    <Link href="/billing" className="text-base font-medium py-3 px-4 rounded-lg hover:bg-muted transition-colors">
-                      Billing
                     </Link>
                   </DrawerClose>
                   <div className="my-2 border-t" />

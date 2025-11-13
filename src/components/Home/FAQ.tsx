@@ -18,7 +18,7 @@ const faqs = [
   },
   {
     question: "How many scans do I get for free?",
-    answer: "Free users get 10 total scans to try the service. After that, you can create a free account for 10 scans per day, or upgrade to Premium for unlimited scans.",
+        answer: "Free visitors can try WhatTheFood with 10 total scans. Create a free account to keep scanning with 3 scans per day, or upgrade to Premium for unlimited scans.",
   },
   {
     question: "Can I export my nutrition data?",

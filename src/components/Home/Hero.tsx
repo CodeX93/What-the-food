@@ -8,14 +8,15 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeFood, saveScanHistory, uploadFoodImage } from "@/utils/foodScan";
-import { getRemainingFreeScans, decrementFreeScan, hasFreeScanAvailable } from "@/utils/freeScanLimit";
+import { decrementFreeScan, hasFreeScanAvailable, getFreeScanStatus } from "@/utils/freeScanLimit";
 import { hasActivePremiumSubscription } from "@/utils/subscription";
 import { useToast } from "@/hooks/use-toast";
 
 const Hero = () => {
   const [uploading, setUploading] = useState(false);
-  const [remainingScans, setRemainingScans] = useState<number>(0);
   const [user, setUser] = useState<any>(null);
+  const [remainingScans, setRemainingScans] = useState<number | null>(null);
+  const [scanStatusType, setScanStatusType] = useState<"registered" | "unregistered" | null>(null);
   const [isPremium, setIsPremium] = useState<boolean | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -43,10 +44,13 @@ const Hero = () => {
       }
 
       try {
-        const remaining = await getRemainingFreeScans(true);
-        setRemainingScans(remaining);
+        const status = await getFreeScanStatus(true);
+        setRemainingScans(status.remaining);
+        setScanStatusType(status.type);
       } catch (error) {
         console.error("Failed to load free scan status", error);
+        setRemainingScans(null);
+        setScanStatusType(null);
       }
     };
     
@@ -119,6 +123,7 @@ const Hero = () => {
         // Decrement free scan count
         const newCount = await decrementFreeScan();
         setRemainingScans(newCount);
+        setScanStatusType("unregistered");
         
         // Save history with temp user (won't be retrievable later, just for current session)
         const scanId = await saveScanHistory({ 
@@ -131,7 +136,7 @@ const Hero = () => {
         
         toast({
           title: "Scan complete!",
-          description: `${newCount} free scan${newCount !== 1 ? 's' : ''} remaining. Sign up to save your history!`,
+          description: `${newCount} free scan${newCount !== 1 ? "s" : ""} remaining. Sign up to save your history!`,
         });
         
         router.push(`/food-results?id=${scanId}`);
@@ -141,7 +146,7 @@ const Hero = () => {
           if (!available) {
             toast({
               title: "Daily limit reached",
-              description: "You have used all 10 free scans for today. Upgrade to Premium for unlimited scans.",
+              description: "You have used all 3 free scans for today. Upgrade to Premium for unlimited scans.",
             });
             return;
           }
@@ -167,6 +172,7 @@ const Hero = () => {
           try {
             const newCount = await decrementFreeScan();
             setRemainingScans(newCount);
+            setScanStatusType("registered");
           } catch (error) {
             console.error("Failed to decrement daily free scan", error);
           }
@@ -198,127 +204,133 @@ const Hero = () => {
     >
       <div className="absolute inset-0 bg-gradient-hero opacity-5 dark:opacity-10" />
       
-      <div className="container mx-auto px-4 relative w-full z-10 py-6 sm:py-10 md:py-12 lg:py-14">
-        <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6 sm:gap-10 lg:gap-14 xl:gap-16">
-          {/* Left Section - Value Proposition (aligned with logo) */}
-          <div className="w-full text-center lg:text-left max-w-2xl lg:max-w-[34rem] xl:max-w-[38rem] lg:pr-10 xl:pr-12">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight">
-              Know What&apos;s Really in Your Food
-            </h1>
-            <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed">
-              Upload a photo of any meal and get instant AI-powered nutritional analysis. 
-              Track calories, macros, and make healthier choices effortlessly.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
-              <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" asChild>
-                <Link href="/auth">Get Started Free</Link>
-              </Button>
-              <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
-                <Link href="/how-it-works">Learn More</Link>
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 sm:mt-7 lg:mt-8">
-              <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-                <Sparkles className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-white">AI Accuracy</p>
-                  <p className="text-xs text-muted-foreground">Understands 10k+ foods</p>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative w-full z-10 py-[19px] sm:py-[35px] md:py-[43px] lg:py-[51px]">
+        <div className="w-full max-w-6xl mx-auto">
+          <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
+            {/* Left Section - Value Proposition (aligned with logo) */}
+            <div className="w-full text-center lg:text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight">
+                Know What&apos;s Really in Your Food
+              </h1>
+              <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed">
+                Upload a photo of any meal and get instant AI-powered nutritional analysis. 
+                Track calories, macros, and make healthier choices effortlessly.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
+                <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" asChild>
+                  <Link href="/auth">Get Started Free</Link>
+                </Button>
+                <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
+                  <Link href="/how-it-works">Learn More</Link>
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 sm:mt-7 lg:mt-8">
+                <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-white">AI Accuracy</p>
+                    <p className="text-xs text-muted-foreground">Understands 10k+ foods</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+                  <Timer className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-white">Instant Results</p>
+                    <p className="text-xs text-muted-foreground">Nutrition in seconds</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+                  <ShieldCheck className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-white">Health Focused</p>
+                    <p className="text-xs text-muted-foreground">Macros & micronutrients</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-                <Timer className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-white">Instant Results</p>
-                  <p className="text-xs text-muted-foreground">Nutrition in seconds</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-                <ShieldCheck className="h-5 w-5 text-primary" />
-                <div>
-                  <p className="text-sm font-semibold text-slate-800 dark:text-white">Health Focused</p>
-                  <p className="text-xs text-muted-foreground">Macros & micronutrients</p>
-                </div>
-              </div>
-            </div>
             <p className="text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6">
               {user ? (
                 isPremium === null ? (
                   "Checking benefits..."
                 ) : isPremium ? (
                   "Unlimited scans per day"
+                ) : remainingScans === null ? (
+                  "Checking your remaining scans..."
+                ) : remainingScans > 0 ? (
+                  `${remainingScans} free scan${remainingScans === 1 ? "" : "s"} remaining today`
                 ) : (
-                  "10 scans per day for free users"
+                  "You have used all free scans for today. Upgrade for unlimited access."
                 )
+              ) : remainingScans === null ? (
+                "Checking free scans..."
               ) : (
-                <>
-                  {remainingScans} free scan{remainingScans !== 1 ? 's' : ''} available • Create a free account for 10 scans per day
-                </>
+                `${remainingScans} free scan${remainingScans === 1 ? "" : "s"} remaining • No signup required`
               )}
             </p>
-          </div>
+            </div>
 
-          {/* Right Section - Upload Placeholder (aligned with profile) */}
-          <div className="w-full max-w-lg lg:max-w-[32rem] xl:max-w-[36rem]">
-            <Card className="shadow-strong">
-              <CardContent className="p-4 sm:p-6 md:p-8">
-                {!previewUrl ? (
-                  <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card">
-                    <Upload className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
-                    <p className="text-base sm:text-lg font-medium mb-2 text-center">Upload Your Food Photo</p>
-                    <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 text-center">
-                      Drop an image here or click to browse
-                    </p>
-                    <div className="flex justify-center">
-                      <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" onClick={onChooseFile} disabled={uploading}>
-                        Choose File
-                      </Button>
+            {/* Right Section - Upload Placeholder (aligned with profile) */}
+            <div className="w-full max-w-lg lg:max-w-[32rem] xl:max-w-[36rem] self-start">
+              <Card className="shadow-strong">
+                <CardContent className="p-4 sm:p-6 md:p-8">
+                  {!previewUrl ? (
+                    <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card">
+                      <Upload className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
+                      <p className="text-base sm:text-lg font-medium mb-2 text-center">Upload Your Food Photo</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 text-center">
+                        Drop an image here or click to browse
+                      </p>
+                      <div className="flex justify-center">
+                        <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" onClick={onChooseFile} disabled={uploading}>
+                          Choose File
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="relative rounded-lg overflow-hidden">
-                      <img 
-                        src={previewUrl} 
-                        alt="Food preview" 
-                        className="w-full h-64 sm:h-72 md:h-80 object-cover rounded-lg"
-                      />
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="relative rounded-lg overflow-hidden">
+                        <img 
+                          src={previewUrl} 
+                          alt="Food preview" 
+                          className="w-full h-64 sm:h-72 md:h-80 object-cover rounded-lg"
+                        />
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        <Button 
+                          size="lg" 
+                          className="bg-primary hover:bg-primary-hover text-sm sm:text-base flex-1 sm:flex-none" 
+                          onClick={handleAnalyze} 
+                          disabled={uploading}
+                        >
+                          {uploading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin"/>
+                              Analyzing...
+                            </>
+                          ) : (
+                            "Analyze Food"
+                          )}
+                        </Button>
+                        <Button 
+                          size="lg" 
+                          variant="outline" 
+                          className="text-sm sm:text-base flex-1 sm:flex-none" 
+                          onClick={() => {
+                            if (previewUrl) {
+                              URL.revokeObjectURL(previewUrl);
+                            }
+                            setSelectedFile(null);
+                            setPreviewUrl(null);
+                          }}
+                          disabled={uploading}
+                        >
+                          Change Photo
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                      <Button 
-                        size="lg" 
-                        className="bg-primary hover:bg-primary-hover text-sm sm:text-base flex-1 sm:flex-none" 
-                        onClick={handleAnalyze} 
-                        disabled={uploading}
-                      >
-                        {uploading ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin"/>
-                            Analyzing...
-                          </>
-                        ) : (
-                          "Analyze Food"
-                        )}
-                      </Button>
-                      <Button 
-                        size="lg" 
-                        variant="outline" 
-                        className="text-sm sm:text-base flex-1 sm:flex-none" 
-                        onClick={() => {
-                          if (previewUrl) {
-                            URL.revokeObjectURL(previewUrl);
-                          }
-                          setSelectedFile(null);
-                          setPreviewUrl(null);
-                        }}
-                        disabled={uploading}
-                      >
-                        Change Photo
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>

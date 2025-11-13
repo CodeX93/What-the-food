@@ -14,7 +14,7 @@ const adminClient = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_K
 });
 
 const UNREGISTERED_LIMIT = 10;
-const REGISTERED_DAILY_LIMIT = 10;
+const REGISTERED_DAILY_LIMIT = 3;
 const SESSION_COOKIE = "wtf_free_scan_session";
 const SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 

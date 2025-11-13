@@ -47,7 +47,7 @@ const steps = [
 
 export default function HowItWorksPage() {
   return (
-    <div className="scroll-snap-proximity overflow-x-hidden">
+    <div className="overflow-x-hidden bg-background">
       {/* Hero */}
       <section className="relative min-h-screen w-full snap-start bg-background">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.08),transparent_70%)] dark:bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.12),transparent_70%)] pointer-events-none" />
@@ -144,9 +144,9 @@ export default function HowItWorksPage() {
       </section>
 
       {/* Process */}
-      <section className="min-h-screen w-full snap-start bg-background">
-        <div className="container mx-auto flex h-full flex-col justify-center gap-10 px-4 lg:px-12 py-16">
-          <div className="max-w-3xl mx-auto text-center space-y-4">
+      <section className="bg-background">
+        <div className="container mx-auto px-4 lg:px-12 py-16 sm:py-20 lg:py-24">
+          <div className="max-w-3xl mx-auto text-center space-y-4 mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground">Your meal, decoded in three guided stages</h2>
             <p className="text-base sm:text-lg text-muted-foreground">
               Capture, analyze, and act—each scan moves from photo to insights in seconds.
@@ -194,10 +194,10 @@ export default function HowItWorksPage() {
    
 
       {/* CTA */}
-      <section className="relative min-h-screen w-full snap-start bg-background">
+      <section className="relative bg-background">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.08),transparent_70%)] dark:bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.12),transparent_70%)] pointer-events-none" />
-        <div className="container mx-auto flex h-full flex-col items-center justify-center gap-10 px-4 lg:px-16 py-16 text-center">
-          <div className="max-w-3xl space-y-6">
+        <div className="container relative z-10 mx-auto px-4 lg:px-16 py-16 sm:py-20 lg:py-24">
+          <div className="max-w-5xl mx-auto text-center space-y-6 mb-10">
             <span className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1 text-xs font-medium uppercase tracking-wide text-primary">
               Join the WhatTheFood community
             </span>
@@ -207,7 +207,7 @@ export default function HowItWorksPage() {
             </p>
           </div>
 
-          <div className="grid w-full max-w-5xl gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-stretch">
+          <div className="grid w-full max-w-5xl mx-auto gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-stretch">
             <Card className="border border-primary/20 bg-white/95 dark:bg-white/5 backdrop-blur-md shadow-lg h-full">
               <CardContent className="flex h-full flex-col justify-between gap-6 p-6 sm:p-10 text-left">
                 <div className="space-y-4">

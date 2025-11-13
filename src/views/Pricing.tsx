@@ -3,7 +3,7 @@ import FAQ from "@/components/Home/FAQ";
 
 export default function PricingPage() {
   return (
-    <div className="scroll-snap-proximity overflow-x-hidden">
+    <div className="overflow-x-hidden bg-background">
       <PricingTable />
       <FAQ />
     </div>

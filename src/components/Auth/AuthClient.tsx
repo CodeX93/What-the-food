@@ -244,7 +244,7 @@ export function AuthClient() {
               <p className="text-sm text-muted-foreground">
                 {tabValue === "signin"
                   ? "Sign in to access your scan history and premium features"
-                  : "Get 10 free scans daily or upgrade to Premium for unlimited access"}
+                  : "Get 3 free scans daily or upgrade to Premium for unlimited access"}
               </p>
             </div>
 
@@ -352,7 +352,7 @@ export function AuthClient() {
                     <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20 mb-4 backdrop-blur-sm">
                       <Sparkles className="h-5 w-5 text-primary" />
                       <p className="text-sm text-muted-foreground">
-                        Get <span className="font-semibold text-foreground">10 free scans daily</span> or upgrade to Premium for unlimited access
+                        Get <span className="font-semibold text-foreground">3 free scans daily</span> or upgrade to Premium for unlimited access
                       </p>
                     </div>
 

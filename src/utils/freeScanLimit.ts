@@ -29,6 +29,10 @@ async function requestStatus(force = false): Promise<FreeScanStatus> {
   return data;
 }
 
+export async function getFreeScanStatus(force = false): Promise<FreeScanStatus> {
+  return requestStatus(force);
+}
+
 export async function getRemainingFreeScans(force = false): Promise<number> {
   try {
     const status = await requestStatus(force);

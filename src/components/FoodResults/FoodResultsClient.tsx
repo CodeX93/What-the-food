@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  analyzeFood,
   scaleNutrients,
   type FoodAnalysis,
   getPersonalizedInsights,
@@ -35,9 +36,22 @@ import {
   Sparkles,
   Crown,
   Info,
+  Pencil,
+  AlertCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export function FoodResultsClient() {
   const searchParams = useSearchParams();
@@ -47,6 +61,15 @@ export function FoodResultsClient() {
 
   const [loading, setLoading] = useState(true);
   const [servings, setServings] = useState(1);
+  const [servingsInput, setServingsInput] = useState("1");
+  const MIN_SERVINGS = 0.001;
+
+  const applyServings = (next: number) => {
+    const clamped = Number(next.toFixed(3));
+    setServings(clamped);
+    setServingsInput(clamped.toString());
+  };
+
   const [savedServings, setSavedServings] = useState(1);
   const [imageUrl, setImageUrl] = useState<string>("");
   const [imagePath, setImagePath] = useState<string>("");
@@ -62,6 +85,10 @@ export function FoodResultsClient() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
   const [checkingPremium, setCheckingPremium] = useState(true);
+  const [ingredientEditorOpen, setIngredientEditorOpen] = useState(false);
+  const [ingredientInput, setIngredientInput] = useState("");
+  const [updatingIngredients, setUpdatingIngredients] = useState(false);
+  const [analysisRefreshing, setAnalysisRefreshing] = useState(false);
 
   const servingApproximation = useMemo(() => {
     if (!analysis?.servingSize) return null;
@@ -80,6 +107,92 @@ export function FoodResultsClient() {
     }
     return null;
   }, [analysis?.servingSize]);
+
+  const handleOpenIngredientEditor = () => {
+    if (analysis) {
+      setIngredientInput((analysis.ingredients ?? []).join("\n"));
+    }
+    setIngredientEditorOpen(true);
+  };
+
+  const handleIngredientUpdate = async () => {
+    if (!analysis) {
+      toast({
+        title: "No analysis available",
+        description: "Please run a scan before editing ingredients.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const cleaned = ingredientInput
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (!cleaned.length) {
+      toast({
+        title: "Add at least one ingredient",
+        description: "Each ingredient should be on its own line.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUpdatingIngredients(true);
+    setAnalysisRefreshing(true);
+    try {
+      let sourceUrl = imageUrl;
+      if (imagePath) {
+        const fresh = await getImageUrl(imagePath, 60 * 5);
+        if (fresh) {
+          sourceUrl = fresh;
+          setImageUrl(fresh);
+        }
+      }
+
+      if (!sourceUrl) {
+        throw new Error("Image reference expired. Please re-upload the meal photo.");
+      }
+
+      const { analysis: updatedAnalysis } = await analyzeFood(sourceUrl, servings, undefined, {
+        overrideIngredients: cleaned,
+      });
+
+      setAnalysis(updatedAnalysis);
+      applyServings(servings);
+      setIngredientInput((updatedAnalysis.ingredients ?? []).join("\n"));
+      setIngredientEditorOpen(false);
+      setInsightsText("");
+      setUpgradeRequired(false);
+
+      if (id) {
+        try {
+          await (supabase as any)
+            .from("food_scans")
+            .update({ result_json: updatedAnalysis })
+            .eq("id", id);
+        } catch (err) {
+          console.error("Failed to persist updated analysis", err);
+        }
+      }
+
+      toast({
+        title: "Ingredients updated",
+        description: "Nutrition values were recalculated using your adjustments.",
+      });
+    } catch (error: any) {
+      console.error("Ingredient update failed:", error);
+      toast({
+        title: "Update failed",
+        description: error?.message || "Could not refresh the analysis. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUpdatingIngredients(false);
+      setAnalysisRefreshing(false);
+    }
+  };
 
   const handleExportPdf = async () => {
     if (!analysis) return;
@@ -222,6 +335,22 @@ export function FoodResultsClient() {
       }
     }
 
+    const escapedDescription = analysis.description
+      ? analysis.description.replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      : "";
+    const tagsHtml =
+      analysis.tags && analysis.tags.length
+        ? `<div class="tag-list">${analysis.tags
+            .map((tag) => `<span class="tag-pill">${tag.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>`)
+            .join("")}</div>`
+        : "";
+    const additionalInfoHtml = analysis.additionalInfo
+      ? `<div class="info-note">${analysis.additionalInfo.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`
+      : "";
+    const servingGuidanceHtml = analysis.servingGuidance
+      ? `<div class="serving-guidance">${analysis.servingGuidance.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`
+      : "";
+
     const printable = `<!doctype html>
 <html>
 <head>
@@ -243,6 +372,11 @@ export function FoodResultsClient() {
     .image-footer div { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
     .progress-bar { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin-top: 8px; }
     .progress-fill { height: 100%; background: #3b82f6; }
+    .meal-description { font-size: 16px; line-height: 1.6; color: #4b5563; margin: 0 0 16px; }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .tag-pill { display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border-radius: 999px; background: #f1f5f9; color: #1f2937; font-size: 12px; font-weight: 600; text-transform: capitalize; }
+    .info-note { border: 1px solid #fcd34d; background: #fef3c7; color: #92400e; padding: 12px 16px; border-radius: 10px; font-size: 13px; line-height: 1.6; margin-bottom: 20px; }
+    .serving-guidance { border: 1px dashed #60a5fa; background: #eff6ff; color: #1d4ed8; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
     .nutrition-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
     .nutrition-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
     .serving-info { font-size: 12px; color: #6b7280; background: #f9fafb; padding: 6px 12px; border-radius: 6px; }
@@ -264,6 +398,9 @@ export function FoodResultsClient() {
     </div>
     <div class="confidence-badge">Confidence: ${Math.round((analysis.confidence || 0) * 100)}%</div>
   </div>
+  ${escapedDescription ? `<p class="meal-description">${escapedDescription}</p>` : ""}
+  ${tagsHtml}
+  ${additionalInfoHtml}
   <div class="main-content">
     <div class="image-section">
       ${
@@ -290,6 +427,7 @@ export function FoodResultsClient() {
           </div>
           <div class="serving-info">Servings: ${servings}</div>
         </div>
+        ${servingGuidanceHtml}
         <div class="nutrition-grid">
           <div class="nutrient-card">🔥 Calories: ${scaledNutrients.calories ?? "-"}</div>
           <div class="nutrient-card">🥩 Protein: ${scaledNutrients.protein_g ?? "-"}g</div>
@@ -419,7 +557,7 @@ export function FoodResultsClient() {
           image_url?: string | null;
         };
 
-        setServings(scanRecord.serving || 1);
+        applyServings(scanRecord.serving || 1);
         setSavedServings(scanRecord.serving || 1);
         setAnalysis((scanRecord.result_json as FoodAnalysis) || null);
         setImagePath(scanRecord.image_path || "");
@@ -432,6 +570,12 @@ export function FoodResultsClient() {
 
     load();
   }, [id, router]);
+
+  useEffect(() => {
+    if (analysis) {
+      setIngredientInput((analysis.ingredients ?? []).join("\n"));
+    }
+  }, [analysis]);
 
   const scaled = useMemo(
     () => (analysis ? scaleNutrients(analysis.nutrients, servings) : null),
@@ -575,7 +719,8 @@ export function FoodResultsClient() {
   }
 
   return (
-    <main className="flex-1">
+    <>
+      <main className="flex-1">
       <div className="container mx-auto px-4 py-6 md:py-8 max-w-7xl">
         <div className="mb-6 md:mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -654,30 +799,70 @@ export function FoodResultsClient() {
           </div>
 
           <div className="lg:col-span-8 space-y-6">
-            <Card>
+            <Card className="relative overflow-hidden">
               <CardHeader>
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div>
-                    <CardTitle className="text-xl">Nutrition Summary</CardTitle>
-                    <CardDescription>{analysis.servingSize || "Per serving"}</CardDescription>
+                  <div className="space-y-2">
+                    <div>
+                      <CardTitle className="text-xl">Nutrition Summary</CardTitle>
+                      <CardDescription>{analysis.servingSize || "Per serving"}</CardDescription>
+                    </div>
+                    {analysis.description && (
+                      <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-primary/30 pl-3">
+                        {analysis.description}
+                      </p>
+                    )}
+                    {analysis.tags && analysis.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {analysis.tags.map((tag, index) => {
+                          const colorIndex = index % 4;
+                          const colorClasses = [
+                            "bg-emerald-100 text-emerald-800 border-emerald-200",
+                            "bg-sky-100 text-sky-800 border-sky-200",
+                            "bg-rose-100 text-rose-800 border-rose-200",
+                            "bg-amber-100 text-amber-800 border-amber-200",
+                          ];
+                          return (
+                            <Badge
+                              key={tag}
+                              variant="outline"
+                              className={`rounded-full px-2.5 py-0.5 text-xs font-medium border ${colorClasses[colorIndex]}`}
+                            >
+                              {tag}
+                            </Badge>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Servings</span>
                     <input
-                      type="number"
-                      min="0.1"
-                      step="0.001"
+                      type="text"
+                      inputMode="decimal"
                       className="border rounded-lg px-3 py-2 w-28 text-center font-medium bg-background"
-                      value={servings}
+                      value={servingsInput}
                       onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === "") {
+                        const raw = e.target.value;
+                        setServingsInput(raw);
+
+                        const sanitized = raw.replace(/[^0-9.]/g, "");
+                        const dots = (sanitized.match(/\./g) ?? []).length;
+                        if (dots > 1) {
                           return;
                         }
-                        const parsed = parseFloat(value);
-                        if (!Number.isNaN(parsed) && parsed > 0) {
-                          const clamped = Number(parsed.toFixed(3));
-                          setServings(clamped);
+
+                        const parsed = parseFloat(sanitized);
+                        if (!Number.isNaN(parsed) && parsed >= MIN_SERVINGS) {
+                          applyServings(parsed);
+                        }
+                      }}
+                      onBlur={() => {
+                        const parsed = parseFloat(servingsInput);
+                        if (!Number.isNaN(parsed) && parsed >= MIN_SERVINGS) {
+                          applyServings(parsed);
+                        } else {
+                          applyServings(MIN_SERVINGS);
                         }
                       }}
                     />
@@ -728,7 +913,12 @@ export function FoodResultsClient() {
                 </div>
               </CardHeader>
               <CardContent>
-                {servingApproximation && (
+                {analysis.servingGuidance && (
+                  <div className="mb-4 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary">
+                    {analysis.servingGuidance}
+                  </div>
+                )}
+                {!analysis.servingGuidance && servingApproximation && (
                   <div className="mb-4 rounded-lg border border-muted/50 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
                     <span className="font-medium text-foreground">{servingApproximation.label}</span> ≈ {servingApproximation.grams} grams. To adjust servings, divide your dish weight (in grams) by {servingApproximation.grams}. For example, 650 g ÷ {servingApproximation.grams} ≈ {(650 / servingApproximation.grams).toFixed(1)} servings.
                   </div>
@@ -760,14 +950,25 @@ export function FoodResultsClient() {
                   ))}
                 </div>
               </CardContent>
+              {analysisRefreshing && (
+                <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              )}
             </Card>
 
             <div className="grid md:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Apple className="h-5 w-5 text-primary" />
-                    <CardTitle>Ingredients</CardTitle>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <Apple className="h-5 w-5 text-primary" />
+                      <CardTitle>Ingredients</CardTitle>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={handleOpenIngredientEditor}>
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Edit
+                    </Button>
                   </div>
                   <CardDescription>Detected/estimated ingredients</CardDescription>
                 </CardHeader>
@@ -805,6 +1006,20 @@ export function FoodResultsClient() {
                 </CardContent>
               </Card>
             </div>
+
+            {analysis.additionalInfo && (
+              <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 mt-0.5" />
+                  <div>
+                    <AlertTitle>Additional Information</AlertTitle>
+                    <AlertDescription className="text-sm leading-relaxed">
+                      {analysis.additionalInfo}
+                    </AlertDescription>
+                  </div>
+                </div>
+              </Alert>
+            )}
 
             <Card className="border-primary/20">
               <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
@@ -1091,6 +1306,42 @@ export function FoodResultsClient() {
           </div>
         </div>
       </div>
-    </main>
+      </main>
+      <Dialog open={ingredientEditorOpen} onOpenChange={setIngredientEditorOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit detected ingredients</DialogTitle>
+            <DialogDescription>
+              Adjust the ingredient list and quantities. We&apos;ll recalculate the nutrition based on your edits.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Textarea
+              rows={Math.max(6, ingredientInput.split("\n").length + 1)}
+              value={ingredientInput}
+              onChange={(e) => setIngredientInput(e.target.value)}
+              placeholder={"1 cup cooked chickpeas\n2 tbsp tahini\n1 tbsp olive oil\nPaprika, to taste"}
+            />
+            <p className="text-xs text-muted-foreground">
+              Enter one ingredient per line. Include quantities (cups, tbsp, grams, etc.) to improve accuracy.
+            </p>
+          </div>
+          <DialogFooter className="pt-2">
+            <Button variant="outline" onClick={() => setIngredientEditorOpen(false)} disabled={updatingIngredients}>
+              Cancel
+            </Button>
+            <Button onClick={handleIngredientUpdate} disabled={updatingIngredients}>
+              {updatingIngredients ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Updating...
+                </>
+              ) : (
+                "Update ingredients"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

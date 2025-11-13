@@ -14,7 +14,7 @@ const plans = [
     period: "/month",
     description: "Try out WhatTheFood",
     features: [
-      "10 scans per day",
+      "3 scans per day",
       "No scan history",
       "Ads included",
       "No serving adjuster",

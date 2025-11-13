@@ -303,7 +303,7 @@ export function DashboardClient({
                           if (!available) {
                             toast({
                               title: "Daily limit reached",
-                              description: "You have used all 10 free scans for today. Upgrade to Premium for unlimited scans.",
+                              description: "You have used all 3 free scans for today. Upgrade to Premium for unlimited scans.",
                             });
                             setAnalyzing(false);
                             return;
