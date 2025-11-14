@@ -171,19 +171,22 @@ Use exactly and only this ingredient list (including quantities) when estimating
   }
 }
 
-async function quickPremiumCheck(userId) {
+async function quickPremiumCheck(client, userId) {
   try {
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const { data } = await supabase
+    const { data, error } = await client
       .from("platform_subscriptions")
-      .select("subscription_type")
+      .select("subscription_type, is_active")
       .eq("user_id", userId)
       .eq("is_active", true)
       .limit(1)
       .maybeSingle();
-
-    return data?.subscription_type && data.subscription_type !== "free";
-  } catch {
+    if (error) {
+      console.error("quickPremiumCheck error:", error);
+      return false;
+    }
+    return Boolean(data?.subscription_type && data.subscription_type !== "free" && data?.is_active);
+  } catch (err) {
+    console.error("quickPremiumCheck failed:", err);
     return false;
   }
 }
@@ -343,9 +346,11 @@ Deno.serve(async (req) => {
       
       tasks.push(
         (async () => {
-          const { data: { user } } = await supabaseAuth.auth.getUser();
+          const {
+            data: { user },
+          } = await supabaseAuth.auth.getUser();
           if (!user) return { user: null, isPremium: false };
-          const isPremium = await quickPremiumCheck(user.id);
+          const isPremium = await quickPremiumCheck(supabaseAuth, user.id);
           return { user, isPremium };
         })()
       );

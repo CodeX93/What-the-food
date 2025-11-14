@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,8 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 export function FoodResultsClient() {
   const searchParams = useSearchParams();
@@ -89,6 +91,8 @@ export function FoodResultsClient() {
   const [ingredientInput, setIngredientInput] = useState("");
   const [updatingIngredients, setUpdatingIngredients] = useState(false);
   const [analysisRefreshing, setAnalysisRefreshing] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const reportRef = useRef<HTMLDivElement | null>(null);
 
   const servingApproximation = useMemo(() => {
     if (!analysis?.servingSize) return null;
@@ -195,319 +199,57 @@ export function FoodResultsClient() {
   };
 
   const handleExportPdf = async () => {
-    if (!analysis) return;
-    const title = analysis.dish || "Food Result";
-    const scaledNutrients = scaleNutrients(analysis.nutrients, servings);
-
-    let imageDataUrl = "";
-
-    if (imagePath) {
-      try {
-        const { data: blobData, error: downloadError } = await supabase.storage
-          .from("FoodScans")
-          .download(imagePath);
-
-        if (!downloadError && blobData) {
-          imageDataUrl = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              if (reader.result && typeof reader.result === "string") {
-                resolve(reader.result);
-              } else {
-                reject(new Error("Failed to convert image"));
-              }
-            };
-            reader.onerror = () => reject(new Error("FileReader error"));
-            reader.readAsDataURL(blobData);
-          });
-        } else {
-          const { data: signed } = await supabase.storage
-            .from("FoodScans")
-            .createSignedUrl(imagePath, 60 * 5);
-
-          if (signed?.signedUrl) {
-            const response = await fetch(signed.signedUrl);
-            if (response.ok) {
-              const blob = await response.blob();
-              imageDataUrl = await new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                  if (reader.result && typeof reader.result === "string") {
-                    resolve(reader.result);
-                  } else {
-                    reject(new Error("Failed to convert image"));
-                  }
-                };
-                reader.onerror = () => reject(new Error("FileReader error"));
-                reader.readAsDataURL(blob);
-              });
-            }
-          }
-        }
-      } catch (e) {
-        console.error("Failed to convert image:", e);
-        imageDataUrl = "";
-      }
-    } else if (imageUrl) {
-      try {
-        const response = await fetch(imageUrl);
-        if (response.ok) {
-          const blob = await response.blob();
-          imageDataUrl = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-              if (reader.result && typeof reader.result === "string") {
-                resolve(reader.result);
-              } else {
-                reject(new Error("Failed to convert image"));
-              }
-            };
-            reader.onerror = () => reject(new Error("FileReader error"));
-            reader.readAsDataURL(blob);
-          });
-        }
-      } catch (e) {
-        console.error("Failed to convert image from URL:", e);
-        imageDataUrl = "";
-      }
-    }
-
-    let insightsHtml = "";
-    if (parsedInsights) {
-      if (parsedInsights.healthContext) {
-        insightsHtml += `
-          <div style="border: 2px solid #e5e7eb; border-radius: 12px; padding: 20px; margin: 20px 0; background: linear-gradient(to bottom right, #f3f4f6, #e5e7eb);">
-            <div style="display: flex; align-items: flex-start; gap: 16px;">
-              <div style="padding: 8px; border-radius: 8px; background: rgba(59, 130, 246, 0.2);">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #3b82f6;">
-                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                  <polyline points="17 6 23 6 23 12"></polyline>
-                </svg>
-              </div>
-              <div style="flex: 1;">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
-                  <h4 style="font-size: 18px; font-weight: 700; margin: 0;">Personalized Health Context</h4>
-                  ${parsedInsights.demographics ? `<span style="font-size: 11px; color: #6b7280; background: white; padding: 4px 12px; border-radius: 999px; border: 1px solid #e5e7eb;">${parsedInsights.demographics}</span>` : ""}
-                </div>
-                <p style="font-size: 14px; line-height: 1.6; color: #1f2937; margin: 0; white-space: pre-wrap;">${parsedInsights.healthContext
-                  .replace(/</g, "&lt;")
-                  .replace(/>/g, "&gt;")}</p>
-              </div>
-            </div>
-          </div>`;
-      }
-
-      if (parsedInsights.substitutions.length > 0) {
-        insightsHtml += `
-          <div style="margin: 20px 0;">
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
-              <div style="padding: 8px; border-radius: 8px; background: rgba(59, 130, 246, 0.1);">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #3b82f6;">
-                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
-                </svg>
-              </div>
-              <h4 style="font-size: 18px; font-weight: 700; margin: 0;">Smart Substitution Suggestions</h4>
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
-              ${parsedInsights.substitutions
-                .map(
-                  (sub) => `
-                <div style="display: flex; align-items: flex-start; gap: 12px; padding: 16px; border-radius: 8px; border: 2px solid #e5e7eb; background: linear-gradient(to bottom right, #f9fafb, #f3f4f6);">
-                  <div style="flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; background: rgba(59, 130, 246, 0.1); display: flex; align-items: center; justify-content: center;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: #3b82f6;">
-                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                      <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                    </svg>
-                  </div>
-                  <div style="flex: 1;">
-                    ${sub.title ? `<h5 style="font-size: 14px; font-weight: 600; margin: 0 0 8px;">${sub.title
-                      .replace(/</g, "&lt;")
-                      .replace(/>/g, "&gt;")}</h5>` : ""}
-                    <p style="font-size: 13px; color: #6b7280; line-height: 1.5; margin: 0;">${sub.description
-                      .replace(/</g, "&lt;")
-                      .replace(/>/g, "&gt;")}</p>
-                  </div>
-                </div>`
-                )
-                .join("")}
-            </div>
-          </div>`;
-      }
-    }
-
-    const escapedDescription = analysis.description
-      ? analysis.description.replace(/</g, "&lt;").replace(/>/g, "&gt;")
-      : "";
-    const tagsHtml =
-      analysis.tags && analysis.tags.length
-        ? `<div class="tag-list">${analysis.tags
-            .map((tag) => `<span class="tag-pill">${tag.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>`)
-            .join("")}</div>`
-        : "";
-    const additionalInfoHtml = analysis.additionalInfo
-      ? `<div class="info-note">${analysis.additionalInfo.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`
-      : "";
-    const servingGuidanceHtml = analysis.servingGuidance
-      ? `<div class="serving-guidance">${analysis.servingGuidance.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`
-      : "";
-
-    const printable = `<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>${title} - WhatTheFood</title>
-  <style>
-    @media print { @page { margin: 20mm; } body { margin: 0; } }
-    * { box-sizing: border-box; }
-    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, sans-serif; margin: 0; padding: 24px; color: #0a0a0a; background: #ffffff; }
-    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #e5e7eb; }
-    h1 { font-size: 28px; margin: 0; display: flex; align-items: center; gap: 8px; font-weight: 700; }
-    .subtitle { color: #6b7280; font-size: 14px; margin-top: 4px; }
-    .confidence-badge { display: inline-block; padding: 4px 12px; border-radius: 999px; background: #eef2ff; color: #4338ca; font-size: 12px; font-weight: 600; }
-    .main-content { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; margin-bottom: 24px; }
-    .image-section { border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
-    .image-section img { width: 100%; height: auto; display: block; }
-    .image-footer { padding: 12px; background: #f9fafb; border-top: 1px solid #e5e7eb; }
-    .image-footer div { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
-    .progress-bar { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin-top: 8px; }
-    .progress-fill { height: 100%; background: #3b82f6; }
-    .meal-description { font-size: 16px; line-height: 1.6; color: #4b5563; margin: 0 0 16px; }
-    .tag-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-    .tag-pill { display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border-radius: 999px; background: #f1f5f9; color: #1f2937; font-size: 12px; font-weight: 600; text-transform: capitalize; }
-    .info-note { border: 1px solid #fcd34d; background: #fef3c7; color: #92400e; padding: 12px 16px; border-radius: 10px; font-size: 13px; line-height: 1.6; margin-bottom: 20px; }
-    .serving-guidance { border: 1px dashed #60a5fa; background: #eff6ff; color: #1d4ed8; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.5; margin-bottom: 16px; }
-    .nutrition-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
-    .nutrition-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-    .serving-info { font-size: 12px; color: #6b7280; background: #f9fafb; padding: 6px 12px; border-radius: 6px; }
-    .nutrition-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    .nutrient-card { padding: 16px; border-radius: 8px; border: 1px solid #e5e7eb; }
-    .nutrient-value { font-size: 24px; font-weight: 700; }
-    .two-col { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px; }
-    .info-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; }
-    .ingredient-list, .instruction-list { list-style: none; padding: 0; margin: 0; }
-    .ingredient-list li, .instruction-list li { display: flex; gap: 12px; margin-bottom: 12px; font-size: 14px; }
-    .step-number { width: 24px; height: 24px; border-radius: 50%; background: rgba(59, 130, 246, 0.1); color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <div>
-      <h1>🍽️ ${title}</h1>
-      <div class="subtitle">${analysis.servingSize || "Per serving"}</div>
-    </div>
-    <div class="confidence-badge">Confidence: ${Math.round((analysis.confidence || 0) * 100)}%</div>
-  </div>
-  ${escapedDescription ? `<p class="meal-description">${escapedDescription}</p>` : ""}
-  ${tagsHtml}
-  ${additionalInfoHtml}
-  <div class="main-content">
-    <div class="image-section">
-      ${
-        imageDataUrl
-          ? `<img src="${imageDataUrl}" alt="${title}" />`
-          : "<div style='height: 300px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; color: #9ca3af;'>Image not available</div>"
-      }
-      <div class="image-footer">
-        <div>
-          <span style="color: #6b7280;">Confidence</span>
-          <span style="font-weight: 600; margin-left: 8px;">${Math.round((analysis.confidence || 0) * 100)}%</span>
-        </div>
-        <div class="progress-bar">
-          <div class="progress-fill" style="width: ${Math.round((analysis.confidence || 0) * 100)}%"></div>
-        </div>
-      </div>
-    </div>
-    <div>
-      <div class="nutrition-card">
-        <div class="nutrition-header">
-          <div>
-            <h2>Nutrition Summary</h2>
-            <div>${analysis.servingSize || "Per serving"}</div>
-          </div>
-          <div class="serving-info">Servings: ${servings}</div>
-        </div>
-        ${servingGuidanceHtml}
-        <div class="nutrition-grid">
-          <div class="nutrient-card">🔥 Calories: ${scaledNutrients.calories ?? "-"}</div>
-          <div class="nutrient-card">🥩 Protein: ${scaledNutrients.protein_g ?? "-"}g</div>
-          <div class="nutrient-card">🌾 Carbs: ${scaledNutrients.carbohydrates_g ?? "-"}g</div>
-          <div class="nutrient-card">💧 Fat: ${scaledNutrients.fat_g ?? "-"}g</div>
-          <div class="nutrient-card">🍎 Fiber: ${scaledNutrients.fiber_g ?? "-"}g</div>
-          <div class="nutrient-card">🍬 Sugar: ${scaledNutrients.sugar_g ?? "-"}g</div>
-        </div>
-      </div>
-      <div class="two-col">
-        <div class="info-card">
-          <h3>🍎 Ingredients</h3>
-          <ul class="ingredient-list">
-            ${(analysis.ingredients || [])
-              .map(
-                (ing) => `
-              <li>
-                <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                  <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                </svg>
-                ${ing.replace(/</g, "&lt;").replace(/>/g, "&gt;")}
-              </li>`
-              )
-              .join("")}
-          </ul>
-        </div>
-        <div class="info-card">
-          <h3>⚡ How to Prepare</h3>
-          <ol class="instruction-list">
-            ${(analysis.instructions || [])
-              .map(
-                (step, i) => `
-              <li>
-                <span class="step-number">${i + 1}</span>
-                <span>${step.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</span>
-              </li>`
-              )
-              .join("")}
-          </ol>
-        </div>
-      </div>
-    </div>
-  </div>
-  ${insightsHtml}
-  <div style="text-align: center; margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;">
-    Generated by WhatTheFood • ${new Date().toLocaleDateString()}
-  </div>
-</body>
-</html>`;
-
-    const win = window.open("", "_blank", "noopener,noreferrer");
-    if (!win) {
-      alert("Please allow popups to export PDF");
+    if (!analysis || !reportRef.current) {
+      toast({
+        title: "Nothing to export",
+        description: "Run a scan first so we can capture the results.",
+        variant: "destructive",
+      });
       return;
     }
 
-    win.document.open();
-    win.document.write(printable);
-    win.document.close();
+    setExportingPdf(true);
+    const node = reportRef.current;
+    node.classList.add("pdf-capturing");
+    const waitForReflow = () =>
+      new Promise((resolve) => {
+        requestAnimationFrame(() => resolve(null));
+      });
 
-    win.onload = () => {
-      setTimeout(() => {
-        try {
-          win.print();
-        } catch (e) {
-          console.error("Print error:", e);
-          win.focus();
-        }
-      }, 500);
-    };
+    try {
+      const backgroundColor = window.getComputedStyle(document.body).backgroundColor || "#ffffff";
+      await waitForReflow();
+      const canvas = await html2canvas(node, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor,
+        windowWidth: node.scrollWidth,
+        windowHeight: node.scrollHeight,
+      });
 
-    setTimeout(() => {
-      try {
-        win.print();
-      } catch (e) {
-        console.error("Print error:", e);
-        win.focus();
-      }
-    }, 1000);
+      const imgData = canvas.toDataURL("image/png");
+      const pdfWidth = canvas.width;
+      const pdfHeight = canvas.height;
+      const pdf = new jsPDF("p", "px", [pdfWidth, pdfHeight]);
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
+
+      const safeTitle = (analysis.dish || "food-result").replace(/[^\w\d_-]+/g, "-");
+      pdf.save(`${safeTitle}.pdf`);
+      toast({
+        title: "PDF ready",
+        description: "We saved the exact screen layout to your downloads.",
+      });
+    } catch (error) {
+      console.error("PDF export failed:", error);
+      toast({
+        title: "Export failed",
+        description: "We couldn't capture the report. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      node.classList.remove("pdf-capturing");
+      setExportingPdf(false);
+    }
   };
 
   useEffect(() => {
@@ -721,7 +463,7 @@ export function FoodResultsClient() {
   return (
     <>
       <main className="flex-1">
-      <div className="container mx-auto px-4 py-6 md:py-8 max-w-7xl">
+      <div className="container mx-auto px-4 py-6 md:py-8 max-w-7xl" ref={reportRef}>
         <div className="mb-6 md:mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -739,15 +481,9 @@ export function FoodResultsClient() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigator.clipboard.writeText(window.location.href)}
-              >
-                <Share2 className="h-4 w-4 mr-2" /> Share
-              </Button>
-              <Button size="sm" onClick={handleExportPdf}>
-                <FileDown className="h-4 w-4 mr-2" /> PDF
+              <Button size="sm" onClick={handleExportPdf} disabled={exportingPdf}>
+                {exportingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
+                {exportingPdf ? "Preparing…" : "PDF"}
               </Button>
             </div>
           </div>
@@ -815,21 +551,20 @@ export function FoodResultsClient() {
                     {analysis.tags && analysis.tags.length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {analysis.tags.map((tag, index) => {
-                          const colorIndex = index % 4;
-                          const colorClasses = [
-                            "bg-emerald-100 text-emerald-800 border-emerald-200",
-                            "bg-sky-100 text-sky-800 border-sky-200",
-                            "bg-rose-100 text-rose-800 border-rose-200",
-                            "bg-amber-100 text-amber-800 border-amber-200",
+                          const palette = [
+                            "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.4)]",
+                            "bg-sky-50 text-sky-700 border border-sky-200 shadow-[inset_0_0_0_1px_rgba(14,165,233,0.3)]",
+                            "bg-rose-50 text-rose-700 border border-rose-200 shadow-[inset_0_0_0_1px_rgba(244,63,94,0.3)]",
+                            "bg-amber-50 text-amber-700 border border-amber-200 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.4)]",
                           ];
+                          const colors = palette[index % palette.length];
                           return (
-                            <Badge
-                              key={tag}
-                              variant="outline"
-                              className={`rounded-full px-2.5 py-0.5 text-xs font-medium border ${colorClasses[colorIndex]}`}
+                            <span
+                              key={`${tag}-${index}`}
+                              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize tracking-tight ${colors}`}
                             >
                               {tag}
-                            </Badge>
+                            </span>
                           );
                         })}
                       </div>
@@ -1101,7 +836,10 @@ export function FoodResultsClient() {
                   </div>
                 ) : (
                   <>
-                    <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                    <div
+                      className="grid sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6"
+                      data-hide-in-pdf={insightsText ? "true" : undefined}
+                    >
                       <div>
                         <label className="text-xs font-medium text-muted-foreground mb-1 block">Age</label>
                         <input
@@ -1154,7 +892,10 @@ export function FoodResultsClient() {
                         </select>
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div
+                      className="flex flex-wrap items-center gap-2"
+                      data-hide-in-pdf={insightsText ? "true" : undefined}
+                    >
                       <Button
                         disabled={insightsLoading || !age || !gender || !activity || !goal}
                         onClick={async () => {
@@ -1237,7 +978,10 @@ export function FoodResultsClient() {
                     )}
 
                     {parsedInsights && (
-                      <div className="mt-6 space-y-6">
+                      <div
+                        className="mt-6 space-y-6"
+                        data-collapse-gap-in-pdf={insightsText ? "true" : undefined}
+                      >
                         {parsedInsights.healthContext && (
                           <div className="rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-5">
                             <div className="flex items-start gap-4">

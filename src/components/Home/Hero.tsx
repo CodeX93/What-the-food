@@ -20,6 +20,7 @@ export default function Hero() {
   const [isPremium, setIsPremium] = useState<boolean | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -70,6 +71,19 @@ export default function Hero() {
       }
     };
   }, [previewUrl]);
+
+  useEffect(() => {
+    const measureHeader = () => {
+      const header = document.querySelector("header");
+      if (!header) return;
+      const { height } = header.getBoundingClientRect();
+      setHeaderHeight(Math.round(height));
+    };
+
+    measureHeader();
+    window.addEventListener("resize", measureHeader);
+    return () => window.removeEventListener("resize", measureHeader);
+  }, []);
 
   const onChooseFile = async () => {
     // Check if user needs to register (no auth and no free scans)
@@ -200,11 +214,12 @@ export default function Hero() {
   return (
     <section
       id="hero"
-      className="relative flex items-center overflow-hidden bg-white dark:bg-[#000000] transition-colors duration-300 min-h-[80vh] lg:min-h-screen"
+      className="relative flex items-center justify-center overflow-hidden bg-white dark:bg-[#000000] transition-colors duration-300 min-h-screen"
+      style={{ minHeight: headerHeight ? `calc(100vh - ${headerHeight}px)` : undefined }}
     >
       <div className="absolute inset-0 bg-gradient-hero opacity-5 dark:opacity-10" />
-      
-      <div className="container mx-auto px-4 relative w-full z-10 py-[19px] sm:py-[35px] md:py-[43px] lg:py-[51px]">
+
+      <div className="container mx-auto px-4 relative w-full z-10 py-[19px] sm:py-[35px] md:py-[43px] lg:py-[51px] flex items-center">
         <div className="w-full flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
             {/* Left Section - Value Proposition (aligned with logo) */}
             <div className="w-full text-center lg:text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start">

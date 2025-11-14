@@ -125,6 +125,14 @@ All colors MUST be HSL.
     overflow-x: hidden;
     min-height: 100vh;
   }
+
+  .pdf-capturing [data-hide-in-pdf="true"] {
+    display: none !important;
+  }
+
+  .pdf-capturing [data-collapse-gap-in-pdf="true"] {
+    margin-top: 0 !important;
+  }
 }
 
 @layer utilities {
