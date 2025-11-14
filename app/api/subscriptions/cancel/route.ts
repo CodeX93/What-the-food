@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     if (subscription.stripe_subscription_id && stripeSecretKey) {
       try {
         const stripe = new Stripe(stripeSecretKey, {
-          apiVersion: "2024-11-20.acacia",
+          apiVersion: "2025-10-29.clover",
         });
         await stripe.subscriptions.cancel(subscription.stripe_subscription_id);
       } catch (stripeError: any) {

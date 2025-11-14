@@ -112,9 +112,9 @@ const PricingTable = () => {
     const billingCycle = subscription.billing_cycle;
 
     if (planName === "Premium") {
-      // For premium plan - if user is on this plan, show "Cancel Plan"
+      // For premium plan - if user is on this plan, show "Change to another plan"
       if (isPremium) {
-        return "Cancel Plan";
+        return "Change to another plan";
       }
       return "Upgrade Now";
     } else {
@@ -122,10 +122,7 @@ const PricingTable = () => {
       if (isFree) {
         return "Current Plan";
       }
-      // If user is on premium, show "Cancel Subscription"
-      if (isPremium) {
-        return "Cancel Subscription";
-      }
+      // If user is on premium, they can't cancel to free from here, just show "Get Started"
       return "Get Started";
     }
   };
@@ -212,12 +209,8 @@ const PricingTable = () => {
       return;
     }
     
-    if (cta === "Cancel Plan" || cta === "Cancel Subscription") {
-      setPlanToCancel(planName);
-      setShowCancelDialog(true);
-    } else {
-      router.push("/plans");
-    }
+    // Navigate to /plans for all cases
+    router.push("/plans");
   };
 
   return (
@@ -265,8 +258,8 @@ const PricingTable = () => {
               </CardContent>
               <CardFooter className="p-4 sm:p-6 pt-0">
                 <Button 
-                  className={`w-full text-sm sm:text-base ${plan.popular && !isCurrentPlan(plan.name) ? 'bg-primary hover:bg-primary-hover' : ''} ${isCurrentPlan(plan.name) && plan.name === "Premium" ? 'bg-destructive hover:bg-destructive/90' : ''}`}
-                  variant={isCurrentPlan(plan.name) && plan.name === "Premium" ? 'destructive' : plan.popular ? 'default' : 'outline'}
+                  className={`w-full text-sm sm:text-base ${plan.popular && !isCurrentPlan(plan.name) ? 'bg-primary hover:bg-primary-hover' : ''}`}
+                  variant={plan.popular ? 'default' : 'outline'}
                   onClick={(e) => handlePlanClick(e, plan.name)}
                   disabled={loading || cancelling || (isCurrentPlan(plan.name) && plan.name === "Free")}
                 >

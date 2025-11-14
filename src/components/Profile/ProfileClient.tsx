@@ -144,7 +144,7 @@ export function ProfileClient({
           session.user.email ? session.user.email.split("@")[0].substring(0, 2).toUpperCase() : "U"
         );
 
-        const { data: profileData } = await supabase
+        const { data: profileData } = await (supabase as any)
           .from("profiles")
           .select("*")
           .eq("id", session.user.id)
@@ -254,7 +254,7 @@ export function ProfileClient({
         throw updateError;
       }
 
-      const { data: updatedProfile, error: fetchError } = await supabase
+      const { data: updatedProfile, error: fetchError } = await (supabase as any)
         .from("profiles")
         .select("*")
         .eq("id", session.user.id)
