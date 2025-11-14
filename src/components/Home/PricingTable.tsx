@@ -74,8 +74,8 @@ const PricingTable = () => {
   };
 
   return (
-    <section className="w-full bg-white dark:bg-[#000000] snap-start transition-colors duration-300">
-      <div className="container mx-auto px-4 sm:px-6 w-full relative z-10 py-16 sm:py-20 lg:py-24">
+    <section className="w-full bg-white dark:bg-[#000000] transition-colors duration-300">
+      <div className="container mx-auto px-4 w-full relative z-10 py-16 sm:py-20 lg:py-24">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Simple, Transparent Pricing</h2>
           <p className="text-base sm:text-lg text-muted-foreground">
@@ -83,7 +83,7 @@ const PricingTable = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 w-full">
           {plans.map((plan, index) => (
             <Card key={index} 
               className={`relative ${plan.popular ? 'border-primary shadow-strong' : ''}`}

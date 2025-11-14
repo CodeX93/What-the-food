@@ -109,7 +109,7 @@ export function SettingsClient() {
 
   return (
     <main className="flex-1">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="container mx-auto px-4 py-8 w-full">
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Settings</h1>
           <p className="text-muted-foreground">Manage your account preferences and app settings</p>

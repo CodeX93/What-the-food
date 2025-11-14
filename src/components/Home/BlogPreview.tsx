@@ -11,7 +11,7 @@ const BlogPreview = () => {
 
   return (
     <section className="relative w-full bg-white dark:bg-[#000000] transition-colors duration-300 py-16 sm:py-20 lg:py-24">
-      <div className="container mx-auto px-4 sm:px-6 w-full relative z-10">
+      <div className="container mx-auto px-4 w-full relative z-10">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold mb-1">Latest from Our Blog</h2>

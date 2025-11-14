@@ -77,17 +77,13 @@ export default function FeaturesPage() {
     <div className="bg-background">
       <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-hero/10">
         <div className="absolute inset-0 bg-gradient-hero opacity-10 pointer-events-none" />
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative py-16 sm:py-20 lg:py-24">
-          <div className="max-w-6xl mx-auto grid gap-12 lg:grid-cols-[1.05fr_minmax(0,1fr)] items-center">
-            <div className="text-center lg:text-left space-y-6">
-              <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
-                <Sparkles className="h-4 w-4" />
-                All-in-one AI nutrition suite
-              </span>
+        <div className="container mx-auto px-4 relative py-16 sm:py-20 lg:py-24">
+          <div className="w-full flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
+            <div className="w-full text-center lg:text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[34rem] self-start lg:-mt-1">
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-hero bg-clip-text text-transparent leading-tight">
                 Powerful Features for Healthy Living
               </h1>
-              <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl lg:max-w-none mx-auto lg:mx-0">
+              <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl lg:max-w-none mx-auto lg:mx-0 my-4">
                 Scan, analyze, track, and share every meal with confidence. WhatTheFood brings together advanced AI,
                 actionable insights, and seamless collaboration so you can focus on feeling your best.
               </p>
@@ -99,66 +95,12 @@ export default function FeaturesPage() {
                   <Link href="/pricing">View Pricing</Link>
                 </Button>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-                <div className="rounded-2xl border border-white/10 bg-white/70 dark:bg-white/5 p-4 shadow-sm backdrop-blur">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <Camera className="h-5 w-5" />
-                    </span>
-                    <div>
-                      <p className="font-semibold text-foreground">Instant macro breakdowns</p>
-                      <p className="text-sm text-muted-foreground">
-                        Upload any meal and get calorie, macro, and micronutrient data in seconds.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/70 dark:bg-white/5 p-4 shadow-sm backdrop-blur">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <BarChart3 className="h-5 w-5" />
-                    </span>
-                    <div>
-                      <p className="font-semibold text-foreground">Trends & progress tracking</p>
-                      <p className="text-sm text-muted-foreground">
-                        Spot habits, compare weeks, and share digestible reports with your coach or dietitian.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/70 dark:bg-white/5 p-4 shadow-sm backdrop-blur">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <FileText className="h-5 w-5" />
-                    </span>
-                    <div>
-                      <p className="font-semibold text-foreground">Ready-to-share reports</p>
-                      <p className="text-sm text-muted-foreground">
-                        Create polished PDFs or embeddable widgets that keep clients and teammates in sync.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/70 dark:bg-white/5 p-4 shadow-sm backdrop-blur">
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <History className="h-5 w-5" />
-                    </span>
-                    <div>
-                      <p className="font-semibold text-foreground">Your nutrition command center</p>
-                      <p className="text-sm text-muted-foreground">
-                        Access scan history, compare servings, and reset goals from one intuitive dashboard.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground lg:mt-6">
                 Trusted by dietitians, coaches, and health-focused teams in over <span className="font-semibold text-foreground">35 countries</span>.
               </p>
             </div>
 
-            <Card className="relative overflow-hidden border border-primary/20 bg-white/80 dark:bg-white/5 shadow-strong backdrop-blur">
+            <Card className="relative overflow-hidden border border-primary/20 bg-white/80 dark:bg-white/5 shadow-strong backdrop-blur w-full max-w-lg lg:max-w-[32rem] xl:max-w-[36rem] self-start lg:ml-auto">
               <div className="absolute inset-x-0 top-0 h-24 bg-gradient-hero opacity-80 blur-3xl" />
               <CardHeader className="relative z-10 pb-2">
                 <span className="text-xs uppercase tracking-widest text-primary font-semibold">Live snapshot</span>
@@ -202,8 +144,8 @@ export default function FeaturesPage() {
       </section>
 
       <section className="bg-background transition-colors duration-300">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
+        <div className="container mx-auto px-4 py-16 sm:py-20 lg:py-24">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 w-full">
             {features.map((feature, index) => {
               const IconComponent = feature.icon;
               return (
@@ -236,7 +178,7 @@ export default function FeaturesPage() {
       </section>
 
       <section className="bg-muted/30">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 lg:py-24">
+        <div className="container mx-auto px-4 py-16 sm:py-20 lg:py-24">
           <div className="max-w-5xl mx-auto space-y-10">
             <div className="text-center space-y-5">
               <h2 className="text-3xl sm:text-4xl font-bold">Ready to Get Started?</h2>

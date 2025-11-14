@@ -28,7 +28,7 @@ const HowItWorks = () => {
       id="how-it-works"
       className="relative w-full bg-white dark:bg-[#000000] transition-colors duration-300 py-16 sm:py-20 lg:py-24"
     >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 w-full">
+      <div className="container mx-auto px-4 w-full">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12 md:mb-16">
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 sm:mb-4 bg-gradient-hero bg-clip-text text-transparent">
             How It Works
@@ -38,7 +38,7 @@ const HowItWorks = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 max-w-6xl mx-auto relative">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 w-full relative">
           {/* Connecting line for desktop */}
           <div className="hidden md:block absolute top-7 sm:top-8 md:top-9 left-8 right-8 h-0.5 bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20 z-0" />
           

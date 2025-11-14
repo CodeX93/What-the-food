@@ -45,7 +45,7 @@ const faqs = [
 const FAQ = () => {
   return (
     <section className="w-full bg-[#F8FAF9] dark:bg-[#111111] transition-colors duration-300 py-16 sm:py-20 lg:py-24">
-      <div className="container mx-auto px-4 sm:px-6 w-full">
+      <div className="container mx-auto px-4 w-full">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Frequently Asked Questions</h2>
           <p className="text-base sm:text-lg text-muted-foreground">
@@ -53,7 +53,7 @@ const FAQ = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
           <Accordion type="single" collapsible className="space-y-4">
             {faqs.slice(0, 4).map((faq, index) => (
               <AccordionItem key={index} value={`item-${index}`} className="border rounded-lg px-3 sm:px-4">

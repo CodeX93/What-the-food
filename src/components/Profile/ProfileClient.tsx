@@ -255,11 +255,11 @@ export function ProfileClient({
 
   return (
     <main className="flex-1">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 max-w-7xl">
+      <div className="container mx-auto px-4 py-8 sm:py-12 w-full">
         <div className="mb-8 sm:mb-12">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent pb-1">
                 Profile Settings
               </h1>
               <p className="text-muted-foreground text-sm sm:text-base">

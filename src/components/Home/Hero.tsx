@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { Button } from "@/components/ui/button";
 import { Upload, Loader2, Sparkles, ShieldCheck, Timer } from "lucide-react";
@@ -12,7 +12,7 @@ import { decrementFreeScan, hasFreeScanAvailable, getFreeScanStatus } from "@/ut
 import { hasActivePremiumSubscription } from "@/utils/subscription";
 import { useToast } from "@/hooks/use-toast";
 
-const Hero = () => {
+export default function Hero() {
   const [uploading, setUploading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [remainingScans, setRemainingScans] = useState<number | null>(null);
@@ -204,18 +204,17 @@ const Hero = () => {
     >
       <div className="absolute inset-0 bg-gradient-hero opacity-5 dark:opacity-10" />
       
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative w-full z-10 py-[19px] sm:py-[35px] md:py-[43px] lg:py-[51px]">
-        <div className="w-full max-w-6xl mx-auto">
-          <div className="flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
+      <div className="container mx-auto px-4 relative w-full z-10 py-[19px] sm:py-[35px] md:py-[43px] lg:py-[51px]">
+        <div className="w-full flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
             {/* Left Section - Value Proposition (aligned with logo) */}
             <div className="w-full text-center lg:text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start">
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight">
                 Know What&apos;s Really in Your Food
-              </h1>
+          </h1>
               <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed">
-                Upload a photo of any meal and get instant AI-powered nutritional analysis. 
-                Track calories, macros, and make healthier choices effortlessly.
-              </p>
+            Upload a photo of any meal and get instant AI-powered nutritional analysis. 
+            Track calories, macros, and make healthier choices effortlessly.
+          </p>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
                 <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" asChild>
                   <Link href="/auth">Get Started Free</Link>
@@ -269,7 +268,7 @@ const Hero = () => {
             </div>
 
             {/* Right Section - Upload Placeholder (aligned with profile) */}
-            <div className="w-full max-w-lg lg:max-w-[32rem] xl:max-w-[36rem] self-start">
+            <div className="w-full max-w-lg lg:max-w-[32rem] xl:max-w-[36rem] self-start lg:ml-auto lg:mt-1.5 xl:mt-2">
               <Card className="shadow-strong">
                 <CardContent className="p-4 sm:p-6 md:p-8">
                   {!previewUrl ? (
@@ -328,14 +327,12 @@ const Hero = () => {
                       </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+            </CardContent>
+          </Card>
             </div>
           </div>
         </div>
-      </div>
+      
     </section>
   );
-};
-
-export default Hero;
+}
