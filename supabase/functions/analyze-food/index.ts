@@ -22,9 +22,10 @@ const PROMPT_GUIDELINES = `Guidelines:
 - Provide 3-6 descriptive "tags" (short lowercase keywords separated into an array).
 - "additionalInfo" must mention that nutrition can vary based on ingredient quality, portion size, cooking method, or added oils/sauces. Tailor it to the dish.
 - "servingGuidance" must explain how to weigh or divide the meal to estimate personal servings (e.g., divide total grams by grams-per-serving).
-- Every entry in "ingredients" must begin with a quantity and unit when possible (e.g., "1 cup cooked chickpeas", "2 tbsp olive oil"). Estimate realistic quantities if not obvious, rather than leaving vague names.
+- Every entry in "ingredients" must begin with a quantity and unit in METRIC format ONLY (grams, kg, ml, liters). NEVER use imperial units (oz, pounds, cups, tbsp, tsp, etc.). Convert all measurements to metric. Examples: "250g cooked chickpeas", "30ml olive oil", "150g potatoes".
 - Ensure nutrient values are realistic positive numbers (avoid zeros unless absolutely accurate).
-- Reflect the most accurate ingredient amounts available.`;
+- Reflect the most accurate ingredient amounts available.
+- ALWAYS use metric units (grams, kg, ml, liters) for all measurements. NEVER use imperial units (oz, pounds, cups, tablespoons, teaspoons).`;
 
 const buildPrompt = (includeInsights = false) =>
   `Return JSON only with this schema:
@@ -91,10 +92,60 @@ async function callGemini(imageBase64, mimeType, options = {}) {
   let prompt = buildPrompt(includeInsights);
   let maxTokens = 800; // Aggressive reduction
 
+  // Add profile context to main prompt if available (even without insights)
+  if (insightsParams && (insightsParams.weight_kg || insightsParams.height_cm || insightsParams.gender || insightsParams.age)) {
+    const { weight_kg, height_cm, age, gender } = insightsParams;
+    let profileContext = "";
+    const profileParts: string[] = [];
+    
+    if (weight_kg && height_cm) {
+      const heightM = height_cm / 100;
+      const bmi = weight_kg / (heightM * heightM);
+      profileParts.push(`${weight_kg}kg, ${height_cm}cm (BMI: ${bmi.toFixed(1)})`);
+    } else if (weight_kg) {
+      profileParts.push(`${weight_kg}kg`);
+    } else if (height_cm) {
+      profileParts.push(`${height_cm}cm`);
+    }
+    
+    if (age) {
+      profileParts.push(`${age} years old`);
+    }
+    
+    if (gender) {
+      profileParts.push(gender);
+    }
+    
+    if (profileParts.length > 0) {
+      profileContext = ` User profile: ${profileParts.join(", ")}. Consider this profile when providing descriptions, tags, and additional information to make them more relevant and personalized.`;
+      prompt += `\n${profileContext}`;
+    }
+  }
+
   if (includeInsights && insightsParams) {
-    const { age = "30", gender = "any", activity = "moderate", goal = "maintenance" } = insightsParams;
-    prompt = buildPrompt(true) + `
-Insights: Provide a quick analysis tailored for ${age}yo, ${gender}, ${activity} activity, ${goal} goal.`;
+    const { 
+      age = "30", 
+      gender = "any", 
+      activity = "moderate", 
+      goal = "maintenance",
+      weight_kg,
+      height_cm
+    } = insightsParams;
+    
+    let personalizedContext = `Insights: Provide a quick analysis tailored for ${age}yo, ${gender}, ${activity} activity, ${goal} goal.`;
+    
+    if (weight_kg && height_cm) {
+      // Calculate BMI for context
+      const heightM = height_cm / 100;
+      const bmi = weight_kg / (heightM * heightM);
+      personalizedContext += ` User profile: ${weight_kg}kg, ${height_cm}cm (BMI: ${bmi.toFixed(1)}).`;
+    } else if (weight_kg) {
+      personalizedContext += ` User weight: ${weight_kg}kg.`;
+    } else if (height_cm) {
+      personalizedContext += ` User height: ${height_cm}cm.`;
+    }
+    
+    prompt = buildPrompt(true) + `\n${personalizedContext}`;
     maxTokens = 1200;
   }
 
@@ -102,16 +153,27 @@ Insights: Provide a quick analysis tailored for ${age}yo, ${gender}, ${activity}
     { text: prompt },
     { inlineData: { mimeType, data: imageBase64 } },
     {
-      text: "Always format numbers as decimals (no trailing text) and keep arrays simple.",
+      text: "Always format numbers as decimals (no trailing text) and keep arrays simple. ALWAYS use metric units (grams, kg, ml, liters) for all ingredient quantities. NEVER use imperial units (oz, pounds, cups, tablespoons, teaspoons).",
     },
   ];
 
   if (Array.isArray(overrideIngredients) && overrideIngredients.length > 0) {
-    parts.push({
-      text: `USER INGREDIENT OVERRIDES:
+    // When overrides are provided, we need to make it clear this is a complete replacement
+    // Move the override instruction BEFORE the image to ensure it's processed first
+    parts.splice(1, 0, {
+      text: `CRITICAL: USER INGREDIENT OVERRIDES - COMPLETE REPLACEMENT REQUIRED
+
+The user has provided this EXACT ingredient list:
 ${overrideIngredients.join("\n")}
 
-Use exactly and only this ingredient list (including quantities) when estimating nutrition. Replace any visual guesses with these explicit values and recompute the nutrients accordingly.`,
+MANDATORY INSTRUCTIONS:
+1. COMPLETELY IGNORE any ingredients you detect from the image. The image is only for dish identification, NOT for ingredient detection.
+2. Use EXACTLY and ONLY the ingredient list provided above. This is a 100% replacement - do NOT add, combine, or merge with anything from the image.
+3. Recalculate ALL nutrients (calories, protein_g, carbohydrates_g, fat_g, fiber_g, sugar_g) from scratch based SOLELY on these user-provided ingredients.
+4. DO NOT add, combine, or merge with any previous values. Start fresh with ONLY these ingredients.
+5. All ingredient quantities must be in METRIC units (grams, kg, ml, liters). Convert any imperial units (oz, pounds, cups, tbsp, tsp) to metric.
+6. Calculate the total nutrition for the entire dish based exclusively on these ingredients.
+7. The "ingredients" array in your response must match EXACTLY the list above (with metric conversions if needed).`,
     });
   }
 
@@ -140,6 +202,7 @@ Use exactly and only this ingredient list (including quantities) when estimating
       }
     );
     clearTimeout(timeoutId);
+    console.log("NEW FUNCTION VERSION 507 LINES LOADED");
 
     if (!resp.ok) {
       const text = await resp.text();
@@ -318,6 +381,8 @@ Deno.serve(async (req) => {
       activity,
       goal,
       optimize,
+      weight_kg,
+      height_cm,
       overrideIngredients = [],
     } = await req.json();
     if (!imageUrl) {
@@ -334,34 +399,56 @@ Deno.serve(async (req) => {
       : [];
 
     const wantsInsights = !!(age || gender || activity || goal);
+    const hasProfileData = !!(weight_kg || height_cm);
     
     // Ultra-parallel execution
     const tasks = [fetchAndEncodeImage(imageUrl)];
     
-    if (wantsInsights) {
-      const authHeader = req.headers.get("Authorization") || "";
-      const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        global: { headers: { Authorization: authHeader } }
-      });
-      
-      tasks.push(
-        (async () => {
-          const {
-            data: { user },
-          } = await supabaseAuth.auth.getUser();
-          if (!user) return { user: null, isPremium: false };
-          const isPremium = await quickPremiumCheck(supabaseAuth, user.id);
-          return { user, isPremium };
-        })()
-      );
-    }
+    // Always check for user session to fetch profile data for personalization
+    const authHeader = req.headers.get("Authorization") || "";
+    const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    
+    tasks.push(
+      (async () => {
+        const {
+          data: { user },
+        } = await supabaseAuth.auth.getUser();
+        if (!user) return { user: null, isPremium: false, profile: null };
+        const isPremium = wantsInsights ? await quickPremiumCheck(supabaseAuth, user.id) : false;
+        
+        // Always fetch profile for logged-in users to personalize analysis
+        const { data: profileData } = await supabaseAuth
+          .from("profiles")
+          .select("weight_kg, height_cm, age, gender")
+          .eq("id", user.id)
+          .maybeSingle();
+        
+        return { user, isPremium, profile: profileData };
+      })()
+    );
 
-    const [imageData, authResult = { user: null, isPremium: false }] = await Promise.all(tasks);
+    const [imageData, authResult = { user: null, isPremium: false, profile: null }] = await Promise.all(tasks);
 
-    // Fast-path: No insights needed
+    // Use profile data from request or fetched profile
+    const finalWeight = weight_kg || authResult.profile?.weight_kg;
+    const finalHeight = height_cm || authResult.profile?.height_cm;
+    const finalAge = age || authResult.profile?.age;
+    const finalGender = gender || authResult.profile?.gender;
+    
+    // Fast-path: No insights needed, but may have profile data for personalization
     if (!wantsInsights) {
+      const profileParams = (finalWeight || finalHeight || finalAge || finalGender) ? {
+        weight_kg: finalWeight,
+        height_cm: finalHeight,
+        age: finalAge,
+        gender: finalGender,
+      } : null;
+      
       const result = await callGemini(imageData.base64, imageData.mimeType, {
         includeInsights: false,
+        insightsParams: profileParams,
         overrideIngredients: overrides,
       });
       console.log(`Response time: ${Date.now() - startTime}ms`);
@@ -384,8 +471,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Premium with insights
-    const insightsParams = { age, gender, activity, goal, optimize };
+    // Premium with insights - use profile data from request or fetched profile
+    const insightsParams = { 
+      age: age || authResult.profile?.age, 
+      gender: gender || authResult.profile?.gender, 
+      activity, 
+      goal, 
+      optimize, 
+      weight_kg: weight_kg || authResult.profile?.weight_kg, 
+      height_cm: height_cm || authResult.profile?.height_cm 
+    };
     const result = await callGemini(imageData.base64, imageData.mimeType, {
       includeInsights: true,
       insightsParams,

@@ -30,7 +30,8 @@ export async function fetchProfileDataServer(userId: string) {
     | null;
 
   let planName: string | null = null;
-  if (subscription?.platform_plan_id) {
+  // Only fetch plan name if subscription is premium and has platform_plan_id
+  if (subscription?.subscription_type === "premium" && subscription?.platform_plan_id) {
     const { data: planRow, error: planError } = await supabase
       .from("platform_plans")
       .select("name")

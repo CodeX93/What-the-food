@@ -38,6 +38,7 @@ import {
   Info,
   Pencil,
   AlertCircle,
+  User,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -76,10 +77,11 @@ export function FoodResultsClient() {
   const [imageUrl, setImageUrl] = useState<string>("");
   const [imagePath, setImagePath] = useState<string>("");
   const [analysis, setAnalysis] = useState<FoodAnalysis | null>(null);
-  const [age, setAge] = useState<number | "">("");
-  const [gender, setGender] = useState<string>("");
-  const [activity, setActivity] = useState<string>("");
-  const [goal, setGoal] = useState<string>("");
+  // These will be populated from profile automatically
+  const [profileAge, setProfileAge] = useState<number | null>(null);
+  const [profileGender, setProfileGender] = useState<string | null>(null);
+  const [activity] = useState<string>("moderate"); // Default value
+  const [goal] = useState<string>("maintenance"); // Default value
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsText, setInsightsText] = useState<string>("");
   const [upgradeRequired, setUpgradeRequired] = useState(false);
@@ -87,6 +89,8 @@ export function FoodResultsClient() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
   const [checkingPremium, setCheckingPremium] = useState(true);
+  const [profile, setProfile] = useState<any>(null);
+  const [profileComplete, setProfileComplete] = useState(true);
   const [ingredientEditorOpen, setIngredientEditorOpen] = useState(false);
   const [ingredientInput, setIngredientInput] = useState("");
   const [updatingIngredients, setUpdatingIngredients] = useState(false);
@@ -198,7 +202,62 @@ export function FoodResultsClient() {
     }
   };
 
+  const handleShare = async () => {
+    try {
+      const shareUrl = `${window.location.origin}/food-results?id=${id}`;
+      const shareData = {
+        title: analysis?.dish || "Food Analysis Results",
+        text: `Check out this food analysis: ${analysis?.dish || "Food scan"}`,
+        url: shareUrl,
+      };
+
+      // Try Web Share API first (mobile-friendly)
+      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+        toast({
+          title: "Shared!",
+          description: "Food analysis results shared successfully.",
+        });
+      } else {
+        // Fallback: Copy to clipboard
+        await navigator.clipboard.writeText(shareUrl);
+        toast({
+          title: "Link copied!",
+          description: "Food analysis link has been copied to your clipboard.",
+        });
+      }
+    } catch (error: any) {
+      // User cancelled share or clipboard failed
+      if (error.name !== "AbortError") {
+        console.error("Share failed:", error);
+        // Fallback to copying URL
+        try {
+          const shareUrl = `${window.location.origin}/food-results?id=${id}`;
+          await navigator.clipboard.writeText(shareUrl);
+          toast({
+            title: "Link copied!",
+            description: "Food analysis link has been copied to your clipboard.",
+          });
+        } catch (clipboardError) {
+          toast({
+            title: "Share failed",
+            description: "Unable to share. Please copy the URL manually.",
+            variant: "destructive",
+          });
+        }
+      }
+    }
+  };
+
   const handleExportPdf = async () => {
+    if (!hasPremiumAccess) {
+      toast({
+        title: "Premium Feature",
+        description: "You need to upgrade your plan to download the results in PDF.",
+      });
+      return;
+    }
+
     if (!analysis || !reportRef.current) {
       toast({
         title: "Nothing to export",
@@ -270,15 +329,41 @@ export function FoodResultsClient() {
             setCheckingPremium(true);
             const premium = await hasActivePremiumSubscription(user.id);
             setHasPremiumAccess(premium);
+            
+            // Fetch profile to check completion
+            const { data: profileData } = await (supabase as any)
+              .from("profiles")
+              .select("full_name, gender, age, weight_kg, height_cm")
+              .eq("id", user.id)
+              .maybeSingle();
+            
+            if (profileData) {
+              setProfile(profileData);
+              // Set profile values for insights
+              setProfileAge(profileData.age || null);
+              setProfileGender(profileData.gender || null);
+              // Check if profile is complete
+              const isComplete = 
+                profileData.full_name &&
+                profileData.gender &&
+                profileData.age !== null &&
+                profileData.weight_kg !== null &&
+                profileData.height_cm !== null;
+              setProfileComplete(isComplete);
+            } else {
+              setProfileComplete(false);
+            }
           } catch (error) {
-            console.error("Failed to determine premium status", error);
+            console.error("Failed to determine premium status or fetch profile", error);
             setHasPremiumAccess(false);
+            setProfileComplete(false);
           } finally {
             setCheckingPremium(false);
           }
         } else {
           setHasPremiumAccess(false);
           setCheckingPremium(false);
+          setProfileComplete(true); // Don't show notice for non-authenticated users
         }
 
         const { data, error } = await supabase
@@ -318,6 +403,54 @@ export function FoodResultsClient() {
       setIngredientInput((analysis.ingredients ?? []).join("\n"));
     }
   }, [analysis]);
+
+  // Auto-generate insights when analysis loads and user has complete profile and premium access
+  useEffect(() => {
+    const autoGenerateInsights = async () => {
+      if (
+        !id ||
+        !analysis ||
+        loading ||
+        insightsLoading ||
+        insightsText ||
+        !isAuthenticated ||
+        !hasPremiumAccess ||
+        checkingPremium ||
+        !profileComplete ||
+        !profileAge ||
+        !profileGender
+      ) {
+        return;
+      }
+
+      try {
+        setInsightsLoading(true);
+        setUpgradeRequired(false);
+        const res = await getPersonalizedInsights({
+          scanId: id,
+          age: profileAge,
+          gender: profileGender,
+          activity,
+          goal,
+          optimize: false,
+          weight_kg: profile?.weight_kg,
+          height_cm: profile?.height_cm,
+        });
+        if (res.upgrade) {
+          setUpgradeRequired(true);
+          return;
+        }
+        setInsightsText(res.insights || "");
+      } catch (error) {
+        console.error("Failed to auto-generate insights:", error);
+        // Silently fail - user can still generate manually if needed
+      } finally {
+        setInsightsLoading(false);
+      }
+    };
+
+    autoGenerateInsights();
+  }, [id, analysis, loading, isAuthenticated, hasPremiumAccess, checkingPremium, profileComplete, profileAge, profileGender, profile, activity, goal, insightsLoading, insightsText]);
 
   const scaled = useMemo(
     () => (analysis ? scaleNutrients(analysis.nutrients, servings) : null),
@@ -475,19 +608,55 @@ export function FoodResultsClient() {
                   <Salad className="h-6 w-6 md:h-8 md:w-8 text-primary" />
                   {analysis.dish || "Food Result"}
                 </h1>
-                <p className="text-sm md:text-base text-muted-foreground mt-1">
-                  {analysis.servingSize || "Per serving"}
-                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button size="sm" onClick={handleExportPdf} disabled={exportingPdf}>
-                {exportingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
-                {exportingPdf ? "Preparing…" : "PDF"}
+              <Button size="sm" variant="outline" onClick={handleShare}>
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
               </Button>
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div>
+                      <Button
+                        size="sm"
+                        onClick={handleExportPdf}
+                        disabled={exportingPdf || !hasPremiumAccess}
+                        variant={!hasPremiumAccess ? "outline" : "default"}
+                      >
+                        {exportingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
+                        {exportingPdf ? "Preparing…" : "PDF"}
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  {!hasPremiumAccess && (
+                    <TooltipContent side="bottom" className="max-w-xs">
+                      <p>You need to upgrade your plan to download the results in PDF</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
         </div>
+
+        {isAuthenticated && !profileComplete && (
+          <Alert className="mb-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
+            <User className="h-4 w-4 text-primary" />
+            <AlertTitle className="font-semibold">Complete Your Profile</AlertTitle>
+            <AlertDescription className="mt-1">
+              Complete your profile to get more personalized nutrition insights and recommendations tailored to your age, gender, weight, and height.
+              <Button
+                variant="link"
+                className="p-0 h-auto ml-1 text-primary font-semibold underline"
+                onClick={() => router.push("/profile")}
+              >
+                Complete Profile →
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="grid lg:grid-cols-12 gap-6">
           <div className="lg:col-span-4">
@@ -537,114 +706,118 @@ export function FoodResultsClient() {
           <div className="lg:col-span-8 space-y-6">
             <Card className="relative overflow-hidden">
               <CardHeader>
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                  <div className="space-y-2">
-                    <div>
-                      <CardTitle className="text-xl">Nutrition Summary</CardTitle>
-                      <CardDescription>{analysis.servingSize || "Per serving"}</CardDescription>
-                    </div>
-                    {analysis.description && (
-                      <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-primary/30 pl-3">
-                        {analysis.description}
-                      </p>
-                    )}
-                    {analysis.tags && analysis.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {analysis.tags.map((tag, index) => {
-                          const palette = [
-                            "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.4)]",
-                            "bg-sky-50 text-sky-700 border border-sky-200 shadow-[inset_0_0_0_1px_rgba(14,165,233,0.3)]",
-                            "bg-rose-50 text-rose-700 border border-rose-200 shadow-[inset_0_0_0_1px_rgba(244,63,94,0.3)]",
-                            "bg-amber-50 text-amber-700 border border-amber-200 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.4)]",
-                          ];
-                          const colors = palette[index % palette.length];
-                          return (
-                            <span
-                              key={`${tag}-${index}`}
-                              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize tracking-tight ${colors}`}
-                            >
-                              {tag}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Servings</span>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      className="border rounded-lg px-3 py-2 w-28 text-center font-medium bg-background"
-                      value={servingsInput}
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        setServingsInput(raw);
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-4">
+                    <CardTitle className="text-xl flex items-center gap-2">
+                      Nutrition Summary
+                      {servingApproximation && (
+                        <span className="text-base font-normal text-muted-foreground">
+                          (~ {servingApproximation.grams}g)
+                        </span>
+                      )}
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">Servings</span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        className="border rounded-lg px-3 py-2 w-28 text-center font-medium bg-background"
+                        value={servingsInput}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          setServingsInput(raw);
 
-                        const sanitized = raw.replace(/[^0-9.]/g, "");
-                        const dots = (sanitized.match(/\./g) ?? []).length;
-                        if (dots > 1) {
-                          return;
-                        }
+                          const sanitized = raw.replace(/[^0-9.]/g, "");
+                          const dots = (sanitized.match(/\./g) ?? []).length;
+                          if (dots > 1) {
+                            return;
+                          }
 
-                        const parsed = parseFloat(sanitized);
-                        if (!Number.isNaN(parsed) && parsed >= MIN_SERVINGS) {
-                          applyServings(parsed);
-                        }
-                      }}
-                      onBlur={() => {
-                        const parsed = parseFloat(servingsInput);
-                        if (!Number.isNaN(parsed) && parsed >= MIN_SERVINGS) {
-                          applyServings(parsed);
-                        } else {
-                          applyServings(MIN_SERVINGS);
-                        }
-                      }}
-                    />
-                    {isAuthenticated && servings !== savedServings && (
-                      <Button
-                        size="sm"
-                        onClick={async () => {
-                          if (!id) return;
-                          try {
-                            setSavingServings(true);
-                            const { error } = await (supabase as any)
-                              .from("food_scans")
-                              .update({ serving: Number(servings) })
-                              .eq("id", id);
+                          const parsed = parseFloat(sanitized);
+                          if (!Number.isNaN(parsed) && parsed >= MIN_SERVINGS) {
+                            applyServings(parsed);
+                          }
+                        }}
+                        onBlur={() => {
+                          const parsed = parseFloat(servingsInput);
+                          if (!Number.isNaN(parsed) && parsed >= MIN_SERVINGS) {
+                            applyServings(parsed);
+                          } else {
+                            applyServings(MIN_SERVINGS);
+                          }
+                        }}
+                      />
+                      {isAuthenticated && servings !== savedServings && (
+                        <Button
+                          size="sm"
+                          onClick={async () => {
+                            if (!id) return;
+                            try {
+                              setSavingServings(true);
+                              const { error } = await (supabase as any)
+                                .from("food_scans")
+                                .update({ serving: Number(servings) })
+                                .eq("id", id);
 
-                            if (error) {
+                              if (error) {
+                                console.error("Failed to update serving in database:", error);
+                                toast({
+                                  title: "Error",
+                                  description: `Failed to save: ${error.message}`,
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+
+                              setSavedServings(servings);
+                              toast({
+                                title: "Servings saved",
+                                description: "Your serving size has been updated successfully.",
+                              });
+                            } catch (error: any) {
                               console.error("Failed to update serving in database:", error);
                               toast({
                                 title: "Error",
-                                description: `Failed to save: ${error.message}`,
+                                description: error?.message || "Failed to save serving size. Please try again.",
                                 variant: "destructive",
                               });
-                              return;
+                            } finally {
+                              setSavingServings(false);
                             }
-
-                            setSavedServings(servings);
-                            toast({
-                              title: "Servings saved",
-                              description: "Your serving size has been updated successfully.",
-                            });
-                          } catch (error: any) {
-                            console.error("Failed to update serving in database:", error);
-                            toast({
-                              title: "Error",
-                              description: error?.message || "Failed to save serving size. Please try again.",
-                              variant: "destructive",
-                            });
-                          } finally {
-                            setSavingServings(false);
-                          }
-                        }}
-                        disabled={savingServings}
-                      >
-                        {savingServings ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
-                      </Button>
-                    )}
+                          }}
+                          disabled={savingServings}
+                        >
+                          {savingServings ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                        </Button>
+                      )}
+                    </div>
                   </div>
+                  {analysis.description && (
+                    <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-primary/30 pl-3">
+                      {analysis.description}
+                    </p>
+                  )}
+                  {analysis.tags && analysis.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {analysis.tags.map((tag, index) => {
+                        const palette = [
+                          "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.4)]",
+                          "bg-sky-50 text-sky-700 border border-sky-200 shadow-[inset_0_0_0_1px_rgba(14,165,233,0.3)]",
+                          "bg-rose-50 text-rose-700 border border-rose-200 shadow-[inset_0_0_0_1px_rgba(244,63,94,0.3)]",
+                          "bg-amber-50 text-amber-700 border border-amber-200 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.4)]",
+                        ];
+                        const colors = palette[index % palette.length];
+                        return (
+                          <span
+                            key={`${tag}-${index}`}
+                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize tracking-tight ${colors}`}
+                          >
+                            {tag}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -836,129 +1009,109 @@ export function FoodResultsClient() {
                   </div>
                 ) : (
                   <>
-                    <div
-                      className="grid sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6"
-                      data-hide-in-pdf={insightsText ? "true" : undefined}
-                    >
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Age</label>
-                        <input
-                          type="number"
-                          placeholder="e.g., 25"
-                          min={1}
-                          className="border rounded-lg px-3 py-2 w-full text-sm"
-                          value={age as number | ""}
-                          onChange={(e) => setAge(e.target.value ? parseInt(e.target.value, 10) : "")}
-                        />
+                    {!profileComplete && (
+                      <Alert className="mb-6 border-amber-200 bg-amber-50 text-amber-900">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Complete Your Profile</AlertTitle>
+                        <AlertDescription>
+                          Complete your profile to get personalized insights automatically. 
+                          <Button
+                            variant="link"
+                            className="p-0 h-auto ml-1 text-amber-900 font-semibold underline"
+                            onClick={() => router.push("/profile")}
+                          >
+                            Complete Profile →
+                          </Button>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                    {insightsLoading && !insightsText && (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                        <span className="text-sm text-muted-foreground">Generating personalized insights...</span>
                       </div>
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Gender</label>
-                        <select
-                          className="border rounded-lg px-3 py-2 w-full text-sm"
-                          value={gender}
-                          onChange={(e) => setGender(e.target.value)}
-                        >
-                          <option value="">Select</option>
-                          <option value="female">Female</option>
-                          <option value="male">Male</option>
-                          <option value="other">Other</option>
-                        </select>
+                    )}
+                    {profileComplete && !insightsLoading && !insightsText && (
+                      <div className="text-center py-8">
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Insights will be generated automatically using your profile data.
+                        </p>
+                        <div className="flex flex-wrap justify-center gap-2">
+                          <Button
+                            variant="outline"
+                            disabled={insightsLoading}
+                            onClick={async () => {
+                              if (!id || !profileAge || !profileGender) return;
+                              try {
+                                setInsightsLoading(true);
+                                setUpgradeRequired(false);
+                                const res = await getPersonalizedInsights({
+                                  scanId: id,
+                                  age: profileAge,
+                                  gender: profileGender,
+                                  activity,
+                                  goal,
+                                  optimize: false,
+                                  weight_kg: profile?.weight_kg,
+                                  height_cm: profile?.height_cm,
+                                });
+                                if (res.upgrade) {
+                                  setUpgradeRequired(true);
+                                  setInsightsText("");
+                                  return;
+                                }
+                                setInsightsText(res.insights || "");
+                              } finally {
+                                setInsightsLoading(false);
+                              }
+                            }}
+                          >
+                            {insightsLoading ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Heart className="h-4 w-4 mr-2" />
+                            )}
+                            Generate Insights
+                          </Button>
+                          <Button
+                            variant="outline"
+                            disabled={insightsLoading}
+                            onClick={async () => {
+                              if (!id || !profileAge || !profileGender) return;
+                              try {
+                                setInsightsLoading(true);
+                                setUpgradeRequired(false);
+                                const res = await getPersonalizedInsights({
+                                  scanId: id,
+                                  age: profileAge,
+                                  gender: profileGender,
+                                  activity,
+                                  goal,
+                                  optimize: true,
+                                  weight_kg: profile?.weight_kg,
+                                  height_cm: profile?.height_cm,
+                                });
+                                if (res.upgrade) {
+                                  setUpgradeRequired(true);
+                                  setInsightsText("");
+                                  return;
+                                }
+                                setInsightsText(res.insights || "");
+                              } finally {
+                                setInsightsLoading(false);
+                              }
+                            }}
+                          >
+                            {insightsLoading ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Sparkles className="h-4 w-4 mr-2" />
+                            )}
+                            Optimize
+                          </Button>
+                        </div>
                       </div>
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Activity</label>
-                        <select
-                          className="border rounded-lg px-3 py-2 w-full text-sm"
-                          value={activity}
-                          onChange={(e) => setActivity(e.target.value)}
-                        >
-                          <option value="">Select</option>
-                          <option value="sedentary">Sedentary</option>
-                          <option value="light">Light</option>
-                          <option value="moderate">Moderate</option>
-                          <option value="active">Active</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Goal</label>
-                        <select
-                          className="border rounded-lg px-3 py-2 w-full text-sm"
-                          value={goal}
-                          onChange={(e) => setGoal(e.target.value)}
-                        >
-                          <option value="">Select</option>
-                          <option value="weight_loss">Weight loss</option>
-                          <option value="muscle_gain">Muscle gain</option>
-                          <option value="maintenance">Maintenance</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div
-                      className="flex flex-wrap items-center gap-2"
-                      data-hide-in-pdf={insightsText ? "true" : undefined}
-                    >
-                      <Button
-                        disabled={insightsLoading || !age || !gender || !activity || !goal}
-                        onClick={async () => {
-                          if (!id) return;
-                          try {
-                            setInsightsLoading(true);
-                            setUpgradeRequired(false);
-                            const res = await getPersonalizedInsights({
-                              scanId: id,
-                              age: age as number,
-                              gender,
-                              activity,
-                              goal,
-                              optimize: false,
-                            });
-                            if (res.upgrade) {
-                              setUpgradeRequired(true);
-                              setInsightsText("");
-                              return;
-                            }
-                            setInsightsText(res.insights || "");
-                          } finally {
-                            setInsightsLoading(false);
-                          }
-                        }}
-                      >
-                        {insightsLoading ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <Heart className="h-4 w-4 mr-2" />
-                        )}
-                        Generate Insights
-                      </Button>
-                      <Button
-                        variant="outline"
-                        disabled={insightsLoading || !age || !gender || !activity || !goal}
-                        onClick={async () => {
-                          if (!id) return;
-                          try {
-                            setInsightsLoading(true);
-                            setUpgradeRequired(false);
-                            const res = await getPersonalizedInsights({
-                              scanId: id,
-                              age: age as number,
-                              gender,
-                              activity,
-                              goal,
-                              optimize: true,
-                            });
-                            if (res.upgrade) {
-                              setUpgradeRequired(true);
-                              setInsightsText("");
-                              return;
-                            }
-                            setInsightsText(res.insights || "");
-                          } finally {
-                            setInsightsLoading(false);
-                          }
-                        }}
-                      >
-                        <Wand2 className="h-4 w-4 mr-2" /> Make It Healthier
-                      </Button>
-                    </div>
+                    )}
 
                     {upgradeRequired && (
                       <div className="mt-6 p-4 rounded-lg border border-primary/20 bg-primary/5">
@@ -1064,10 +1217,10 @@ export function FoodResultsClient() {
               rows={Math.max(6, ingredientInput.split("\n").length + 1)}
               value={ingredientInput}
               onChange={(e) => setIngredientInput(e.target.value)}
-              placeholder={"1 cup cooked chickpeas\n2 tbsp tahini\n1 tbsp olive oil\nPaprika, to taste"}
+              placeholder={"250g cooked chickpeas\n30g tahini\n15ml olive oil\nPaprika, to taste"}
             />
             <p className="text-xs text-muted-foreground">
-              Enter one ingredient per line. Include quantities (cups, tbsp, grams, etc.) to improve accuracy.
+              Enter one ingredient per line. Use metric units (grams, kg, ml, liters) for quantities. Imperial units (cups, tbsp, oz) will be automatically converted to metric.
             </p>
           </div>
           <DialogFooter className="pt-2">

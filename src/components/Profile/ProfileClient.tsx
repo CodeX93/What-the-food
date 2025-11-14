@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +29,11 @@ import {
   CreditCard,
   ArrowRight,
   Code,
+  Users,
+  Scale,
+  Ruler,
+  AlertCircle,
+  CheckCircle,
 } from "lucide-react";
 import { getPlatformSubscription, getWidgetSubscription } from "@/utils/subscription";
 import type { User } from "@supabase/supabase-js";
@@ -57,6 +69,10 @@ export function ProfileClient({
   const [userInitials, setUserInitials] = useState(
     initialUser?.email ? initialUser.email.split("@")[0].substring(0, 2).toUpperCase() : "U"
   );
+  const [gender, setGender] = useState<string>(initialProfile?.gender || "");
+  const [age, setAge] = useState<string>(initialProfile?.age?.toString() || "");
+  const [weight, setWeight] = useState<string>(initialProfile?.weight_kg?.toString() || "");
+  const [height, setHeight] = useState<string>(initialProfile?.height_cm?.toString() || "");
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -72,10 +88,20 @@ export function ProfileClient({
 
   useEffect(() => {
     setProfile(initialProfile);
+    if (initialProfile) {
+      setGender(initialProfile.gender || "");
+      setAge(initialProfile.age?.toString() || "");
+      setWeight(initialProfile.weight_kg?.toString() || "");
+      setHeight(initialProfile.height_cm?.toString() || "");
+    }
   }, [initialProfile]);
 
   useEffect(() => {
     setSubscription(initialSubscription);
+    // Clear plan name if subscription is free
+    if (initialSubscription?.subscription_type === "free") {
+      setPlanName(null);
+    }
   }, [initialSubscription]);
 
   useEffect(() => {
@@ -125,13 +151,18 @@ export function ProfileClient({
           .maybeSingle();
         if (!cancelled && profileData) {
           setProfile(profileData);
+          setGender(profileData.gender || "");
+          setAge(profileData.age?.toString() || "");
+          setWeight(profileData.weight_kg?.toString() || "");
+          setHeight(profileData.height_cm?.toString() || "");
         }
 
         const sub = await getPlatformSubscription(session.user.id);
         if (!cancelled) {
           setSubscription(sub);
 
-          if (sub?.platform_plan_id) {
+          // Only fetch plan name if subscription is premium and has platform_plan_id
+          if (sub?.subscription_type === "premium" && sub?.platform_plan_id) {
             const { data: planRow } = await (supabase as any)
               .from("platform_plans")
               .select("name")
@@ -139,7 +170,12 @@ export function ProfileClient({
               .maybeSingle();
             if (!cancelled && planRow?.name) {
               setPlanName(planRow.name);
+            } else {
+              setPlanName(null);
             }
+          } else {
+            // Clear plan name if subscription is free
+            setPlanName(null);
           }
         }
 
@@ -194,12 +230,22 @@ export function ProfileClient({
 
       const fullName = fullNameRaw.trim() || null;
       const bio = bioRaw.trim() || null;
+      
+      // Parse demographic fields
+      const genderValue = gender.trim() || null;
+      const ageValue = age.trim() ? parseInt(age.trim(), 10) : null;
+      const weightValue = weight.trim() ? parseFloat(weight.trim()) : null;
+      const heightValue = height.trim() ? parseInt(height.trim(), 10) : null;
 
       const { error: updateError } = await (supabase as any)
         .from("profiles")
         .update({
           full_name: fullName,
           bio,
+          gender: genderValue,
+          age: ageValue,
+          weight_kg: weightValue,
+          height_cm: heightValue,
           updated_at: new Date().toISOString(),
         })
         .eq("id", session.user.id);
@@ -216,11 +262,26 @@ export function ProfileClient({
 
       if (!fetchError && updatedProfile) {
         setProfile(updatedProfile);
+        // Update state variables to reflect saved values
+        setGender(updatedProfile.gender || "");
+        setAge(updatedProfile.age?.toString() || "");
+        setWeight(updatedProfile.weight_kg?.toString() || "");
+        setHeight(updatedProfile.height_cm?.toString() || "");
       }
+
+      // Check if profile is now complete
+      const isNowComplete = updatedProfile && 
+        updatedProfile.full_name &&
+        updatedProfile.gender &&
+        updatedProfile.age !== null &&
+        updatedProfile.weight_kg !== null &&
+        updatedProfile.height_cm !== null;
 
       toast({
         title: "Success",
-        description: "Profile updated successfully.",
+        description: isNowComplete 
+          ? "Profile updated and completed! 🎉"
+          : "Profile updated successfully.",
       });
     } catch (error: any) {
       console.error("Error saving profile:", error);
@@ -253,9 +314,111 @@ export function ProfileClient({
   const isPremium = subscription?.subscription_type === "premium";
   const isWidgetPremium = widgetSubscription?.subscription_type !== "free" && widgetSubscription?.is_active;
 
+  // Calculate profile completion
+  const profileFields = [
+    { key: 'full_name', value: profile?.full_name },
+    { key: 'gender', value: profile?.gender },
+    { key: 'age', value: profile?.age },
+    { key: 'weight_kg', value: profile?.weight_kg },
+    { key: 'height_cm', value: profile?.height_cm },
+  ];
+  
+  const completedFields = profileFields.filter(field => {
+    if (field.key === 'age' || field.key === 'weight_kg' || field.key === 'height_cm') {
+      return field.value !== null && field.value !== undefined && field.value !== '';
+    }
+    return field.value && field.value.toString().trim() !== '';
+  }).length;
+  
+  const totalFields = profileFields.length;
+  const completionPercentage = Math.round((completedFields / totalFields) * 100);
+  const isProfileComplete = completedFields === totalFields;
+  const missingFields = profileFields
+    .filter(field => {
+      if (field.key === 'age' || field.key === 'weight_kg' || field.key === 'height_cm') {
+        return field.value === null || field.value === undefined || field.value === '';
+      }
+      return !field.value || field.value.toString().trim() === '';
+    })
+    .map(field => {
+      const labels: Record<string, string> = {
+        full_name: 'Full Name',
+        gender: 'Gender',
+        age: 'Age',
+        weight_kg: 'Weight',
+        height_cm: 'Height',
+      };
+      return labels[field.key];
+    });
+
   return (
     <main className="flex-1">
       <div className="container mx-auto px-4 py-8 sm:py-12 w-full">
+        {!isProfileComplete && (
+          <Card className="mb-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 shadow-lg">
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-start gap-4 flex-1">
+                  <div className="p-2 rounded-lg bg-primary/20">
+                    <AlertCircle className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg mb-1">Complete Your Profile</h3>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      {missingFields.length > 0 
+                        ? `Please add your ${missingFields.join(', ').toLowerCase()} to get personalized insights.`
+                        : 'Your profile is almost complete!'}
+                    </p>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Profile Completion</span>
+                        <span className="font-semibold text-primary">{completionPercentage}%</span>
+                      </div>
+                      <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500 rounded-full"
+                          style={{ width: `${completionPercentage}%` }}
+                        />
+                      </div>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {profileFields.map((field) => {
+                          const isCompleted = field.key === 'age' || field.key === 'weight_kg' || field.key === 'height_cm'
+                            ? field.value !== null && field.value !== undefined && field.value !== ''
+                            : field.value && field.value.toString().trim() !== '';
+                          const labels: Record<string, string> = {
+                            full_name: 'Full Name',
+                            gender: 'Gender',
+                            age: 'Age',
+                            weight_kg: 'Weight',
+                            height_cm: 'Height',
+                          };
+                          return (
+                            <div
+                              key={field.key}
+                              className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full ${
+                                isCompleted
+                                  ? 'bg-primary/20 text-primary border border-primary/30'
+                                  : 'bg-muted text-muted-foreground border border-muted'
+                              }`}
+                            >
+                              {isCompleted ? (
+                                <CheckCircle className="h-3 w-3" />
+                              ) : (
+                                <AlertCircle className="h-3 w-3" />
+                              )}
+                              <span>{labels[field.key]}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="mb-8 sm:mb-12">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
@@ -362,6 +525,80 @@ export function ProfileClient({
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="gender" className="text-sm font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" /> Gender
+                  </Label>
+                  <Select value={gender} onValueChange={setGender}>
+                    <SelectTrigger className="h-12 border-2">
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                      <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="age" className="text-sm font-semibold flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary" /> Age
+                  </Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="age"
+                      type="number"
+                      min="0"
+                      max="150"
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      placeholder="Enter your age"
+                      className="pl-12 h-12 border-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="weight" className="text-sm font-semibold flex items-center gap-2">
+                    <Scale className="h-4 w-4 text-primary" /> Weight (kg)
+                  </Label>
+                  <div className="relative">
+                    <Scale className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="weight"
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={weight}
+                      onChange={(e) => setWeight(e.target.value)}
+                      placeholder="Enter weight in kg"
+                      className="pl-12 h-12 border-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="height" className="text-sm font-semibold flex items-center gap-2">
+                    <Ruler className="h-4 w-4 text-primary" /> Height (cm)
+                  </Label>
+                  <div className="relative">
+                    <Ruler className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="height"
+                      type="number"
+                      min="0"
+                      max="300"
+                      value={height}
+                      onChange={(e) => setHeight(e.target.value)}
+                      placeholder="Enter height in cm"
+                      className="pl-12 h-12 border-2"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="bio" className="text-sm font-semibold">Bio</Label>
                   <Textarea
@@ -440,7 +677,7 @@ export function ProfileClient({
                     </div>
                   </div>
 
-                  {planName && (
+                  {planName && isPremium && (
                     <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-primary/10">
                       <p className="text-xs text-muted-foreground mb-2 font-medium">Plan Name</p>
                       <p className="font-bold text-lg">{planName}</p>
@@ -469,24 +706,6 @@ export function ProfileClient({
                       </p>
                     </div>
                   )}
-
-                  <div className="pt-4 border-t-2">
-                    <Button
-                      variant={isPremium ? "outline" : "default"}
-                      className="w-full h-12 font-semibold"
-                      onClick={() => router.push("/plans")}
-                    >
-                      {isPremium ? (
-                        <>
-                          Change Plan <ArrowRight className="ml-2 h-5 w-5" />
-                        </>
-                      ) : (
-                        <>
-                          Upgrade Plan <Crown className="ml-2 h-5 w-5" />
-                        </>
-                      )}
-                    </Button>
-                  </div>
                 </div>
               ) : (
                 <div className="text-center py-12 space-y-4">
@@ -497,11 +716,26 @@ export function ProfileClient({
                     <p className="text-muted-foreground mb-2 font-semibold">No subscription found</p>
                     <p className="text-sm text-muted-foreground mb-6">Choose a plan to get started</p>
                   </div>
-                  <Button onClick={() => router.push("/plans")} className="w-full h-12 font-semibold">
-                    View Plans <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
                 </div>
               )}
+
+              <div className="pt-6 border-t-2 mt-6">
+                <Button
+                  variant={isPremium ? "outline" : "default"}
+                  className="w-full h-12 font-semibold"
+                  onClick={() => router.push("/plans")}
+                >
+                  {isPremium ? (
+                    <>
+                      Change Plan <ArrowRight className="ml-2 h-5 w-5" />
+                    </>
+                  ) : (
+                    <>
+                      Upgrade Plan <Crown className="ml-2 h-5 w-5" />
+                    </>
+                  )}
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

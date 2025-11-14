@@ -10,6 +10,16 @@ import { useToast } from "@/hooks/use-toast";
 import { createCheckoutSession, redirectToCheckout } from "@/utils/stripe";
 import { getPlatformSubscription } from "@/utils/subscription";
 import type { User } from "@supabase/supabase-js";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Plan {
   id: string;
@@ -40,6 +50,9 @@ export function PlansClient({
   const [plans, setPlans] = useState<Plan[]>(initialPlans);
   const [isFetchingPlans, setIsFetchingPlans] = useState(initialPlans.length === 0);
   const [subscription, setSubscription] = useState<any>(initialSubscription);
+  const [cancelling, setCancelling] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [planToCancel, setPlanToCancel] = useState<Plan | null>(null);
 
   useEffect(() => {
     if (initialPlans.length > 0) {
@@ -118,12 +131,16 @@ export function PlansClient({
   };
 
   const isCurrentPlan = (plan: Plan) => {
-    if (!subscription || !subscription.is_active) return false;
+    if (!subscription) return false;
 
+    // For free plan, check even if is_active is false (after cancellation)
     if (subscription.subscription_type === "free") {
       const planCycle = plan.billing_cycle || (plan.interval === "free" ? "free" : null);
       return planCycle === "free";
     }
+
+    // For paid plans, require is_active to be true
+    if (!subscription.is_active) return false;
 
     if (subscription.platform_plan_id && plan.id) {
       return subscription.platform_plan_id === plan.id;
@@ -136,6 +153,61 @@ export function PlansClient({
     }
 
     return false;
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!subscription || !planToCancel) return;
+
+    setCancelling(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to cancel your subscription.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch("/api/subscriptions/cancel", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          subscriptionType: "platform",
+          userId: session.user.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to cancel subscription");
+      }
+
+      // Refresh subscription data
+      const sub = await getPlatformSubscription(session.user.id);
+      setSubscription(sub);
+
+      toast({
+        title: "Subscription Cancelled",
+        description: "Your subscription has been cancelled and you've been moved to the Free plan.",
+      });
+
+      setShowCancelDialog(false);
+      setPlanToCancel(null);
+    } catch (error: any) {
+      console.error("Cancel subscription error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel subscription. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCancelling(false);
+    }
   };
 
   const handleSelectPlan = async (plan: Plan) => {
@@ -292,7 +364,7 @@ export function PlansClient({
           <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-hero bg-clip-text text-transparent">
             Choose Your Plan
           </h1>
-          <p className="text-lg text-muted-foreground mb-6">
+          <p className="text-lg text-muted-foreground mb-6 pb-1" >
             Select a plan that works best for you. You can upgrade or downgrade at any time.
           </p>
           <Button variant="outline" onClick={() => router.push("/dashboard")} className="mx-auto">
@@ -313,8 +385,13 @@ export function PlansClient({
               const isLoading = loading === `${plan.name}-${billingCycle}`;
               const isCurrent = isCurrentPlan(plan);
 
+              const isPaidPlan = billingCycle !== "free";
+              const isCurrentPaidPlan = isCurrent && isPaidPlan;
+              
               const buttonText = isLoading
                 ? "Processing..."
+                : isCurrentPaidPlan
+                ? "Cancel Plan"
                 : isCurrent
                 ? "Current Plan"
                 : billingCycle === "free"
@@ -358,10 +435,17 @@ export function PlansClient({
                       ))}
                     </ul>
                     <Button
-                      className="w-full"
-                      variant={isCurrent ? "outline" : plan.is_popular ? "default" : "outline"}
-                      onClick={() => !isCurrent && handleSelectPlan(plan)}
-                      disabled={isLoading || isCurrent}
+                      className={`w-full ${isCurrentPaidPlan ? "bg-destructive hover:bg-destructive/90" : ""}`}
+                      variant={isCurrentPaidPlan ? "destructive" : isCurrent ? "outline" : plan.is_popular ? "default" : "outline"}
+                      onClick={() => {
+                        if (isCurrentPaidPlan) {
+                          setPlanToCancel(plan);
+                          setShowCancelDialog(true);
+                        } else if (!isCurrent) {
+                          handleSelectPlan(plan);
+                        }
+                      }}
+                      disabled={isLoading || cancelling || (isCurrent && !isCurrentPaidPlan)}
                     >
                       {buttonText}
                     </Button>
@@ -372,6 +456,27 @@ export function PlansClient({
           )}
         </div>
       </div>
+
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel your subscription? You'll be moved to the Free plan and will lose access to premium features.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Keep Subscription</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelSubscription}
+              disabled={cancelling}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {cancelling ? "Cancelling..." : "Cancel Subscription"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }

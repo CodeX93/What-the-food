@@ -55,9 +55,9 @@ const HowItWorks = () => {
                 
                 <Card className="relative overflow-hidden border-2 border-transparent bg-card/50 backdrop-blur-sm h-full flex flex-col mt-3 sm:mt-4 md:mt-5">
                   {/* Large step number in background */}
-                  <div className="absolute top-4 sm:top-6 right-4 sm:right-6 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-primary/5 select-none pointer-events-none">
+                  {/* <div className="absolute top-4 sm:top-6 right-4 sm:right-6 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-primary/5 select-none pointer-events-none">
                     {step.number}
-                  </div>
+                  </div> */}
                   
                   <CardHeader className="pt-10 sm:pt-12 md:pt-14 pb-4 sm:pb-6 flex-grow">
                     <div className="bg-gradient-hero w-14 h-14 sm:w-16 sm:h-16 md:w-[4.5rem] md:h-[4.5rem] lg:w-20 lg:h-20 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6 mx-auto shadow-lg">

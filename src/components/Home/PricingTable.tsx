@@ -6,6 +6,18 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { getPlatformSubscription } from "@/utils/subscription";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const plans = [
   {
@@ -47,36 +59,171 @@ const plans = [
 
 const PricingTable = () => {
   const router = useRouter();
+  const { toast } = useToast();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [planToCancel, setPlanToCancel] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setIsLoggedIn(!!session);
+      
+      if (session?.user) {
+        try {
+          const sub = await getPlatformSubscription(session.user.id);
+          setSubscription(sub);
+        } catch (error) {
+          console.error("Error fetching subscription:", error);
+        }
+      }
+      setLoading(false);
     };
     checkAuth();
     
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setIsLoggedIn(!!session);
+      if (session?.user) {
+        try {
+          const sub = await getPlatformSubscription(session.user.id);
+          setSubscription(sub);
+        } catch (error) {
+          console.error("Error fetching subscription:", error);
+        }
+      } else {
+        setSubscription(null);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const handlePlanClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (isLoggedIn) {
-      router.push("/plans");
+  const getPlanCTA = (planName: string) => {
+    if (!isLoggedIn || !subscription) {
+      return planName === "Free" ? "Get Started" : "Upgrade Now";
+    }
+
+    const isPremium = subscription.subscription_type === "premium" && subscription.is_active;
+    const isFree = subscription.subscription_type === "free";
+    const billingCycle = subscription.billing_cycle;
+
+    if (planName === "Premium") {
+      // For premium plan - if user is on this plan, show "Cancel Plan"
+      if (isPremium) {
+        return "Cancel Plan";
+      }
+      return "Upgrade Now";
     } else {
+      // For free plan - if user is on free plan, show "Current Plan"
+      if (isFree) {
+        return "Current Plan";
+      }
+      // If user is on premium, show "Cancel Subscription"
+      if (isPremium) {
+        return "Cancel Subscription";
+      }
+      return "Get Started";
+    }
+  };
+
+  const isCurrentPlan = (planName: string) => {
+    if (!isLoggedIn || !subscription) return false;
+    const isPremium = subscription.subscription_type === "premium" && subscription.is_active;
+    const isFree = subscription.subscription_type === "free";
+    
+    if (planName === "Premium") {
+      return isPremium;
+    } else if (planName === "Free") {
+      return isFree;
+    }
+    return false;
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!subscription || !isLoggedIn) return;
+
+    setCancelling(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to cancel your subscription.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await fetch("/api/subscriptions/cancel", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          subscriptionType: "platform",
+          userId: session.user.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to cancel subscription");
+      }
+
+      // Refresh subscription data
+      const sub = await getPlatformSubscription(session.user.id);
+      setSubscription(sub);
+
+      toast({
+        title: "Subscription Cancelled",
+        description: "Your subscription has been cancelled and you've been moved to the Free plan.",
+      });
+
+      setShowCancelDialog(false);
+      setPlanToCancel(null);
+    } catch (error: any) {
+      console.error("Cancel subscription error:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to cancel subscription. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handlePlanClick = (e: React.MouseEvent, planName: string) => {
+    e.preventDefault();
+    if (!isLoggedIn) {
       router.push("/auth");
+      return;
+    }
+
+    const cta = getPlanCTA(planName);
+    
+    // Don't do anything if it's the current plan (for Free plan)
+    if (cta === "Current Plan") {
+      return;
+    }
+    
+    if (cta === "Cancel Plan" || cta === "Cancel Subscription") {
+      setPlanToCancel(planName);
+      setShowCancelDialog(true);
+    } else {
+      router.push("/plans");
     }
   };
 
   return (
     <section className="w-full bg-white dark:bg-[#000000] transition-colors duration-300">
-      <div className="container mx-auto px-4 w-full relative z-10 py-16 sm:py-20 lg:py-24">
-        <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
+      <div className="mx-auto w-full max-w-6xl px-6 sm:px-10 lg:px-16 relative z-10 py-16 sm:py-20 lg:py-24">
+        <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Simple, Transparent Pricing</h2>
           <p className="text-base sm:text-lg text-muted-foreground">
             Choose the plan that works best for you
@@ -118,17 +265,39 @@ const PricingTable = () => {
               </CardContent>
               <CardFooter className="p-4 sm:p-6 pt-0">
                 <Button 
-                  className={`w-full text-sm sm:text-base ${plan.popular ? 'bg-primary hover:bg-primary-hover' : ''}`}
-                  variant={plan.popular ? 'default' : 'outline'}
-                  onClick={handlePlanClick}
+                  className={`w-full text-sm sm:text-base ${plan.popular && !isCurrentPlan(plan.name) ? 'bg-primary hover:bg-primary-hover' : ''} ${isCurrentPlan(plan.name) && plan.name === "Premium" ? 'bg-destructive hover:bg-destructive/90' : ''}`}
+                  variant={isCurrentPlan(plan.name) && plan.name === "Premium" ? 'destructive' : plan.popular ? 'default' : 'outline'}
+                  onClick={(e) => handlePlanClick(e, plan.name)}
+                  disabled={loading || cancelling || (isCurrentPlan(plan.name) && plan.name === "Free")}
                 >
-                  {plan.cta}
+                  {loading || cancelling ? "Loading..." : getPlanCTA(plan.name)}
                 </Button>
               </CardFooter>
             </Card>
           ))}
         </div>
       </div>
+
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel your subscription? You'll be moved to the Free plan and will lose access to premium features.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Keep Subscription</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelSubscription}
+              disabled={cancelling}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {cancelling ? "Cancelling..." : "Cancel Subscription"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 };

@@ -31,61 +31,55 @@ const BlogPreview = () => {
           
           {isLoading &&
             Array.from({ length: 6 }).map((_, i) => (
-              <div
+              <Card
                 key={`skeleton-${i}`}
-                className="mt-2 h-full rounded-3xl border border-slate-100/80 bg-slate-50/90 p-2 shadow-[0_18px_40px_-28px_rgba(30,41,59,0.22)] dark:border-slate-800/40 dark:bg-slate-900/60 dark:shadow-[0_18px_40px_-26px_rgba(15,23,42,0.48)]"
+                className="mt-2 flex h-full flex-col overflow-hidden rounded-2xl border-[0.2rem] border-primary/40 bg-white shadow-[0_25px_60px_-32px_rgba(30,41,59,0.35)] dark:border-primary/60 dark:bg-slate-950 dark:shadow-[0_25px_60px_-30px_rgba(15,23,42,0.6)]"
               >
-                <Card className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_25px_60px_-32px_rgba(30,41,59,0.35)] dark:border-slate-800/70 dark:bg-slate-950 dark:shadow-[0_25px_60px_-30px_rgba(15,23,42,0.6)]">
-                  <div className="aspect-video bg-muted" />
-                  <div className="flex flex-1 flex-col gap-3 p-5">
-                    <div className="h-4 w-3/4 rounded bg-muted" />
-                    <div className="space-y-2">
-                      <div className="h-3 w-full rounded bg-muted" />
-                      <div className="h-3 w-2/3 rounded bg-muted" />
-                    </div>
+                <div className="aspect-video bg-muted" />
+                <div className="flex flex-1 flex-col gap-3 p-5">
+                  <div className="h-4 w-3/4 rounded bg-muted" />
+                  <div className="space-y-2">
+                    <div className="h-3 w-full rounded bg-muted" />
+                    <div className="h-3 w-2/3 rounded bg-muted" />
                   </div>
-                </Card>
-              </div>
+                </div>
+              </Card>
             ))}
 
           {!isLoading && data &&
             data.posts.slice(0, 6).map((post) => (
-              <div
+              <a
                 key={post.id}
-                className="mt-2 h-full rounded-3xl border border-slate-100/80 bg-slate-50/90 p-2 shadow-[0_18px_40px_-28px_rgba(30,41,59,0.22)] transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_22px_54px_-26px_rgba(30,41,59,0.28)] dark:border-slate-800/40 dark:bg-slate-900/60 dark:shadow-[0_18px_40px_-26px_rgba(15,23,42,0.48)] dark:hover:shadow-[0_22px_54px_-24px_rgba(15,23,42,0.62)]"
+                href={post.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group block h-full"
               >
-                <a
-                  href={post.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group block h-full"
-                >
-                  <Card className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_25px_60px_-32px_rgba(30,41,59,0.35)] transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:shadow-[0_28px_90px_-30px_rgba(30,41,59,0.45)] dark:border-slate-800/70 dark:bg-slate-950 dark:shadow-[0_25px_60px_-30px_rgba(15,23,42,0.6)] dark:group-hover:shadow-[0_28px_90px_-28px_rgba(15,23,42,0.72)]">
-                    {post.image ? (
-                      <img
-                        src={post.image}
-                        alt={post.title}
-                        className="aspect-video w-full object-cover"
-                      />
-                    ) : (
-                      <div className="aspect-video bg-muted" />
-                    )}
-                    <div className="flex flex-1 flex-col gap-3 p-5">
-                      <CardTitle className="line-clamp-1 text-sm font-semibold tracking-tight text-slate-900 transition-colors group-hover:text-primary dark:text-white md:text-[0.95rem]">
-                        {post.title}
-                      </CardTitle>
-                      <p className="min-h-[60px] text-xs leading-relaxed text-slate-600 line-clamp-3 dark:text-slate-300/80 md:text-[0.8rem]">
-                        {post.excerpt}
-                      </p>
-                    </div>
-                  </Card>
-                </a>
-              </div>
+                <Card className="mt-2 flex h-full flex-col overflow-hidden rounded-2xl border-[0.2rem] border-primary/40 bg-white shadow-[0_25px_60px_-32px_rgba(30,41,59,0.35)] transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:shadow-[0_28px_90px_-30px_rgba(30,41,59,0.45)] dark:border-primary/60 dark:bg-slate-950 dark:shadow-[0_25px_60px_-30px_rgba(15,23,42,0.6)] dark:group-hover:shadow-[0_28px_90px_-28px_rgba(15,23,42,0.72)]">
+                  {post.image ? (
+                    <img
+                      src={post.image}
+                      alt={post.title}
+                      className="aspect-video w-full object-cover"
+                    />
+                  ) : (
+                    <div className="aspect-video bg-muted" />
+                  )}
+                  <div className="flex flex-1 flex-col gap-3 p-5">
+                    <CardTitle className="line-clamp-1 text-sm font-semibold tracking-tight text-slate-900 transition-colors group-hover:text-primary dark:text-white md:text-[0.95rem]">
+                      {post.title}
+                    </CardTitle>
+                    <p className="min-h-[60px] text-xs leading-relaxed text-slate-600 line-clamp-3 dark:text-slate-300/80 md:text-[0.8rem]">
+                      {post.excerpt}
+                    </p>
+                  </div>
+                </Card>
+              </a>
             ))}
         </div>
 
         <div className="mt-4 text-center md:hidden">
-          <Button variant="outline" size="sm" asChild>
+          <Button variant="outline" size="sm" className="mt-9" asChild>
             <Link href="/blog">
               View All Posts
               <ArrowRight className="ml-2 h-4 w-4" />

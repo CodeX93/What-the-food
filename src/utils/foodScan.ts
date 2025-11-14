@@ -46,7 +46,7 @@ export async function uploadFoodImage(file: File, userId: string): Promise<{ pat
 export async function analyzeFood(
   imageUrl: string,
   serving: number = 1,
-  insightsParams?: { age?: number; gender?: string; activity?: string; goal?: string; optimize?: boolean },
+  insightsParams?: { age?: number; gender?: string; activity?: string; goal?: string; optimize?: boolean; weight_kg?: number; height_cm?: number },
   options?: { overrideIngredients?: string[] }
 ): Promise<{ analysis: FoodAnalysis; insights?: string; upgrade?: boolean }>{
   const body: Record<string, unknown> = { imageUrl, serving, ...(insightsParams || {}) };
@@ -182,6 +182,8 @@ export async function getPersonalizedInsights(params: {
   activity?: string;
   goal?: string;
   optimize?: boolean;
+  weight_kg?: number;
+  height_cm?: number;
 }): Promise<{ insights?: string; upgrade?: boolean; message?: string }>{
   // Fetch the scan to get image URL
   const { data: scan, error: scanError } = await (supabase as any)
@@ -210,6 +212,8 @@ export async function getPersonalizedInsights(params: {
       activity: params.activity,
       goal: params.goal,
       optimize: params.optimize,
+      weight_kg: params.weight_kg,
+      height_cm: params.height_cm,
     },
   });
   

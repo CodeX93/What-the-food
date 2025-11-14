@@ -1,7 +1,8 @@
-import { Upload, Sparkles, TrendingUp, FlaskConical, CalendarDays, Download, ArrowUpRight } from "lucide-react";
+import { Upload, Sparkles, TrendingUp } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { HowItWorksHero } from "@/components/HowItWorks/HowItWorksHero";
 
 const steps = [
   {
@@ -45,103 +46,10 @@ const steps = [
   },
 ];
 
-export default function HowItWorksPage() {
+function HowItWorksPage() {
   return (
     <div className="overflow-x-hidden bg-background">
-      {/* Hero */}
-      <section className="relative min-h-screen w-full snap-start bg-background">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.08),transparent_70%)] dark:bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.12),transparent_70%)] pointer-events-none" />
-        <div className="container mx-auto flex h-full flex-col items-center justify-center gap-12 px-4 lg:px-12 py-16">
-          <div className="max-w-3xl space-y-6 text-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1 text-xs font-medium uppercase tracking-wide text-primary">
-              Lightning-fast nutrition intelligence
-            </div>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight text-foreground">
-              Snap, scan, and know exactly what&apos;s on your plate
-            </h1>
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-              Skip the manual tracking. WhatTheFood recognizes your meal, estimates portions, and surfaces accurate nutrition instantly.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="bg-primary hover:bg-primary-hover" asChild>
-                <Link href="/#hero">Start Free Scan</Link>
-              </Button>
-              <Button size="lg" variant="outline" className="border-primary/50 text-primary hover:bg-primary/10" asChild>
-                <Link href="/pricing">View Plans</Link>
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              <div className="rounded-2xl border border-slate-200/60 dark:border-white/10 bg-white/80 dark:bg-white/5 p-5 shadow-sm">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Foods detected</p>
-                <p className="text-3xl font-semibold text-primary mt-1">12K+</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200/60 dark:border-white/10 bg-white/80 dark:bg-white/5 p-5 shadow-sm">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Recognition accuracy</p>
-                <p className="text-3xl font-semibold text-primary mt-1">97%</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200/60 dark:border-white/10 bg-white/80 dark:bg-white/5 p-5 shadow-sm">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Time to insight</p>
-                <p className="text-3xl font-semibold text-primary mt-1">30s</p>
-              </div>
-            </div>
-          </div>
-
-          <Card className="w-full max-w-3xl border-primary/20 bg-white/90 dark:bg-white/5 backdrop-blur-md shadow-strong">
-            <CardContent className="p-6 sm:p-8 space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Live Scan Preview</p>
-                  <h2 className="text-2xl font-semibold text-foreground">Mediterranean Bowl</h2>
-                </div>
-                <Button variant="ghost" size="sm" className="text-primary hover:text-primary-hover">
-                  Review Details
-                  <ArrowUpRight className="ml-1 h-4 w-4" />
-                </Button>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                  <p className="text-xs uppercase tracking-wide text-primary/70">Calories</p>
-                  <p className="text-2xl font-bold text-primary">540 kcal</p>
-                  <p className="text-xs text-muted-foreground mt-1">On par with your daily target</p>
-                </div>
-                <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                  <p className="text-xs uppercase tracking-wide text-primary/70">Protein</p>
-                  <p className="text-2xl font-bold text-primary">32 g</p>
-                  <p className="text-xs text-muted-foreground mt-1">Great macro balance</p>
-                </div>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-lg border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Fiber</p>
-                  <p className="text-lg font-semibold text-foreground">11 g</p>
-                </div>
-                <div className="rounded-lg border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Carbs</p>
-                  <p className="text-lg font-semibold text-foreground">58 g</p>
-                </div>
-                <div className="rounded-lg border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Fats</p>
-                  <p className="text-lg font-semibold text-foreground">18 g</p>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                  Chickpeas
-                </span>
-                <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                  Quinoa
-                </span>
-                <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                  Olive Oil
-                </span>
-                <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                  Feta
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
+      <HowItWorksHero />
 
       {/* Process */}
       <section className="bg-background">
@@ -288,4 +196,6 @@ export default function HowItWorksPage() {
     </div>
   );
 }
+
+export default HowItWorksPage;
 

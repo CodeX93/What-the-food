@@ -14,13 +14,28 @@ export function CheckoutSuccessClient() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<any>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [subscriptionType, setSubscriptionType] = useState<string | null>(null);
 
-  const sessionId = searchParams?.get("session_id") ?? null;
-  const subscriptionType = searchParams?.get("type") ?? null;
+  // Get search params in useEffect to ensure they're available
+  useEffect(() => {
+    if (searchParams) {
+      setSessionId(searchParams.get("session_id"));
+      setSubscriptionType(searchParams.get("type"));
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const verifySubscription = async () => {
-      if (!sessionId) {
+      // Wait for searchParams to be available
+      if (!searchParams) {
+        return;
+      }
+
+      const currentSessionId = searchParams.get("session_id");
+      const currentSubscriptionType = searchParams.get("type");
+
+      if (!currentSessionId) {
         toast({
           title: "Invalid session",
           description: "No checkout session found.",
@@ -40,7 +55,7 @@ export function CheckoutSuccessClient() {
           return;
         }
 
-        const tableName = subscriptionType === "widget" ? "widget_subscriptions" : "platform_subscriptions";
+        const tableName = currentSubscriptionType === "widget" ? "widget_subscriptions" : "platform_subscriptions";
         let attempts = 0;
         const maxAttempts = 10;
 
@@ -79,13 +94,13 @@ export function CheckoutSuccessClient() {
           toast({
             title: "Success!",
             description:
-              subscriptionType === "widget"
+              currentSubscriptionType === "widget"
                 ? "Your widget subscription is now active. You can now create your widget!"
                 : "Your Premium subscription is now active.",
           });
 
           setTimeout(() => {
-            if (subscriptionType === "widget") {
+            if (currentSubscriptionType === "widget") {
               router.push("/widget/dashboard");
             } else {
               router.push("/dashboard");
@@ -98,7 +113,7 @@ export function CheckoutSuccessClient() {
           });
 
           setTimeout(() => {
-            if (subscriptionType === "widget") {
+            if (currentSubscriptionType === "widget") {
               router.push("/widget/dashboard");
             } else {
               router.push("/dashboard");
@@ -116,7 +131,7 @@ export function CheckoutSuccessClient() {
         });
 
         setTimeout(() => {
-          if (subscriptionType === "widget") {
+          if (currentSubscriptionType === "widget") {
             router.push("/widget/dashboard");
           } else {
             router.push("/dashboard");
@@ -127,10 +142,13 @@ export function CheckoutSuccessClient() {
       }
     };
 
-    void verifySubscription();
-  }, [router, sessionId, subscriptionType, toast]);
+    if (sessionId !== null) {
+      void verifySubscription();
+    }
+  }, [router, searchParams, sessionId, subscriptionType, toast]);
 
-  if (loading) {
+  // Show loading if searchParams aren't ready yet or if we're still verifying
+  if (loading || !searchParams || sessionId === null) {
     return (
       <main className="flex-1 flex items-center justify-center">
         <div className="text-center">
