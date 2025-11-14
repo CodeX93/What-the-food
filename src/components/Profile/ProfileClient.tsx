@@ -143,7 +143,7 @@ export function ProfileClient({
         setUserInitials(
           session.user.email ? session.user.email.split("@")[0].substring(0, 2).toUpperCase() : "U"
         );
-
+console.log("hello world");
         const { data: profileData } = await (supabase as any)
           .from("profiles")
           .select("*")
