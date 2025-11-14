@@ -152,6 +152,42 @@ export function WidgetDashboardClient() {
     [evaluateSiteLimit, subscriptionType, supabaseClient, user]
   );
 
+  const resetCreateForm = useCallback(() => {
+    setCreateForm(() => ({
+      ...defaultFormState,
+      brandingVisible: subscriptionType === "free" ? true : defaultFormState.brandingVisible,
+    }));
+    setIsCreating(true);
+  }, [subscriptionType]);
+
+  const handleTabChange = useCallback((nextTab: string) => {
+    if (nextTab === "create") {
+      resetCreateForm();
+      setActiveTab("create");
+      return;
+    }
+
+    if (nextTab === "saved-widgets") {
+      setIsCreating(false);
+      setActiveTab("saved-widgets");
+      return;
+    }
+
+    setActiveTab(nextTab);
+  }, [resetCreateForm]);
+
+  const clearEditingContext = useCallback(() => {
+    setEditForm(() => ({
+      ...defaultFormState,
+      brandingVisible: subscriptionType === "free" ? true : defaultFormState.brandingVisible,
+    }));
+    setCurrentWidget(null);
+    currentWidgetRef.current = null;
+    setIsCreating(false);
+    setWidgetSites([]);
+    evaluateSiteLimit(0);
+  }, [subscriptionType, evaluateSiteLimit]);
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -275,26 +311,7 @@ export function WidgetDashboardClient() {
     };
 
     void loadData();
-  }, [router, supabaseClient, toast, loadWidgetForEditing]);
-
-  const resetCreateForm = useCallback(() => {
-    setCreateForm(() => ({
-      ...defaultFormState,
-      brandingVisible: subscriptionType === "free" ? true : defaultFormState.brandingVisible,
-    }));
-    setIsCreating(true);
-  }, [subscriptionType]);
-
-  const clearEditingContext = useCallback(() => {
-    setEditForm(() => ({
-      ...defaultFormState,
-      brandingVisible: subscriptionType === "free" ? true : defaultFormState.brandingVisible,
-    }));
-    setCurrentWidget(null);
-    currentWidgetRef.current = null;
-    setWidgetSites([]);
-    evaluateSiteLimit(0);
-  }, [evaluateSiteLimit, subscriptionType]);
+  }, [router, supabaseClient, toast, loadWidgetForEditing, clearEditingContext, handleTabChange]);
 
   const handleSaveWidget = async (mode: "create" | "edit", saveAsNew: boolean = false) => {
     if (!user) return;
@@ -700,21 +717,6 @@ export function WidgetDashboardClient() {
     );
   };
 
-  const handleTabChange = (nextTab: string) => {
-    if (nextTab === "create") {
-      resetCreateForm();
-      setActiveTab("create");
-      return;
-    }
-
-    if (nextTab === "saved-widgets") {
-      setIsCreating(false);
-      setActiveTab("saved-widgets");
-      return;
-    }
-
-    setActiveTab(nextTab);
-  };
 
   if (loading) {
     return (

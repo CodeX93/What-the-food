@@ -462,7 +462,7 @@ export function PlansClient({
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to cancel your subscription? You'll be moved to the Free plan and will lose access to premium features.
+              Are you sure you want to cancel your subscription? You&apos;ll be moved to the Free plan and will lose access to premium features.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

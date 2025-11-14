@@ -76,13 +76,13 @@ export function FeaturesHero() {
                     RD
                   </div>
                   <div>
-                    <p className="font-semibold text-foreground">"Gemma Ray, RDN"</p>
+                    <p className="font-semibold text-foreground">&quot;Gemma Ray, RDN&quot;</p>
                     <p className="text-xs text-muted-foreground">Sports Nutrition Partner</p>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  "The accuracy and clarity help our athletes understand what fuels their performance.
-                  It's like having a dietitian assistant available 24/7."
+                  &quot;The accuracy and clarity help our athletes understand what fuels their performance.
+                  It&apos;s like having a dietitian assistant available 24/7.&quot;
                 </p>
               </div>
             </CardContent>
