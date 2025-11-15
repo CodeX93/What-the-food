@@ -213,7 +213,7 @@ export function FoodResultsClient() {
 
   const handleShare = async () => {
     try {
-      const shareUrl = `${window.location.origin}/food-results?id=${id}`;
+      const shareUrl = `${window.location.origin}/shared/${id}`;
       const shareData = {
         title: analysis?.dish || "Food Analysis Results",
         text: `Check out this food analysis: ${analysis?.dish || "Food scan"}`,
@@ -241,7 +241,7 @@ export function FoodResultsClient() {
         console.error("Share failed:", error);
         // Fallback to copying URL
         try {
-          const shareUrl = `${window.location.origin}/food-results?id=${id}`;
+          const shareUrl = `${window.location.origin}/shared/${id}`;
           await navigator.clipboard.writeText(shareUrl);
           toast({
             title: "Link copied!",
