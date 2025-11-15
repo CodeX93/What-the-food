@@ -67,14 +67,14 @@ function HowItWorksPage() {
               return (
                 <Card
                   key={index}
-                  className="relative flex flex-col border border-slate-200/70 dark:border-white/10 bg-white/95 dark:bg-white/5 backdrop-blur-sm shadow-lg"
+                  className="relative flex flex-col border border-slate-200/70 dark:border-white/10 bg-white/95 dark:bg-white/5 backdrop-blur-sm shadow-lg hover:shadow-strong transition-all duration-300 hover:border-primary/30 dark:hover:border-primary/30"
                 >
                   <CardContent className="flex flex-1 flex-col gap-5 p-6 sm:p-8">
                     <div className="flex items-center justify-between">
                       <div className={`rounded-xl ${step.colorClass} p-3 shadow-lg`}>
                         <IconComponent className="h-7 w-7 text-white" />
                       </div>
-                      <span className="text-4xl font-black text-primary/10">{step.number}</span>
+                      <span className="text-4xl font-black text-primary dark:text-primary">{step.number}</span>
                     </div>
                     <div>
                       <h3 className="text-2xl font-semibold text-foreground mb-2">{step.title}</h3>

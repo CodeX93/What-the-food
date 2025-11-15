@@ -15,13 +15,14 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
 
-const BASE_SCHEMA = `{"dish":string,"description":string,"tags":string[],"additionalInfo":string,"servingGuidance":string,"confidence":number,"servingSize":string,"nutrients":{"calories":number,"protein_g":number,"carbohydrates_g":number,"fat_g":number,"fiber_g":number,"sugar_g":number},"ingredients":string[],"instructions":string[]}`;
+const BASE_SCHEMA = `{"dish":string,"description":string,"tags":string[],"additionalInfo":string,"servingGuidance":string,"confidence":number,"servingSize":string,"servingWeightGrams":number,"nutrients":{"calories":number,"protein_g":number,"carbohydrates_g":number,"fat_g":number,"fiber_g":number,"sugar_g":number},"ingredients":string[],"instructions":string[]}`;
 const SCHEMA_WITH_INSIGHTS = `${BASE_SCHEMA.slice(0, -1)},"insights":string}`;
 const PROMPT_GUIDELINES = `Guidelines:
 - "description" should be a concise 1-2 sentence summary of the meal.
 - Provide 3-6 descriptive "tags" (short lowercase keywords separated into an array).
 - "additionalInfo" must mention that nutrition can vary based on ingredient quality, portion size, cooking method, or added oils/sauces. Tailor it to the dish.
 - "servingGuidance" must explain how to weigh or divide the meal to estimate personal servings (e.g., divide total grams by grams-per-serving).
+- "servingWeightGrams" is MANDATORY and must ALWAYS be provided. It must be the estimated weight in grams for one serving of the dish. This should be a realistic number based on the dish type, ingredients, and typical portion sizes. For example, a typical serving of pasta might be 200-250g, a burger might be 150-200g, a salad might be 150-300g. NEVER omit this field or set it to zero. Always provide a realistic weight estimate.
 - Every entry in "ingredients" must begin with a quantity and unit in METRIC format ONLY (grams, kg, ml, liters). NEVER use imperial units (oz, pounds, cups, tbsp, tsp, etc.). Convert all measurements to metric. Examples: "250g cooked chickpeas", "30ml olive oil", "150g potatoes".
 - Ensure nutrient values are realistic positive numbers (avoid zeros unless absolutely accurate).
 - Reflect the most accurate ingredient amounts available.
@@ -262,6 +263,7 @@ const defaultAnalysis = {
   servingGuidance: "Divide the total portion weight by the grams per serving to estimate your ideal portion.",
   confidence: 0.75,
   servingSize: "1 serving",
+  servingWeightGrams: 200,
   nutrients: {
     calories: 320,
     protein_g: 18,
@@ -331,6 +333,10 @@ function sanitizeAnalysis(raw, ingredientOverrides = []) {
       result.confidence = Math.max(0, Math.min(1, confidence));
     }
     result.servingSize = typeof raw.servingSize === "string" && raw.servingSize.trim() ? raw.servingSize.trim() : result.servingSize;
+    const weightGrams = sanitizeNumber(raw.servingWeightGrams);
+    if (typeof weightGrams === "number" && weightGrams > 0) {
+      result.servingWeightGrams = weightGrams;
+    }
 
     const nutrients = raw.nutrients && typeof raw.nutrients === "object" ? raw.nutrients : {};
     const fallback = result.nutrients;

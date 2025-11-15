@@ -45,7 +45,7 @@ const faqs = [
 const FAQ = () => {
   return (
     <section className="w-full bg-[#F8FAF9] dark:bg-[#111111] transition-colors duration-300">
-      <div className="container mx-auto px-4 w-full relative z-10 py-16 sm:py-20 lg:py-24">
+      <div className="mx-auto w-full max-w-6xl px-6 sm:px-10 lg:px-16 relative z-10 py-16 sm:py-20 lg:py-24">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Frequently Asked Questions</h2>
           <p className="text-base sm:text-lg text-muted-foreground">

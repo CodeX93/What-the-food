@@ -11,7 +11,7 @@ const DashboardClient = dynamic<DashboardClientProps>(
 
 type DashboardProps = DashboardClientProps;
 
-const Dashboard = ({ initialUser, initialSubscription, initialScans }: DashboardProps) => {
+const Dashboard = ({ initialUser, initialSubscription, initialScans, initialFullName }: DashboardProps) => {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background to-muted/20">
       <TopBar />
@@ -20,6 +20,7 @@ const Dashboard = ({ initialUser, initialSubscription, initialScans }: Dashboard
         initialUser={initialUser}
         initialSubscription={initialSubscription}
         initialScans={initialScans}
+        initialFullName={initialFullName}
       />
       <Footer />
     </div>

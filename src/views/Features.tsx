@@ -86,7 +86,7 @@ export default function FeaturesPage() {
               return (
                 <Card
                   key={index}
-                  className="hover:shadow-strong transition-all duration-300 border border-slate-200/60 dark:border-white/10 hover:border-primary/30 backdrop-blur-sm bg-white/90 dark:bg-white/5 h-full flex flex-col"
+                  className="hover:shadow-strong transition-all duration-300 border border-slate-200/60 dark:border-white/10 hover:border-primary/30 dark:hover:border-primary/30 backdrop-blur-sm bg-white/90 dark:bg-white/5 h-full flex flex-col"
                 >
                   <CardHeader className="pb-4">
                     <div className="w-14 h-14 rounded-xl bg-gradient-hero flex items-center justify-center mb-4">

@@ -59,15 +59,15 @@ const HowItWorks = () => {
                     {step.number}
                   </div> */}
                   
-                  <CardHeader className="pt-10 sm:pt-12 md:pt-14 pb-4 sm:pb-6 flex-grow">
+                  <CardHeader className="pt-10 sm:pt-12 md:pt-14 pb-0">
                     <div className="bg-gradient-hero w-14 h-14 sm:w-16 sm:h-16 md:w-[4.5rem] md:h-[4.5rem] lg:w-20 lg:h-20 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6 mx-auto shadow-lg">
                       <IconComponent className="h-7 w-7 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-10 lg:w-10 text-white" />
                     </div>
-                    <CardTitle className="text-xl sm:text-2xl md:text-2xl lg:text-3xl text-center font-bold mb-2 sm:mb-3">
+                    <CardTitle className="text-xl sm:text-2xl md:text-2xl lg:text-3xl text-center font-bold mb-0 min-h-[4rem] sm:min-h-[4.5rem] md:min-h-[5rem] flex items-start justify-center">
                       {step.title}
                     </CardTitle>
               </CardHeader>
-                  <CardContent className="px-4 sm:px-6 md:px-8 pb-6 sm:pb-8 md:pb-10">
+                  <CardContent className="px-4 sm:px-6 md:px-8 pb-6 sm:pb-8 md:pb-10 pt-4 sm:pt-6">
                     <p className="text-sm sm:text-base md:text-lg text-muted-foreground text-center leading-relaxed">
                       {step.description}
                     </p>

@@ -422,7 +422,7 @@ console.log("hello world");
         <div className="mb-8 sm:mb-12">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent pb-1">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent pb-2">
                 Profile Settings
               </h1>
               <p className="text-muted-foreground text-sm sm:text-base">

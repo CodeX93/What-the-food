@@ -8,6 +8,7 @@ export type FoodAnalysis = {
   servingGuidance?: string;
   confidence: number;
   servingSize: string;
+  servingWeightGrams?: number;
   nutrients?: {
     calories?: number;
     protein_g?: number;

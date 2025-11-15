@@ -26,12 +26,14 @@ export type DashboardClientProps = {
   initialUser?: User | null;
   initialSubscription?: any;
   initialScans?: any[];
+  initialFullName?: string | null;
 };
 
 export function DashboardClient({
   initialUser = null,
   initialSubscription = null,
   initialScans = [],
+  initialFullName = null,
 }: DashboardClientProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -45,6 +47,7 @@ export function DashboardClient({
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [uploadedImagePath, setUploadedImagePath] = useState<string | null>(null);
   const [freeScanRemaining, setFreeScanRemaining] = useState<number | null>(null);
+  const [userFullName, setUserFullName] = useState<string | null>(initialFullName);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -64,6 +67,28 @@ export function DashboardClient({
         }
 
         setUser(session.user);
+
+        // Fetch user profile to get full_name (if not already provided from server)
+        if (!initialFullName) {
+          try {
+            const { data: profileData, error: profileError } = await (supabase as any)
+              .from("profiles")
+              .select("full_name")
+              .eq("id", session.user.id)
+              .maybeSingle();
+
+            if (profileError) {
+              console.error("Profile fetch error:", profileError);
+            } else if (profileData) {
+              const fullName = profileData.full_name?.trim();
+              if (fullName && fullName.length > 0) {
+                setUserFullName(fullName);
+              }
+            }
+          } catch (error) {
+            console.error("Failed to load user profile", error);
+          }
+        }
 
         const sub =
           initialSubscription ??
@@ -95,7 +120,7 @@ export function DashboardClient({
     };
 
     fetchUserData();
-  }, [initialScans, initialSubscription, initialUser, router, toast]);
+  }, [initialScans, initialSubscription, initialUser, initialFullName, router, toast]);
 
   if (loading) {
     return (
@@ -116,7 +141,11 @@ export function DashboardClient({
             <div>
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-2">
                 <Stars className="h-7 w-7 text-primary" />
-                Welcome back{user?.email ? `, ${user.email.split("@")[0]}` : ""}
+                {userFullName ? (
+                  `Welcome back ${userFullName.split(" ").slice(0, 2).join(" ")}`
+                ) : (
+                  `Welcome back${user?.email ? `, ${user.email.split("@")[0]}` : ""}`
+                )}
               </h1>
               <p className="text-muted-foreground mt-1">Scan meals, get instant nutrition, and track progress.</p>
             </div>
@@ -205,12 +234,40 @@ export function DashboardClient({
           </Card>
         </div>
 
-        <Card id="upload-section" className="mb-8">
-          <CardHeader>
-            <CardTitle>Upload and Analyze</CardTitle>
-            <CardDescription>PNG, JPG, JPEG, HEIC</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <div id="upload-section" className="grid md:grid-cols-2 gap-6 mb-8">
+          {/* Ad/Sponsor Space - Left Side */}
+          <Card className="border-dashed border-2 border-muted-foreground/20 bg-gradient-to-br from-muted/50 to-muted/30">
+            <CardHeader>
+              <CardTitle className="text-lg">Sponsored</CardTitle>
+              <CardDescription>Advertisement Space</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center justify-center min-h-[400px] p-6">
+              <div className="text-center space-y-4 w-full">
+                <div className="p-6 bg-primary/5 rounded-lg border border-primary/10">
+                  <Sparkles className="h-12 w-12 text-primary/60 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-muted-foreground mb-2">
+                    Ad Space Available
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Reach health-conscious users interested in nutrition tracking
+                  </p>
+                </div>
+                <div className="pt-4 border-t border-muted-foreground/10">
+                  <p className="text-xs text-muted-foreground/70">
+                    Contact us to advertise here
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Upload and Analyze - Right Side */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Upload and Analyze</CardTitle>
+              <CardDescription>PNG, JPG, JPEG, HEIC</CardDescription>
+            </CardHeader>
+            <CardContent>
             {!uploadedFile ? (
               <div
                 className="border-2 border-dashed border-primary/30 rounded-lg p-10 cursor-pointer bg-muted/30 text-center hover:border-primary/50 transition-colors"
@@ -351,8 +408,9 @@ export function DashboardClient({
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </main>
   );

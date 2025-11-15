@@ -112,8 +112,14 @@ const PricingTable = () => {
     const billingCycle = subscription.billing_cycle;
 
     if (planName === "Premium") {
-      // For premium plan - if user is on this plan, show "Change to another plan"
+      // For premium plan - if user is on this plan, show billing cycle switch option
       if (isPremium) {
+        if (billingCycle === "monthly") {
+          return "Go Annually";
+        } else if (billingCycle === "yearly") {
+          return "Go Monthly";
+        }
+        // Fallback if billing cycle is not set
         return "Change to another plan";
       }
       return "Upgrade Now";

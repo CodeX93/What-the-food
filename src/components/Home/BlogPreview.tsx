@@ -33,7 +33,7 @@ const BlogPreview = () => {
             Array.from({ length: 6 }).map((_, i) => (
               <Card
                 key={`skeleton-${i}`}
-                className="mt-2 flex h-full flex-col overflow-hidden rounded-2xl border-[0.2rem] border-primary/40 bg-white shadow-[0_25px_60px_-32px_rgba(30,41,59,0.35)] dark:border-primary/60 dark:bg-slate-950 dark:shadow-[0_25px_60px_-30px_rgba(15,23,42,0.6)]"
+                className="mt-2 flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/60 dark:border-white/10 bg-white/90 dark:bg-white/5 shadow-[0_25px_60px_-32px_rgba(30,41,59,0.35)] backdrop-blur-sm transition-all duration-300 dark:shadow-[0_25px_60px_-30px_rgba(15,23,42,0.6)]"
               >
                 <div className="aspect-video bg-muted" />
                 <div className="flex flex-1 flex-col gap-3 p-5">
@@ -55,7 +55,7 @@ const BlogPreview = () => {
                 rel="noopener noreferrer"
                 className="group block h-full"
               >
-                <Card className="mt-2 flex h-full flex-col overflow-hidden rounded-2xl border-[0.2rem] border-primary/40 bg-white shadow-[0_25px_60px_-32px_rgba(30,41,59,0.35)] transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:shadow-[0_28px_90px_-30px_rgba(30,41,59,0.45)] dark:border-primary/60 dark:bg-slate-950 dark:shadow-[0_25px_60px_-30px_rgba(15,23,42,0.6)] dark:group-hover:shadow-[0_28px_90px_-28px_rgba(15,23,42,0.72)]">
+                <Card className="mt-2 flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/60 dark:border-white/10 bg-white/90 dark:bg-white/5 shadow-[0_25px_60px_-32px_rgba(30,41,59,0.35)] backdrop-blur-sm transition-all duration-300 group-hover:-translate-y-0.5 group-hover:shadow-strong group-hover:border-primary/30 dark:group-hover:border-primary/30">
                   {post.image ? (
                     <img
                       src={post.image}

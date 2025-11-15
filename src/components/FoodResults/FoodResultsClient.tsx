@@ -99,6 +99,15 @@ export function FoodResultsClient() {
   const reportRef = useRef<HTMLDivElement | null>(null);
 
   const servingApproximation = useMemo(() => {
+    // First, check if servingWeightGrams is available from Gemini
+    if (analysis?.servingWeightGrams && analysis.servingWeightGrams > 0) {
+      return {
+        grams: analysis.servingWeightGrams,
+        label: analysis.servingSize || "1 serving"
+      };
+    }
+    
+    // Fallback to approximation if servingWeightGrams is not available
     if (!analysis?.servingSize) return null;
     const size = analysis.servingSize.toLowerCase();
     const approximations = [
@@ -114,7 +123,7 @@ export function FoodResultsClient() {
       }
     }
     return null;
-  }, [analysis?.servingSize]);
+  }, [analysis?.servingSize, analysis?.servingWeightGrams]);
 
   const handleOpenIngredientEditor = () => {
     if (analysis) {
@@ -596,7 +605,7 @@ export function FoodResultsClient() {
   return (
     <>
       <main className="flex-1">
-      <div className="container mx-auto px-4 py-6 md:py-8 max-w-7xl" ref={reportRef}>
+      <div className="container mx-auto px-4 py-6 md:py-8 relative w-full" ref={reportRef}>
         <div className="mb-6 md:mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -707,21 +716,21 @@ export function FoodResultsClient() {
             <Card className="relative overflow-hidden">
               <CardHeader>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-4">
-                    <CardTitle className="text-xl flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                    <CardTitle className="text-xl flex items-center gap-2 flex-wrap">
                       Nutrition Summary
                       {servingApproximation && (
-                        <span className="text-base font-normal text-muted-foreground">
+                        <span className="text-base font-normal text-muted-foreground whitespace-nowrap">
                           (~ {servingApproximation.grams}g)
                         </span>
                       )}
                     </CardTitle>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">Servings</span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">Servings</span>
                       <input
                         type="text"
                         inputMode="decimal"
-                        className="border rounded-lg px-3 py-2 w-28 text-center font-medium bg-background"
+                        className="border rounded-lg px-3 py-2 w-28 text-center font-medium bg-background flex-shrink-0"
                         value={servingsInput}
                         onChange={(e) => {
                           const raw = e.target.value;

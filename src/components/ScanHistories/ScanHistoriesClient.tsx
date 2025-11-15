@@ -31,50 +31,141 @@ export function ScanHistoriesClient() {
   const [openRange, setOpenRange] = useState(false);
   const [range, setRange] = useState<{ from: Date | null; to: Date | null }>({ from: null, to: null });
   const [activePreset, setActivePreset] = useState<string>("all");
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const load = async () => {
+
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        // Fast auth check with timeout
+        const authPromise = supabase.auth.getSession();
+        const authTimeout = new Promise<{ data: { session: null }, error: null }>((resolve) =>
+          setTimeout(() => resolve({ data: { session: null }, error: null }), 2000)
+        );
+
+        let session: any;
+        const authResult = await Promise.race([authPromise, authTimeout]);
+        if (!authResult?.data?.session) {
+          console.warn("Auth check timed out or failed");
+          if (!cancelled) {
+            setItems([]);
+            setLoading(false);
+          }
+          return;
+        }
+        session = authResult.data.session;
+
         if (!session?.user) {
-          router.push("/auth");
+          if (!cancelled) router.push("/auth");
           return;
         }
 
-        const { data, error } = await supabase
+        // Load only 6 scans initially for faster load
+        const queryPromise = supabase
           .from("food_scans")
-          .select("id, image_url, image_path, serving, result_json, created_at")
+          .select("id, image_url, image_path, serving, result_json, created_at", { count: "exact" })
           .eq("user_id", session.user.id)
-          .order("created_at", { ascending: false });
+          .order("created_at", { ascending: false })
+          .limit(6); // Show 6 scans initially
 
-        if (error) throw error;
-
-        const scans = data || [];
-        const withUrls = await Promise.all(
-          scans.map(async (scan: any) => {
-            let displayUrl: string | null = null;
-
-            if (scan.image_path) {
-              displayUrl = await getImageUrl(scan.image_path, 60 * 60);
-            }
-
-            if (!displayUrl && scan.image_url) {
-              displayUrl = scan.image_url as string;
-            }
-
-            return { ...scan, displayUrl } as FoodScan;
-          })
+        const timeoutPromise = new Promise<{ data: null; error: null; count: null }>((resolve) =>
+          setTimeout(() => resolve({ data: null, error: null, count: null }), 2000) // Reduced to 2 seconds
         );
 
-        setItems(withUrls);
-      } finally {
+        const queryResult = await Promise.race([queryPromise, timeoutPromise]);
+        
+        if (!queryResult || !queryResult.data) {
+          // Query timed out, show empty state but don't block the page
+          console.warn("Scan history query timed out");
+          if (!cancelled) {
+            setItems([]);
+            setHasMore(false);
+            setLoading(false);
+          }
+          return;
+        }
+
+        const { data, error, count } = queryResult;
+
+        if (cancelled) return;
+
+        if (error) {
+          console.error("Query error:", error);
+          if (!cancelled) {
+            setItems([]);
+            setLoading(false);
+          }
+          return;
+        }
+
+        const scans = data || [];
+        
+        // Check if there are more scans
+        if (!cancelled && count !== null) {
+          setHasMore(count > 6);
+        }
+        
+        // Set items immediately with fallback URLs, then load fresh signed URLs in background
+        const initialItems = scans.map((scan: any) => ({
+          ...scan,
+          displayUrl: scan.image_url || null, // Use stored image_url as fallback
+        })) as FoodScan[];
+
+        if (!cancelled) {
+          setItems(initialItems);
+          setLoading(false);
+        }
+
+        // Load fresh signed URLs in background for all scans with image_path
+        Promise.all(
+          scans.map(async (scan: any) => {
+            if (cancelled) return null;
+            
+            let displayUrl: string | null = null;
+            
+            // Always try to get fresh signed URL from image_path if available
+            if (scan.image_path) {
+              try {
+                displayUrl = await getImageUrl(scan.image_path, 60 * 60);
+              } catch (err) {
+                console.warn("Failed to load image URL for scan:", scan.id, err);
+                // Keep fallback URL if getImageUrl fails
+                displayUrl = scan.image_url || null;
+              }
+            } else if (scan.image_url) {
+              displayUrl = scan.image_url;
+            }
+            
+            return { id: scan.id, displayUrl };
+          })
+        ).then((urls) => {
+          if (cancelled) return;
+          
+          // Update items with fresh URLs
+          setItems((prev) =>
+            prev.map((item) => {
+              const urlData = urls.find((u) => u?.id === item.id);
+              return urlData && urlData.displayUrl ? { ...item, displayUrl: urlData.displayUrl } : item;
+            })
+          );
+        });
+      } catch (error: any) {
+        if (cancelled) return;
+        
+        console.error("Error loading scans:", error);
+        setItems([]);
         setLoading(false);
       }
     };
 
     load();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   const display = useMemo(() => {
@@ -235,35 +326,100 @@ export function ScanHistoriesClient() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {display.map((scan) => (
-              <Card
-                key={scan.id}
-                className="hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => router.push(`/food-results?id=${scan.id}`)}
-              >
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{scan.result_json?.dish || "Food"}</CardTitle>
-                      <CardDescription className="flex items-center gap-2">
-                        <CalendarIcon className="h-3 w-3" /> {new Date(scan.created_at).toLocaleString()}
-                      </CardDescription>
+          <>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {display.map((scan) => (
+                <Card
+                  key={scan.id}
+                  className="hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => router.push(`/food-results?id=${scan.id}`)}
+                >
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg">{scan.result_json?.dish || "Food"}</CardTitle>
+                        <CardDescription className="flex items-center gap-2">
+                          <CalendarIcon className="h-3 w-3" /> {new Date(scan.created_at).toLocaleString()}
+                        </CardDescription>
+                      </div>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-lg overflow-hidden bg-muted aspect-video flex items-center justify-center">
-                    {scan.displayUrl ? (
-                      <img src={scan.displayUrl} alt="scan" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="text-muted-foreground">No image</div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="rounded-lg overflow-hidden bg-muted aspect-video flex items-center justify-center">
+                      {scan.displayUrl ? (
+                        <img 
+                          src={scan.displayUrl} 
+                          alt="scan" 
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div className="text-muted-foreground">No image</div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            {hasMore && !search && (!range.from || !range.to) && (
+              <div className="mt-6 text-center">
+                <Button 
+                  className="bg-primary hover:bg-primary-hover text-primary-foreground" 
+                  disabled={loadingMore}
+                  onClick={async () => {
+                    setLoadingMore(true);
+                    try {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (!session?.user) return;
+                      
+                      const { data: moreData, count } = await supabase
+                        .from("food_scans")
+                        .select("id, image_url, image_path, serving, result_json, created_at", { count: "exact" })
+                        .eq("user_id", session.user.id)
+                        .order("created_at", { ascending: false })
+                        .range(items.length, items.length + 5); // Load next 6 scans
+                      
+                      if (moreData) {
+                        // Load image URLs for new scans
+                        const newItems = await Promise.all(
+                          moreData.map(async (scan: any) => {
+                            let displayUrl: string | null = null;
+                            
+                            if (scan.image_path) {
+                              try {
+                                displayUrl = await getImageUrl(scan.image_path, 60 * 60);
+                              } catch (err) {
+                                console.warn("Failed to load image URL for scan:", scan.id, err);
+                              }
+                            }
+                            
+                            if (!displayUrl && scan.image_url) {
+                              displayUrl = scan.image_url;
+                            }
+                            
+                            return {
+                              ...scan,
+                              displayUrl,
+                            } as FoodScan;
+                          })
+                        );
+                        
+                        setItems(prev => [...prev, ...newItems]);
+                        setHasMore(count !== null && (items.length + newItems.length) < count);
+                      }
+                    } finally {
+                      setLoadingMore(false);
+                    }
+                  }}
+                >
+                  {loadingMore ? "Loading..." : "Load Next 6 Scans"}
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </main>
