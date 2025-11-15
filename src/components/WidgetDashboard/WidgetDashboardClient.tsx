@@ -61,7 +61,7 @@ export function WidgetDashboardClient() {
   const [savedWidgets, setSavedWidgets] = useState<any[]>([]);
   const [widgetSites, setWidgetSites] = useState<any[]>([]);
   const [apiStats, setApiStats] = useState<any>({ total: 0, today: 0, thisMonth: 0, successful: 0 });
-  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [copiedWidgetId, setCopiedWidgetId] = useState<string | null>(null);
   const [currentWidget, setCurrentWidget] = useState<any>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -124,10 +124,8 @@ export function WidgetDashboardClient() {
         brandingVisible: isFree ? true : widgetBrandingVisible,
       });
 
-      const {
-        data: { user: authenticatedUser },
-      } = await supabaseClient.auth.getUser();
-      const currentUser = user || authenticatedUser;
+      // Use existing user state instead of calling getUser again
+      const currentUser = user;
       if (widget.widget_id && currentUser) {
         supabaseClient
           .from("widget_sites")
@@ -189,128 +187,307 @@ export function WidgetDashboardClient() {
   }, [subscriptionType, evaluateSiteLimit]);
 
   useEffect(() => {
+    let cancelled = false;
+    let timeoutId: NodeJS.Timeout;
+    let statsTimeoutId: NodeJS.Timeout;
+    let statsObserver: IntersectionObserver | null = null;
+
     const loadData = async () => {
       try {
-        const {
-          data: { user: authenticatedUser },
-        } = await supabaseClient.auth.getUser();
-        if (!authenticatedUser) {
-          router.push("/auth");
+        // Set a timeout to ensure page renders even if queries are slow
+        timeoutId = setTimeout(() => {
+          if (!cancelled) {
+            setLoading(false);
+          }
+        }, 3000); // Max 3 seconds wait
+
+        // Fast session check only
+        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        
+        // Check if cancelled or no session
+        if (cancelled || !session?.user || sessionError) {
+          clearTimeout(timeoutId);
+          if (!session?.user) {
+            router.push("/auth");
+          }
           return;
         }
 
-        setUser(authenticatedUser);
+        setUser(session.user);
 
-        const [subRes, widgetsRes] = await Promise.all([
-          supabaseClient
-            .from("widget_subscriptions")
-            .select("id, subscription_type, site_limit, is_active")
-            .eq("user_id", authenticatedUser.id)
-            .maybeSingle(),
-          supabaseClient
-            .from("widget_settings")
-            .select(
-              "id, widget_id, widget_name, widget_description, primary_color, border_radius, is_default, created_at, custom_text, branding_visible"
-            )
-            .eq("user_id", authenticatedUser.id)
-            .order("created_at", { ascending: false })
-            .limit(50),
-        ]);
+        // Load only subscription first - render page immediately
+        // Add timeout to subscription query
+        const subscriptionPromise = supabaseClient
+          .from("widget_subscriptions")
+          .select("id, subscription_type, site_limit, is_active")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
 
-        if (subRes.error) {
-          throw subRes.error;
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Subscription query timeout")), 2000);
+        });
+
+        let subRes;
+        try {
+          subRes = await Promise.race([subscriptionPromise, timeoutPromise]);
+        } catch (timeoutError) {
+          // If subscription query times out, still render the page
+          console.warn("Subscription query timed out, rendering page anyway");
+          clearTimeout(timeoutId);
+          setLoading(false);
+          // Set a default subscription to allow page to render
+          setSubscription({ subscription_type: "free", is_active: false, site_limit: 1 });
+          return;
         }
 
-        if (widgetsRes.error) {
-          throw widgetsRes.error;
+        if (cancelled) {
+          clearTimeout(timeoutId);
+          return;
+        }
+
+        if (subRes.error) {
+          console.error("Subscription error:", subRes.error);
+          clearTimeout(timeoutId);
+          setLoading(false);
+          // Set default subscription to allow page to render
+          setSubscription({ subscription_type: "free", is_active: false, site_limit: 1 });
+          return;
         }
 
         const sub = subRes.data;
-        const widgets = widgetsRes.data;
 
         if (!sub) {
+          clearTimeout(timeoutId);
           router.push("/widget/plans");
           return;
         }
 
+        clearTimeout(timeoutId);
         setSubscription(sub);
+        
+        // Render page immediately with subscription data
         setLoading(false);
 
-        if ((widgets as any[]) && (widgets as any[]).length > 0) {
-          const widgetList = widgets as Array<{ is_default?: boolean }>;
-          setSavedWidgets(widgetList);
-          const defaultWidget = widgetList.find((w) => w.is_default) || widgetList[0];
+        // Load widgets in background (non-blocking)
+        supabaseClient
+          .from("widget_settings")
+          .select(
+            "id, widget_id, widget_name, widget_description, primary_color, border_radius, is_default, created_at, custom_text, branding_visible"
+          )
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false })
+          .limit(50)
+          .then(({ data: widgets, error: widgetsError }) => {
+            if (cancelled) return;
+            
+            // Verify user is still authenticated before processing widgets
+            supabaseClient.auth.getSession().then(({ data: { session: verifySession } }) => {
+              if (cancelled || !verifySession?.user) return;
+              
+              if (widgetsError) {
+                console.error("Error loading widgets:", widgetsError);
+                return;
+              }
 
-          if (!currentWidgetRef.current) {
-            await loadWidgetForEditing(defaultWidget);
-          }
+              if ((widgets as any[]) && (widgets as any[]).length > 0) {
+                const widgetList = widgets as Array<{ is_default?: boolean }>;
+                setSavedWidgets(widgetList);
+                const defaultWidget = widgetList.find((w) => w.is_default) || widgetList[0];
 
-          if (initialLoadRef.current) {
-            setActiveTab("saved-widgets");
-          }
-        } else {
-          clearEditingContext();
-          if (initialLoadRef.current) {
-            handleTabChange("create");
-          }
-        }
-        initialLoadRef.current = false;
+                if (!currentWidgetRef.current) {
+                  // Load widget details in background, don't block UI
+                  loadWidgetForEditing(defaultWidget).catch((error) => {
+                    if (!cancelled) {
+                      console.error("Error loading widget for editing:", error);
+                    }
+                  });
+                }
 
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
-        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-
-        Promise.all([
-          supabaseClient
-            .from("widget_api_calls")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", authenticatedUser.id),
-          supabaseClient
-            .from("widget_api_calls")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", authenticatedUser.id)
-            .gte("created_at", startOfToday.toISOString()),
-          supabaseClient
-            .from("widget_api_calls")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", authenticatedUser.id)
-            .gte("created_at", startOfMonth.toISOString()),
-          supabaseClient
-            .from("widget_api_calls")
-            .select("id", { count: "exact", head: true })
-            .eq("user_id", authenticatedUser.id)
-            .eq("status", "success"),
-        ])
-          .then(([totalRes, todayRes, monthRes, successRes]) => {
-            const totalCount = (totalRes?.count as number) || 0;
-            const todayCount = (todayRes?.count as number) || 0;
-            const monthCount = (monthRes?.count as number) || 0;
-            const successCount = (successRes?.count as number) || 0;
-
-            setApiStats({
-              total: totalCount,
-              today: todayCount,
-              thisMonth: monthCount,
-              successful: successCount,
+                if (initialLoadRef.current) {
+                  setActiveTab("saved-widgets");
+                }
+              } else {
+                clearEditingContext();
+                if (initialLoadRef.current) {
+                  handleTabChange("create");
+                }
+              }
+              initialLoadRef.current = false;
             });
-            setStatsLoading(false);
           })
           .catch((error) => {
-            console.error("Error loading API stats:", error);
-            setStatsLoading(false);
+            if (cancelled) return;
+            console.error("Error loading widgets:", error);
           });
+
+        // Load API stats only when user scrolls to stats section (lazy load)
+        // Use Intersection Observer to load stats only when visible
+        const loadStatsWhenVisible = () => {
+          if (cancelled) return;
+          
+          // Set a long delay as fallback (10 seconds)
+          statsTimeoutId = setTimeout(() => {
+            if (cancelled) return;
+            // Verify user is still authenticated before loading stats
+            supabaseClient.auth.getSession().then(({ data: { session: currentSession } }) => {
+              if (!cancelled && currentSession?.user) {
+                loadApiStats(currentSession.user.id);
+              }
+            });
+          }, 10000);
+
+          // Try to use Intersection Observer if available
+          if (typeof window !== 'undefined' && 'IntersectionObserver' in window) {
+            const statsElement = document.querySelector('[data-stats-section]');
+            if (statsElement && !cancelled) {
+              statsObserver = new IntersectionObserver(
+                (entries) => {
+                  if (cancelled) {
+                    if (statsObserver) statsObserver.disconnect();
+                    return;
+                  }
+                  if (entries[0].isIntersecting) {
+                    clearTimeout(statsTimeoutId);
+                    // Verify user is still authenticated before loading stats
+                    supabaseClient.auth.getSession().then(({ data: { session: currentSession } }) => {
+                      if (!cancelled && currentSession?.user) {
+                        loadApiStats(currentSession.user.id);
+                      }
+                    });
+                    if (statsObserver) {
+                      statsObserver.disconnect();
+                      statsObserver = null;
+                    }
+                  }
+                },
+                { threshold: 0.1 }
+              );
+              statsObserver.observe(statsElement);
+            } else if (!cancelled) {
+              // If element not found, just use timeout
+              clearTimeout(statsTimeoutId);
+              statsTimeoutId = setTimeout(() => {
+                if (cancelled) return;
+                supabaseClient.auth.getSession().then(({ data: { session: currentSession } }) => {
+                  if (!cancelled && currentSession?.user) {
+                    loadApiStats(currentSession.user.id);
+                  }
+                });
+              }, 5000);
+            }
+          }
+        };
+
+        const loadApiStats = (userId: string) => {
+          if (cancelled) return;
+          
+          // Double-check user is still authenticated
+          supabaseClient.auth.getSession().then(({ data: { session: currentSession } }) => {
+            if (cancelled || !currentSession?.user || currentSession.user.id !== userId) {
+              return;
+            }
+            
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+            const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+            // Add timeout to each query (3 seconds max per query)
+            const queryWithTimeout = (query: Promise<any>, timeoutMs = 3000) => {
+              return Promise.race([
+                query,
+                new Promise((_, reject) => 
+                  setTimeout(() => reject(new Error('Query timeout')), timeoutMs)
+                )
+              ]);
+            };
+
+            Promise.all([
+              queryWithTimeout(
+                supabaseClient
+                  .from("widget_api_calls")
+                  .select("id", { count: "exact", head: true })
+                  .eq("user_id", userId)
+              ).catch(() => ({ count: 0 })),
+              queryWithTimeout(
+                supabaseClient
+                  .from("widget_api_calls")
+                  .select("id", { count: "exact", head: true })
+                  .eq("user_id", userId)
+                  .gte("created_at", startOfToday.toISOString())
+              ).catch(() => ({ count: 0 })),
+              queryWithTimeout(
+                supabaseClient
+                  .from("widget_api_calls")
+                  .select("id", { count: "exact", head: true })
+                  .eq("user_id", userId)
+                  .gte("created_at", startOfMonth.toISOString())
+              ).catch(() => ({ count: 0 })),
+              queryWithTimeout(
+                supabaseClient
+                  .from("widget_api_calls")
+                  .select("id", { count: "exact", head: true })
+                  .eq("user_id", userId)
+                  .eq("status", "success")
+              ).catch(() => ({ count: 0 })),
+            ])
+            .then(([totalRes, todayRes, monthRes, successRes]) => {
+              if (cancelled) return;
+              // Verify user is still authenticated before updating state
+              supabaseClient.auth.getSession().then(({ data: { session: verifySession } }) => {
+                if (cancelled || !verifySession?.user) return;
+                const totalCount = (totalRes?.count as number) || 0;
+                const todayCount = (todayRes?.count as number) || 0;
+                const monthCount = (monthRes?.count as number) || 0;
+                const successCount = (successRes?.count as number) || 0;
+
+                setApiStats({
+                  total: totalCount,
+                  today: todayCount,
+                  thisMonth: monthCount,
+                  successful: successCount,
+                });
+              });
+            })
+            .catch((error) => {
+              if (cancelled) return;
+              console.error("Error loading API stats:", error);
+              // Keep stats at 0 on error
+            });
+          });
+        };
+
+        // Start loading stats when visible or after delay
+        loadStatsWhenVisible();
       } catch (error: any) {
+        if (cancelled) return;
         console.error("Error loading data:", error);
+        clearTimeout(timeoutId);
         setLoading(false);
+        // Set default subscription to allow page to render even on error
+        setSubscription({ subscription_type: "free", is_active: false, site_limit: 1 });
         toast({
           title: "Error",
-          description: "Failed to load dashboard data.",
+          description: "Failed to load dashboard data. Showing limited view.",
           variant: "destructive",
         });
       }
     };
 
     void loadData();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      if (statsTimeoutId) {
+        clearTimeout(statsTimeoutId);
+      }
+      if (statsObserver) {
+        statsObserver.disconnect();
+        statsObserver = null;
+      }
+    };
   }, [router, supabaseClient, toast, loadWidgetForEditing, clearEditingContext, handleTabChange]);
 
   const handleSaveWidget = async (mode: "create" | "edit", saveAsNew: boolean = false) => {
@@ -742,7 +919,7 @@ export function WidgetDashboardClient() {
           <p className="text-muted-foreground">Manage your widget customization, sites, and track usage</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8" data-stats-section>
           {[
             { label: "Total API Calls", value: apiStats?.total || 0 },
             { label: "Today", value: apiStats?.today || 0 },
@@ -755,11 +932,7 @@ export function WidgetDashboardClient() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {index < 3 && statsLoading ? (
-                    <span className="inline-block h-7 w-12 bg-muted animate-pulse rounded" />
-                  ) : (
-                    stat.value
-                  )}
+                  {stat.value}
                 </div>
               </CardContent>
             </Card>
