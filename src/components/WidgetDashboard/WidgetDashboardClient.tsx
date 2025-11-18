@@ -218,8 +218,8 @@ export function WidgetDashboardClient() {
         // Load only subscription first - render page immediately
         // Add timeout to subscription query
         const subscriptionPromise = supabaseClient
-          .from("widget_subscriptions")
-          .select("id, subscription_type, site_limit, is_active")
+          .from("platform_subscriptions")
+          .select("id, subscription_type, is_active")
           .eq("user_id", session.user.id)
           .maybeSingle();
 
@@ -258,12 +258,15 @@ export function WidgetDashboardClient() {
 
         if (!sub) {
           clearTimeout(timeoutId);
-          router.push("/widget/plans");
+          router.push("/plans");
           return;
         }
 
         clearTimeout(timeoutId);
-        setSubscription(sub);
+        setSubscription({
+          ...sub,
+          site_limit: sub.subscription_type === "premium" ? null : 1,
+        });
         
         // Render page immediately with subscription data
         setLoading(false);

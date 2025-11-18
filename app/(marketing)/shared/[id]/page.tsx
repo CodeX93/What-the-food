@@ -8,20 +8,24 @@ export const dynamic = "force-dynamic";
 export default async function SharedFoodResultsRoute({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const scanId = params.id;
+  const { id: scanId } = await params;
 
   if (!scanId) {
+    console.error("No scan ID provided");
     notFound();
   }
 
   // Use service role key to bypass RLS for public access
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   
   if (!supabaseUrl || !supabaseServiceKey) {
-    console.error("Missing Supabase environment variables");
+    console.error("Missing Supabase environment variables", {
+      hasUrl: !!supabaseUrl,
+      hasServiceKey: !!supabaseServiceKey,
+    });
     notFound();
   }
 
@@ -37,10 +41,20 @@ export default async function SharedFoodResultsRoute({
       .from("food_scans")
       .select("id, image_url, image_path, serving, result_json, created_at")
       .eq("id", scanId)
-      .single();
+      .maybeSingle();
 
-    if (error || !scanData) {
-      console.error("Error fetching scan:", error);
+    if (error) {
+      console.error("Error fetching scan:", {
+        error,
+        scanId,
+        errorCode: error.code,
+        errorMessage: error.message,
+      });
+      notFound();
+    }
+
+    if (!scanData) {
+      console.error("Scan not found:", scanId);
       notFound();
     }
 

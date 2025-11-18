@@ -48,7 +48,7 @@ const plans = [
       "Complete scan history",
       "Ad-free experience",
       "Serving adjuster",
-      "Customizable widget",
+      "Customizable widget (included)",
       "PDF reports",
       "Premium chat support",
     ],

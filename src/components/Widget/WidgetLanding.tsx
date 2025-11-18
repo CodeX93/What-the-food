@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Code } from "lucide-react";
 import { WidgetHero } from "./WidgetHero";
-import { WidgetPricing } from "./WidgetPricing";
 
 export function WidgetLanding() {
   return (
@@ -69,8 +68,6 @@ export function WidgetLanding() {
           </div>
         </div>
       </section>
-
-      <WidgetPricing />
     </main>
   );
 }

@@ -22,9 +22,7 @@ export default async function ProfileRoute() {
       initialUser={user}
       initialProfile={profileData.profile}
       initialSubscription={profileData.subscription}
-      initialWidgetSubscription={profileData.widgetSubscription}
       initialPlanName={profileData.planName}
-      initialWidgetPlanName={profileData.widgetPlanName}
     />
   );
 }

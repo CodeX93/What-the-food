@@ -20,7 +20,6 @@ export default function Hero() {
   const [isPremium, setIsPremium] = useState<boolean | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [headerHeight, setHeaderHeight] = useState(0);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -72,18 +71,6 @@ export default function Hero() {
     };
   }, [previewUrl]);
 
-  useEffect(() => {
-    const measureHeader = () => {
-      const header = document.querySelector("header");
-      if (!header) return;
-      const { height } = header.getBoundingClientRect();
-      setHeaderHeight(Math.round(height));
-    };
-
-    measureHeader();
-    window.addEventListener("resize", measureHeader);
-    return () => window.removeEventListener("resize", measureHeader);
-  }, []);
 
   const onChooseFile = async () => {
     // Check if user needs to register (no auth and no free scans)
@@ -215,7 +202,7 @@ export default function Hero() {
     <section
       id="hero"
       className="relative flex items-center justify-center overflow-hidden bg-white dark:bg-[#000000] transition-colors duration-300 min-h-screen"
-      style={{ minHeight: headerHeight ? `calc(100vh - ${headerHeight}px)` : undefined }}
+      style={{ minHeight: "calc(100vh - 80px)" }}
     >
       <div className="absolute inset-0 bg-gradient-hero opacity-5 dark:opacity-10" />
 
@@ -269,7 +256,7 @@ export default function Hero() {
             <Card className="shadow-strong">
               <CardContent className="p-4 sm:p-6 md:p-8">
                 {!previewUrl ? (
-                  <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card">
+                  <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card hover:border-primary/50 transition-colors">
                     <Upload className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
                     <p className="text-base sm:text-lg font-medium mb-2 text-center">Upload Your Food Photo</p>
                     <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 text-center">
@@ -374,29 +361,8 @@ export default function Hero() {
                   <Link href="/how-it-works">Learn More</Link>
                 </Button>
               </div>
-              
-              {/* Free scans text for desktop */}
-              <p className="text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6">
-                {user ? (
-                  isPremium === null ? (
-                    "Checking benefits..."
-                  ) : isPremium ? (
-                    "Unlimited scans per day"
-                  ) : remainingScans === null ? (
-                    "Checking your remaining scans..."
-                  ) : remainingScans > 0 ? (
-                    `${remainingScans} free scan${remainingScans === 1 ? "" : "s"} remaining today`
-                  ) : (
-                    "You have used all free scans for today. Upgrade for unlimited access."
-                  )
-                ) : remainingScans === null ? (
-                  "Checking free scans..."
-                ) : (
-                  `${remainingScans} free scan${remainingScans === 1 ? "" : "s"} remaining • No signup required`
-                )}
-              </p>
 
-              {/* Feature boxes for desktop - keep in left section */}
+              {/* Feature boxes for desktop - below CTAs */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 sm:mt-7 lg:mt-8">
                 <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                   <Sparkles className="h-5 w-5 text-primary" />
@@ -420,6 +386,27 @@ export default function Hero() {
                   </div>
                 </div>
               </div>
+
+              {/* Free scans text for desktop - after feature boxes */}
+              <p className="text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6">
+                {user ? (
+                  isPremium === null ? (
+                    "Checking benefits..."
+                  ) : isPremium ? (
+                    "Unlimited scans per day"
+                  ) : remainingScans === null ? (
+                    "Checking your remaining scans..."
+                  ) : remainingScans > 0 ? (
+                    `${remainingScans} free scan${remainingScans === 1 ? "" : "s"} remaining today`
+                  ) : (
+                    "You have used all free scans for today. Upgrade for unlimited access."
+                  )
+                ) : remainingScans === null ? (
+                  "Checking free scans..."
+                ) : (
+                  `${remainingScans} free scan${remainingScans === 1 ? "" : "s"} remaining • No signup required`
+                )}
+              </p>
             </div>
 
             {/* Right Section - Upload Placeholder (aligned with profile) */}
@@ -427,7 +414,7 @@ export default function Hero() {
               <Card className="shadow-strong">
                 <CardContent className="p-4 sm:p-6 md:p-8">
                   {!previewUrl ? (
-                    <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card">
+                    <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card hover:border-primary/50 transition-colors">
                       <Upload className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
                       <p className="text-base sm:text-lg font-medium mb-2 text-center">Upload Your Food Photo</p>
                       <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 text-center">

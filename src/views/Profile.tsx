@@ -15,9 +15,7 @@ const Profile = ({
   initialUser,
   initialProfile,
   initialSubscription,
-  initialWidgetSubscription,
   initialPlanName,
-  initialWidgetPlanName,
 }: ProfileProps) => {
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-muted/20">
@@ -27,9 +25,7 @@ const Profile = ({
         initialUser={initialUser}
         initialProfile={initialProfile}
         initialSubscription={initialSubscription}
-        initialWidgetSubscription={initialWidgetSubscription}
         initialPlanName={initialPlanName}
-        initialWidgetPlanName={initialWidgetPlanName}
       />
       <Footer />
     </div>

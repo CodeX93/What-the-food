@@ -388,17 +388,53 @@ export function PlansClient({
               const isPaidPlan = billingCycle !== "free";
               const isCurrentPaidPlan = isCurrent && isPaidPlan;
               
-              const buttonText = isLoading
-                ? "Processing..."
-                : isCurrentPaidPlan
-                ? "Cancel Plan"
-                : isCurrent
-                ? "Current Plan"
-                : billingCycle === "free"
-                ? "Get Started"
-                : billingCycle === "yearly"
-                ? "Subscribe Yearly"
-                : "Subscribe Monthly";
+              // Determine button text based on current subscription and target plan
+              const getButtonText = () => {
+                if (isLoading) return "Processing...";
+                if (isCurrentPaidPlan) return "Cancel Plan";
+                if (isCurrent) return "Current Plan";
+                
+                // Check if user has an active premium subscription
+                const hasActivePremium = subscription?.subscription_type === "premium" && subscription?.is_active;
+                const currentBillingCycle = subscription?.billing_cycle;
+                const isOnFreePlan = !hasActivePremium && (subscription?.subscription_type === "free" || !subscription);
+                
+                if (billingCycle === "free") {
+                  // If user is on premium (monthly or yearly), show "Go Free"
+                  if (hasActivePremium) {
+                    return "Go Free";
+                  }
+                  return "Get Started";
+                }
+                
+                if (billingCycle === "yearly") {
+                  // If user is on premium monthly, show "Go Annually"
+                  if (hasActivePremium && currentBillingCycle === "monthly") {
+                    return "Go Annually";
+                  }
+                  // If user is on free plan, show "Go Yearly"
+                  if (isOnFreePlan) {
+                    return "Go Yearly";
+                  }
+                  return "Subscribe Yearly";
+                }
+                
+                if (billingCycle === "monthly") {
+                  // If user is on premium yearly, show "Go Monthly"
+                  if (hasActivePremium && currentBillingCycle === "yearly") {
+                    return "Go Monthly";
+                  }
+                  // If user is on free plan, show "Go Monthly"
+                  if (isOnFreePlan) {
+                    return "Go Monthly";
+                  }
+                  return "Subscribe Monthly";
+                }
+                
+                return "Go";
+              };
+              
+              const buttonText = getButtonText();
 
               return (
                 <Card

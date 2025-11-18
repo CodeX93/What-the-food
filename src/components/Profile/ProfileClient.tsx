@@ -35,25 +35,21 @@ import {
   AlertCircle,
   CheckCircle,
 } from "lucide-react";
-import { getPlatformSubscription, getWidgetSubscription } from "@/utils/subscription";
+import { getPlatformSubscription } from "@/utils/subscription";
 import type { User } from "@supabase/supabase-js";
 
 export type ProfileClientProps = {
   initialUser?: User | null;
   initialProfile?: any;
   initialSubscription?: any;
-  initialWidgetSubscription?: any;
   initialPlanName?: string | null;
-  initialWidgetPlanName?: string | null;
 };
 
 export function ProfileClient({
   initialUser = null,
   initialProfile = null,
   initialSubscription = null,
-  initialWidgetSubscription = null,
   initialPlanName = null,
-  initialWidgetPlanName = null,
 }: ProfileClientProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -61,10 +57,8 @@ export function ProfileClient({
   const [profile, setProfile] = useState<any>(initialProfile);
   const [loading, setLoading] = useState(!initialUser);
   const [subscription, setSubscription] = useState<any>(initialSubscription);
-  const [widgetSubscription, setWidgetSubscription] = useState<any>(initialWidgetSubscription);
   const [saving, setSaving] = useState(false);
   const [planName, setPlanName] = useState<string | null>(initialPlanName);
-  const [widgetPlanName, setWidgetPlanName] = useState<string | null>(initialWidgetPlanName);
   const [email, setEmail] = useState(initialUser?.email || "");
   const [userInitials, setUserInitials] = useState(
     initialUser?.email ? initialUser.email.split("@")[0].substring(0, 2).toUpperCase() : "U"
@@ -105,16 +99,8 @@ export function ProfileClient({
   }, [initialSubscription]);
 
   useEffect(() => {
-    setWidgetSubscription(initialWidgetSubscription);
-  }, [initialWidgetSubscription]);
-
-  useEffect(() => {
     setPlanName(initialPlanName ?? null);
   }, [initialPlanName]);
-
-  useEffect(() => {
-    setWidgetPlanName(initialWidgetPlanName ?? null);
-  }, [initialWidgetPlanName]);
 
   useEffect(() => {
     if (initialUser) {
@@ -179,21 +165,6 @@ console.log("hello world");
           }
         }
 
-        const widgetSub = await getWidgetSubscription(session.user.id);
-        if (!cancelled) {
-          setWidgetSubscription(widgetSub as any);
-
-          const widgetSubData = widgetSub as { subscription_type?: string } | null;
-          if (widgetSubData?.subscription_type) {
-            const planNames: Record<string, string> = {
-              free: "Free",
-              plan1: "Premium Plan 1",
-              plan2: "Premium Plan 2",
-              plan3: "Premium Plan 3",
-            };
-            setWidgetPlanName(planNames[widgetSubData.subscription_type] || widgetSubData.subscription_type);
-          }
-        }
       } catch (err) {
         console.error("Error fetching user data:", err);
       } finally {
@@ -312,7 +283,6 @@ console.log("hello world");
   }
 
   const isPremium = subscription?.subscription_type === "premium";
-  const isWidgetPremium = widgetSubscription?.subscription_type !== "free" && widgetSubscription?.is_active;
 
   // Calculate profile completion
   const profileFields = [
@@ -432,12 +402,7 @@ console.log("hello world");
             <div className="flex flex-wrap gap-2">
               {isPremium && (
                 <Badge variant="secondary" className="px-4 py-2 text-sm shadow-md">
-                  <Crown className="h-4 w-4 mr-2" /> Platform Premium
-                </Badge>
-              )}
-              {isWidgetPremium && (
-                <Badge variant="secondary" className="px-4 py-2 text-sm shadow-md">
-                  <Code className="h-4 w-4 mr-2" /> Widget Premium
+                  <Crown className="h-4 w-4 mr-2" /> Premium
                 </Badge>
               )}
             </div>
@@ -736,117 +701,6 @@ console.log("hello world");
                   )}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-xl border-2 border-primary/10 bg-gradient-to-br from-card via-card to-card/50">
-            <CardHeader className="pb-6">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3">
-                  <div className={`p-3 rounded-xl ${
-                    isWidgetPremium ? "bg-gradient-to-br from-primary/30 to-primary/10" : "bg-muted/50"
-                  }`}>
-                    <Code className={`h-6 w-6 ${isWidgetPremium ? "text-primary" : "text-muted-foreground"}`} />
-                  </div>
-                  <div>
-                    <CardTitle className="text-xl sm:text-2xl">Widget Subscription</CardTitle>
-                    <CardDescription className="mt-1">Your widget plan</CardDescription>
-                  </div>
-                </div>
-                {isWidgetPremium && (
-                  <Badge variant="default" className="shadow-md">
-                    <Code className="h-3 w-3 mr-1" /> Active
-                  </Badge>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {widgetSubscription ? (
-                <div className="space-y-6">
-                  <div className={`relative overflow-hidden p-5 rounded-xl border-2 ${
-                    isWidgetPremium ? "bg-gradient-to-br from-primary/20 via-primary/10 to-transparent border-primary/30" : "bg-muted/50 border-dashed"
-                  }`}>
-                    <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-lg ${isWidgetPremium ? "bg-primary/20" : "bg-muted"}`}>
-                        {isWidgetPremium ? (
-                          <Crown className="h-6 w-6 text-primary" />
-                        ) : (
-                          <CheckCircle2 className="h-6 w-6 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground mb-1 font-medium">Current Plan</p>
-                        <p className="font-bold text-xl">{widgetPlanName || widgetSubscription.subscription_type}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {widgetSubscription.site_limit !== undefined && (
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-primary/10">
-                      <p className="text-xs text-muted-foreground mb-2 font-medium">Site Limit</p>
-                      <p className="font-bold text-lg">
-                        {widgetSubscription.site_limit === null
-                          ? "Unlimited"
-                          : `${widgetSubscription.site_limit} ${widgetSubscription.site_limit === 1 ? "site" : "sites"}`}
-                      </p>
-                    </div>
-                  )}
-
-                  {widgetSubscription.billing_cycle && (
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-primary/10">
-                      <p className="text-xs text-muted-foreground mb-2 font-medium">Billing Cycle</p>
-                      <p className="font-semibold text-base capitalize flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-primary" />
-                        {widgetSubscription.billing_cycle}
-                      </p>
-                    </div>
-                  )}
-
-                  {widgetSubscription.current_period_end && (
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-primary/10">
-                      <p className="text-xs text-muted-foreground mb-2 font-medium">Next Billing Date</p>
-                      <p className="font-semibold text-base">
-                        {new Date(widgetSubscription.current_period_end).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="pt-4 border-t-2">
-                    <Button
-                      variant={isWidgetPremium ? "outline" : "default"}
-                      className="w-full h-12 font-semibold"
-                      onClick={() => router.push("/widget/plans")}
-                    >
-                      {isWidgetPremium ? (
-                        <>
-                          Change Plan <ArrowRight className="ml-2 h-5 w-5" />
-                        </>
-                      ) : (
-                        <>
-                          View Widget Plans <Code className="ml-2 h-5 w-5" />
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-12 space-y-4">
-                  <div className="mx-auto w-20 h-20 rounded-full bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center shadow-lg">
-                    <Code className="h-10 w-10 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground mb-2 font-semibold">No widget subscription</p>
-                    <p className="text-sm text-muted-foreground mb-6">Choose a widget plan to get started</p>
-                  </div>
-                  <Button onClick={() => router.push("/widget/plans")} className="w-full h-12 font-semibold">
-                    View Widget Plans <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>

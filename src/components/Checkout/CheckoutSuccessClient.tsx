@@ -16,6 +16,7 @@ export function CheckoutSuccessClient() {
   const [subscription, setSubscription] = useState<any>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [subscriptionType, setSubscriptionType] = useState<string | null>(null);
+  const cameFromWidgetFlow = subscriptionType === "widget";
 
   // Get search params in useEffect to ensure they're available
   useEffect(() => {
@@ -34,6 +35,7 @@ export function CheckoutSuccessClient() {
 
       const currentSessionId = searchParams.get("session_id");
       const currentSubscriptionType = searchParams.get("type");
+      const legacyWidgetFlow = currentSubscriptionType === "widget";
 
       if (!currentSessionId) {
         toast({
@@ -55,7 +57,7 @@ export function CheckoutSuccessClient() {
           return;
         }
 
-        const tableName = currentSubscriptionType === "widget" ? "widget_subscriptions" : "platform_subscriptions";
+        const tableName = "platform_subscriptions";
         let attempts = 0;
         const maxAttempts = 10;
 
@@ -94,17 +96,13 @@ export function CheckoutSuccessClient() {
           toast({
             title: "Success!",
             description:
-              currentSubscriptionType === "widget"
-                ? "Your widget subscription is now active. You can now create your widget!"
+              legacyWidgetFlow
+                ? "Widget access now follows your WhatTheFood plan. You're ready to embed."
                 : "Your Premium subscription is now active.",
           });
 
           setTimeout(() => {
-            if (currentSubscriptionType === "widget") {
-              router.push("/widget/dashboard");
-            } else {
-              router.push("/dashboard");
-            }
+            router.push(legacyWidgetFlow ? "/widget/dashboard" : "/dashboard");
           }, 1500);
         } else {
           toast({
@@ -113,11 +111,7 @@ export function CheckoutSuccessClient() {
           });
 
           setTimeout(() => {
-            if (currentSubscriptionType === "widget") {
-              router.push("/widget/dashboard");
-            } else {
-              router.push("/dashboard");
-            }
+            router.push(legacyWidgetFlow ? "/widget/dashboard" : "/dashboard");
           }, 2000);
         }
 
@@ -131,11 +125,7 @@ export function CheckoutSuccessClient() {
         });
 
         setTimeout(() => {
-          if (currentSubscriptionType === "widget") {
-            router.push("/widget/dashboard");
-          } else {
-            router.push("/dashboard");
-          }
+          router.push(legacyWidgetFlow ? "/widget/dashboard" : "/dashboard");
         }, 2000);
 
         setLoading(false);
@@ -169,8 +159,8 @@ export function CheckoutSuccessClient() {
             </div>
             <CardTitle className="text-2xl">Payment Successful!</CardTitle>
             <CardDescription>
-              {subscriptionType === "widget"
-                ? "Your widget subscription is now active"
+              {cameFromWidgetFlow
+                ? "Your widget access is part of your WhatTheFood plan"
                 : "Your Premium subscription is now active"}
             </CardDescription>
           </CardHeader>
@@ -179,9 +169,7 @@ export function CheckoutSuccessClient() {
               <div className="bg-muted p-4 rounded-lg">
                 <p className="text-sm text-muted-foreground mb-1">Current Plan</p>
                 <p className="font-semibold">
-                  {subscriptionType === "widget"
-                    ? `Widget Plan ${subscription.subscription_type} - Active`
-                    : "Premium - Active"}
+                  {subscription.subscription_type === "premium" ? "Premium - Active" : "Free plan"}
                 </p>
                 {subscription.current_period_end && (
                   <p className="text-xs text-muted-foreground mt-1">
@@ -193,9 +181,7 @@ export function CheckoutSuccessClient() {
 
             <Button
               className="w-full"
-              onClick={() =>
-                router.push(subscriptionType === "widget" ? "/widget/dashboard" : "/dashboard")
-              }
+                onClick={() => router.push(cameFromWidgetFlow ? "/widget/dashboard" : "/dashboard")}
             >
               Go to Dashboard
             </Button>
@@ -203,7 +189,7 @@ export function CheckoutSuccessClient() {
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => router.push(subscriptionType === "widget" ? "/widget/plans" : "/plans")}
+                onClick={() => router.push("/plans")}
             >
               View Plans
             </Button>

@@ -123,15 +123,15 @@ export function WidgetHero() {
             {/* Left Section - Content */}
             <div className="w-full text-center lg:text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start">
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight">
-                Embeddable Widget for Your Website
+                Embeddable Widget included in your plan
               </h1>
               <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed">
                 Add WhatTheFood&apos;s AI-powered food scanning to your blog or website. Perfect for food bloggers,
-                nutrition sites, and health platforms.
+                nutrition sites, and health platforms—without an extra subscription.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
                 <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" asChild>
-                  <Link href="/widget/plans">Get Your Widget</Link>
+                  <Link href="/pricing">View Platform Pricing</Link>
                 </Button>
                 <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
                   <Link href="/how-it-works">How It Works</Link>

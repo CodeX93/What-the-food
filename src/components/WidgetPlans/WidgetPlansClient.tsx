@@ -1,441 +1,193 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Check, Shield, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { redirectToCheckout } from "@/utils/stripe";
-import { getUrl } from "@/utils/url";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
-type WidgetPlanType = {
-  name: string;
-  subscriptionType: "free" | "plan1" | "plan2" | "plan3";
-  price: string;
-  period: string;
-  yearlyPrice?: string;
-  priceId?: string;
-  yearlyPriceId?: string;
-  features: string[];
-  popular: boolean;
-  siteLimit: number | string;
-  scans: string;
-  support: string;
-  branding: string;
+type PlatformSubscriptionSummary = {
+  subscription_type: "free" | "premium" | null;
+  billing_cycle: string | null;
+  current_period_end: string | null;
+  is_active: boolean | null;
 };
+
+const widgetAccessHighlights = [
+  {
+    title: "Free plan access",
+    description: "Embed with WhatTheFood branding, single website connection, community support.",
+    features: ["1 website connection", "Branding stays visible", "Community email support"],
+  },
+  {
+    title: "Premium plan access",
+    description: "Full customization, unlimited sites, priority support—everything your clients expect.",
+    features: ["Remove branding", "Unlimited websites", "Priority chat support"],
+    highlighted: true,
+  },
+];
 
 export function WidgetPlansClient() {
   const router = useRouter();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState<string | null>(null);
-  const [subscription, setSubscription] = useState<any>(null);
-  const [cancelling, setCancelling] = useState(false);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [planToCancel, setPlanToCancel] = useState<WidgetPlanType | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [subscription, setSubscription] = useState<PlatformSubscriptionSummary | null>(null);
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const loadSubscription = async () => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!session) {
+
+      if (!session?.user) {
         router.push("/auth");
         return;
       }
 
-      // Fetch current widget subscription
-      try {
-        const { data: sub, error } = await supabase
-          .from("widget_subscriptions")
-          .select("*")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-
-        if (!error && sub) {
-          setSubscription(sub);
-        }
-      } catch (error) {
-        console.error("Error fetching widget subscription:", error);
-      }
-    };
-
-    void checkAuth();
-  }, [router]);
-
-  const plans: WidgetPlanType[] = [
-    {
-      name: "Free",
-      subscriptionType: "free",
-      price: "$0",
-      period: "/month",
-      features: ["Branding included", "1 scan per day", "1 site", "Basic Support"],
-      popular: false,
-      siteLimit: 1,
-      scans: "1/day",
-      support: "Basic Support",
-      branding: "No",
-    },
-    {
-      name: "Premium Plan 1",
-      subscriptionType: "plan1",
-      price: "$4.99",
-      period: "/month",
-      yearlyPrice: "$49.99/year",
-      priceId: process.env.NEXT_PUBLIC_STRIPE_WIDGET_PLAN1_MONTHLY_PRICE_ID,
-      yearlyPriceId: process.env.NEXT_PUBLIC_STRIPE_WIDGET_PLAN1_YEARLY_PRICE_ID,
-      features: ["Remove branding", "Unlimited scans", "1 site", "Premium Support"],
-      popular: false,
-      siteLimit: 1,
-      scans: "Unlimited",
-      support: "Premium Support",
-      branding: "Yes",
-    },
-    {
-      name: "Premium Plan 2",
-      subscriptionType: "plan2",
-      price: "$9.99",
-      period: "/month",
-      yearlyPrice: "$99.90/year",
-      priceId: process.env.NEXT_PUBLIC_STRIPE_WIDGET_PLAN2_MONTHLY_PRICE_ID,
-      yearlyPriceId: process.env.NEXT_PUBLIC_STRIPE_WIDGET_PLAN2_YEARLY_PRICE_ID,
-      features: ["Remove branding", "Unlimited scans", "Up to 3 sites", "Premium Support"],
-      popular: true,
-      siteLimit: 3,
-      scans: "Unlimited",
-      support: "Premium Support",
-      branding: "Yes",
-    },
-    {
-      name: "Premium Plan 3",
-      subscriptionType: "plan3",
-      price: "$14.99",
-      period: "/month",
-      yearlyPrice: "$149.99/year",
-      priceId: process.env.NEXT_PUBLIC_STRIPE_WIDGET_PLAN3_MONTHLY_PRICE_ID,
-      yearlyPriceId: process.env.NEXT_PUBLIC_STRIPE_WIDGET_PLAN3_YEARLY_PRICE_ID,
-      features: ["Remove branding", "Unlimited scans", "Unlimited sites", "Premium Support"],
-      popular: false,
-      siteLimit: "Unlimited",
-      scans: "Unlimited",
-      support: "Premium Support",
-      branding: "Yes",
-    },
-  ];
-
-  const isCurrentPlan = (plan: WidgetPlanType) => {
-    if (!subscription || !subscription.is_active) return false;
-    return subscription.subscription_type === plan.subscriptionType;
-  };
-
-  const handleCancelSubscription = async () => {
-    if (!subscription || !planToCancel) return;
-
-    setCancelling(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to cancel your subscription.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const response = await fetch("/api/subscriptions/cancel", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          subscriptionType: "widget",
-          userId: session.user.id,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to cancel subscription");
-      }
-
-      // Refresh subscription data
-      const { data: sub, error } = await supabase
-        .from("widget_subscriptions")
-        .select("*")
+      const { data, error } = await supabase
+        .from("platform_subscriptions")
+        .select("subscription_type, billing_cycle, current_period_end, is_active")
         .eq("user_id", session.user.id)
         .maybeSingle();
 
-      if (!error && sub) {
-        setSubscription(sub);
-      }
-
-      toast({
-        title: "Subscription Cancelled",
-        description: "Your widget subscription has been cancelled and you've been moved to the Free plan.",
-      });
-
-      setShowCancelDialog(false);
-      setPlanToCancel(null);
-    } catch (error: any) {
-      console.error("Cancel subscription error:", error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to cancel subscription. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setCancelling(false);
-    }
-  };
-
-  const handleSelectPlan = async (plan: WidgetPlanType, billingCycle: "monthly" | "yearly" = "monthly") => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.user) {
-      router.push("/auth");
-      return;
-    }
-
-    setLoading(`${plan.subscriptionType}-${billingCycle}`);
-
-    try {
-      if (plan.subscriptionType === "free") {
-        const { data: existingProfile, error: profileError } = await (supabase as any)
-          .from("profiles")
-          .select("id")
-          .eq("id", session.user.id)
-          .maybeSingle();
-
-        if (profileError) {
-          throw profileError;
-        }
-
-        if (!existingProfile) {
-          const { error: createProfileError } = await (supabase as any)
-            .from("profiles")
-            .insert({ id: session.user.id, email: session.user.email || "" });
-
-          if (createProfileError) {
-            throw createProfileError;
-          }
-        }
-
-        const { error } = await (supabase as any)
-          .from("widget_subscriptions")
-          .upsert(
-            {
-              user_id: session.user.id,
-              subscription_type: "free",
-              is_active: true,
-              site_limit: 1,
-            },
-            { onConflict: "user_id" }
-          );
-
-        if (error) throw error;
-
-        toast({
-          title: "Success!",
-          description: "Free plan activated. You can now create your widget.",
-        });
-
-        router.push("/widget/dashboard");
-        return;
-      }
-
-      const priceId = billingCycle === "yearly" ? plan.yearlyPriceId : plan.priceId;
-      if (!priceId) {
-        throw new Error("Price ID not configured for this plan");
-      }
-
-      const successUrl = `${getUrl('/checkout/success')}?session_id={CHECKOUT_SESSION_ID}&type=widget`;
-      const cancelUrl = getUrl('/widget/plans');
-
-      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-        body: {
-          priceId,
-          billingCycle,
-          userId: session.user.id,
-          email: session.user.email,
-          successUrl,
-          cancelUrl,
-          subscriptionType: 'widget',
-        },
-      });
-
       if (error) {
-        throw error;
+        console.error("Error loading platform subscription", error);
       }
 
-      if (!data?.url) {
-        throw new Error('No checkout URL returned from server. Check Edge Function logs for details.');
-      }
+      setSubscription(
+        data ?? {
+          subscription_type: "free",
+          billing_cycle: "free",
+          current_period_end: null,
+          is_active: true,
+        }
+      );
+      setLoading(false);
+    };
 
-      await redirectToCheckout(data.url);
-    } catch (error: any) {
-      console.error('Error selecting plan:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to process plan selection. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
+    void loadSubscription();
+  }, [router]);
+
+  const planLabel =
+    subscription?.subscription_type === "premium"
+      ? `Premium · ${subscription.billing_cycle === "yearly" ? "Yearly" : "Monthly"}`
+      : "Free plan";
 
   return (
     <main className="flex-1">
-      <section className="py-20 bg-gradient-hero/5">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-hero bg-clip-text text-transparent pb-1">
-            Choose your Widget Pricing
+      <section className="py-16 sm:py-20 lg:py-24 bg-gradient-hero/5">
+        <div className="container mx-auto px-4 max-w-5xl space-y-10">
+          <div className="text-center space-y-4">
+            <Badge className="bg-primary/10 text-primary border-primary/20 text-xs uppercase tracking-wide px-4 py-1">
+              Widget access included
+            </Badge>
+            <h1 className="text-3xl sm:text-4xl font-bold">
+              Manage the widget through your WhatTheFood subscription
             </h1>
-            <p className="text-lg text-muted-foreground mb-6">Select the perfect plan for your website needs. You can upgrade or downgrade at any time.</p>
+            <p className="text-muted-foreground text-base sm:text-lg max-w-3xl mx-auto">
+              There&apos;s no separate widget billing anymore. Choose the platform plan that fits your workflow and
+              unlock the widget instantly.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-            {plans.map((plan) => {
-              const isCurrent = isCurrentPlan(plan);
-              const isPaidPlan = plan.subscriptionType !== "free";
-              const isCurrentPaidPlan = isCurrent && isPaidPlan;
-
-              return (
-                <Card
-                  key={plan.subscriptionType}
-                  className={`relative ${plan.popular ? "border-primary shadow-strong" : ""}`}
-                >
-                  {plan.popular && (
-                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-medium">
-                      Popular
-                    </div>
-                  )}
-                  <CardHeader>
-                    <CardTitle className="text-xl">{plan.name}</CardTitle>
-                    <CardDescription>
-                      <span className="text-3xl font-bold text-foreground">{plan.price}</span>
-                      <span className="text-muted-foreground">{plan.period}</span>
-                      {plan.yearlyPrice && (
-                        <div className="text-xs text-muted-foreground mt-1">or {plan.yearlyPrice}</div>
-                      )}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2 mb-4">
-                      {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-start text-sm">
-                          <Check className="h-4 w-4 text-primary mr-2 flex-shrink-0 mt-0.5" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                  <CardFooter className="flex flex-col gap-2">
-                    {plan.subscriptionType === "free" ? (
-                      <Button
-                        onClick={() => handleSelectPlan(plan)}
-                        className="w-full"
-                        variant={plan.popular ? "default" : "outline"}
-                        disabled={loading === `${plan.subscriptionType}-monthly` || cancelling}
-                      >
-                        {loading === `${plan.subscriptionType}-monthly` ? (
-                          <>
-                            <Sparkles className="mr-2 h-4 w-4 animate-spin" /> Activating...
-                          </>
-                        ) : (
-                          "Get Started Free"
-                        )}
-                      </Button>
-                    ) : isCurrentPaidPlan ? (
-                      <Button
-                        onClick={() => {
-                          setPlanToCancel(plan);
-                          setShowCancelDialog(true);
-                        }}
-                        className="w-full bg-destructive hover:bg-destructive/90"
-                        variant="destructive"
-                        disabled={cancelling}
-                      >
-                        {cancelling ? "Cancelling..." : "Cancel Plan"}
-                      </Button>
-                    ) : (
-                      <>
-                        <Button
-                          onClick={() => handleSelectPlan(plan, "monthly")}
-                          className="w-full"
-                          variant={plan.popular ? "default" : "outline"}
-                          disabled={loading?.startsWith(plan.subscriptionType) || cancelling}
-                        >
-                          {loading === `${plan.subscriptionType}-monthly` ? (
-                            <>
-                              <Sparkles className="mr-2 h-4 w-4 animate-spin" /> Processing...
-                            </>
-                          ) : (
-                            `Subscribe ${plan.price}/mo`
-                          )}
-                        </Button>
-                        {plan.yearlyPriceId && (
-                          <Button
-                            onClick={() => handleSelectPlan(plan, "yearly")}
-                            className="w-full"
-                            variant="outline"
-                            size="sm"
-                            disabled={loading?.startsWith(plan.subscriptionType) || cancelling}
-                          >
-                            {loading === `${plan.subscriptionType}-yearly` ? (
-                              <>
-                                <Sparkles className="mr-2 h-4 w-4 animate-spin" /> Processing...
-                              </>
-                            ) : (
-                              "Save with Yearly"
-                            )}
-                          </Button>
-                        )}
-                      </>
+          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+            <Card className="border-2">
+              <CardHeader className="space-y-1">
+                <CardTitle className="flex items-center gap-3 text-2xl">
+                  <Shield className="h-5 w-5 text-primary" />
+                  Current access
+                </CardTitle>
+                <CardDescription>
+                  {loading
+                    ? "Checking your subscription..."
+                    : `You have ${planLabel} access. Widget features follow this plan.`}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!loading && (
+                  <div className="rounded-xl bg-muted p-4 space-y-2">
+                    <p className="text-sm text-muted-foreground uppercase tracking-wide">Widget status</p>
+                    <p className="text-lg font-semibold">
+                      {subscription?.subscription_type === "premium"
+                        ? "Premium widget features enabled"
+                        : "Free widget features enabled"}
+                    </p>
+                    {subscription?.current_period_end && subscription.subscription_type === "premium" && (
+                      <p className="text-xs text-muted-foreground">
+                        Next renewal: {new Date(subscription.current_period_end).toLocaleDateString()}
+                      </p>
                     )}
-                  </CardFooter>
-                </Card>
-              );
-            })}
+                  </div>
+                )}
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {widgetAccessHighlights.map((highlight) => (
+                    <div
+                      key={highlight.title}
+                      className={`rounded-xl border p-4 ${
+                        highlight.highlighted ? "border-primary bg-primary/5" : "border-border bg-background"
+                      }`}
+                    >
+                      <p className="text-sm font-semibold flex items-center gap-2">
+                        {highlight.highlighted && <Sparkles className="h-4 w-4 text-primary" />}
+                        {highlight.title}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1 mb-3">{highlight.description}</p>
+                      <ul className="space-y-1 text-sm">
+                        {highlight.features.map((feature) => (
+                          <li key={feature} className="flex items-start gap-2 text-muted-foreground">
+                            <Check className="h-4 w-4 text-primary mt-0.5" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 border-dashed">
+              <CardHeader>
+                <CardTitle className="text-2xl">Need more widget power?</CardTitle>
+                <CardDescription>
+                  Upgrade your platform subscription to Premium for unlimited custom embeds and priority support.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg bg-muted/60 p-4">
+                  <p className="text-sm font-semibold text-muted-foreground uppercase mb-2">Premium unlocks</p>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-primary" />
+                      Unlimited websites & white-label embeds
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-primary" />
+                      PDF exports & advanced analytics
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-primary" />
+                      Priority chat + onboarding support
+                    </li>
+                  </ul>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Button asChild>
+                    <Link href="/plans">View platform plans</Link>
+                  </Button>
+                  <Button asChild variant="outline">
+                    <Link href="/dashboard">Back to dashboard</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
-
-      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to cancel your widget subscription? You&apos;ll be moved to the Free plan and will lose access to premium widget features.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={cancelling}>Keep Subscription</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancelSubscription}
-              disabled={cancelling}
-              className="bg-destructive hover:bg-destructive/90"
-            >
-              {cancelling ? "Cancelling..." : "Cancel Subscription"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </main>
   );
 }
+
+

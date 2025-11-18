@@ -19,6 +19,7 @@ export type FoodAnalysis = {
   };
   ingredients: string[];
   instructions: string[];
+  youtubeVideoUrl?: string;
 };
 
 export async function uploadFoodImage(file: File, userId: string): Promise<{ path: string; publicUrl: string; signedUrl?: string }>{

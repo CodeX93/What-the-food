@@ -267,7 +267,7 @@ export function DashboardClient({
               <CardTitle>Upload and Analyze</CardTitle>
               <CardDescription>PNG, JPG, JPEG, HEIC</CardDescription>
             </CardHeader>
-            <CardContent>
+              <CardContent>
             {!uploadedFile ? (
               <div
                 className="border-2 border-dashed border-primary/30 rounded-lg p-10 cursor-pointer bg-muted/30 text-center hover:border-primary/50 transition-colors"
@@ -408,6 +408,20 @@ export function DashboardClient({
                 </div>
               </div>
             )}
+
+            {/* Ad placeholder spaces */}
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[1, 2, 3, 4].map((index) => (
+                <div
+                  key={index}
+                  className="border border-dashed border-muted-foreground/30 rounded-lg bg-muted/30 min-h-[120px] flex flex-col items-center justify-center text-muted-foreground/70"
+                >
+                  <Sparkles className="h-6 w-6 mb-2 text-muted-foreground/60" />
+                  <p className="text-xs uppercase tracking-wide">Ad Illustration</p>
+                  <span className="text-[10px]">160×120</span>
+                </div>
+              ))}
+            </div>
             </CardContent>
           </Card>
         </div>

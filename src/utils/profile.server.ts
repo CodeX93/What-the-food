@@ -1,7 +1,6 @@
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import {
   getPlatformSubscriptionServer,
-  getWidgetSubscriptionServer,
 } from "@/utils/subscription.server";
 
 export async function fetchProfileDataServer(userId: string) {
@@ -23,11 +22,6 @@ export async function fetchProfileDataServer(userId: string) {
         subscription_type?: string | null;
       }
     | null;
-  const widgetSubscription = (await getWidgetSubscriptionServer(userId)) as
-    | {
-        subscription_type?: string | null;
-      }
-    | null;
 
   let planName: string | null = null;
   // Only fetch plan name if subscription is premium and has platform_plan_id
@@ -46,25 +40,10 @@ export async function fetchProfileDataServer(userId: string) {
     planName = planRecord?.name ?? null;
   }
 
-  let widgetPlanName: string | null = null;
-  if (widgetSubscription?.subscription_type) {
-    const widgetPlanLabels: Record<string, string> = {
-      free: "Free",
-      plan1: "Premium Plan 1",
-      plan2: "Premium Plan 2",
-      plan3: "Premium Plan 3",
-    };
-    widgetPlanName =
-      widgetPlanLabels[widgetSubscription.subscription_type] ||
-      widgetSubscription.subscription_type;
-  }
-
   return {
     profile: profile ?? null,
     subscription: subscription ?? null,
-    widgetSubscription: widgetSubscription ?? null,
     planName,
-    widgetPlanName,
   };
 }
 

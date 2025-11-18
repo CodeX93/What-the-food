@@ -15,7 +15,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
 
-const BASE_SCHEMA = `{"dish":string,"description":string,"tags":string[],"additionalInfo":string,"servingGuidance":string,"confidence":number,"servingSize":string,"servingWeightGrams":number,"nutrients":{"calories":number,"protein_g":number,"carbohydrates_g":number,"fat_g":number,"fiber_g":number,"sugar_g":number},"ingredients":string[],"instructions":string[]}`;
+const BASE_SCHEMA = `{"dish":string,"description":string,"tags":string[],"additionalInfo":string,"servingGuidance":string,"confidence":number,"servingSize":string,"servingWeightGrams":number,"nutrients":{"calories":number,"protein_g":number,"carbohydrates_g":number,"fat_g":number,"fiber_g":number,"sugar_g":number},"ingredients":string[],"instructions":string[],"youtubeVideoUrl":string}`;
 const SCHEMA_WITH_INSIGHTS = `${BASE_SCHEMA.slice(0, -1)},"insights":string}`;
 const PROMPT_GUIDELINES = `Guidelines:
 - "description" should be a concise 1-2 sentence summary of the meal.
@@ -24,6 +24,8 @@ const PROMPT_GUIDELINES = `Guidelines:
 - "servingGuidance" must explain how to weigh or divide the meal to estimate personal servings (e.g., divide total grams by grams-per-serving).
 - "servingWeightGrams" is MANDATORY and must ALWAYS be provided. It must be the estimated weight in grams for one serving of the dish. This should be a realistic number based on the dish type, ingredients, and typical portion sizes. For example, a typical serving of pasta might be 200-250g, a burger might be 150-200g, a salad might be 150-300g. NEVER omit this field or set it to zero. Always provide a realistic weight estimate.
 - Every entry in "ingredients" must begin with a quantity and unit in METRIC format ONLY (grams, kg, ml, liters). NEVER use imperial units (oz, pounds, cups, tbsp, tsp, etc.). Convert all measurements to metric. Examples: "250g cooked chickpeas", "30ml olive oil", "150g potatoes".
+- "instructions" must be DETAILED step-by-step cooking/preparation instructions. Each step should be comprehensive, clear, and actionable. Include specific temperatures, cooking times, techniques, and tips. Provide 5-10 detailed steps that cover the entire preparation process from start to finish.
+- "youtubeVideoUrl" must be a valid YouTube video URL (format: https://www.youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID) that demonstrates how to prepare this specific dish. Search for a high-quality, relevant tutorial video that matches the dish shown in the image. If no exact match is available, provide the closest relevant video. The URL must be a complete, valid YouTube link. If you cannot find a suitable video, return an empty string "".
 - Ensure nutrient values are realistic positive numbers (avoid zeros unless absolutely accurate).
 - Reflect the most accurate ingredient amounts available.
 - ALWAYS use metric units (grams, kg, ml, liters) for all measurements. NEVER use imperial units (oz, pounds, cups, tablespoons, teaspoons).`;
@@ -274,6 +276,7 @@ const defaultAnalysis = {
   },
   ingredients: [] as string[],
   instructions: [] as string[],
+  youtubeVideoUrl: "",
 };
 
 function sanitizeString(value, fallback = "") {
@@ -352,6 +355,15 @@ function sanitizeAnalysis(raw, ingredientOverrides = []) {
     const sanitizedIngredients = sanitizeArray(raw.ingredients);
     result.ingredients = sanitizedIngredients.length ? sanitizedIngredients : result.ingredients;
     result.instructions = sanitizeArray(raw.instructions);
+    
+    // Sanitize YouTube video URL
+    const youtubeUrl = sanitizeString(raw.youtubeVideoUrl, "");
+    // Validate it's a YouTube URL
+    if (youtubeUrl && (youtubeUrl.includes("youtube.com/watch") || youtubeUrl.includes("youtu.be/"))) {
+      result.youtubeVideoUrl = youtubeUrl;
+    } else {
+      result.youtubeVideoUrl = "";
+    }
   }
 
   const overrideList = Array.isArray(ingredientOverrides)

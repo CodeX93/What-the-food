@@ -1,30 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Sparkles, Timer, ShieldCheck } from "lucide-react";
 
 export function FeaturesHero() {
-  const [headerHeight, setHeaderHeight] = useState(0);
-
-  useEffect(() => {
-    const measureHeader = () => {
-      const header = document.querySelector("header");
-      if (!header) return;
-      const { height } = header.getBoundingClientRect();
-      setHeaderHeight(Math.round(height));
-    };
-    measureHeader();
-    window.addEventListener("resize", measureHeader);
-    return () => window.removeEventListener("resize", measureHeader);
-  }, []);
-
   return (
     <section
       className="relative flex items-center justify-center overflow-hidden bg-white dark:bg-[#000000] transition-colors duration-300 min-h-screen"
-      style={{ minHeight: headerHeight ? `calc(100vh - ${headerHeight}px)` : undefined }}
+      style={{ minHeight: "calc(100vh - 80px)" }}
     >
       <div className="absolute inset-0 bg-gradient-hero opacity-5 dark:opacity-10" />
 
@@ -48,11 +33,8 @@ export function FeaturesHero() {
                   <Link href="/pricing">View Pricing</Link>
                 </Button>
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6">
-                Trusted by dietitians, coaches, and health-focused teams in over <span className="font-semibold text-foreground">35 countries</span>.
-              </p>
 
-              {/* Feature boxes for desktop */}
+              {/* Feature boxes for desktop - below CTAs */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 sm:mt-7 lg:mt-8">
                 <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                   <Sparkles className="h-5 w-5 text-primary" />
@@ -76,6 +58,11 @@ export function FeaturesHero() {
                   </div>
                 </div>
               </div>
+
+              {/* Trusted by text for desktop - after feature boxes */}
+              <p className="text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6">
+                Trusted by dietitians, coaches, and health-focused teams in over <span className="font-semibold text-foreground">35 countries</span>.
+              </p>
             </div>
 
             {/* Right Section - Card (aligned with profile) */}

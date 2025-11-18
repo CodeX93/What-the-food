@@ -920,6 +920,42 @@ export function FoodResultsClient() {
                       </li>
                     ))}
                   </ol>
+                  {analysis.youtubeVideoUrl && (
+                    <div className="mt-6 pt-6 border-t">
+                      <div className="space-y-3">
+                        <p className="text-sm font-semibold text-foreground">Watch Video Tutorial</p>
+                        <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+                          <iframe
+                            src={(() => {
+                              const url = analysis.youtubeVideoUrl;
+                              // Extract video ID from various YouTube URL formats
+                              let videoId = "";
+                              if (url.includes("youtube.com/watch?v=")) {
+                                videoId = url.split("watch?v=")[1]?.split("&")[0] || "";
+                              } else if (url.includes("youtu.be/")) {
+                                videoId = url.split("youtu.be/")[1]?.split("?")[0] || "";
+                              } else if (url.includes("youtube.com/embed/")) {
+                                videoId = url.split("embed/")[1]?.split("?")[0] || "";
+                              }
+                              return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+                            })()}
+                            className="absolute top-0 left-0 w-full h-full rounded-lg"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            title="Cooking tutorial"
+                          />
+                        </div>
+                        <a
+                          href={analysis.youtubeVideoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                        >
+                          Watch on YouTube
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
