@@ -47,17 +47,25 @@ export default async function SharedFoodResultsRoute({
       hasUrl: !!supabaseUrl,
       hasServiceKey: !!supabaseServiceKey,
       scanId,
+      envKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE')),
     });
-    // Return error page instead of notFound to help debug
+    // Return error page with marketing layout
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold mb-4">Configuration Error</h1>
-        <p className="text-muted-foreground mb-2">
-          Missing Supabase environment variables.
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Please ensure SUPABASE_SERVICE_ROLE_KEY is set in your deployment environment.
-        </p>
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="container mx-auto px-4 py-16 text-center">
+            <h1 className="text-2xl font-bold mb-4">Configuration Error</h1>
+            <p className="text-muted-foreground mb-2">
+              Missing Supabase environment variables.
+            </p>
+            <p className="text-sm text-muted-foreground mb-4">
+              Please ensure SUPABASE_SERVICE_ROLE_KEY is set in your Vercel deployment environment.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Has URL: {supabaseUrl ? "Yes" : "No"} | Has Service Key: {supabaseServiceKey ? "Yes" : "No"}
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
