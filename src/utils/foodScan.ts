@@ -22,6 +22,19 @@ export type FoodAnalysis = {
   youtubeVideoUrl?: string;
 };
 
+type AnalyzeFoodResponse = {
+  ok?: boolean;
+  analysis?: FoodAnalysis;
+  insights?: string;
+  upgrade?: boolean;
+  error?: string;
+};
+
+type AnalyzeFoodInvokeResult = {
+  data: AnalyzeFoodResponse | null;
+  error: { message?: string } | null;
+};
+
 export async function uploadFoodImage(file: File, userId: string): Promise<{ path: string; publicUrl: string; signedUrl?: string }>{
   const cleanName = file.name.replace(/[^a-zA-Z0-9_.-]/g, "_");
   const ext = cleanName.split(".").pop() || "jpg";
@@ -56,7 +69,7 @@ export async function analyzeFood(
     body.overrideIngredients = options.overrideIngredients;
   }
 
-  const { data, error } = await supabase.functions.invoke("analyze-food", {
+  const { data, error } = await supabase.functions.invoke<AnalyzeFoodResponse>("analyze-food", {
     body,
   });
   if (error || !data?.ok) {
@@ -206,7 +219,7 @@ export async function getPersonalizedInsights(params: {
 
   // Call analyze-food with demographic data (single Gemini call)
   // Add timeout to the function call (15 seconds)
-  const invokePromise = supabase.functions.invoke("analyze-food", {
+  const invokePromise = supabase.functions.invoke<AnalyzeFoodResponse>("analyze-food", {
     body: {
       imageUrl,
       serving: scan.serving || 1,
@@ -224,9 +237,9 @@ export async function getPersonalizedInsights(params: {
     setTimeout(() => reject(new Error("Request timeout - insights generation took too long. Please try again.")), 15000);
   });
 
-  let result: Awaited<ReturnType<typeof supabase.functions.invoke>>;
+  let result: AnalyzeFoodInvokeResult;
   try {
-    result = await Promise.race([invokePromise, timeoutPromise]);
+    result = await Promise.race([invokePromise, timeoutPromise]) as AnalyzeFoodInvokeResult;
   } catch (error: any) {
     throw new Error(error?.message || "Failed to get insights");
   }
