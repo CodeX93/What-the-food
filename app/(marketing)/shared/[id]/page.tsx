@@ -4,6 +4,8 @@ import SharedFoodResultsPage from "@/views/SharedFoodResults";
 import type { Database } from "@/integrations/supabase/types";
 
 export const dynamic = "force-dynamic";
+export const dynamicParams = true;
+export const revalidate = 0;
 
 export default async function SharedFoodResultsRoute({
   params,
@@ -25,8 +27,20 @@ export default async function SharedFoodResultsRoute({
     console.error("Missing Supabase environment variables", {
       hasUrl: !!supabaseUrl,
       hasServiceKey: !!supabaseServiceKey,
+      scanId,
     });
-    notFound();
+    // Return error page instead of notFound to help debug
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h1 className="text-2xl font-bold mb-4">Configuration Error</h1>
+        <p className="text-muted-foreground mb-2">
+          Missing Supabase environment variables.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Please ensure SUPABASE_SERVICE_ROLE_KEY is set in your deployment environment.
+        </p>
+      </div>
+    );
   }
 
   const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
@@ -50,12 +64,32 @@ export default async function SharedFoodResultsRoute({
         errorCode: error.code,
         errorMessage: error.message,
       });
-      notFound();
+      return (
+        <div className="container mx-auto px-4 py-16 text-center">
+          <h1 className="text-2xl font-bold mb-4">Error Loading Scan</h1>
+          <p className="text-muted-foreground mb-2">
+            Failed to fetch scan data.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Error: {error.message || "Unknown error"}
+          </p>
+        </div>
+      );
     }
 
     if (!scanData) {
       console.error("Scan not found:", scanId);
-      notFound();
+      return (
+        <div className="container mx-auto px-4 py-16 text-center">
+          <h1 className="text-2xl font-bold mb-4">Scan Not Found</h1>
+          <p className="text-muted-foreground mb-2">
+            The requested scan could not be found.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Scan ID: {scanId}
+          </p>
+        </div>
+      );
     }
 
     // Generate fresh signed URL for the image using service role
