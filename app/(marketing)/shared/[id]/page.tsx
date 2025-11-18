@@ -12,11 +12,29 @@ export default async function SharedFoodResultsRoute({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id: scanId } = await params;
+  let scanId: string;
+  
+  try {
+    const resolvedParams = await params;
+    scanId = resolvedParams.id;
+  } catch (error) {
+    console.error("Error resolving params:", error);
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h1 className="text-2xl font-bold mb-4">Route Error</h1>
+        <p className="text-muted-foreground">Failed to resolve route parameters.</p>
+      </div>
+    );
+  }
 
   if (!scanId) {
     console.error("No scan ID provided");
-    notFound();
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <h1 className="text-2xl font-bold mb-4">Invalid Route</h1>
+        <p className="text-muted-foreground">No scan ID provided in the URL.</p>
+      </div>
+    );
   }
 
   // Use service role key to bypass RLS for public access
