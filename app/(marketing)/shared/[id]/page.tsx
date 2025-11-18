@@ -12,11 +12,30 @@ export default async function SharedFoodResultsRoute({
 }: {
   params: { id: string };
 }) {
-  const scanId = params.id;
+  // Extract just the UUID from the params (in case extra text was appended to the URL)
+  // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 characters)
+  const rawId = params?.id || "";
+  
+  // Try to extract a valid UUID from the string
+  // Match UUID pattern: 8-4-4-4-12 hex digits
+  const uuidPattern = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
+  const match = rawId.match(uuidPattern);
+  const scanId = match ? match[1] : rawId.split(/[%?\s]/)[0]; // Fallback: take first part before % or space
 
-  if (!scanId) {
-    console.error("No scan ID provided");
-    notFound();
+  // Debug: Log that the route is being hit
+  console.log("Shared route accessed with rawId:", rawId, "extracted scanId:", scanId);
+
+  if (!scanId || scanId.length < 36) {
+    console.error("Invalid scan ID provided:", scanId);
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Invalid Route</h1>
+          <p className="text-muted-foreground">Invalid scan ID format.</p>
+          <p className="text-sm text-muted-foreground mt-2">Received: {rawId.substring(0, 100)}</p>
+        </div>
+      </div>
+    );
   }
 
   // Use service role key to bypass RLS for public access
