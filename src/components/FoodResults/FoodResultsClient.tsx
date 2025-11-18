@@ -13,6 +13,7 @@ import {
   getImageUrl,
 } from "@/utils/foodScan";
 import { hasActivePremiumSubscription } from "@/utils/subscription";
+import { calculateBMI, getBMICategory } from "@/utils/bmi";
 import {
   Loader2,
   Salad,
@@ -39,6 +40,10 @@ import {
   Pencil,
   AlertCircle,
   User,
+  Youtube,
+  Activity,
+  Scale,
+  ChevronDown,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -65,6 +70,7 @@ export function FoodResultsClient() {
   const [loading, setLoading] = useState(true);
   const [servings, setServings] = useState(1);
   const [servingsInput, setServingsInput] = useState("1");
+  const [isVideoAvailable, setIsVideoAvailable] = useState<boolean | null>(null);
   const MIN_SERVINGS = 0.001;
 
   const applyServings = (next: number) => {
@@ -80,8 +86,8 @@ export function FoodResultsClient() {
   // These will be populated from profile automatically
   const [profileAge, setProfileAge] = useState<number | null>(null);
   const [profileGender, setProfileGender] = useState<string | null>(null);
-  const [activity] = useState<string>("moderate"); // Default value
-  const [goal] = useState<string>("maintenance"); // Default value
+  const [profileGoal, setProfileGoal] = useState<string | null>(null);
+  const [profileActivityLevel, setProfileActivityLevel] = useState<string | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsText, setInsightsText] = useState<string>("");
   const [upgradeRequired, setUpgradeRequired] = useState(false);
@@ -342,7 +348,7 @@ export function FoodResultsClient() {
             // Fetch profile to check completion
             const { data: profileData } = await (supabase as any)
               .from("profiles")
-              .select("full_name, gender, age, weight_kg, height_cm")
+              .select("full_name, gender, age, weight_kg, height_cm, goal, activity_level")
               .eq("id", user.id)
               .maybeSingle();
             
@@ -351,13 +357,17 @@ export function FoodResultsClient() {
               // Set profile values for insights
               setProfileAge(profileData.age || null);
               setProfileGender(profileData.gender || null);
+              setProfileGoal(profileData.goal || null);
+              setProfileActivityLevel(profileData.activity_level || null);
               // Check if profile is complete
               const isComplete = 
                 profileData.full_name &&
                 profileData.gender &&
                 profileData.age !== null &&
                 profileData.weight_kg !== null &&
-                profileData.height_cm !== null;
+                profileData.height_cm !== null &&
+                profileData.goal &&
+                profileData.activity_level;
               setProfileComplete(isComplete);
             } else {
               setProfileComplete(false);
@@ -413,53 +423,51 @@ export function FoodResultsClient() {
     }
   }, [analysis]);
 
-  // Auto-generate insights when analysis loads and user has complete profile and premium access
+  // Check if YouTube video is available
   useEffect(() => {
-    const autoGenerateInsights = async () => {
-      if (
-        !id ||
-        !analysis ||
-        loading ||
-        insightsLoading ||
-        insightsText ||
-        !isAuthenticated ||
-        !hasPremiumAccess ||
-        checkingPremium ||
-        !profileComplete ||
-        !profileAge ||
-        !profileGender
-      ) {
+    const checkVideoAvailability = async () => {
+      if (!analysis?.youtubeVideoUrl) {
+        setIsVideoAvailable(false);
         return;
       }
 
       try {
-        setInsightsLoading(true);
-        setUpgradeRequired(false);
-        const res = await getPersonalizedInsights({
-          scanId: id,
-          age: profileAge,
-          gender: profileGender,
-          activity,
-          goal,
-          optimize: false,
-          weight_kg: profile?.weight_kg,
-          height_cm: profile?.height_cm,
-        });
-        if (res.upgrade) {
-          setUpgradeRequired(true);
+        // Extract video ID from URL
+        let videoId = "";
+        const url = analysis.youtubeVideoUrl;
+        if (url.includes("youtube.com/watch?v=")) {
+          videoId = url.split("watch?v=")[1]?.split("&")[0] || "";
+        } else if (url.includes("youtu.be/")) {
+          videoId = url.split("youtu.be/")[1]?.split("?")[0] || "";
+        } else if (url.includes("youtube.com/embed/")) {
+          videoId = url.split("embed/")[1]?.split("?")[0] || "";
+        }
+
+        if (!videoId) {
+          setIsVideoAvailable(false);
           return;
         }
-        setInsightsText(res.insights || "");
+
+        // Check video availability using YouTube oEmbed API
+        const oEmbedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+        const response = await fetch(oEmbedUrl);
+        
+        if (response.ok) {
+          setIsVideoAvailable(true);
+        } else {
+          setIsVideoAvailable(false);
+        }
       } catch (error) {
-        console.error("Failed to auto-generate insights:", error);
-        // Silently fail - user can still generate manually if needed
-      } finally {
-        setInsightsLoading(false);
+        console.error("Error checking video availability:", error);
+        setIsVideoAvailable(false);
       }
     };
 
-    autoGenerateInsights();
-  }, [id, analysis, loading, isAuthenticated, hasPremiumAccess, checkingPremium, profileComplete, profileAge, profileGender, profile, activity, goal, insightsLoading, insightsText]);
+    checkVideoAvailability();
+  }, [analysis?.youtubeVideoUrl]);
+
+  // DISABLED: Auto-generate insights - too slow, users can generate manually
+  // Insights will only be generated when user clicks "Generate Insights" button
 
   const scaled = useMemo(
     () => (analysis ? scaleNutrients(analysis.nutrients, servings) : null),
@@ -810,10 +818,10 @@ export function FoodResultsClient() {
                     <div className="flex flex-wrap gap-2">
                       {analysis.tags.map((tag, index) => {
                         const palette = [
-                          "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.4)]",
-                          "bg-sky-50 text-sky-700 border border-sky-200 shadow-[inset_0_0_0_1px_rgba(14,165,233,0.3)]",
-                          "bg-rose-50 text-rose-700 border border-rose-200 shadow-[inset_0_0_0_1px_rgba(244,63,94,0.3)]",
-                          "bg-amber-50 text-amber-700 border border-amber-200 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.4)]",
+                          "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.4)] hover:bg-emerald-500 hover:text-white hover:border-emerald-600 transition-colors",
+                          "bg-sky-50 text-sky-700 border border-sky-200 shadow-[inset_0_0_0_1px_rgba(14,165,233,0.3)] hover:bg-sky-500 hover:text-white hover:border-sky-600 transition-colors",
+                          "bg-rose-50 text-rose-700 border border-rose-200 shadow-[inset_0_0_0_1px_rgba(244,63,94,0.3)] hover:bg-rose-500 hover:text-white hover:border-rose-600 transition-colors",
+                          "bg-amber-50 text-amber-700 border border-amber-200 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.4)] hover:bg-amber-500 hover:text-white hover:border-amber-600 transition-colors",
                         ];
                         const colors = palette[index % palette.length];
                         return (
@@ -910,17 +918,35 @@ export function FoodResultsClient() {
                   <CardDescription>Step-by-step instructions</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ol className="space-y-3">
-                    {analysis.instructions?.map((step, i) => (
-                      <li key={i} className="flex gap-3">
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium">
-                          {i + 1}
-                        </span>
-                        <span className="text-sm leading-relaxed">{step}</span>
-                      </li>
-                    ))}
+                  <ol className="space-y-4">
+                    {analysis.instructions?.map((step, i) => {
+                      // Parse step to extract bold title and description
+                      // Handle both markdown **bold** and plain text formats
+                      const boldMatch = step.match(/^\*\*(.+?)\*\*[:\s]*(.+)$/);
+                      const hasBoldTitle = boldMatch !== null;
+                      const title = hasBoldTitle ? boldMatch[1] : null;
+                      const description = hasBoldTitle ? boldMatch[2] : step;
+                      
+                      return (
+                        <li key={i} className="flex gap-3">
+                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium mt-0.5">
+                            {i + 1}
+                          </span>
+                          <div className="flex-1">
+                            {title && (
+                              <p className="text-sm font-semibold text-foreground mb-1.5">
+                                {title}
+                              </p>
+                            )}
+                            <p className="text-sm leading-relaxed text-foreground/90">
+                              {description}
+                            </p>
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ol>
-                  {analysis.youtubeVideoUrl && (
+                  {isVideoAvailable === true && analysis.youtubeVideoUrl && (
                     <div className="mt-6 pt-6 border-t">
                       <div className="space-y-3">
                         <p className="text-sm font-semibold text-foreground">Watch Video Tutorial</p>
@@ -951,7 +977,7 @@ export function FoodResultsClient() {
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
                         >
-                          Watch on YouTube
+                          <Youtube className="h-4 w-4" /> Watch on YouTube
                         </a>
                       </div>
                     </div>
@@ -1071,50 +1097,99 @@ export function FoodResultsClient() {
                       </Alert>
                     )}
                     {insightsLoading && !insightsText && (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-                        <span className="text-sm text-muted-foreground">Generating personalized insights...</span>
+                      <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                        <div className="flex items-center">
+                          <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                          <span className="text-sm text-muted-foreground">Generating personalized insights...</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground/70 text-center max-w-md">
+                          This may take up to 15 seconds. If it takes longer, you can try generating manually below.
+                        </p>
                       </div>
                     )}
-                    {profileComplete && !insightsLoading && !insightsText && (
+                    {hasPremiumAccess && !insightsLoading && !insightsText && (
                       <div className="text-center py-8">
                         <p className="text-sm text-muted-foreground mb-4">
-                          Insights will be generated automatically using your profile data.
+                          {profileComplete 
+                            ? "Get personalized health insights tailored to your goals and profile."
+                            : "Generate personalized insights. Complete your profile for more accurate recommendations."}
                         </p>
                         <div className="flex flex-wrap justify-center gap-2">
                           <Button
                             variant="outline"
                             disabled={insightsLoading}
                             onClick={async () => {
-                              if (!id || !profileAge || !profileGender) return;
+                              console.log("Generate Insights clicked", { id, profileAge, profileGender, profileComplete, hasPremiumAccess });
+                              if (!id) {
+                                toast({
+                                  title: "Error",
+                                  description: "Scan ID is missing.",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
+                              // Allow generation even with partial profile data
+                              if (!profileAge || !profileGender) {
+                                toast({
+                                  title: "Incomplete Profile",
+                                  description: "Insights will be generated with limited personalization. Complete your profile for better results.",
+                                  variant: "default",
+                                });
+                              }
                               try {
                                 setInsightsLoading(true);
                                 setUpgradeRequired(false);
-                                const res = await getPersonalizedInsights({
-                                  scanId: id,
-                                  age: profileAge,
-                                  gender: profileGender,
-                                  activity,
-                                  goal,
-                                  optimize: false,
-                                  weight_kg: profile?.weight_kg,
-                                  height_cm: profile?.height_cm,
+                                console.log("Starting insights generation...");
+                                
+                                // Add timeout wrapper (20 seconds max)
+                                const timeoutPromise = new Promise((_, reject) => {
+                                  setTimeout(() => reject(new Error("Insights generation timed out after 20 seconds. Please try again.")), 20000);
                                 });
+                                
+                                const insightsPromise = getPersonalizedInsights({
+                                  scanId: id,
+                                  age: profileAge || undefined,
+                                  gender: profileGender || undefined,
+                                  activity: profileActivityLevel || undefined,
+                                  goal: profileGoal || undefined,
+                                  optimize: false,
+                                  weight_kg: profile?.weight_kg || undefined,
+                                  height_cm: profile?.height_cm || undefined,
+                                });
+                                
+                                console.log("Waiting for insights...");
+                                const res = await Promise.race([insightsPromise, timeoutPromise]) as Awaited<ReturnType<typeof getPersonalizedInsights>>;
+                                console.log("Insights received:", res);
+                                
                                 if (res.upgrade) {
                                   setUpgradeRequired(true);
                                   setInsightsText("");
                                   return;
                                 }
-                                setInsightsText(res.insights || "");
+                                if (res.insights) {
+                                  setInsightsText(res.insights);
+                                  console.log("Insights set successfully");
+                                } else {
+                                  throw new Error("No insights returned from server");
+                                }
+                              } catch (error: any) {
+                                console.error("Failed to generate insights:", error);
+                                toast({
+                                  title: "Insights Generation Failed",
+                                  description: error?.message || "Unable to generate personalized insights. Please try again.",
+                                  variant: "destructive",
+                                });
+                                setInsightsText(""); // Clear any partial state
                               } finally {
                                 setInsightsLoading(false);
+                                console.log("Insights loading finished");
                               }
                             }}
                           >
                             {insightsLoading ? (
                               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             ) : (
-                              <Heart className="h-4 w-4 mr-2" />
+                              <Sparkles className="h-4 w-4 mr-2" />
                             )}
                             Generate Insights
                           </Button>
@@ -1122,28 +1197,62 @@ export function FoodResultsClient() {
                             variant="outline"
                             disabled={insightsLoading}
                             onClick={async () => {
-                              if (!id || !profileAge || !profileGender) return;
+                              console.log("Optimize clicked", { id, profileAge, profileGender, hasPremiumAccess });
+                              if (!id) {
+                                toast({
+                                  title: "Error",
+                                  description: "Scan ID is missing.",
+                                  variant: "destructive",
+                                });
+                                return;
+                              }
                               try {
                                 setInsightsLoading(true);
                                 setUpgradeRequired(false);
-                                const res = await getPersonalizedInsights({
-                                  scanId: id,
-                                  age: profileAge,
-                                  gender: profileGender,
-                                  activity,
-                                  goal,
-                                  optimize: true,
-                                  weight_kg: profile?.weight_kg,
-                                  height_cm: profile?.height_cm,
+                                console.log("Starting optimized insights generation...");
+                                
+                                // Add timeout wrapper (20 seconds max)
+                                const timeoutPromise = new Promise((_, reject) => {
+                                  setTimeout(() => reject(new Error("Insights generation timed out after 20 seconds. Please try again.")), 20000);
                                 });
+                                
+                                const insightsPromise = getPersonalizedInsights({
+                                  scanId: id,
+                                  age: profileAge || undefined,
+                                  gender: profileGender || undefined,
+                                  activity: profileActivityLevel || undefined,
+                                  goal: profileGoal || undefined,
+                                  optimize: true,
+                                  weight_kg: profile?.weight_kg || undefined,
+                                  height_cm: profile?.height_cm || undefined,
+                                });
+                                
+                                console.log("Waiting for optimized insights...");
+                                const res = await Promise.race([insightsPromise, timeoutPromise]) as Awaited<ReturnType<typeof getPersonalizedInsights>>;
+                                console.log("Optimized insights received:", res);
+                                
                                 if (res.upgrade) {
                                   setUpgradeRequired(true);
                                   setInsightsText("");
                                   return;
                                 }
-                                setInsightsText(res.insights || "");
+                                if (res.insights) {
+                                  setInsightsText(res.insights);
+                                  console.log("Optimized insights set successfully");
+                                } else {
+                                  throw new Error("No insights returned from server");
+                                }
+                              } catch (error: any) {
+                                console.error("Failed to generate optimized insights:", error);
+                                toast({
+                                  title: "Insights Generation Failed",
+                                  description: error?.message || "Unable to generate optimized insights. Please try again.",
+                                  variant: "destructive",
+                                });
+                                setInsightsText(""); // Clear any partial state
                               } finally {
                                 setInsightsLoading(false);
+                                console.log("Optimized insights loading finished");
                               }
                             }}
                           >
@@ -1181,27 +1290,134 @@ export function FoodResultsClient() {
                         data-collapse-gap-in-pdf={insightsText ? "true" : undefined}
                       >
                         {parsedInsights.healthContext && (
-                          <div className="rounded-xl border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-5">
-                            <div className="flex items-start gap-4">
-                              <div className="p-2 rounded-lg bg-primary/20 flex-shrink-0">
-                                <TrendingUp className="h-6 w-6 text-primary" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
-                                  <h4 className="font-bold text-lg">Personalized Health Context</h4>
-                                  {parsedInsights.demographics && (
-                                    <span className="text-xs font-medium text-muted-foreground bg-background px-3 py-1 rounded-full border border-primary/20">
-                                      {parsedInsights.demographics}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="prose prose-sm max-w-none">
-                                  <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap break-words">
+                          <div className="space-y-4">
+                            {/* Profile Badges */}
+                            <div className="flex flex-wrap items-center gap-2">
+                              {parsedInsights.demographics && (
+                                <Badge variant="outline" className="text-xs px-3 py-1.5 bg-background/80 border-primary/30">
+                                  {parsedInsights.demographics}
+                                </Badge>
+                              )}
+                              {profile?.goal && (
+                                <Badge variant="outline" className="text-xs px-3 py-1.5 bg-primary/10 border-primary/30 text-primary">
+                                  <Target className="h-3 w-3 mr-1.5" />
+                                  {profile.goal.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                                </Badge>
+                              )}
+                              {profile?.activity_level && (
+                                <Badge variant="outline" className="text-xs px-3 py-1.5 bg-primary/10 border-primary/30 text-primary">
+                                  <Activity className="h-3 w-3 mr-1.5" />
+                                  {profile.activity_level.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                                </Badge>
+                              )}
+                              {profile?.weight_kg && profile?.height_cm && (() => {
+                                const bmi = calculateBMI(profile.weight_kg, profile.height_cm);
+                                const bmiCategory = getBMICategory(bmi);
+                                if (bmi) {
+                                  return (
+                                    <Badge 
+                                      variant="outline" 
+                                      className={`text-xs px-3 py-1.5 border-2 ${
+                                        bmiCategory.color === "green" ? "bg-green-50 border-green-500 text-green-700" :
+                                        bmiCategory.color === "blue" ? "bg-blue-50 border-blue-500 text-blue-700" :
+                                        bmiCategory.color === "orange" ? "bg-orange-50 border-orange-500 text-orange-700" :
+                                        "bg-red-50 border-red-500 text-red-700"
+                                      }`}
+                                    >
+                                      <Scale className="h-3 w-3 mr-1.5" />
+                                      BMI: {bmi.toFixed(1)} ({bmiCategory.category})
+                                    </Badge>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
+
+                            {/* Enhanced Insights Display */}
+                            <div className="grid md:grid-cols-2 gap-4">
+                              {/* Key Recommendations Card */}
+                              <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+                                <CardHeader className="pb-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded-lg bg-primary/20">
+                                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <CardTitle className="text-base">Key Recommendations</CardTitle>
+                                  </div>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="space-y-3">
+                                    {(() => {
+                                      // Parse the health context to extract key points
+                                      const text = parsedInsights.healthContext;
+                                      const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
+                                      const keyPoints = sentences.slice(0, 4).map(s => s.trim());
+                                      
+                                      return keyPoints.map((point, idx) => (
+                                        <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-background/60 border border-primary/10">
+                                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
+                                            <span className="text-xs font-semibold text-primary">{idx + 1}</span>
+                                          </div>
+                                          <p className="text-sm leading-relaxed text-foreground flex-1">{point}.</p>
+                                        </div>
+                                      ));
+                                    })()}
+                                  </div>
+                                </CardContent>
+                              </Card>
+
+                              {/* Action Items Card */}
+                              <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+                                <CardHeader className="pb-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded-lg bg-primary/20">
+                                      <Zap className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <CardTitle className="text-base">Action Items</CardTitle>
+                                  </div>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="space-y-3">
+                                    {(() => {
+                                      // Extract actionable items (sentences with action verbs)
+                                      const text = parsedInsights.healthContext;
+                                      const actionKeywords = ['consider', 'focus', 'monitor', 'pair', 'include', 'reduce', 'increase', 'suggest', 'try', 'add', 'replace'];
+                                      const sentences = text.split(/[.!?]+/).filter(s => {
+                                        const lower = s.toLowerCase();
+                                        return actionKeywords.some(keyword => lower.includes(keyword)) && s.trim().length > 15;
+                                      });
+                                      
+                                      return sentences.slice(0, 4).map((item, idx) => (
+                                        <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-background/60 border border-primary/10">
+                                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
+                                            <Sparkles className="h-3.5 w-3.5 text-primary" />
+                                          </div>
+                                          <p className="text-sm leading-relaxed text-foreground flex-1">{item.trim()}.</p>
+                                        </div>
+                                      ));
+                                    })()}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            </div>
+
+                            {/* Full Context (Collapsible) */}
+                              <details className="group">
+                                <summary className="cursor-pointer list-none">
+                                  <div className="flex items-center justify-between p-4 rounded-lg border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/15 transition-colors">
+                                    <div className="flex items-center gap-2">
+                                      <Info className="h-5 w-5 text-primary" />
+                                      <span className="font-semibold text-sm">View Full Analysis</span>
+                                    </div>
+                                    <ChevronDown className="h-4 w-4 text-primary transition-transform group-open:rotate-180" />
+                                  </div>
+                                </summary>
+                                <div className="mt-2 p-4 rounded-lg border border-primary/10 bg-background/50">
+                                  <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
                                     {parsedInsights.healthContext}
                                   </p>
                                 </div>
-                              </div>
-                            </div>
+                              </details>
                           </div>
                         )}
 

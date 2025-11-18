@@ -213,10 +213,10 @@ export default function Hero() {
           <div className="w-full text-center">
             <h1 className="text-3xl sm:text-4xl font-bold mb-4 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight">
               Know What&apos;s Really in Your Food
-            </h1>
+          </h1>
             <p className="text-base sm:text-lg text-muted-foreground mb-6 leading-relaxed">
-              Upload a photo of any meal and get instant AI-powered nutritional analysis. 
-              Track calories, macros, and make healthier choices effortlessly.
+            Upload a photo of any meal and get instant AI-powered nutritional analysis. 
+            Track calories, macros, and make healthier choices effortlessly.
             </p>
           </div>
 
@@ -260,11 +260,11 @@ export default function Hero() {
                     <Upload className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
                     <p className="text-base sm:text-lg font-medium mb-2 text-center">Upload Your Food Photo</p>
                     <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 text-center">
-                      Drop an image here or click to browse
-                    </p>
+                  Drop an image here or click to browse
+                </p>
                     <div className="flex justify-center">
                       <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" onClick={onChooseFile} disabled={uploading}>
-                        Choose File
+                  Choose File
                       </Button>
                     </div>
                   </div>
@@ -469,8 +469,8 @@ export default function Hero() {
                       </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+            </CardContent>
+          </Card>
             </div>
           </div>
         </div>

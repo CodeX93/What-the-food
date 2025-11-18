@@ -20,12 +20,37 @@ const SCHEMA_WITH_INSIGHTS = `${BASE_SCHEMA.slice(0, -1)},"insights":string}`;
 const PROMPT_GUIDELINES = `Guidelines:
 - "description" should be a concise 1-2 sentence summary of the meal.
 - Provide 3-6 descriptive "tags" (short lowercase keywords separated into an array).
-- "additionalInfo" must mention that nutrition can vary based on ingredient quality, portion size, cooking method, or added oils/sauces. Tailor it to the dish.
-- "servingGuidance" must explain how to weigh or divide the meal to estimate personal servings (e.g., divide total grams by grams-per-serving).
+- "additionalInfo" must be COMPREHENSIVE and DETAILED. It should provide extensive information about the dish, including:
+  * Nutrition variability: Explain how nutrition values can vary based on ingredient quality, portion size, cooking method, added oils/sauces, brand variations, and preparation techniques. Be specific about which nutrients are most likely to vary and why.
+  * Health considerations: Mention any notable health benefits, dietary considerations, allergens, or nutritional highlights specific to this dish (e.g., high protein, fiber content, vitamin sources, etc.).
+  * Cooking variations: Discuss how different cooking methods (baking vs frying, steaming vs boiling) might affect the nutritional profile.
+  * Ingredient substitutions: Mention common ingredient variations or substitutions that could impact nutrition values.
+  * Storage and serving tips: Provide guidance on how to store, reheat, or serve the dish while maintaining nutritional value.
+  * Portion control guidance: Offer specific advice on how to adjust portions for different dietary needs or goals.
+  * Write in complete, well-structured paragraphs (2-4 sentences minimum). Be informative, helpful, and tailored specifically to the dish being analyzed.
+- "servingGuidance" must provide clear, specific instructions on how to calculate servings for the user's actual portion. The guidance MUST:
+  * Explicitly tell users to divide their actual dish weight (in grams) by the projected serving weight shown in the Nutrition Summary (the ~Xg value)
+  * Include a concrete, realistic example using the servingWeightGrams value you provide. For instance, if servingWeightGrams is 300, use: "For example, if your dish weighs 470g and the projected serving is ~300g, divide 470 ÷ 300 = 1.56 servings"
+  * Explain that this calculation tells them how many servings their actual portion contains, which they can then use to adjust the nutrition values
+  * Use the EXACT servingWeightGrams value you provide in the servingWeightGrams field for the example calculation
+  * Format: "To calculate your servings, divide your actual dish weight (in grams) by the projected serving weight shown above (~Xg). For example, if your dish weighs 470g and the projected serving is ~Xg, divide 470 ÷ X = Y servings. This tells you how many servings your portion contains."
 - "servingWeightGrams" is MANDATORY and must ALWAYS be provided. It must be the estimated weight in grams for one serving of the dish. This should be a realistic number based on the dish type, ingredients, and typical portion sizes. For example, a typical serving of pasta might be 200-250g, a burger might be 150-200g, a salad might be 150-300g. NEVER omit this field or set it to zero. Always provide a realistic weight estimate.
 - Every entry in "ingredients" must begin with a quantity and unit in METRIC format ONLY (grams, kg, ml, liters). NEVER use imperial units (oz, pounds, cups, tbsp, tsp, etc.). Convert all measurements to metric. Examples: "250g cooked chickpeas", "30ml olive oil", "150g potatoes".
-- "instructions" must be DETAILED step-by-step cooking/preparation instructions. Each step should be comprehensive, clear, and actionable. Include specific temperatures, cooking times, techniques, and tips. Provide 5-10 detailed steps that cover the entire preparation process from start to finish.
-- "youtubeVideoUrl" must be a valid YouTube video URL (format: https://www.youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID) that demonstrates how to prepare this specific dish. Search for a high-quality, relevant tutorial video that matches the dish shown in the image. If no exact match is available, provide the closest relevant video. The URL must be a complete, valid YouTube link. If you cannot find a suitable video, return an empty string "".
+- "instructions" must be EXTREMELY DETAILED step-by-step cooking/preparation instructions. Each step must follow this EXACT structure:
+  * Start with a clear, descriptive action title in markdown bold format: **Title** followed by a colon and space, then the detailed instructions
+  * Example format: "**Prepare the Pepper Base**: Instructions to blend onions, bell peppers, scotch bonnet peppers, and tomatoes until smooth to create the pepper base."
+  * Follow with comprehensive, detailed sentences that include:
+    - Specific ingredients and quantities mentioned in the step
+    - Exact temperatures (in both Fahrenheit and Celsius when applicable, e.g., "375°F (190°C)")
+    - Precise cooking times (e.g., "2-3 minutes", "20-25 minutes", "30-40 minutes")
+    - Detailed techniques and methods (blend, heat, stir, simmer, bake, baste, etc.)
+    - Specific measurements or ratios (e.g., "liquid should be about 1 inch above the rice")
+    - Clear action sequences with transitions (e.g., "then", "next", "after that")
+    - Visual cues or doneness indicators (e.g., "until the sauce thickens", "until the chicken is cooked through and the glaze is sticky")
+  * Write in complete, well-structured sentences (not bullet points or fragments)
+  * Each step should be comprehensive enough that someone can follow it without prior knowledge
+  * Provide atleast 5-10 detailed steps that cover the entire preparation process from start to finish, including all components of the dish
+- "youtubeVideoUrl" is MANDATORY and must ALWAYS be provided. It must be a valid YouTube video URL (format: https://www.youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID) that demonstrates how to prepare this specific dish. You MUST search for and provide a high-quality, relevant tutorial video that matches the dish shown in the image. If no exact match is available, provide the closest relevant video for a similar dish or cooking technique. The URL must be a complete, valid YouTube link. NEVER return an empty string - always provide a YouTube video URL, even if it's for a similar dish or cooking method.
 - Ensure nutrient values are realistic positive numbers (avoid zeros unless absolutely accurate).
 - Reflect the most accurate ingredient amounts available.
 - ALWAYS use metric units (grams, kg, ml, liters) for all measurements. NEVER use imperial units (oz, pounds, cups, tablespoons, teaspoons).`;
@@ -135,21 +160,29 @@ async function callGemini(imageBase64, mimeType, options = {}) {
       height_cm
     } = insightsParams;
     
-    let personalizedContext = `Insights: Provide a quick analysis tailored for ${age}yo, ${gender}, ${activity} activity, ${goal} goal.`;
-    
+    // Calculate BMI and category
+    let bmi = null;
+    let bmiCategory = "";
     if (weight_kg && height_cm) {
-      // Calculate BMI for context
       const heightM = height_cm / 100;
-      const bmi = weight_kg / (heightM * heightM);
-      personalizedContext += ` User profile: ${weight_kg}kg, ${height_cm}cm (BMI: ${bmi.toFixed(1)}).`;
-    } else if (weight_kg) {
-      personalizedContext += ` User weight: ${weight_kg}kg.`;
-    } else if (height_cm) {
-      personalizedContext += ` User height: ${height_cm}cm.`;
+      bmi = weight_kg / (heightM * heightM);
+      if (bmi < 18.5) {
+        bmiCategory = "underweight";
+      } else if (bmi < 25) {
+        bmiCategory = "normal";
+      } else if (bmi < 30) {
+        bmiCategory = "overweight";
+      } else {
+        bmiCategory = "obese";
+      }
     }
     
-    prompt = buildPrompt(true) + `\n${personalizedContext}`;
-    maxTokens = 1200;
+    // Build minimal personalized context - single line for speed
+    const bmiStr = bmi !== null ? `, BMI ${bmi.toFixed(1)} (${bmiCategory})` : "";
+    const personalizedContext = `\n\nCRITICAL: You MUST include the "insights" field in your JSON response. The insights field should contain: "Personalized Health Context (Age: ${age}, Gender: ${gender}, Activity: ${activity}, Goal: ${goal}${bmiStr}): [2 short paragraphs]. Smart Substitution Suggestions: [2 swaps]."`;
+    
+    prompt = buildPrompt(true) + personalizedContext;
+    maxTokens = 500; // Minimized for fastest generation
   }
 
   const parts: Array<Record<string, unknown>> = [
@@ -187,12 +220,46 @@ MANDATORY INSTRUCTIONS:
     generationConfig: {
       temperature: 0,
       maxOutputTokens: maxTokens,
-      responseMimeType: "application/json"
+      responseMimeType: "application/json",
+      responseSchema: includeInsights ? {
+        type: "object",
+        properties: {
+          dish: { type: "string" },
+          description: { type: "string" },
+          tags: { type: "array", items: { type: "string" } },
+          additionalInfo: { type: "string" },
+          servingGuidance: { type: "string" },
+          confidence: { type: "number" },
+          servingSize: { type: "string" },
+          servingWeightGrams: { type: "number" },
+          nutrients: {
+            type: "object",
+            properties: {
+              calories: { type: "number" },
+              protein_g: { type: "number" },
+              carbohydrates_g: { type: "number" },
+              fat_g: { type: "number" },
+              fiber_g: { type: "number" },
+              sugar_g: { type: "number" }
+            }
+          },
+          ingredients: { type: "array", items: { type: "string" } },
+          instructions: { type: "array", items: { type: "string" } },
+          youtubeVideoUrl: { type: "string" },
+          insights: { type: "string" }
+        },
+        required: includeInsights ? ["insights"] : []
+      } : undefined,
+      // Optimize for speed
+      topP: 0.95,
+      topK: 40,
     }
   };
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  // Timeout: 10s for insights (same as regular for speed), 10s for regular
+  const timeoutDuration = 10000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
 
   try {
     const resp = await fetch(
@@ -227,10 +294,22 @@ MANDATORY INSTRUCTIONS:
       parsed = JSON.parse(jsonrepair(jsonStr));
     }
 
-    const insights = parsed.insights;
+    // Log what we received for debugging
+    if (includeInsights) {
+      console.log("Gemini response includes insights field:", "insights" in parsed);
+      console.log("Insights value type:", typeof parsed.insights);
+      console.log("Insights value preview:", parsed.insights ? parsed.insights.substring(0, 100) : "undefined");
+    }
+
+    const insights = parsed.insights || (includeInsights ? null : undefined);
     delete parsed.insights;
 
-    return { analysis: sanitizeAnalysis(parsed, overrideIngredients), insights };
+    // If insights were requested but not provided, log a warning
+    if (includeInsights && !insights) {
+      console.warn("WARNING: Insights were requested but not returned by Gemini. Response keys:", Object.keys(parsed));
+    }
+
+    return { analysis: sanitizeAnalysis(parsed, overrideIngredients), insights: insights || undefined };
   } catch (e) {
     clearTimeout(timeoutId);
     throw e;

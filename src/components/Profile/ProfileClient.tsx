@@ -34,9 +34,12 @@ import {
   Ruler,
   AlertCircle,
   CheckCircle,
+  Target,
+  Activity,
 } from "lucide-react";
 import { getPlatformSubscription } from "@/utils/subscription";
 import type { User } from "@supabase/supabase-js";
+import { calculateBMI, getBMICategory, getIdealWeightRange } from "@/utils/bmi";
 
 export type ProfileClientProps = {
   initialUser?: User | null;
@@ -67,6 +70,8 @@ export function ProfileClient({
   const [age, setAge] = useState<string>(initialProfile?.age?.toString() || "");
   const [weight, setWeight] = useState<string>(initialProfile?.weight_kg?.toString() || "");
   const [height, setHeight] = useState<string>(initialProfile?.height_cm?.toString() || "");
+  const [goal, setGoal] = useState<string>(initialProfile?.goal || "");
+  const [activityLevel, setActivityLevel] = useState<string>(initialProfile?.activity_level || "");
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -87,6 +92,8 @@ export function ProfileClient({
       setAge(initialProfile.age?.toString() || "");
       setWeight(initialProfile.weight_kg?.toString() || "");
       setHeight(initialProfile.height_cm?.toString() || "");
+      setGoal(initialProfile.goal || "");
+      setActivityLevel(initialProfile.activity_level || "");
     }
   }, [initialProfile]);
 
@@ -141,6 +148,8 @@ console.log("hello world");
           setAge(profileData.age?.toString() || "");
           setWeight(profileData.weight_kg?.toString() || "");
           setHeight(profileData.height_cm?.toString() || "");
+          setGoal(profileData.goal || "");
+          setActivityLevel(profileData.activity_level || "");
         }
 
         const sub = await getPlatformSubscription(session.user.id);
@@ -197,26 +206,27 @@ console.log("hello world");
       const form = formRef.current || (event.currentTarget as HTMLFormElement);
       const formData = new FormData(form);
       const fullNameRaw = (formData.get("full_name") as string) ?? "";
-      const bioRaw = (formData.get("bio") as string) ?? "";
 
       const fullName = fullNameRaw.trim() || null;
-      const bio = bioRaw.trim() || null;
       
       // Parse demographic fields
       const genderValue = gender.trim() || null;
       const ageValue = age.trim() ? parseInt(age.trim(), 10) : null;
       const weightValue = weight.trim() ? parseFloat(weight.trim()) : null;
       const heightValue = height.trim() ? parseInt(height.trim(), 10) : null;
+      const goalValue = goal.trim() || null;
+      const activityLevelValue = activityLevel.trim() || null;
 
       const { error: updateError } = await (supabase as any)
         .from("profiles")
         .update({
           full_name: fullName,
-          bio,
           gender: genderValue,
           age: ageValue,
           weight_kg: weightValue,
           height_cm: heightValue,
+          goal: goalValue,
+          activity_level: activityLevelValue,
           updated_at: new Date().toISOString(),
         })
         .eq("id", session.user.id);
@@ -238,6 +248,8 @@ console.log("hello world");
         setAge(updatedProfile.age?.toString() || "");
         setWeight(updatedProfile.weight_kg?.toString() || "");
         setHeight(updatedProfile.height_cm?.toString() || "");
+        setGoal(updatedProfile.goal || "");
+        setActivityLevel(updatedProfile.activity_level || "");
       }
 
       // Check if profile is now complete
@@ -246,7 +258,9 @@ console.log("hello world");
         updatedProfile.gender &&
         updatedProfile.age !== null &&
         updatedProfile.weight_kg !== null &&
-        updatedProfile.height_cm !== null;
+        updatedProfile.height_cm !== null &&
+        updatedProfile.goal &&
+        updatedProfile.activity_level;
 
       toast({
         title: "Success",
@@ -284,6 +298,11 @@ console.log("hello world");
 
   const isPremium = subscription?.subscription_type === "premium";
 
+  // Calculate BMI
+  const currentBMI = calculateBMI(profile?.weight_kg, profile?.height_cm);
+  const bmiCategory = getBMICategory(currentBMI);
+  const idealWeightRange = getIdealWeightRange(profile?.height_cm);
+
   // Calculate profile completion
   const profileFields = [
     { key: 'full_name', value: profile?.full_name },
@@ -291,6 +310,8 @@ console.log("hello world");
     { key: 'age', value: profile?.age },
     { key: 'weight_kg', value: profile?.weight_kg },
     { key: 'height_cm', value: profile?.height_cm },
+    { key: 'goal', value: profile?.goal },
+    { key: 'activity_level', value: profile?.activity_level },
   ];
   
   const completedFields = profileFields.filter(field => {
@@ -361,6 +382,8 @@ console.log("hello world");
                             age: 'Age',
                             weight_kg: 'Weight',
                             height_cm: 'Height',
+                            goal: 'Goal',
+                            activity_level: 'Activity Level',
                           };
                           return (
                             <div
@@ -564,17 +587,70 @@ console.log("hello world");
                   </div>
                 </div>
 
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="bio" className="text-sm font-semibold">Bio</Label>
-                  <Textarea
-                    id="bio"
-                    name="bio"
-                    rows={5}
-                    defaultValue={profile?.bio || ""}
-                    placeholder="Tell us about yourself..."
-                    className="resize-none border-2 min-h-[140px]"
-                  />
-                  <p className="text-xs text-muted-foreground">Share a brief description about yourself</p>
+                {/* BMI Display */}
+                {currentBMI && (
+                  <div className="sm:col-span-2 p-4 rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-primary/20">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1 font-medium">Body Mass Index</p>
+                        <p className="text-2xl font-bold text-foreground">{currentBMI}</p>
+                      </div>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-sm px-3 py-1 ${
+                          bmiCategory.color === "green" ? "border-green-500 text-green-700 bg-green-50" :
+                          bmiCategory.color === "blue" ? "border-blue-500 text-blue-700 bg-blue-50" :
+                          bmiCategory.color === "orange" ? "border-orange-500 text-orange-700 bg-orange-50" :
+                          "border-red-500 text-red-700 bg-red-50"
+                        }`}
+                      >
+                        {bmiCategory.category}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-2">{bmiCategory.description}</p>
+                    {idealWeightRange && (
+                      <p className="text-xs text-muted-foreground">
+                        Ideal weight range: {idealWeightRange.min} - {idealWeightRange.max} kg
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="goal" className="text-sm font-semibold flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" /> Health Goal
+                  </Label>
+                  <Select value={goal} onValueChange={setGoal}>
+                    <SelectTrigger className="h-12 border-2">
+                      <SelectValue placeholder="Select your goal" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="weight_loss">Weight Loss</SelectItem>
+                      <SelectItem value="weight_gain">Weight Gain</SelectItem>
+                      <SelectItem value="maintain_weight">Maintain Weight</SelectItem>
+                      <SelectItem value="build_muscle">Build Muscle</SelectItem>
+                      <SelectItem value="improve_fitness">Improve Fitness</SelectItem>
+                      <SelectItem value="general_health">General Health</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="activity_level" className="text-sm font-semibold flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-primary" /> Activity Level
+                  </Label>
+                  <Select value={activityLevel} onValueChange={setActivityLevel}>
+                    <SelectTrigger className="h-12 border-2">
+                      <SelectValue placeholder="Select activity level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sedentary">Sedentary (little or no exercise)</SelectItem>
+                      <SelectItem value="light_active">Lightly Active (light exercise 1-3 days/week)</SelectItem>
+                      <SelectItem value="moderately_active">Moderately Active (moderate exercise 3-5 days/week)</SelectItem>
+                      <SelectItem value="very_active">Very Active (hard exercise 6-7 days/week)</SelectItem>
+                      <SelectItem value="extremely_active">Extremely Active (very hard exercise, physical job)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

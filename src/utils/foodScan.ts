@@ -205,7 +205,8 @@ export async function getPersonalizedInsights(params: {
   }
 
   // Call analyze-food with demographic data (single Gemini call)
-  const { data, error } = await supabase.functions.invoke("analyze-food", {
+  // Add timeout to the function call (15 seconds)
+  const invokePromise = supabase.functions.invoke("analyze-food", {
     body: {
       imageUrl,
       serving: scan.serving || 1,
@@ -218,6 +219,19 @@ export async function getPersonalizedInsights(params: {
       height_cm: params.height_cm,
     },
   });
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error("Request timeout - insights generation took too long. Please try again.")), 15000);
+  });
+
+  let result: Awaited<ReturnType<typeof supabase.functions.invoke>>;
+  try {
+    result = await Promise.race([invokePromise, timeoutPromise]);
+  } catch (error: any) {
+    throw new Error(error?.message || "Failed to get insights");
+  }
+  
+  const { data, error } = result;
   
   if (error || !data?.ok) {
     throw new Error(data?.error || error?.message || "Failed to get insights");
