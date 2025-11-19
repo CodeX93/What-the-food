@@ -11,6 +11,10 @@ import {
   Wheat,
   Candy,
   Info,
+  Zap,
+  Youtube,
+  Target,
+  Sparkles,
 } from "lucide-react";
 import { scaleNutrients, type FoodAnalysis } from "@/utils/foodScan";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -202,13 +206,93 @@ export function SharedFoodResults({
               </CardContent>
             </Card>
 
+            {analysis.instructions && analysis.instructions.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-primary" />
+                    <CardTitle>How to Prepare</CardTitle>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Step-by-step instructions to recreate this dish.
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <ol className="space-y-4">
+                    {analysis.instructions.map((step, index) => {
+                      const boldMatch = step.match(/^\*\*(.+?)\*\*[:\s]*(.+)$/);
+                      const hasBoldTitle = boldMatch !== null;
+                      const title = hasBoldTitle ? boldMatch[1] : null;
+                      const description = hasBoldTitle ? boldMatch[2] : step;
+
+                      return (
+                        <li key={index} className="flex gap-3">
+                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium mt-0.5">
+                            {index + 1}
+                          </span>
+                          <div className="flex-1">
+                            {title && (
+                              <p className="text-sm font-semibold text-foreground mb-1">
+                                {title}
+                              </p>
+                            )}
+                            <p className="text-sm leading-relaxed text-muted-foreground">
+                              {description}
+                            </p>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+
+                  {analysis.youtubeVideoUrl && (
+                    <div className="mt-6 pt-6 border-t">
+                      <div className="space-y-3">
+                        <p className="text-sm font-semibold text-foreground">Watch Video Tutorial</p>
+                        <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+                          <iframe
+                            src={(() => {
+                              const url = analysis.youtubeVideoUrl;
+                              let videoId = "";
+                              if (url.includes("youtube.com/watch?v=")) {
+                                videoId = url.split("watch?v=")[1]?.split("&")[0] || "";
+                              } else if (url.includes("youtu.be/")) {
+                                videoId = url.split("youtu.be/")[1]?.split("?")[0] || "";
+                              } else if (url.includes("youtube.com/embed/")) {
+                                videoId = url.split("embed/")[1]?.split("?")[0] || "";
+                              }
+                              return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
+                            })()}
+                            className="absolute top-0 left-0 w-full h-full rounded-lg"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            title="Cooking tutorial"
+                          />
+                        </div>
+                        <a
+                          href={analysis.youtubeVideoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                        >
+                          <Youtube className="h-4 w-4" /> Watch on YouTube
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {analysis.additionalInfo && (
               <Card>
                 <CardHeader>
                   <CardTitle>Additional Information</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{analysis.additionalInfo}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {analysis.additionalInfo}
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -227,6 +311,33 @@ export function SharedFoodResults({
                       </li>
                     ))}
                   </ul>
+                </CardContent>
+              </Card>
+            )}
+
+            {analysis.insights && (
+              <Card className="border-primary/30">
+                <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Target className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle>Personalized Health Context</CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        Insights tailored to wellness goals
+                      </p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
+                    {analysis.insights}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    Generated with AI · Informational only
+                  </div>
                 </CardContent>
               </Card>
             )}
