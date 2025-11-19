@@ -6,7 +6,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Download, RefreshCw, ArrowLeft, CalendarRange } from "lucide-react";
+import { Download, RefreshCw, ArrowLeft, CalendarRange, Loader2, Plus, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+type ManualItem = {
+  name?: string;
+  calories?: number;
+  protein_g?: number;
+  carbohydrates_g?: number;
+  fat_g?: number;
+};
 
 type FoodScan = {
   id: string;
@@ -20,6 +29,7 @@ type FoodScan = {
       carbohydrates_g?: number;
       fat_g?: number;
     };
+    manualItems?: ManualItem[];
   };
 };
 
@@ -40,9 +50,124 @@ const parseNumber = (value: any): number => {
 export function MyFoodAnalyticsClient() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { toast } = useToast();
   const [scans, setScans] = useState<FoodScan[]>([]);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [manualFoods, setManualFoods] = useState<Array<{ id: string; value: string }>>([
+    { id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`, value: "" },
+  ]);
+  const [manualLoading, setManualLoading] = useState(false);
+
+  const manualPlaceholders = ["2 boiled eggs", "Greek yogurt (1 cup)", "1 banana", "Protein shake with almond milk"];
+  const quickAddOptions = ["Handful of almonds", "Oatmeal packet", "Apple", "Dark chocolate square"];
+
+  const addManualFoodField = () => {
+    setManualFoods((prev) => [...prev, { id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${prev.length}`, value: "" }]);
+  };
+
+  const updateManualFood = (id: string, value: string) => {
+    setManualFoods((prev) => prev.map((food) => (food.id === id ? { ...food, value } : food)));
+  };
+
+  const removeManualFood = (id: string) => {
+    setManualFoods((prev) => (prev.length > 1 ? prev.filter((food) => food.id !== id) : prev));
+  };
+
+  const quickAddFood = (text: string) => {
+    setManualFoods((prev) => {
+      const copy = [...prev];
+      const emptyIndex = copy.findIndex((food) => !food.value.trim());
+      if (emptyIndex !== -1) {
+        copy[emptyIndex] = { ...copy[emptyIndex], value: text };
+      } else {
+        copy.push({ id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${copy.length}`, value: text });
+      }
+      return copy;
+    });
+  };
+
+  const handleManualEntry = async () => {
+    const foods = manualFoods.map((item) => item.value.trim()).filter(Boolean);
+
+    if (!foods.length) {
+      toast({
+        title: "Add at least one item",
+        description: "Include a short description like “2 eggs” or “1 banana”.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setManualLoading(true);
+      const { data: manualData, error } = await supabase.functions.invoke("manual-food", {
+        body: { foods },
+      });
+      if (error) throw error;
+      if (!manualData?.ok) {
+        throw new Error(manualData?.error || "Unable to estimate nutrition for these foods");
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user) {
+        router.push("/auth");
+        return;
+      }
+
+      const totals = manualData.totals || {};
+      const dishName = `Manual: ${foods.join(", ")}`.slice(0, 200);
+      const manualResult = {
+        dish: dishName,
+        description: "Manually logged foods",
+        tags: ["manual"],
+        servingSize: "1 serving",
+        servingWeightGrams: undefined,
+        servingGuidance: "Manually added to analytics",
+        nutrients: {
+          calories: totals.calories ?? null,
+          protein_g: totals.protein_g ?? null,
+          carbohydrates_g: totals.carbohydrates_g ?? null,
+          fat_g: totals.fat_g ?? null,
+        },
+        ingredients: manualData.items?.map((item: any) => `${item.name}`) ?? foods,
+        instructions: [],
+        additionalInfo: "Logged manually by the user for quick tracking.",
+        youtubeVideoUrl: "",
+        manualItems: manualData.items || [],
+        isManualEntry: true,
+      };
+
+      const { error: insertError } = await (supabase as any).from("food_scans").insert({
+        user_id: session.user.id,
+        image_path: `manual-entry-${Date.now()}-${crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substr(2, 9)}`,
+        image_url: null,
+        serving: 1,
+        result_json: manualResult,
+      });
+      if (insertError) throw insertError;
+
+      setManualFoods([{ id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`, value: "" }]);
+
+      toast({
+        title: "Added to My Food Analytics",
+        description: "Manual foods have been logged successfully.",
+      });
+
+      await reload();
+    } catch (error: any) {
+      console.error("Manual entry error:", error);
+      toast({
+        title: "Failed to log foods",
+        description: error?.message || "Unable to estimate these foods.",
+        variant: "destructive",
+      });
+    } finally {
+      setManualLoading(false);
+    }
+  };
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -74,9 +199,9 @@ export function MyFoodAnalyticsClient() {
     if (!scans.length) return;
     const firstDay = formatDay(scans[0].created_at);
     const lastDay = formatDay(scans[scans.length - 1].created_at);
-    if (!startDate) setStartDate(firstDay);
-    if (!endDate) setEndDate(lastDay);
-  }, [scans, startDate, endDate]);
+    setStartDate((prev) => (!prev || firstDay < prev ? firstDay : prev));
+    setEndDate((prev) => (!prev || lastDay > prev ? lastDay : prev));
+  }, [scans]);
 
   const filteredScans = useMemo(() => {
     if (!scans.length) return [] as FoodScan[];
@@ -117,8 +242,17 @@ export function MyFoodAnalyticsClient() {
       totals.carbs += carbs;
       totals.fat += fat;
 
-      const dishName = (scan.result_json?.dish || "Unknown").slice(0, 60);
-      dishes[dishName] = (dishes[dishName] || 0) + 1;
+      const addDishCount = (label: string) => {
+        const key = label.slice(0, 60) || "Unknown";
+        dishes[key] = (dishes[key] || 0) + 1;
+      };
+
+      const manualItems = scan.result_json?.manualItems;
+      if (Array.isArray(manualItems) && manualItems.length > 0) {
+        manualItems.forEach((item) => addDishCount(item?.name || "Manual item"));
+      } else {
+        addDishCount(scan.result_json?.dish || "Unknown");
+      }
     }
 
     const byDay = Object.entries(daily).sort((a, b) => a[0].localeCompare(b[0]));
@@ -255,6 +389,8 @@ export function MyFoodAnalyticsClient() {
             </Button>
           </div>
         </div>
+
+        
 
         {loading ? (
           <div className="min-h-[200px] flex items-center justify-center">
@@ -406,7 +542,7 @@ export function MyFoodAnalyticsClient() {
             <Card>
               <CardHeader>
                 <CardTitle>Top Dishes</CardTitle>
-                <CardDescription>Most scanned items</CardDescription>
+                <CardDescription>Most logged meals </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
@@ -431,6 +567,71 @@ export function MyFoodAnalyticsClient() {
             </Card>
           </div>
         )}
+        <Card className="mb-8 mt-8">
+          <CardHeader>
+            <CardTitle>Log foods manually</CardTitle>
+            <CardDescription>Add quick bites without scanning. We’ll estimate macros and include them in these analytics.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Describe each item with quantity (e.g., “2 eggs”, “1 banana”, “protein shake with almond milk”).
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {quickAddOptions.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => quickAddFood(item)}
+                    className="px-3 py-1 rounded-full border text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {manualFoods.map((food, index) => (
+                <div className="flex gap-2" key={food.id}>
+                  <Input
+                    value={food.value}
+                    onChange={(event) => updateManualFood(food.id, event.target.value)}
+                    placeholder={manualPlaceholders[index % manualPlaceholders.length]}
+                  />
+                  {manualFoods.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="shrink-0"
+                      onClick={() => removeManualFood(food.id)}
+                      aria-label="Remove food"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+              <Button variant="outline" size="sm" onClick={addManualFoodField} className="w-full sm:w-auto">
+                <Plus className="h-4 w-4 mr-2" /> Add another food
+              </Button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+             
+              <Button onClick={handleManualEntry} disabled={manualLoading}>
+                {manualLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Logging…
+                  </>
+                ) : (
+                  "Add to analytics"
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </main>
   );

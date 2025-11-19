@@ -43,6 +43,47 @@ export type Database = {
           },
         ]
       }
+      meal_plans: {
+        Row: {
+          created_at: string
+          goal: string | null
+          id: string
+          plan: Json
+          target_weight: number | null
+          timeframe_weeks: number | null
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          goal?: string | null
+          id?: string
+          plan: Json
+          target_weight?: number | null
+          timeframe_weeks?: number | null
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          goal?: string | null
+          id?: string
+          plan?: Json
+          target_weight?: number | null
+          timeframe_weeks?: number | null
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_plans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       free_scan_sessions: {
         Row: {
           created_at: string

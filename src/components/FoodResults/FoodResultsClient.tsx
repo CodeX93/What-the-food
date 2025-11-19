@@ -126,6 +126,513 @@ export function FoodResultsClient() {
   const [exportingPdf, setExportingPdf] = useState(false);
   const reportRef = useRef<HTMLDivElement | null>(null);
 
+  const fetchImageAsDataUrl = async (url: string) => {
+    try {
+      const response = await fetch(url, { mode: "cors" });
+      const blob = await response.blob();
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.warn("Failed to inline image for PDF, falling back to original URL.", error);
+      return null;
+    }
+  };
+
+  const buildPdfHtml = (imageSrc?: string | null) => {
+    if (!analysis) return "";
+
+    const nutrientStats = [
+      { label: "Calories", value: scaled?.calories ?? analysis.nutrients?.calories, suffix: " kcal", className: "stat-card calories" },
+      { label: "Protein", value: scaled?.protein_g ?? analysis.nutrients?.protein_g, suffix: " g", className: "stat-card protein" },
+      { label: "Carbs", value: scaled?.carbohydrates_g ?? analysis.nutrients?.carbohydrates_g, suffix: " g", className: "stat-card carbs" },
+      { label: "Fat", value: scaled?.fat_g ?? analysis.nutrients?.fat_g, suffix: " g", className: "stat-card fat" },
+      { label: "Fiber", value: scaled?.fiber_g ?? analysis.nutrients?.fiber_g, suffix: " g", className: "stat-card fiber" },
+      { label: "Sugar", value: scaled?.sugar_g ?? analysis.nutrients?.sugar_g, suffix: " g", className: "stat-card sugar" },
+    ];
+
+    const nutrientHtml = nutrientStats
+      .map(
+        (stat) => `
+        <div class="${stat.className || "stat-card"}">
+          <div class="stat-label">${stat.label}</div>
+          <div class="stat-value">${formatNumber(stat.value)}${stat.suffix}</div>
+        </div>
+      `
+      )
+      .join("");
+
+    const tagPalette = ["mint", "sky", "rose", "amber", "teal", "indigo"];
+    const tagsHtml =
+      (analysis.tags && analysis.tags.length > 0
+        ? analysis.tags
+            .map((tag, index) => `<span class="tag ${tagPalette[index % tagPalette.length]}">${escapeHtml(tag)}</span>`)
+            .join("")
+        : `<span class="tag muted">No tags</span>`);
+
+    const ingredientsHtml =
+      analysis.ingredients && analysis.ingredients.length > 0
+        ? analysis.ingredients.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
+        : `<li class="muted">Ingredients not detected.</li>`;
+
+    const instructionsList = analysis.instructions ?? [];
+    const instructionsHtml =
+      instructionsList.length > 0
+        ? instructionsList
+            .map((step, index) => {
+              const parsed = parseInstruction(step);
+              return `
+                <li class="instruction">
+                  <span class="step-index">${index + 1}</span>
+                  <div>
+                    ${parsed.title ? `<p class="instruction-title">${parsed.title}</p>` : ""}
+                    <p class="instruction-text">${parsed.description}</p>
+                  </div>
+                </li>
+              `;
+            })
+            .join("")
+        : `<li class="muted">How to prepare instructions were not generated for this scan.</li>`;
+
+    const additionalInfoHtml = analysis.additionalInfo
+      ? formatTextBlock(analysis.additionalInfo)
+      : "Additional information was not generated for this scan.";
+
+    const servingGuidance = analysis.servingGuidance
+      ? formatTextBlock(analysis.servingGuidance)
+      : "Use the serving slider to adjust nutrition values for your portion.";
+
+    const insightsHtml = (() => {
+      if (parsedInsights) {
+        const substitutions =
+          parsedInsights.substitutions && parsedInsights.substitutions.length > 0
+            ? `<div class="substitution-grid">
+                ${parsedInsights.substitutions
+                  .map(
+                    (item) => `
+                      <div class="sub-card">
+                        ${item.title ? `<p class="sub-title">${escapeHtml(item.title)}</p>` : ""}
+                        <p class="sub-text">${formatTextBlock(item.description)}</p>
+                      </div>
+                    `
+                  )
+                  .join("")}
+              </div>`
+            : "";
+
+        return `
+          ${parsedInsights.demographics ? `<div class="badge-row">${escapeHtml(parsedInsights.demographics)}</div>` : ""}
+          ${parsedInsights.healthContext ? `<p class="insight-text">${formatTextBlock(parsedInsights.healthContext)}</p>` : ""}
+          ${substitutions}
+        `;
+      }
+
+      if (insightsText) {
+        return `<p class="insight-text">${formatTextBlock(insightsText)}</p>`;
+      }
+
+      return `<p class="muted">Personalized insights were not generated for this scan.</p>`;
+    })();
+
+    const pdfStyles = `
+      :root {
+        --mint: #10b981;
+        --mint-soft: #ecfdf5;
+        --sky: #38bdf8;
+        --sky-soft: #ecfeff;
+        --rose: #fb7185;
+        --rose-soft: #fff5f7;
+        --amber: #fbbf24;
+        --amber-soft: #fffaf0;
+        --teal: #14b8a6;
+        --teal-soft: #e6fffa;
+        --indigo: #6366f1;
+        --indigo-soft: #eef2ff;
+        --slate-900: #0f172a;
+        --slate-700: #334155;
+        --slate-500: #64748b;
+        --border: #e4e7ec;
+      }
+      * { box-sizing: border-box; }
+      body {
+        font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: linear-gradient(180deg, #f5f7ff 0%, #f9fbff 40%, #ffffff 100%);
+        padding: 32px;
+        margin: 0;
+        color: var(--slate-900);
+      }
+      .report {
+        max-width: 960px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+      }
+      .card {
+        background: #ffffff;
+        border-radius: 32px;
+        padding: 32px 40px;
+        border: 1px solid var(--border);
+        box-shadow: 0 25px 60px rgba(15, 23, 42, 0.08);
+        position: relative;
+        overflow: hidden;
+      }
+      .card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 32px;
+        border: 1px solid rgba(255,255,255,0.6);
+        pointer-events: none;
+      }
+      .header-card {
+        display: flex;
+        gap: 24px;
+        align-items: flex-start;
+      }
+      .hero-img {
+        width: 320px;
+        height: 320px;
+        border-radius: 24px;
+        object-fit: cover;
+        border: 1px solid #e2e8f0;
+        background: #f1f5f9;
+      }
+      .summary {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .title {
+        margin: 0;
+        font-size: 34px;
+        font-weight: 800;
+        color: var(--slate-900);
+      }
+      .subtitle {
+        font-size: 15px;
+        color: var(--slate-500);
+        margin: 0;
+        line-height: 1.6;
+      }
+      .meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+      .pill {
+        padding: 8px 22px;
+        border-radius: 999px;
+        border: 1px solid rgba(15,23,42,0.12);
+        background: #f8fafc;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--slate-900);
+        text-align: center;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 150px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
+      }
+      .tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin-top: 8px;
+        margin-bottom: 8px;
+      }
+      .tag {
+        min-width: 120px;
+        min-height: 36px;
+        padding: 0 20px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: capitalize;
+        text-align: center;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--slate-900);
+      }
+      .tag.mint { background: var(--mint-soft); border-color: #6ee7b7; color: #047857; }
+      .tag.sky { background: var(--sky-soft); border-color: #7dd3fc; color: #0369a1; }
+      .tag.rose { background: var(--rose-soft); border-color: #fda4af; color: #be123c; }
+      .tag.amber { background: var(--amber-soft); border-color: #fcd34d; color: #92400e; }
+      .tag.teal { background: var(--teal-soft); border-color: #5eead4; color: #0f766e; }
+      .tag.indigo { background: var(--indigo-soft); border-color: #c7d2fe; color: #3730a3; }
+      .tag.muted {
+        background: #e2e8f0;
+        color: #64748b;
+        border-color: #cbd5f5;
+      }
+      .callout {
+        border-radius: 20px;
+        border: 1px solid #bbf7d0;
+        background: linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%);
+        padding: 18px 22px;
+        color: #166534;
+        font-size: 13px;
+        line-height: 1.5;
+        margin-top: 12px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+      }
+      .section-title {
+        margin: 0 0 16px;
+        font-size: 20px;
+        font-weight: 700;
+        color: #0f172a;
+      }
+      .nutrients-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+      }
+      .stat-card {
+        border-radius: 20px;
+        border: 2px solid transparent;
+        padding: 18px 20px;
+        color: var(--slate-900);
+        background: #ffffff;
+      }
+      .stat-card.calories { border-color: #fdba74; }
+      .stat-card.protein { border-color: #f472b6; }
+      .stat-card.carbs { border-color: #facc15; }
+      .stat-card.fat { border-color: #93c5fd; }
+      .stat-card.fiber { border-color: #84cc16; }
+      .stat-card.sugar { border-color: #fda4af; }
+      .stat-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #475467;
+        margin-bottom: 8px;
+      }
+      .stat-value {
+        font-size: 26px;
+        font-weight: 700;
+        color: #0f172a;
+      }
+      .two-column {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+      }
+      .list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin: 0;
+        padding: 0;
+      }
+      .list li {
+        font-size: 14px;
+        color: #1f2937;
+        border-bottom: 1px solid #eef2f6;
+        padding-bottom: 10px;
+      }
+      .list li:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+      .instruction {
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+      }
+      .step-index {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #eef2ff;
+        color: #4338ca;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .instruction-title {
+        margin: 0 0 6px;
+        font-weight: 600;
+        color: #111827;
+      }
+      .instruction-text {
+        margin: 0;
+        color: #374151;
+        line-height: 1.5;
+      }
+      .insight-text {
+        font-size: 14px;
+        line-height: 1.6;
+        color: #111827;
+      }
+      .badge-row {
+        display: inline-flex;
+        padding: 8px 20px;
+        border-radius: 999px;
+        background: #e0f2fe;
+        color: #0369a1;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        border: 1px solid #7dd3fc;
+      }
+      .substitution-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+      .sub-card {
+        border-radius: 18px;
+        border: 1px solid #e4e7ec;
+        padding: 14px 16px;
+        background: #fff;
+      }
+      .sub-title {
+        margin: 0 0 6px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #0f172a;
+      }
+      .sub-text {
+        margin: 0;
+        font-size: 13px;
+        color: #475467;
+        line-height: 1.5;
+      }
+      .muted {
+        color: #94a3b8;
+        font-size: 14px;
+      }
+    `;
+
+    const imageHtml = imageSrc
+      ? `<img src="${imageSrc}" class="hero-img" />`
+      : `<div class="hero-img" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;font-weight:600;">No image</div>`;
+
+    const servingLabel = servingApproximation
+      ? `Approx. ${servingApproximation.grams}g`
+      : analysis.servingSize || "1 serving";
+
+    const confidence = typeof analysis.confidence === "number"
+      ? `${Math.round((analysis.confidence || 0) * 100)}%`
+      : "—";
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>${escapeHtml(analysis.dish || "Food Analysis")}</title>
+          <style>${pdfStyles}</style>
+        </head>
+        <body>
+          <div class="report">
+            <div class="card header-card">
+              ${imageHtml}
+              <div class="summary">
+                <h1 class="title">${escapeHtml(analysis.dish || "Food Analysis")}</h1>
+                <p class="subtitle">${escapeHtml(
+                  analysis.description ||
+                    "AI-generated nutrition summary with personalized context."
+                )}</p>
+                <div class="meta-row">
+                  <span class="pill">Servings: ${formatNumber(servings, 2)}</span>
+                  <span class="pill">Serving Size: ${escapeHtml(servingLabel)}</span>
+                  <span class="pill">Confidence: ${confidence}</span>
+                </div>
+                <div class="tags">${tagsHtml}</div>
+                <div class="callout">
+                  ${servingGuidance}
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <p class="section-title">Nutrition Overview</p>
+              <div class="nutrients-grid">
+                ${nutrientHtml}
+              </div>
+            </div>
+
+            <div class="card">
+              <p class="section-title">Additional Information</p>
+              <p class="insight-text">${additionalInfoHtml}</p>
+            </div>
+
+            <div class="card">
+              <div class="two-column">
+                <div>
+                  <p class="section-title">Ingredients</p>
+                  <ul class="list">${ingredientsHtml}</ul>
+                </div>
+                <div>
+                  <p class="section-title">How to Prepare</p>
+                  <ol class="list">
+                    ${instructionsHtml}
+                  </ol>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <p class="section-title">Personalized Health Context</p>
+              ${insightsHtml}
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+  };
+
+  const escapeHtml = (value?: string | null) => {
+    if (!value) return "";
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  };
+
+  const formatTextBlock = (value?: string | null) => {
+    if (!value) return "";
+    return escapeHtml(value).replace(/\n/g, "<br />");
+  };
+
+  const formatNumber = (value?: number | null, decimals: number = 1) => {
+    if (typeof value !== "number" || Number.isNaN(value)) return "-";
+    const fixed = value % 1 === 0 ? value.toString() : value.toFixed(decimals);
+    return fixed.replace(/\.0+$/, "");
+  };
+
+  const parseInstruction = (step: string) => {
+    const boldMatch = step.match(/^\*\*(.+?)\*\*[:\s]*(.+)$/);
+    if (boldMatch) {
+      return {
+        title: escapeHtml(boldMatch[1]),
+        description: formatTextBlock(boldMatch[2]),
+      };
+    }
+    return {
+      title: "",
+      description: formatTextBlock(step),
+    };
+  };
+
   const servingApproximation = useMemo(() => {
     // First, check if servingWeightGrams is available from Gemini
     if (analysis?.servingWeightGrams && analysis.servingWeightGrams > 0) {
@@ -305,36 +812,95 @@ export function FoodResultsClient() {
     }
 
     setExportingPdf(true);
-    const node = reportRef.current;
-    node.classList.add("pdf-capturing");
-    const waitForReflow = () =>
-      new Promise((resolve) => {
-        requestAnimationFrame(() => resolve(null));
-      });
+
+    let iframe: HTMLIFrameElement | null = null;
 
     try {
-      const backgroundColor = window.getComputedStyle(document.body).backgroundColor || "#ffffff";
-      await waitForReflow();
-      const canvas = await html2canvas(node, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor,
-        windowWidth: node.scrollWidth,
-        windowHeight: node.scrollHeight,
+      const imageDataUrl = imageUrl ? await fetchImageAsDataUrl(imageUrl) : null;
+      const pdfHtml = buildPdfHtml(imageDataUrl || imageUrl || undefined);
+      const workingIframe = document.createElement("iframe");
+      iframe = workingIframe;
+      workingIframe.style.position = "fixed";
+      workingIframe.style.top = "0";
+      workingIframe.style.left = "-9999px";
+      workingIframe.style.width = "1100px";
+      workingIframe.style.height = "10px";
+      workingIframe.style.opacity = "0";
+      workingIframe.style.pointerEvents = "none";
+      document.body.appendChild(workingIframe);
+
+      const iframeLoadPromise = new Promise<void>((resolve) => {
+        workingIframe.onload = () => resolve();
       });
 
-      const imgData = canvas.toDataURL("image/png");
+      workingIframe.srcdoc = pdfHtml;
+      await iframeLoadPromise;
+
+      const iframeDoc = workingIframe.contentDocument!;
+      const captureTarget = iframeDoc.body;
+
+      if (iframeDoc.fonts && iframeDoc.fonts.ready) {
+        try {
+          await iframeDoc.fonts.ready;
+        } catch {
+          // ignore font errors
+        }
+      }
+
+      const images = Array.from(captureTarget.querySelectorAll("img"));
+      await Promise.all(
+        images.map((img) => {
+          if ((img as HTMLImageElement).complete) return Promise.resolve(null);
+          return new Promise((resolve) => {
+            img.onload = () => resolve(null);
+            img.onerror = () => resolve(null);
+            setTimeout(() => resolve(null), 3000);
+          });
+        })
+      );
+
+      await new Promise((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve(null));
+        });
+      });
+
+      const canvas = await html2canvas(captureTarget, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        allowTaint: false,
+        removeContainer: false,
+        imageTimeout: 15000,
+        width: captureTarget.scrollWidth || captureTarget.offsetWidth,
+        height: captureTarget.scrollHeight || captureTarget.offsetHeight,
+        windowWidth: captureTarget.scrollWidth || captureTarget.offsetWidth,
+        windowHeight: captureTarget.scrollHeight || captureTarget.offsetHeight,
+      });
+
+      const imgData = canvas.toDataURL("image/png", 1.0);
       const pdfWidth = canvas.width;
       const pdfHeight = canvas.height;
-      const pdf = new jsPDF("p", "px", [pdfWidth, pdfHeight]);
+
+      const pdf = new jsPDF({
+        unit: "px",
+        format: [pdfWidth, pdfHeight],
+        compress: true,
+      });
+      
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
 
       const safeTitle = (analysis.dish || "food-result").replace(/[^\w\d_-]+/g, "-");
       pdf.save(`${safeTitle}.pdf`);
       toast({
         title: "PDF ready",
-        description: "We saved the exact screen layout to your downloads.",
+        description: "We saved a share-ready report to your downloads.",
       });
+
+      if (workingIframe && document.body.contains(workingIframe)) {
+        document.body.removeChild(workingIframe);
+      }
     } catch (error) {
       console.error("PDF export failed:", error);
       toast({
@@ -343,7 +909,9 @@ export function FoodResultsClient() {
         variant: "destructive",
       });
     } finally {
-      node.classList.remove("pdf-capturing");
+      if (iframe && document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
+      }
       setExportingPdf(false);
     }
   };
@@ -653,7 +1221,7 @@ export function FoodResultsClient() {
                 </h1>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 pdf-hide">
               <Button size="sm" variant="outline" onClick={handleShare}>
                 <Share2 className="h-4 w-4 mr-2" />
                 Share

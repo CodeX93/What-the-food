@@ -23,6 +23,14 @@ export default function Hero() {
   const router = useRouter();
   const { toast } = useToast();
 
+  const handleGetStarted = () => {
+    if (user) {
+      router.push("/dashboard");
+    } else {
+      router.push("/auth");
+    }
+  };
+
   useEffect(() => {
     // Check authentication and premium status
     const checkAuthAndScans = async () => {
@@ -228,8 +236,12 @@ export default function Hero() {
 
           {/* Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center w-full">
-            <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base w-full sm:w-auto" asChild>
-              <Link href="/auth">Get Started Free</Link>
+            <Button
+              size="lg"
+              className="bg-primary hover:bg-primary-hover text-sm sm:text-base w-full sm:w-auto"
+              onClick={handleGetStarted}
+            >
+              Get Started Free
             </Button>
             <Button size="lg" variant="outline" className="text-sm sm:text-base w-full sm:w-auto" asChild>
               <Link href="/how-it-works">Learn More</Link>
@@ -360,8 +372,12 @@ export default function Hero() {
                 Track calories, macros, and make healthier choices effortlessly.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-start">
-                <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" asChild>
-                  <Link href="/auth">Get Started Free</Link>
+                <Button
+                  size="lg"
+                  className="bg-primary hover:bg-primary-hover text-sm sm:text-base"
+                  onClick={handleGetStarted}
+                >
+                  Get Started Free
                 </Button>
                 <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
                   <Link href="/how-it-works">Learn More</Link>

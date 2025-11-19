@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   ArrowRight,
   Upload,
+  UtensilsCrossed,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getPlatformSubscription } from "@/utils/subscription";
@@ -181,7 +182,7 @@ export function DashboardClient({
       </section>
 
       <div className="container mx-auto px-4 pb-10">
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card
             className="cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => {
@@ -228,6 +229,20 @@ export function DashboardClient({
                 <div>
                   <CardTitle className="text-lg">History</CardTitle>
                   <CardDescription>Past scans</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+
+          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push("/meal-planner")}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <UtensilsCrossed className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Meal Planner</CardTitle>
+                  <CardDescription>Personalized meal plan</CardDescription>
                 </div>
               </div>
             </CardHeader>
