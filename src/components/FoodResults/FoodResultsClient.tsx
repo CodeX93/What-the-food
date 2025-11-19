@@ -79,6 +79,28 @@ export function FoodResultsClient() {
     setServingsInput(clamped.toString());
   };
 
+  const persistInsights = async (newInsights: string) => {
+    setInsightsText(newInsights);
+
+    if (!analysis) {
+      return;
+    }
+
+    const updatedAnalysis = { ...analysis, insights: newInsights };
+    setAnalysis(updatedAnalysis);
+
+    if (!id) return;
+
+    try {
+      await (supabase as any)
+        .from("food_scans")
+        .update({ result_json: updatedAnalysis })
+        .eq("id", id);
+    } catch (error) {
+      console.error("Failed to save insights", error);
+    }
+  };
+
   const [savedServings, setSavedServings] = useState(1);
   const [imageUrl, setImageUrl] = useState<string>("");
   const [imagePath, setImagePath] = useState<string>("");
@@ -405,7 +427,11 @@ export function FoodResultsClient() {
 
         applyServings(scanRecord.serving || 1);
         setSavedServings(scanRecord.serving || 1);
-        setAnalysis((scanRecord.result_json as FoodAnalysis) || null);
+        const loadedAnalysis = (scanRecord.result_json as FoodAnalysis) || null;
+        setAnalysis(loadedAnalysis);
+        if (loadedAnalysis?.insights) {
+          setInsightsText(loadedAnalysis.insights);
+        }
         setImagePath(scanRecord.image_path || "");
         const freshUrl = scanRecord.image_path ? await getImageUrl(scanRecord.image_path, 60 * 60) : null;
         setImageUrl(freshUrl || scanRecord.image_url || "");
@@ -1181,7 +1207,7 @@ export function FoodResultsClient() {
                                   return;
                                 }
                                 if (res.insights) {
-                                  setInsightsText(res.insights);
+                                  await persistInsights(res.insights);
                                   console.log("Insights set successfully");
                                 } else {
                                   throw new Error("No insights returned from server");
@@ -1251,7 +1277,7 @@ export function FoodResultsClient() {
                                   return;
                                 }
                                 if (res.insights) {
-                                  setInsightsText(res.insights);
+                                  await persistInsights(res.insights);
                                   console.log("Optimized insights set successfully");
                                 } else {
                                   throw new Error("No insights returned from server");
