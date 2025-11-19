@@ -132,7 +132,10 @@ export default function Hero() {
           imagePath: path, 
           imageUrl: signedUrl || publicUrl, 
           serving: 1, 
-          result: analysis.analysis 
+          result: {
+            ...analysis.analysis,
+            ...(analysis.insights ? { insights: analysis.insights } : {}),
+          },
         });
         
         toast({
@@ -166,7 +169,10 @@ export default function Hero() {
           imagePath: path, 
           imageUrl: signedUrl || publicUrl, 
           serving: 1, 
-          result: analysis.analysis 
+          result: {
+            ...analysis.analysis,
+            ...(analysis.insights ? { insights: analysis.insights } : {}),
+          },
         });
         
         if (!isPremium) {

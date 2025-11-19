@@ -387,7 +387,10 @@ export function DashboardClient({
                           imagePath: uploadedImagePath,
                           imageUrl: uploadedImageUrl,
                           serving: servings,
-                          result: result.analysis,
+                          result: {
+                            ...result.analysis,
+                            ...(result.insights ? { insights: result.insights } : {}),
+                          },
                         });
                         if (!subscription || subscription.subscription_type !== "premium") {
                           try {

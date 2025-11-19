@@ -20,6 +20,7 @@ export type FoodAnalysis = {
   ingredients: string[];
   instructions: string[];
   youtubeVideoUrl?: string;
+  insights?: string;
 };
 
 type AnalyzeFoodResponse = {
