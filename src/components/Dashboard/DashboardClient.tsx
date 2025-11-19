@@ -234,43 +234,58 @@ export function DashboardClient({
           </Card>
         </div>
 
-        <div id="upload-section" className="grid md:grid-cols-2 gap-6 mb-8">
-          {/* Ad/Sponsor Space - Left Side */}
-          <Card className="border-dashed border-2 border-muted-foreground/20 bg-gradient-to-br from-muted/50 to-muted/30">
-            <CardHeader>
-              <CardTitle className="text-lg">Sponsored</CardTitle>
+        <div id="upload-section" className="grid md:grid-cols-2 gap-6 mb-8 md:items-stretch">
+          {/* Sponsored Section - Left Side */}
+          <Card className="flex flex-col h-full">
+            <CardHeader className="pb-4">
+              <CardTitle >Sponsored</CardTitle>
               <CardDescription>Advertisement Space</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center min-h-[400px] p-6">
-              <div className="text-center space-y-4 w-full">
-                <div className="p-6 bg-primary/5 rounded-lg border border-primary/10">
-                  <Sparkles className="h-12 w-12 text-primary/60 mx-auto mb-3" />
-                  <p className="text-sm font-medium text-muted-foreground mb-2">
-                    Ad Space Available
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Reach health-conscious users interested in nutrition tracking
-                  </p>
-                </div>
-                <div className="pt-4 border-t border-muted-foreground/10">
-                  <p className="text-xs text-muted-foreground/70">
-                    Contact us to advertise here
-                  </p>
+            <CardContent className="p-4 pt-0 pb-4">
+              <div className="relative">
+                {/* Four Ad Boxes in 2x2 Grid */}
+                <div className="grid grid-cols-2 gap-3 relative">
+                  {[1, 2, 3, 4].map((index) => (
+                    <div
+                      key={index}
+                      className="border-2 border-dashed border-muted-foreground/40 rounded-lg bg-background/50 min-h-[80px] flex flex-col items-center justify-center text-muted-foreground/70 aspect-square"
+                    >
+                      <Sparkles className="h-4 w-4 mb-1 text-muted-foreground/60" />
+                      <p className="text-[10px] uppercase tracking-wide">Ad Illustration</p>
+                      <span className="text-[9px]">160×120</span>
+                    </div>
+                  ))}
+                  
+                  {/* Informational Content Overlaid in Center */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="p-3 bg-primary/5 rounded-lg border border-primary/10 text-center max-w-[180px] backdrop-blur-sm">
+                      <Sparkles className="h-6 w-6 text-primary/60 mx-auto mb-1.5" />
+                      <p className="text-xs font-medium text-muted-foreground mb-0.5">
+                        Ad Space Available
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mb-1.5">
+                        Reach health-conscious users interested in nutrition tracking
+                      </p>
+                      <p className="text-[9px] text-muted-foreground/70">
+                        Contact us to advertise here
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Upload and Analyze - Right Side */}
-          <Card>
-            <CardHeader>
+          <Card className="flex flex-col h-full">
+            <CardHeader className="pb-4">
               <CardTitle>Upload and Analyze</CardTitle>
               <CardDescription>PNG, JPG, JPEG, HEIC</CardDescription>
             </CardHeader>
-              <CardContent>
+              <CardContent className="flex-1 flex flex-col pt-0 pb-4">
             {!uploadedFile ? (
               <div
-                className="border-2 border-dashed border-primary/30 rounded-lg p-10 cursor-pointer bg-muted/30 text-center hover:border-primary/50 transition-colors"
+                className="border-2 border-dashed border-primary/30 rounded-lg p-10 cursor-pointer bg-muted/30 text-center hover:border-primary/50 transition-colors flex-1 flex flex-col items-center justify-center"
                 onClick={() => {
                   const input = document.createElement("input");
                   input.type = "file";
@@ -297,7 +312,7 @@ export function DashboardClient({
                 <Button>Choose File</Button>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 flex-1 flex flex-col">
                 <div className="relative rounded-lg overflow-hidden border-2 border-primary/20 bg-muted/30">
                   <div className="aspect-video relative">
                     {uploadedImageUrl ? (
@@ -408,20 +423,6 @@ export function DashboardClient({
                 </div>
               </div>
             )}
-
-            {/* Ad placeholder spaces */}
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {[1, 2, 3, 4].map((index) => (
-                <div
-                  key={index}
-                  className="border border-dashed border-muted-foreground/30 rounded-lg bg-muted/30 min-h-[120px] flex flex-col items-center justify-center text-muted-foreground/70"
-                >
-                  <Sparkles className="h-6 w-6 mb-2 text-muted-foreground/60" />
-                  <p className="text-xs uppercase tracking-wide">Ad Illustration</p>
-                  <span className="text-[10px]">160×120</span>
-                </div>
-              ))}
-            </div>
             </CardContent>
           </Card>
         </div>

@@ -20,14 +20,11 @@ const SCHEMA_WITH_INSIGHTS = `${BASE_SCHEMA.slice(0, -1)},"insights":string}`;
 const PROMPT_GUIDELINES = `Guidelines:
 - "description" should be a concise 1-2 sentence summary of the meal.
 - Provide 3-6 descriptive "tags" (short lowercase keywords separated into an array).
-- "additionalInfo" must be COMPREHENSIVE and DETAILED. It should provide extensive information about the dish, including:
-  * Nutrition variability: Explain how nutrition values can vary based on ingredient quality, portion size, cooking method, added oils/sauces, brand variations, and preparation techniques. Be specific about which nutrients are most likely to vary and why.
-  * Health considerations: Mention any notable health benefits, dietary considerations, allergens, or nutritional highlights specific to this dish (e.g., high protein, fiber content, vitamin sources, etc.).
-  * Cooking variations: Discuss how different cooking methods (baking vs frying, steaming vs boiling) might affect the nutritional profile.
-  * Ingredient substitutions: Mention common ingredient variations or substitutions that could impact nutrition values.
-  * Storage and serving tips: Provide guidance on how to store, reheat, or serve the dish while maintaining nutritional value.
-  * Portion control guidance: Offer specific advice on how to adjust portions for different dietary needs or goals.
-  * Write in complete, well-structured paragraphs (2-4 sentences minimum). Be informative, helpful, and tailored specifically to the dish being analyzed.
+- "additionalInfo" must be RICH, PERSONALIZED, and CONCISE. It should provide valuable information about the dish in MAXIMUM 5-6 lines total (approximately 50-80 words). Write in a single, well-structured paragraph that covers:
+  * Key nutrition variability factors (how values may vary based on cooking method, portion size, or ingredient quality)
+  * Notable health benefits or dietary considerations specific to this dish
+  * Practical tips for storage, serving, or portion adjustments
+  * Be informative, helpful, and tailored to the dish, but keep it concise and readable. NEVER exceed 6 lines of text. Prioritize the most important and actionable information.
 - "servingGuidance" must provide clear, specific instructions on how to calculate servings for the user's actual portion. The guidance MUST:
   * Explicitly tell users to divide their actual dish weight (in grams) by the projected serving weight shown in the Nutrition Summary (the ~Xg value)
   * Include a concrete, realistic example using the servingWeightGrams value you provide. For instance, if servingWeightGrams is 300, use: "For example, if your dish weighs 470g and the projected serving is ~300g, divide 470 ÷ 300 = 1.56 servings"
@@ -36,20 +33,22 @@ const PROMPT_GUIDELINES = `Guidelines:
   * Format: "To calculate your servings, divide your actual dish weight (in grams) by the projected serving weight shown above (~Xg). For example, if your dish weighs 470g and the projected serving is ~Xg, divide 470 ÷ X = Y servings. This tells you how many servings your portion contains."
 - "servingWeightGrams" is MANDATORY and must ALWAYS be provided. It must be the estimated weight in grams for one serving of the dish. This should be a realistic number based on the dish type, ingredients, and typical portion sizes. For example, a typical serving of pasta might be 200-250g, a burger might be 150-200g, a salad might be 150-300g. NEVER omit this field or set it to zero. Always provide a realistic weight estimate.
 - Every entry in "ingredients" must begin with a quantity and unit in METRIC format ONLY (grams, kg, ml, liters). NEVER use imperial units (oz, pounds, cups, tbsp, tsp, etc.). Convert all measurements to metric. Examples: "250g cooked chickpeas", "30ml olive oil", "150g potatoes".
-- "instructions" must be EXTREMELY DETAILED step-by-step cooking/preparation instructions. Each step must follow this EXACT structure:
-  * Start with a clear, descriptive action title in markdown bold format: **Title** followed by a colon and space, then the detailed instructions
-  * Example format: "**Prepare the Pepper Base**: Instructions to blend onions, bell peppers, scotch bonnet peppers, and tomatoes until smooth to create the pepper base."
-  * Follow with comprehensive, detailed sentences that include:
-    - Specific ingredients and quantities mentioned in the step
-    - Exact temperatures (in both Fahrenheit and Celsius when applicable, e.g., "375°F (190°C)")
+- "instructions" must be COMPLETE, DETAILED, and EXHAUSTIVE step-by-step cooking/preparation instructions. CRITICAL REQUIREMENTS:
+  * You MUST provide the ENTIRE recipe from start to finish. NEVER truncate, abbreviate, or leave steps incomplete.
+  * Each step must follow this EXACT structure: Start with a clear, descriptive action title in markdown bold format: **Title** followed by a colon and space, then the detailed instructions
+  * Example format: "**Prepare the Pepper Base**: Heat 30ml of vegetable oil in a large pot over medium heat (350°F/175°C). Add 200g chopped onions and cook for 3-4 minutes until translucent. Then add 150g chopped bell peppers, 2 scotch bonnet peppers (seeded), and 300g chopped tomatoes. Blend everything together until smooth using an immersion blender or food processor, creating a vibrant pepper base for the dish."
+  * Each step must include comprehensive, detailed sentences with:
+    - Specific ingredients and quantities (always in metric: grams, kg, ml, liters)
+    - Exact temperatures in both Fahrenheit and Celsius when applicable (e.g., "375°F (190°C)")
     - Precise cooking times (e.g., "2-3 minutes", "20-25 minutes", "30-40 minutes")
-    - Detailed techniques and methods (blend, heat, stir, simmer, bake, baste, etc.)
-    - Specific measurements or ratios (e.g., "liquid should be about 1 inch above the rice")
-    - Clear action sequences with transitions (e.g., "then", "next", "after that")
-    - Visual cues or doneness indicators (e.g., "until the sauce thickens", "until the chicken is cooked through and the glaze is sticky")
+    - Detailed techniques and methods (blend, heat, stir, simmer, bake, baste, sauté, etc.)
+    - Specific measurements or ratios (e.g., "liquid should be about 2.5cm above the rice")
+    - Clear action sequences with transitions (e.g., "then", "next", "after that", "once", "when")
+    - Visual cues or doneness indicators (e.g., "until the sauce thickens and coats the back of a spoon", "until the chicken is cooked through and the internal temperature reaches 165°F (74°C)", "until golden brown and crispy")
   * Write in complete, well-structured sentences (not bullet points or fragments)
   * Each step should be comprehensive enough that someone can follow it without prior knowledge
-  * Provide atleast 5-10 detailed steps that cover the entire preparation process from start to finish, including all components of the dish
+  * You MUST provide ALL steps needed to complete the dish. Typically this means 6-12 detailed steps covering: ingredient preparation, cooking techniques, seasoning, combining components, final cooking, and presentation/garnishing
+  * NEVER end instructions mid-step or with incomplete information. Always complete the full recipe process.
 - "youtubeVideoUrl" is MANDATORY and must ALWAYS be provided. It must be a valid YouTube video URL (format: https://www.youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID) that demonstrates how to prepare this specific dish. You MUST search for and provide a high-quality, relevant tutorial video that matches the dish shown in the image. If no exact match is available, provide the closest relevant video for a similar dish or cooking technique. The URL must be a complete, valid YouTube link. NEVER return an empty string - always provide a YouTube video URL, even if it's for a similar dish or cooking method.
 - Ensure nutrient values are realistic positive numbers (avoid zeros unless absolutely accurate).
 - Reflect the most accurate ingredient amounts available.
@@ -118,7 +117,7 @@ async function callGemini(imageBase64, mimeType, options = {}) {
   if (!GEMINI_API_KEY) throw new Error("Missing API key");
 
   let prompt = buildPrompt(includeInsights);
-  let maxTokens = 800; // Aggressive reduction
+  let maxTokens = 2000; // Increased to ensure complete instructions and detailed responses
 
   // Add profile context to main prompt if available (even without insights)
   if (insightsParams && (insightsParams.weight_kg || insightsParams.height_cm || insightsParams.gender || insightsParams.age)) {

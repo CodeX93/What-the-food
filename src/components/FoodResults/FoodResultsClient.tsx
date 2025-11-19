@@ -720,12 +720,12 @@ export function FoodResultsClient() {
             </Card>
           </div>
 
-          <div className="lg:col-span-8 space-y-6">
-            <Card className="relative overflow-hidden">
+          <div className="lg:col-span-8 space-y-7">
+            <Card >
               <CardHeader>
                 <div className="space-y-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                    <CardTitle className="text-xl flex items-center gap-2 flex-wrap">
+                <div className="lg:col-span-4">
+                <CardTitle className="overflow-hidden sticky top-6 pb-3">
                       Nutrition Summary
                       {servingApproximation && (
                         <span className="text-base font-normal text-muted-foreground whitespace-nowrap">
@@ -742,7 +742,11 @@ export function FoodResultsClient() {
                         value={servingsInput}
                         onChange={(e) => {
                           const raw = e.target.value;
-                          setServingsInput(raw);
+                          
+                          if (raw === "") {
+                            setServingsInput("");
+                            return;
+                          }
 
                           const sanitized = raw.replace(/[^0-9.]/g, "");
                           const dots = (sanitized.match(/\./g) ?? []).length;
@@ -750,8 +754,16 @@ export function FoodResultsClient() {
                             return;
                           }
 
+                          setServingsInput(sanitized);
+
                           const parsed = parseFloat(sanitized);
-                          if (!Number.isNaN(parsed) && parsed >= MIN_SERVINGS) {
+                          const hasCompleteNumber = sanitized !== "" && !sanitized.endsWith(".");
+                          
+                          if (
+                            hasCompleteNumber &&
+                            !Number.isNaN(parsed) &&
+                            parsed >= MIN_SERVINGS
+                          ) {
                             applyServings(parsed);
                           }
                         }}
@@ -759,8 +771,10 @@ export function FoodResultsClient() {
                           const parsed = parseFloat(servingsInput);
                           if (!Number.isNaN(parsed) && parsed >= MIN_SERVINGS) {
                             applyServings(parsed);
+                            setServingsInput(parsed.toString());
                           } else {
                             applyServings(MIN_SERVINGS);
+                            setServingsInput(MIN_SERVINGS.toString());
                           }
                         }}
                       />
