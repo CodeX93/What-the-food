@@ -445,7 +445,7 @@ export function MealPlannerClient() {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle>Saved Meal Plans</CardTitle>
-            <CardDescription>Load any plan you've saved previously.</CardDescription>
+            <CardDescription>Load any plan you&apos;ve saved previously.</CardDescription>
           </CardHeader>
           <CardContent>
             {savedPlansLoading ? (

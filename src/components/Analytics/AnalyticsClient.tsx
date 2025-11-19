@@ -199,7 +199,7 @@ export function AnalyticsClient() {
       const totals = manualData.totals || {};
       const dishName = `Manual: ${foods.join(", ")}`.slice(0, 200);
 
-      const { error: insertError } = await supabase.from("scans").insert({
+      const { error: insertError } = await (supabase as any).from("scans").insert({
         user_id: session.user.id,
         dish_name: dishName,
         calories: Math.round(totals.calories ?? 0),
