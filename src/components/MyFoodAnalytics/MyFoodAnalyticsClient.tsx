@@ -12,12 +12,19 @@ import {
   ArrowLeft,
   CalendarRange,
   Loader2,
-  Plus,
-  X,
   Lock,
   ShieldCheck,
   Sparkles,
   ArrowRight,
+  Flame,
+  Beef,
+  Wheat,
+  Droplet,
+  Apple,
+  Candy,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -40,6 +47,8 @@ type FoodScan = {
       protein_g?: number;
       carbohydrates_g?: number;
       fat_g?: number;
+      fiber_g?: number;
+      sugar_g?: number;
     };
     manualItems?: ManualItem[];
   };
@@ -59,6 +68,84 @@ const parseNumber = (value: any): number => {
   return 0;
 };
 
+// Calculate daily macro requirements based on profile
+const calculateDailyRequirements = (profile: any) => {
+  if (!profile || !profile.weight_kg || !profile.height_cm) {
+    return null;
+  }
+
+  const weight = profile.weight_kg;
+  const height = profile.height_cm;
+  const age = profile.age || 30;
+  const gender = profile.gender || "male";
+  const activityLevel = profile.activity_level || "moderate";
+  const goal = profile.goal || "maintenance";
+
+  // Calculate BMR using Mifflin-St Jeor Equation
+  let bmr: number;
+  if (gender.toLowerCase() === "female") {
+    bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+  } else {
+    bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+  }
+
+  // Activity multipliers
+  const activityMultipliers: Record<string, number> = {
+    sedentary: 1.2,
+    light: 1.375,
+    moderate: 1.55,
+    active: 1.725,
+    very_active: 1.9,
+  };
+
+  const multiplier = activityMultipliers[activityLevel.toLowerCase()] || 1.55;
+  let tdee = bmr * multiplier;
+
+  // Adjust for goal
+  if (goal === "weight_loss") {
+    tdee = tdee * 0.85; // 15% deficit
+  } else if (goal === "weight_gain") {
+    tdee = tdee * 1.15; // 15% surplus
+  }
+
+  const calories = Math.round(tdee);
+
+  // Macro distribution (can be adjusted based on goal)
+  let proteinPercent = 0.25; // 25% protein
+  let carbsPercent = 0.45; // 45% carbs
+  let fatPercent = 0.30; // 30% fat
+
+  if (goal === "weight_loss") {
+    proteinPercent = 0.30;
+    carbsPercent = 0.35;
+    fatPercent = 0.35;
+  } else if (goal === "weight_gain") {
+    proteinPercent = 0.20;
+    carbsPercent = 0.50;
+    fatPercent = 0.30;
+  }
+
+  // Calculate macros in grams
+  const protein = Math.round((calories * proteinPercent) / 4); // 4 cal/g
+  const carbs = Math.round((calories * carbsPercent) / 4); // 4 cal/g
+  const fat = Math.round((calories * fatPercent) / 9); // 9 cal/g
+
+  // Fiber: 14g per 1000 calories (minimum)
+  const fiber = Math.round((calories / 1000) * 14);
+  
+  // Sugar: Max 10% of calories (WHO recommendation)
+  const sugar = Math.round((calories * 0.10) / 4);
+
+  return {
+    calories,
+    protein,
+    carbs,
+    fat,
+    fiber,
+    sugar,
+  };
+};
+
 type MyFoodAnalyticsClientProps = {
   initialSubscription?: any;
 };
@@ -70,6 +157,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
   const [scans, setScans] = useState<FoodScan[]>([]);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [profile, setProfile] = useState<any>(null);
   const [manualFoods, setManualFoods] = useState<Array<{ id: string; value: string }>>([
     { id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`, value: "" },
   ]);
@@ -156,7 +244,9 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
         isManualEntry: true,
       };
 
+      const scanId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const { error: insertError } = await (supabase as any).from("food_scans").insert({
+        id: scanId,
         user_id: session.user.id,
         image_path: `manual-entry-${Date.now()}-${crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substr(2, 9)}`,
         image_url: null,
@@ -164,6 +254,35 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
         result_json: manualResult,
       });
       if (insertError) throw insertError;
+
+      // Generate additionalInfo and insights using Gemini
+      try {
+        const { data: analyzeData, error: analyzeError } = await supabase.functions.invoke("analyze-food", {
+          body: {
+            manualEntry: {
+              dish: dishName.replace(/^Manual:\s*/, ""),
+              ingredients: manualData.items?.map((item: any) => `${item.name}`) ?? foods,
+            },
+          },
+        });
+        
+        if (!analyzeError && analyzeData?.ok && analyzeData?.analysis) {
+          // Update the scan with generated additionalInfo and insights
+          const updatedResult = {
+            ...manualResult,
+            additionalInfo: analyzeData.analysis.additionalInfo || manualResult.additionalInfo,
+            insights: analyzeData.insights || undefined,
+          };
+          
+          await (supabase as any)
+            .from("food_scans")
+            .update({ result_json: updatedResult })
+            .eq("id", scanId);
+        }
+      } catch (genError) {
+        // Don't fail the whole operation if generation fails
+        console.error("Failed to generate additionalInfo/insights:", genError);
+      }
 
       setManualFoods([{ id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`, value: "" }]);
 
@@ -201,6 +320,15 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
         router.push("/auth");
         return;
       }
+      
+      // Fetch profile
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", session.user.id)
+        .maybeSingle();
+      setProfile(profileData);
+
       const { data, error } = await supabase
         .from("food_scans")
         .select("id, created_at, serving, result_json")
@@ -240,9 +368,9 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
   }, [scans, startDate, endDate]);
 
   const stats = useMemo(() => {
-    const daily: Record<string, { calories: number; protein: number; carbs: number; fat: number; count: number }> = {};
+    const daily: Record<string, { calories: number; protein: number; carbs: number; fat: number; fiber: number; sugar: number; count: number }> = {};
     const dishes: Record<string, number> = {};
-    const totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+    const totals = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0 };
 
     for (const scan of filteredScans) {
       const day = formatDay(scan.created_at);
@@ -252,21 +380,27 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
       const protein = parseNumber(nutrients.protein_g) * servingsMultiplier;
       const carbs = parseNumber(nutrients.carbohydrates_g) * servingsMultiplier;
       const fat = parseNumber(nutrients.fat_g) * servingsMultiplier;
+      const fiber = parseNumber(nutrients.fiber_g) * servingsMultiplier;
+      const sugar = parseNumber(nutrients.sugar_g) * servingsMultiplier;
 
       if (!daily[day]) {
-        daily[day] = { calories: 0, protein: 0, carbs: 0, fat: 0, count: 0 };
+        daily[day] = { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0, count: 0 };
       }
 
       daily[day].calories += calories;
       daily[day].protein += protein;
       daily[day].carbs += carbs;
       daily[day].fat += fat;
+      daily[day].fiber += fiber;
+      daily[day].sugar += sugar;
       daily[day].count += 1;
 
       totals.calories += calories;
       totals.protein += protein;
       totals.carbs += carbs;
       totals.fat += fat;
+      totals.fiber += fiber;
+      totals.sugar += sugar;
 
       const addDishCount = (label: string) => {
         const key = label.slice(0, 60) || "Unknown";
@@ -349,6 +483,20 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
 
   const calorieSeries = buildBarSeries(stats.byDay, (value) => value.calories, maxCal);
   const countSeries = buildBarSeries(stats.byDay, (value) => value.count, maxCount);
+
+  // Calculate today's totals
+  const today = formatDay(new Date().toISOString());
+  const todayStats = stats.byDay.find(([date]) => date === today)?.[1] || {
+    calories: 0,
+    protein: 0,
+    carbs: 0,
+    fat: 0,
+    fiber: 0,
+    sugar: 0,
+  };
+
+  // Get daily requirements
+  const dailyRequirements = useMemo(() => calculateDailyRequirements(profile), [profile]);
 
   if (!isPremium) {
     return (
@@ -481,8 +629,153 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card className="lg:col-span-2">
+          <div className="space-y-6">
+            {/* Today's Intake - Horizontal Layout */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Today&apos;s Intake</CardTitle>
+                <CardDescription>
+                  {dailyRequirements
+                    ? "Personalized targets based on your profile"
+                    : "Complete your profile to see personalized targets"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  {[
+                    {
+                      icon: Flame,
+                      label: "Calories",
+                      value: Math.round(todayStats.calories),
+                      target: dailyRequirements?.calories,
+                      unit: "kcal",
+                      color: "orange",
+                      bgColor: "bg-orange-100/90",
+                      borderColor: "border-orange-200",
+                      textColor: "text-orange-900",
+                    },
+                    {
+                      icon: Beef,
+                      label: "Protein",
+                      value: Math.round(todayStats.protein),
+                      target: dailyRequirements?.protein,
+                      unit: "g",
+                      color: "rose",
+                      bgColor: "bg-rose-100/90",
+                      borderColor: "border-rose-200",
+                      textColor: "text-rose-900",
+                    },
+                    {
+                      icon: Wheat,
+                      label: "Carbs",
+                      value: Math.round(todayStats.carbs),
+                      target: dailyRequirements?.carbs,
+                      unit: "g",
+                      color: "yellow",
+                      bgColor: "bg-yellow-100/90",
+                      borderColor: "border-yellow-200",
+                      textColor: "text-yellow-900",
+                    },
+                    {
+                      icon: Droplet,
+                      label: "Fat",
+                      value: Math.round(todayStats.fat),
+                      target: dailyRequirements?.fat,
+                      unit: "g",
+                      color: "sky",
+                      bgColor: "bg-sky-100/90",
+                      borderColor: "border-sky-200",
+                      textColor: "text-sky-900",
+                    },
+                    {
+                      icon: Apple,
+                      label: "Fiber",
+                      value: Math.round(todayStats.fiber),
+                      target: dailyRequirements?.fiber,
+                      unit: "g",
+                      color: "emerald",
+                      bgColor: "bg-emerald-100/90",
+                      borderColor: "border-emerald-200",
+                      textColor: "text-emerald-900",
+                    },
+                    {
+                      icon: Candy,
+                      label: "Sugar",
+                      value: Math.round(todayStats.sugar),
+                      target: dailyRequirements?.sugar,
+                      unit: "g",
+                      color: "rose",
+                      bgColor: "bg-rose-100/90",
+                      borderColor: "border-rose-200",
+                      textColor: "text-rose-900",
+                    },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    const hasTarget = item.target !== undefined && item.target !== null;
+                    const target = item.target ?? 0;
+                    const isOver = hasTarget && item.value > target;
+                    const isUnder = hasTarget && item.value < target * 0.9; // 10% tolerance
+                    const isGood = hasTarget && !isOver && !isUnder;
+
+                    return (
+                      <div
+                        key={item.label}
+                        className={`p-3 rounded-lg border ${item.bgColor} ${item.borderColor} ${item.textColor} flex flex-col`}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <Icon className="h-4 w-4" />
+                          <span className="text-sm font-medium">{item.label}</span>
+                        </div>
+                        <div className="flex flex-col gap-1 flex-1">
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-xl font-bold">{item.value}</span>
+                            <span className="text-xs opacity-70">{item.unit}</span>
+                          </div>
+                          {hasTarget && (
+                            <>
+                              <div className="flex items-center gap-1 text-xs">
+                                {isOver ? (
+                                  <>
+                                    <TrendingUp className="h-3 w-3 text-red-600" />
+                                    <span className="text-red-600 font-semibold">&gt; {target}</span>
+                                  </>
+                                ) : isUnder ? (
+                                  <>
+                                    <TrendingDown className="h-3 w-3 text-green-600" />
+                                    <span className="text-green-600 font-semibold">&lt; {target}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="text-green-600 font-semibold">✓ {target}</span>
+                                  </>
+                                )}
+                              </div>
+                              <div className="mt-1 h-1.5 bg-white/50 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    isOver
+                                      ? "bg-red-500"
+                                      : isUnder
+                                      ? "bg-yellow-500"
+                                      : "bg-green-500"
+                                  }`}
+                                  style={{
+                                    width: `${Math.min((item.value / target) * 100, 100)}%`,
+                                  }}
+                                />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Daily Calories Chart - Full Width */}
+            <Card>
               <CardHeader>
                 <CardTitle>Daily Calories</CardTitle>
                 <CardDescription>Total calories per day</CardDescription>
@@ -539,183 +832,243 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Totals</CardTitle>
-                <CardDescription>Cumulative macros</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Calories</div>
-                    <div className="text-xl font-semibold">{Math.round(stats.totals.calories)}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Protein (g)</div>
-                    <div className="text-xl font-semibold">{Math.round(stats.totals.protein)}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Carbs (g)</div>
-                    <div className="text-xl font-semibold">{Math.round(stats.totals.carbs)}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Fat (g)</div>
-                    <div className="text-xl font-semibold">{Math.round(stats.totals.fat)}</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle>Scans per Day</CardTitle>
-                <CardDescription>Frequency over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="w-full overflow-x-auto">
-                  <div className="min-w-[700px]">
-                    <div className="h-56">
-                      {countSeries.bars.length && countSeries.hasData ? (
-                        <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                          <defs>
-                            <linearGradient id="countBarGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                              <stop offset="0%" stopColor="#60a5fa" />
-                              <stop offset="100%" stopColor="#3b82f6" />
-                            </linearGradient>
-                          </defs>
-                          <rect x="0" y="0" width="100" height="100" fill="#1e3a8a" opacity="0.05" />
-                          <line x1="0" y1="95" x2="100" y2="95" stroke="#374151" strokeWidth="0.6" />
-                          {countSeries.bars.map((bar, index) => (
-                            <g key={`count-bar-${index}`}>
-                              <rect
-                                x={bar.x}
-                                y={bar.height > 0 ? bar.y : 95}
-                                width={bar.width}
-                                height={bar.height > 0 ? bar.height : 0.8}
-                                rx={1.2}
-                                fill="url(#countBarGradient)"
-                                opacity={0.9}
-                              >
-                                <title>{`${bar.value} scans`}</title>
-                              </rect>
-                            </g>
+            {/* Scans per Day and My Eats Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Scans per Day</CardTitle>
+                  <CardDescription>Frequency over time</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="w-full overflow-x-auto">
+                    <div className="min-w-[700px]">
+                      <div className="h-56">
+                        {countSeries.bars.length && countSeries.hasData ? (
+                          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            <defs>
+                              <linearGradient id="countBarGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" stopColor="#60a5fa" />
+                                <stop offset="100%" stopColor="#3b82f6" />
+                              </linearGradient>
+                            </defs>
+                            <rect x="0" y="0" width="100" height="100" fill="#1e3a8a" opacity="0.05" />
+                            <line x1="0" y1="95" x2="100" y2="95" stroke="#374151" strokeWidth="0.6" />
+                            {countSeries.bars.map((bar, index) => (
+                              <g key={`count-bar-${index}`}>
+                                <rect
+                                  x={bar.x}
+                                  y={bar.height > 0 ? bar.y : 95}
+                                  width={bar.width}
+                                  height={bar.height > 0 ? bar.height : 0.8}
+                                  rx={1.2}
+                                  fill="url(#countBarGradient)"
+                                  opacity={0.9}
+                                >
+                                  <title>{`${bar.value} scans`}</title>
+                                </rect>
+                              </g>
+                            ))}
+                          </svg>
+                        ) : (
+                          <div className="w-full text-center text-sm text-muted-foreground py-10">
+                            {countSeries.bars.length
+                              ? "No scans recorded in this range."
+                              : "No scans recorded yet."}
+                          </div>
+                        )}
+                      </div>
+                      {countSeries.labels.length > 0 && (
+                        <div className="flex justify-between text-[11px] text-muted-foreground mt-3">
+                          {countSeries.labels.map((label, index) => (
+                            <span key={`count-label-${index}`} className="flex-1 text-center">
+                              {label}
+                            </span>
                           ))}
-                        </svg>
-                      ) : (
-                        <div className="w-full text-center text-sm text-muted-foreground py-10">
-                          {countSeries.bars.length
-                            ? "No scans recorded in this range."
-                            : "No scans recorded yet."}
                         </div>
                       )}
                     </div>
-                    {countSeries.labels.length > 0 && (
-                      <div className="flex justify-between text-[11px] text-muted-foreground mt-3">
-                        {countSeries.labels.map((label, index) => (
-                          <span key={`count-label-${index}`} className="flex-1 text-center">
-                            {label}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>My Eats</CardTitle>
+                  <CardDescription>Most logged meals </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {stats.topDishes.map(([name, count]: any) => (
+                      <div key={name} className="text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="truncate mr-2" title={name}>
+                            {name}
                           </span>
-                        ))}
+                          <span className="text-muted-foreground">{count}</span>
+                        </div>
+                        <div className="h-2 bg-muted rounded">
+                          <div
+                            className="h-full bg-primary rounded"
+                            style={{ width: `${(count / (stats.topDishes[0]?.[1] || 1)) * 100}%` }}
+                          />
+                        </div>
                       </div>
-                    )}
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+          </div>
+          </div>
+        )}
+        {/* Macro Distribution Chart */}
+        {dailyRequirements && (
+          <Card className="mb-8 mt-8">
+            <CardHeader>
+              <CardTitle>Macro Distribution</CardTitle>
+              <CardDescription>Today&apos;s macro breakdown based on your intake</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Pie Chart */}
+                <div className="flex items-center justify-center">
+                  <div className="relative w-64 h-64">
+                    <svg viewBox="0 0 100 100" className="transform -rotate-90">
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="40"
+                        fill="none"
+                        stroke="#e5e7eb"
+                        strokeWidth="8"
+                      />
+                      {(() => {
+                        const totalCalories = todayStats.calories || 1;
+                        const proteinCal = todayStats.protein * 4;
+                        const carbsCal = todayStats.carbs * 4;
+                        const fatCal = todayStats.fat * 9;
+                        
+                        const proteinPercent = (proteinCal / totalCalories) * 100;
+                        const carbsPercent = (carbsCal / totalCalories) * 100;
+                        const fatPercent = (fatCal / totalCalories) * 100;
+
+                        let currentOffset = 0;
+                        const circumference = 2 * Math.PI * 40;
+
+                        return (
+                          <>
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="40"
+                              fill="none"
+                              stroke="#f472b6"
+                              strokeWidth="8"
+                              strokeDasharray={circumference}
+                              strokeDashoffset={circumference - (proteinPercent / 100) * circumference}
+                              strokeLinecap="round"
+                            />
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="40"
+                              fill="none"
+                              stroke="#facc15"
+                              strokeWidth="8"
+                              strokeDasharray={circumference}
+                              strokeDashoffset={
+                                circumference -
+                                ((proteinPercent + carbsPercent) / 100) * circumference
+                              }
+                              strokeLinecap="round"
+                              transform={`rotate(${(proteinPercent / 100) * 360} 50 50)`}
+                            />
+                            <circle
+                              cx="50"
+                              cy="50"
+                              r="40"
+                              fill="none"
+                              stroke="#93c5fd"
+                              strokeWidth="8"
+                              strokeDasharray={circumference}
+                              strokeDashoffset={
+                                circumference -
+                                ((proteinPercent + carbsPercent + fatPercent) / 100) * circumference
+                              }
+                              strokeLinecap="round"
+                              transform={`rotate(${((proteinPercent + carbsPercent) / 100) * 360} 50 50)`}
+                            />
+                          </>
+                        );
+                      })()}
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{Math.round(todayStats.calories)}</div>
+                        <div className="text-xs text-muted-foreground">kcal</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Dishes</CardTitle>
-                <CardDescription>Most logged meals </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {stats.topDishes.map(([name, count]: any) => (
-                    <div key={name} className="text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="truncate mr-2" title={name}>
-                          {name}
+                {/* Legend */}
+                <div className="space-y-3">
+                  {[
+                    {
+                      label: "Protein",
+                      value: todayStats.protein,
+                      percent: todayStats.calories
+                        ? ((todayStats.protein * 4) / todayStats.calories) * 100
+                        : 0,
+                      color: "bg-rose-500",
+                      target: dailyRequirements.protein,
+                    },
+                    {
+                      label: "Carbs",
+                      value: todayStats.carbs,
+                      percent: todayStats.calories
+                        ? ((todayStats.carbs * 4) / todayStats.calories) * 100
+                        : 0,
+                      color: "bg-yellow-500",
+                      target: dailyRequirements.carbs,
+                    },
+                    {
+                      label: "Fat",
+                      value: todayStats.fat,
+                      percent: todayStats.calories
+                        ? ((todayStats.fat * 9) / todayStats.calories) * 100
+                        : 0,
+                      color: "bg-sky-500",
+                      target: dailyRequirements.fat,
+                    },
+                  ].map((macro) => (
+                    <div key={macro.label} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded ${macro.color}`} />
+                          <span className="font-medium">{macro.label}</span>
+                        </div>
+                        <span className="text-muted-foreground">
+                          {macro.value.toFixed(0)}g ({macro.percent.toFixed(0)}%)
                         </span>
-                        <span className="text-muted-foreground">{count}</span>
                       </div>
-                      <div className="h-2 bg-muted rounded">
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-primary rounded"
-                          style={{ width: `${(count / (stats.topDishes[0]?.[1] || 1)) * 100}%` }}
+                          className={`h-full ${macro.color}`}
+                          style={{ width: `${Math.min(macro.percent, 100)}%` }}
                         />
                       </div>
+                      {macro.target && (
+                        <div className="text-xs text-muted-foreground">
+                          Target: {macro.target}g
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-        <Card className="mb-8 mt-8">
-          <CardHeader>
-            <CardTitle>Log foods manually</CardTitle>
-            <CardDescription>Add quick bites without scanning. We’ll estimate macros and include them in these analytics.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
-                Describe each item with quantity (e.g., “2 eggs”, “1 banana”, “protein shake with almond milk”).
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {quickAddOptions.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => quickAddFood(item)}
-                    className="px-3 py-1 rounded-full border text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors"
-                  >
-                    {item}
-                  </button>
-                ))}
               </div>
-            </div>
-
-            <div className="space-y-3">
-              {manualFoods.map((food, index) => (
-                <div className="flex gap-2" key={food.id}>
-                  <Input
-                    value={food.value}
-                    onChange={(event) => updateManualFood(food.id, event.target.value)}
-                    placeholder={manualPlaceholders[index % manualPlaceholders.length]}
-                  />
-                  {manualFoods.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0"
-                      onClick={() => removeManualFood(food.id)}
-                      aria-label="Remove food"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              ))}
-              <Button variant="outline" size="sm" onClick={addManualFoodField} className="w-full sm:w-auto">
-                <Plus className="h-4 w-4 mr-2" /> Add another food
-              </Button>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-             
-              <Button onClick={handleManualEntry} disabled={manualLoading}>
-                {manualLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Logging…
-                  </>
-                ) : (
-                  "Add to analytics"
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </main>
   );

@@ -21,6 +21,8 @@ export type FoodAnalysis = {
   instructions: string[];
   youtubeVideoUrl?: string;
   insights?: string;
+  isManualEntry?: boolean;
+  manualItems?: any[];
 };
 
 type AnalyzeFoodResponse = {
@@ -201,10 +203,10 @@ export async function getPersonalizedInsights(params: {
   weight_kg?: number;
   height_cm?: number;
 }): Promise<{ insights?: string; upgrade?: boolean; message?: string }>{
-  // Fetch the scan to get image URL
+  // Fetch the scan to get image URL or manual entry data
   const { data: scan, error: scanError } = await (supabase as any)
     .from("food_scans")
-    .select("image_url, image_path, serving")
+    .select("image_url, image_path, serving, result_json")
     .eq("id", params.scanId)
     .maybeSingle();
   
@@ -212,26 +214,40 @@ export async function getPersonalizedInsights(params: {
     throw new Error("Scan not found");
   }
 
-  // Always generate a fresh signed URL from image_path (never expires)
-  const imageUrl = await getImageUrl(scan.image_path, 60 * 5) || scan.image_url as string;
-  if (!imageUrl) {
-    throw new Error("No valid image URL available");
+  // Check if this is a manual entry
+  const resultJson = scan.result_json as FoodAnalysis | null;
+  const isManualEntry = resultJson?.isManualEntry || resultJson?.dish?.startsWith("Manual: ");
+
+  let body: Record<string, unknown> = {
+    serving: scan.serving || 1,
+    age: params.age,
+    gender: params.gender,
+    activity: params.activity,
+    goal: params.goal,
+    optimize: params.optimize,
+    weight_kg: params.weight_kg,
+    height_cm: params.height_cm,
+  };
+
+  if (isManualEntry && resultJson) {
+    // For manual entries, use manualEntry instead of imageUrl
+    body.manualEntry = {
+      dish: resultJson.dish?.replace(/^Manual:\s*/, "") || "",
+      ingredients: resultJson.ingredients || [],
+    };
+  } else {
+    // For image-based scans, get image URL
+    const imageUrl = await getImageUrl(scan.image_path, 60 * 5) || scan.image_url as string;
+    if (!imageUrl) {
+      throw new Error("No valid image URL available");
+    }
+    body.imageUrl = imageUrl;
   }
 
   // Call analyze-food with demographic data (single Gemini call)
   // Add timeout to the function call (15 seconds)
   const invokePromise = supabase.functions.invoke<AnalyzeFoodResponse>("analyze-food", {
-    body: {
-      imageUrl,
-      serving: scan.serving || 1,
-      age: params.age,
-      gender: params.gender,
-      activity: params.activity,
-      goal: params.goal,
-      optimize: params.optimize,
-      weight_kg: params.weight_kg,
-      height_cm: params.height_cm,
-    },
+    body,
   });
 
   const timeoutPromise = new Promise<never>((_, reject) => {

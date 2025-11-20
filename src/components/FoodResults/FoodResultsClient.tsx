@@ -536,7 +536,11 @@ export function FoodResultsClient() {
       <html>
         <head>
           <meta charset="utf-8" />
-          <title>${escapeHtml(analysis.dish || "Food Analysis")}</title>
+          <title>${escapeHtml(
+            analysis.isManualEntry || analysis.dish?.startsWith("Manual: ")
+              ? `Manual input: ${analysis.dish?.replace(/^Manual:\s*/, "") || ""}`
+              : analysis.dish || "Food Analysis"
+          )}</title>
           <style>${pdfStyles}</style>
         </head>
         <body>
@@ -544,7 +548,11 @@ export function FoodResultsClient() {
             <div class="card header-card">
               ${imageHtml}
               <div class="summary">
-                <h1 class="title">${escapeHtml(analysis.dish || "Food Analysis")}</h1>
+                <h1 class="title">${escapeHtml(
+                  analysis.isManualEntry || analysis.dish?.startsWith("Manual: ")
+                    ? `Manual input: ${analysis.dish?.replace(/^Manual:\s*/, "") || ""}`
+                    : analysis.dish || "Food Analysis"
+                )}</h1>
                 <p class="subtitle">${escapeHtml(
                   analysis.description ||
                     "AI-generated nutrition summary with personalized context."
@@ -749,9 +757,12 @@ export function FoodResultsClient() {
   const handleShare = async () => {
     try {
       const shareUrl = `${window.location.origin}/shared/${id}`;
+      const dishDisplay = analysis?.isManualEntry || analysis?.dish?.startsWith("Manual: ")
+        ? `Manual input: ${analysis.dish?.replace(/^Manual:\s*/, "") || ""}`
+        : analysis?.dish || "Food scan";
       const shareData = {
-        title: analysis?.dish || "Food Analysis Results",
-        text: `Check out this food analysis: ${analysis?.dish || "Food scan"}`,
+        title: dishDisplay || "Food Analysis Results",
+        text: `Check out this food analysis: ${dishDisplay}`,
         url: shareUrl,
       };
 
@@ -891,7 +902,10 @@ export function FoodResultsClient() {
       
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
 
-      const safeTitle = (analysis.dish || "food-result").replace(/[^\w\d_-]+/g, "-");
+      const dishForFilename = analysis.isManualEntry || analysis.dish?.startsWith("Manual: ")
+        ? `Manual input: ${analysis.dish?.replace(/^Manual:\s*/, "") || ""}`
+        : analysis.dish || "food-result";
+      const safeTitle = dishForFilename.replace(/[^\w\d_-]+/g, "-");
       pdf.save(`${safeTitle}.pdf`);
       toast({
         title: "PDF ready",
@@ -1217,7 +1231,9 @@ export function FoodResultsClient() {
               <div>
                 <h1 className="text-2xl md:text-4xl font-bold flex items-center gap-2">
                   <Salad className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-                  {analysis.dish || "Food Result"}
+                  {analysis.isManualEntry || analysis.dish?.startsWith("Manual: ")
+                    ? `Manual input: ${analysis.dish?.replace(/^Manual:\s*/, "") || ""}`
+                    : analysis.dish || "Food Result"}
                 </h1>
               </div>
             </div>
@@ -1270,59 +1286,61 @@ export function FoodResultsClient() {
         )}
 
         <div className="grid lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-4">
-            <Card className="overflow-hidden sticky top-6">
-              {imageUrl ? (
-                <div className="aspect-square relative overflow-hidden">
-                  <img src={imageUrl} alt={analysis.dish || "Food"} className="w-full h-full object-cover" />
-                </div>
-              ) : (
-                <div className="aspect-square flex items-center justify-center text-muted-foreground bg-muted">
-                  <Salad className="h-16 w-16 opacity-30" />
-                </div>
-              )}
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <span>Confidence</span>
-                    <TooltipProvider delayDuration={150}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span
-                            role="button"
-                            aria-label="Confidence info"
-                            className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-muted-foreground/40 text-[10px] text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary"
-                          >
-                            <Info className="h-3 w-3" strokeWidth={2} />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" align="start" className="max-w-xs text-xs leading-relaxed">
-                          AI confidence can fluctuate with image quality, lighting, angle, and other visual factors.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+          {!(analysis.isManualEntry || analysis.dish?.startsWith("Manual: ")) && (
+            <div className="lg:col-span-4">
+              <Card className="overflow-hidden sticky top-6">
+                {imageUrl ? (
+                  <div className="aspect-square relative overflow-hidden">
+                    <img src={imageUrl} alt={analysis.dish || "Food"} className="w-full h-full object-cover" />
                   </div>
-                  <span className="font-semibold">{Math.round((analysis.confidence || 0) * 100)}%</span>
-                </div>
-                <div className="h-2 bg-muted rounded-full mt-2 overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all"
-                    style={{ width: `${Math.round((analysis.confidence || 0) * 100)}%` }}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                ) : (
+                  <div className="aspect-square flex items-center justify-center text-muted-foreground bg-muted">
+                    <Salad className="h-16 w-16 opacity-30" />
+                  </div>
+                )}
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <span>Confidence</span>
+                      <TooltipProvider delayDuration={150}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              role="button"
+                              aria-label="Confidence info"
+                              className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-muted-foreground/40 text-[10px] text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary"
+                            >
+                              <Info className="h-3 w-3" strokeWidth={2} />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" align="start" className="max-w-xs text-xs leading-relaxed">
+                            AI confidence can fluctuate with image quality, lighting, angle, and other visual factors.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <span className="font-semibold">{Math.round((analysis.confidence || 0) * 100)}%</span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full mt-2 overflow-hidden">
+                    <div
+                      className="h-full bg-primary transition-all"
+                      style={{ width: `${Math.round((analysis.confidence || 0) * 100)}%` }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-          <div className="lg:col-span-8 space-y-7">
+          <div className={`${analysis.isManualEntry || analysis.dish?.startsWith("Manual: ") ? "lg:col-span-12" : "lg:col-span-8"} space-y-7`}>
             <Card >
               <CardHeader>
                 <div className="space-y-2">
-                <div className="lg:col-span-4">
-                <CardTitle className="overflow-hidden sticky top-6 pb-3">
-                      Nutrition Summary
+                  <div className="flex items-center justify-between gap-4">
+                    <CardTitle className="overflow-hidden sticky top-6 pb-3">
+                      Nutrition Summary 
                       {servingApproximation && (
-                        <span className="text-base font-normal text-muted-foreground whitespace-nowrap">
+                        <span className="text-base font-normal text-muted-foreground whitespace-nowrap mx-3">
                           (~ {servingApproximation.grams}g)
                         </span>
                       )}
@@ -1491,7 +1509,7 @@ export function FoodResultsClient() {
             </Card>
 
             <div className="grid md:grid-cols-2 gap-6">
-              <Card>
+              <Card className={analysis.isManualEntry || analysis.dish?.startsWith("Manual: ") ? "md:col-span-2" : ""}>
                 <CardHeader>
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -1517,33 +1535,34 @@ export function FoodResultsClient() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <div className="flex items-md center gap-2">
-                    <Zap className="h-5 w-5 text-primary" />
-                    <CardTitle>How to Prepare</CardTitle>
-                  </div>
-                  <CardDescription>Step-by-step instructions</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ol className="space-y-4">
-                    {analysis.instructions?.map((step, i) => {
-                      // Parse step to extract bold title and description
-                      // Handle both markdown **bold** and plain text formats
-                      const boldMatch = step.match(/^\*\*(.+?)\*\*[:\s]*(.+)$/);
-                      const hasBoldTitle = boldMatch !== null;
-                      const title = hasBoldTitle ? boldMatch[1] : null;
-                      const description = hasBoldTitle ? boldMatch[2] : step;
-                      
-                      return (
-                        <li key={i} className="flex gap-3">
-                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium mt-0.5">
-                            {i + 1}
-                          </span>
-                          <div className="flex-1">
-                            {title && (
-                              <p className="text-sm font-semibold text-foreground mb-1.5">
-                                {title}
+              {!(analysis.isManualEntry || analysis.dish?.startsWith("Manual: ")) && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-md center gap-2">
+                      <Zap className="h-5 w-5 text-primary" />
+                      <CardTitle>How to Prepare</CardTitle>
+                    </div>
+                    <CardDescription>Step-by-step instructions</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ol className="space-y-4">
+                      {analysis.instructions?.map((step, i) => {
+                        // Parse step to extract bold title and description
+                        // Handle both markdown **bold** and plain text formats
+                        const boldMatch = step.match(/^\*\*(.+?)\*\*[:\s]*(.+)$/);
+                        const hasBoldTitle = boldMatch !== null;
+                        const title = hasBoldTitle ? boldMatch[1] : null;
+                        const description = hasBoldTitle ? boldMatch[2] : step;
+                        
+                        return (
+                          <li key={i} className="flex gap-3">
+                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium mt-0.5">
+                              {i + 1}
+                            </span>
+                            <div className="flex-1">
+                              {title && (
+                                <p className="text-sm font-semibold text-foreground mb-1.5">
+                                  {title}
                               </p>
                             )}
                             <p className="text-sm leading-relaxed text-foreground/90">
@@ -1592,6 +1611,7 @@ export function FoodResultsClient() {
                   )}
                 </CardContent>
               </Card>
+              )}
             </div>
 
             {analysis.additionalInfo && (
@@ -1711,7 +1731,7 @@ export function FoodResultsClient() {
                           <span className="text-sm text-muted-foreground">Generating personalized insights...</span>
                         </div>
                         <p className="text-xs text-muted-foreground/70 text-center max-w-md">
-                          This may take up to 15 seconds. If it takes longer, you can try generating manually below.
+                          This may take up to 15 seconds.
                         </p>
                       </div>
                     )}
@@ -1943,14 +1963,14 @@ export function FoodResultsClient() {
 
                             {/* Enhanced Insights Display */}
                             <div className="grid md:grid-cols-2 gap-4">
-                              {/* Key Recommendations Card */}
+                              {/* Key Recommendations & Tips Card */}
                               <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
                                 <CardHeader className="pb-3">
                                   <div className="flex items-center gap-2">
                                     <div className="p-2 rounded-lg bg-primary/20">
                                       <CheckCircle2 className="h-5 w-5 text-primary" />
                                     </div>
-                                    <CardTitle className="text-base">Key Recommendations</CardTitle>
+                                    <CardTitle className="text-base">Key Recommendations & Tips</CardTitle>
                                   </div>
                                 </CardHeader>
                                 <CardContent>
@@ -1974,87 +1994,41 @@ export function FoodResultsClient() {
                                 </CardContent>
                               </Card>
 
-                              {/* Action Items Card */}
-                              <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
-                                <CardHeader className="pb-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className="p-2 rounded-lg bg-primary/20">
-                                      <Zap className="h-5 w-5 text-primary" />
-                                    </div>
-                                    <CardTitle className="text-base">Action Items</CardTitle>
-                                  </div>
-                                </CardHeader>
-                                <CardContent>
-                                  <div className="space-y-3">
-                                    {(() => {
-                                      // Extract actionable items (sentences with action verbs)
-                                      const text = parsedInsights.healthContext;
-                                      const actionKeywords = ['consider', 'focus', 'monitor', 'pair', 'include', 'reduce', 'increase', 'suggest', 'try', 'add', 'replace'];
-                                      const sentences = text.split(/[.!?]+/).filter(s => {
-                                        const lower = s.toLowerCase();
-                                        return actionKeywords.some(keyword => lower.includes(keyword)) && s.trim().length > 15;
-                                      });
-                                      
-                                      return sentences.slice(0, 4).map((item, idx) => (
-                                        <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-background/60 border border-primary/10">
-                                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
-                                            <Sparkles className="h-3.5 w-3.5 text-primary" />
-                                          </div>
-                                          <p className="text-sm leading-relaxed text-foreground flex-1">{item.trim()}.</p>
-                                        </div>
-                                      ));
-                                    })()}
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            </div>
-
-                            {/* Full Context (Collapsible) */}
-                              <details className="group">
-                                <summary className="cursor-pointer list-none">
-                                  <div className="flex items-center justify-between p-4 rounded-lg border-2 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 hover:from-primary/10 hover:to-primary/15 transition-colors">
+                              {/* Smart Substitution Suggestions Card */}
+                              {parsedInsights.substitutions.length > 0 && (
+                                <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+                                  <CardHeader className="pb-3">
                                     <div className="flex items-center gap-2">
-                                      <Info className="h-5 w-5 text-primary" />
-                                      <span className="font-semibold text-sm">View Full Analysis</span>
+                                      <div className="p-2 rounded-lg bg-primary/20">
+                                        <Lightbulb className="h-5 w-5 text-primary" />
+                                      </div>
+                                      <CardTitle className="text-base">Smart Substitution Suggestions</CardTitle>
                                     </div>
-                                    <ChevronDown className="h-4 w-4 text-primary transition-transform group-open:rotate-180" />
-                                  </div>
-                                </summary>
-                                <div className="mt-2 p-4 rounded-lg border border-primary/10 bg-background/50">
-                                  <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
-                                    {parsedInsights.healthContext}
-                                  </p>
-                                </div>
-                              </details>
+                                  </CardHeader>
+                                  <CardContent>
+                                    <div className="space-y-3">
+                                      {parsedInsights.substitutions.map((sub, idx) => (
+                                        <div
+                                          key={idx}
+                                          className="flex items-start gap-3 p-3 rounded-lg bg-background/60 border border-primary/10"
+                                        >
+                                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
+                                            <CheckCircle2 className="h-4 w-4 text-primary" />
+                                          </div>
+                                          <div className="flex-1">
+                                            {sub.title && <h5 className="font-semibold mb-1 text-sm">{sub.title}</h5>}
+                                            <p className="text-sm text-foreground leading-relaxed">{sub.description}</p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              )}
+                            </div>
                           </div>
                         )}
 
-                        {parsedInsights.substitutions.length > 0 && (
-                          <div>
-                            <div className="flex items-center gap-2 mb-4">
-                              <div className="p-2 rounded-lg bg-primary/10">
-                                <Lightbulb className="h-5 w-5 text-primary" />
-                              </div>
-                              <h4 className="font-bold text-lg">Smart Substitution Suggestions</h4>
-                            </div>
-                            <div className="grid md:grid-cols-2 gap-4">
-                              {parsedInsights.substitutions.map((sub, idx) => (
-                                <div
-                                  key={idx}
-                                  className="flex items-start gap-3 p-4 rounded-lg border-2 bg-gradient-to-br from-muted/50 to-muted/30 hover:border-primary/30 transition-colors"
-                                >
-                                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                    <CheckCircle2 className="h-5 w-5 text-primary" />
-                                  </div>
-                                  <div className="flex-1">
-                                    {sub.title && <h5 className="font-semibold mb-2 text-base">{sub.title}</h5>}
-                                    <p className="text-sm text-muted-foreground leading-relaxed">{sub.description}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
 
                         {!parsedInsights.healthContext &&
                           !parsedInsights.substitutions.length &&

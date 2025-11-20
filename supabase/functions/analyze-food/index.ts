@@ -108,16 +108,31 @@ async function callGemini(imageBase64, mimeType, options = {}) {
     includeInsights = false,
     insightsParams = null,
     overrideIngredients = [],
+    manualEntry = null, // { dish: string, ingredients: string[] }
   }: {
     includeInsights?: boolean;
     insightsParams?: Record<string, unknown> | null;
     overrideIngredients?: string[];
+    manualEntry?: { dish: string; ingredients: string[] } | null;
   } = options;
 
   if (!GEMINI_API_KEY) throw new Error("Missing API key");
 
   let prompt = buildPrompt(includeInsights);
   let maxTokens = 2000; // Increased to ensure complete instructions and detailed responses
+  
+  // Add manual entry context if provided
+  if (manualEntry) {
+    const manualContext = `\n\nMANUAL ENTRY - NO IMAGE AVAILABLE:
+Dish Name: ${manualEntry.dish}
+Ingredients: ${Array.isArray(manualEntry.ingredients) ? manualEntry.ingredients.join(", ") : manualEntry.ingredients}
+
+Based on the dish name and ingredients provided above, generate the analysis. Since this is a manual entry, focus on generating:
+- "additionalInfo": Rich, personalized information about this dish (5-6 lines)
+- "insights": If requested, personalized health context and substitution suggestions
+- Other fields can use reasonable defaults or be based on the ingredients provided.`;
+    prompt += manualContext;
+  }
 
   // Add profile context to main prompt if available (even without insights)
   if (insightsParams && (insightsParams.weight_kg || insightsParams.height_cm || insightsParams.gender || insightsParams.age)) {
@@ -186,11 +201,16 @@ async function callGemini(imageBase64, mimeType, options = {}) {
 
   const parts: Array<Record<string, unknown>> = [
     { text: prompt },
-    { inlineData: { mimeType, data: imageBase64 } },
-    {
-      text: "Always format numbers as decimals (no trailing text) and keep arrays simple. ALWAYS use metric units (grams, kg, ml, liters) for all ingredient quantities. NEVER use imperial units (oz, pounds, cups, tablespoons, teaspoons).",
-    },
   ];
+  
+  // Only include image if provided (not manual entry)
+  if (imageBase64 && mimeType) {
+    parts.push({ inlineData: { mimeType, data: imageBase64 } });
+  }
+  
+  parts.push({
+    text: "Always format numbers as decimals (no trailing text) and keep arrays simple. ALWAYS use metric units (grams, kg, ml, liters) for all ingredient quantities. NEVER use imperial units (oz, pounds, cups, tablespoons, teaspoons).",
+  });
 
   if (Array.isArray(overrideIngredients) && overrideIngredients.length > 0) {
     // When overrides are provided, we need to make it clear this is a complete replacement
@@ -480,10 +500,14 @@ Deno.serve(async (req) => {
       weight_kg,
       height_cm,
       overrideIngredients = [],
+      manualEntry, // { dish: string, ingredients: string[] }
     } = await req.json();
-    if (!imageUrl) {
+    
+    // Support manual entries without image
+    const isManualEntry = !!manualEntry && !imageUrl;
+    if (!imageUrl && !isManualEntry) {
       return new Response(
-        JSON.stringify({ error: "imageUrl required" }),
+        JSON.stringify({ error: "imageUrl or manualEntry required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -498,7 +522,14 @@ Deno.serve(async (req) => {
     const hasProfileData = !!(weight_kg || height_cm);
     
     // Ultra-parallel execution
-    const tasks = [fetchAndEncodeImage(imageUrl)];
+    const tasks: Promise<any>[] = [];
+    
+    // Only fetch image if not a manual entry
+    if (!isManualEntry && imageUrl) {
+      tasks.push(fetchAndEncodeImage(imageUrl));
+    } else {
+      tasks.push(Promise.resolve({ base64: null, mimeType: null }));
+    }
     
     // Always check for user session to fetch profile data for personalization
     const authHeader = req.headers.get("Authorization") || "";
@@ -546,6 +577,7 @@ Deno.serve(async (req) => {
         includeInsights: false,
         insightsParams: profileParams,
         overrideIngredients: overrides,
+        manualEntry: isManualEntry ? manualEntry : null,
       });
       console.log(`Response time: ${Date.now() - startTime}ms`);
       return new Response(
@@ -559,6 +591,7 @@ Deno.serve(async (req) => {
       const result = await callGemini(imageData.base64, imageData.mimeType, {
         includeInsights: false,
         overrideIngredients: overrides,
+        manualEntry: isManualEntry ? manualEntry : null,
       });
       console.log(`Response time: ${Date.now() - startTime}ms`);
       return new Response(
@@ -581,6 +614,7 @@ Deno.serve(async (req) => {
       includeInsights: true,
       insightsParams,
       overrideIngredients: overrides,
+      manualEntry: isManualEntry ? manualEntry : null,
     });
     
     console.log(`Response time: ${Date.now() - startTime}ms`);

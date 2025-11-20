@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Script from "next/script";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -139,7 +140,9 @@ export function DashboardClient({
         isManualEntry: true,
       };
 
+      const scanId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const { error: insertError } = await (supabase as any).from("food_scans").insert({
+        id: scanId,
         user_id: session.user.id,
         image_path: `manual-entry-${Date.now()}-${crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substr(2, 9)}`,
         image_url: null,
@@ -147,6 +150,35 @@ export function DashboardClient({
         result_json: manualResult,
       });
       if (insertError) throw insertError;
+
+      // Generate additionalInfo and insights using Gemini
+      try {
+        const { data: analyzeData, error: analyzeError } = await supabase.functions.invoke("analyze-food", {
+          body: {
+            manualEntry: {
+              dish: dishName.replace(/^Manual:\s*/, ""),
+              ingredients: manualData.items?.map((item: any) => `${item.name}`) ?? foods,
+            },
+          },
+        });
+        
+        if (!analyzeError && analyzeData?.ok && analyzeData?.analysis) {
+          // Update the scan with generated additionalInfo and insights
+          const updatedResult = {
+            ...manualResult,
+            additionalInfo: analyzeData.analysis.additionalInfo || manualResult.additionalInfo,
+            insights: analyzeData.insights || undefined,
+          };
+          
+          await (supabase as any)
+            .from("food_scans")
+            .update({ result_json: updatedResult })
+            .eq("id", scanId);
+        }
+      } catch (genError) {
+        // Don't fail the whole operation if generation fails
+        console.error("Failed to generate additionalInfo/insights:", genError);
+      }
 
       setManualFoods([{ id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`, value: "" }]);
 
@@ -263,9 +295,9 @@ export function DashboardClient({
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-2">
                 <Stars className="h-7 w-7 text-primary" />
                 {userFullName ? (
-                  `Welcome back ${userFullName.split(" ").slice(0, 2).join(" ")}`
+                  `Welcome back,  ${userFullName.split(" ").slice(0, 2).join(" ")}`
                 ) : (
-                  `Welcome back${user?.email ? `, ${user.email.split("@")[0]}` : ""}`
+                  `Welcome back, ${user?.email ? `, ${user.email.split("@")[0]}` : ""}`
                 )}
               </h1>
               <p className="text-muted-foreground mt-1">Scan meals, get instant nutrition, and track progress.</p>
@@ -418,265 +450,259 @@ export function DashboardClient({
           </Card>
         </div>
 
-        <div id="upload-section" className="grid md:grid-cols-2 gap-6 mb-8 md:items-stretch">
-          {/* Manual Meal Logs (Premium) or Sponsored Section (Free) - Left Side */}
-          {subscription && subscription.subscription_type === "premium" ? (
-            <Card className="flex flex-col h-full">
-              <CardHeader className="pb-4">
-                <CardTitle>Log foods manually</CardTitle>
-                <CardDescription>Add quick bites without scanning. We&apos;ll estimate macros and include them in your analytics.</CardDescription>
+        <Script src="https://cdn.tinysnippet.net/scripts/v2.0/manager.js" strategy="lazyOnload" />
+
+        <div id="upload-section" className="grid md:grid-cols-2 gap-6 mb-2 md:items-stretch">
+          {/* Left Section: Upload & Analyze (first), then Log Foods manually (below) */}
+          <div className="flex flex-col gap-0 h-full ">
+            {/* Upload and Analyze - First */}
+            <Card className="flex flex-col flex-1">
+              <CardHeader className="pb-0" style={{ minHeight: '80px' }}>
+                <CardTitle>Upload and Analyze</CardTitle>
+                <CardDescription>PNG, JPG, JPEG, HEIC</CardDescription>
               </CardHeader>
-              <CardContent className="p-4 pt-0 pb-4 space-y-5 flex-1 flex flex-col">
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    Describe each item with quantity (e.g., &quot;2 eggs&quot;, &quot;1 banana&quot;, &quot;protein shake with almond milk&quot;).
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {quickAddOptions.map((item) => (
-                      <button
-                        key={item}
-                        type="button"
-                        onClick={() => quickAddFood(item)}
-                        className="px-3 py-1 rounded-full border text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors"
-                      >
-                        {item}
-                      </button>
-                    ))}
+              <CardContent className="flex-1 flex flex-col p-4 mb-4 pb-4">
+                {!uploadedFile ? (
+                  <div
+                    className="border-2 border-dashed border-primary/30 rounded-lg p-10 cursor-pointer bg-muted/30 text-center hover:border-primary/50 transition-colors flex-1 flex flex-col items-center justify-center"
+                    onClick={() => {
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = "image/png, image/jpeg, image/jpg, image/heic, image/heif";
+                      input.onchange = async () => {
+                        const file = input.files?.[0];
+                        if (!file || !user) return;
+                        try {
+                          const { path, publicUrl, signedUrl } = await uploadFoodImage(file, user.id);
+                          setUploadedFile(file);
+                          setUploadedImageUrl(signedUrl || publicUrl);
+                          setUploadedImagePath(path);
+                        } catch (e) {
+                          console.error(e);
+                          toast({ title: "Error", description: "Failed to upload image.", variant: "destructive" });
+                        }
+                      };
+                      input.click();
+                    }}
+                  >
+                    <Upload className="h-14 w-14 text-primary mx-auto mb-4" />
+                    <p className="text-lg font-medium mb-2">Upload Your Food Photo</p>
+                    <p className="text-sm text-muted-foreground mb-4">Drop an image here or click to browse</p>
+                    <Button>Choose File</Button>
                   </div>
-                </div>
-
-                <div className="space-y-3 flex-1">
-                  {manualFoods.map((food, index) => (
-                    <div className="flex gap-2" key={food.id}>
-                      <Input
-                        value={food.value}
-                        onChange={(event) => updateManualFood(food.id, event.target.value)}
-                        placeholder={manualPlaceholders[index % manualPlaceholders.length]}
-                      />
-                      {manualFoods.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="shrink-0"
-                          onClick={() => removeManualFood(food.id)}
-                          aria-label="Remove food"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                  <Button variant="outline" size="sm" onClick={addManualFoodField} className="w-full sm:w-auto">
-                    <Plus className="h-4 w-4 mr-2" /> Add another food
-                  </Button>
-                </div>
-
-                <div className="flex items-center justify-center mt-auto">
-                  <Button onClick={handleManualEntry} disabled={manualLoading} className="w-full sm:w-auto">
-                    {manualLoading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Logging…
-                      </>
-                    ) : (
-                      "Add to analytics"
-                    )}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="flex flex-col h-full">
-              <CardHeader className="pb-4">
-                <CardTitle >Sponsored</CardTitle>
-                <CardDescription>Advertisement Space</CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 pt-0 pb-4">
-                <div className="relative">
-                  {/* Four Ad Boxes in 2x2 Grid */}
-                  <div className="grid grid-cols-2 gap-3 relative">
-                    {[1, 2, 3, 4].map((index) => (
-                      <div
-                        key={index}
-                        className="border-2 border-dashed border-muted-foreground/40 rounded-lg bg-background/50 min-h-[80px] flex flex-col items-center justify-center text-muted-foreground/70 aspect-square"
-                      >
-                        <Sparkles className="h-4 w-4 mb-1 text-muted-foreground/60" />
-                        <p className="text-[10px] uppercase tracking-wide">Ad Illustration</p>
-                        <span className="text-[9px]">160×120</span>
-                      </div>
-                    ))}
-                    
-                    {/* Informational Content Overlaid in Center */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="p-3 bg-primary/5 rounded-lg border border-primary/10 text-center max-w-[180px] backdrop-blur-sm">
-                        <Sparkles className="h-6 w-6 text-primary/60 mx-auto mb-1.5" />
-                        <p className="text-xs font-medium text-muted-foreground mb-0.5">
-                          Ad Space Available
-                        </p>
-                        <p className="text-[10px] text-muted-foreground mb-1.5">
-                          Reach health-conscious users interested in nutrition tracking
-                        </p>
-                        <p className="text-[9px] text-muted-foreground/70">
-                          Contact us to advertise here
-                        </p>
+                ) : (
+                  <div className="space-y-4 flex-1 flex flex-col">
+                    <div className="relative rounded-lg overflow-hidden border-2 border-primary/20 bg-muted/30">
+                      <div className="aspect-video relative">
+                        {uploadedImageUrl ? (
+                          <img src={uploadedImageUrl} alt="Uploaded food" className="w-full h-full object-cover" />
+                        ) : uploadedFile ? (
+                          <div className="w-full h-full flex items-center justify-center bg-muted">
+                            <Camera className="h-12 w-12 text-muted-foreground" />
+                          </div>
+                        ) : null}
+                        <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              const input = document.createElement("input");
+                              input.type = "file";
+                              input.accept = "image/png, image/jpeg, image/jpg, image/heic, image/heif";
+                              input.onchange = async () => {
+                                const file = input.files?.[0];
+                                if (!file || !user) return;
+                                try {
+                                  const { path, publicUrl, signedUrl } = await uploadFoodImage(file, user.id);
+                                  setUploadedFile(file);
+                                  setUploadedImageUrl(signedUrl || publicUrl);
+                                  setUploadedImagePath(path);
+                                } catch (e) {
+                                  console.error(e);
+                                  toast({ title: "Error", description: "Failed to upload image.", variant: "destructive" });
+                                }
+                              };
+                              input.click();
+                            }}
+                          >
+                            Change Image
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
-          {/* Upload and Analyze - Right Side */}
-          <Card className="flex flex-col h-full">
-            <CardHeader className="pb-4">
-              <CardTitle>Upload and Analyze</CardTitle>
-              <CardDescription>PNG, JPG, JPEG, HEIC</CardDescription>
-            </CardHeader>
-              <CardContent className="flex-1 flex flex-col pt-0 pb-4">
-            {!uploadedFile ? (
-              <div
-                className="border-2 border-dashed border-primary/30 rounded-lg p-10 cursor-pointer bg-muted/30 text-center hover:border-primary/50 transition-colors flex-1 flex flex-col items-center justify-center"
-                onClick={() => {
-                  const input = document.createElement("input");
-                  input.type = "file";
-                  input.accept = "image/png, image/jpeg, image/jpg, image/heic, image/heif";
-                  input.onchange = async () => {
-                    const file = input.files?.[0];
-                    if (!file || !user) return;
-                    try {
-                      const { path, publicUrl, signedUrl } = await uploadFoodImage(file, user.id);
-                      setUploadedFile(file);
-                      setUploadedImageUrl(signedUrl || publicUrl);
-                      setUploadedImagePath(path);
-                    } catch (e) {
-                      console.error(e);
-                      toast({ title: "Error", description: "Failed to upload image.", variant: "destructive" });
-                    }
-                  };
-                  input.click();
-                }}
-              >
-                <Upload className="h-14 w-14 text-primary mx-auto mb-4" />
-                <p className="text-lg font-medium mb-2">Upload Your Food Photo</p>
-                <p className="text-sm text-muted-foreground mb-4">Drop an image here or click to browse</p>
-                <Button>Choose File</Button>
-              </div>
-            ) : (
-              <div className="space-y-4 flex-1 flex flex-col">
-                <div className="relative rounded-lg overflow-hidden border-2 border-primary/20 bg-muted/30">
-                  <div className="aspect-video relative">
-                    {uploadedImageUrl ? (
-                      <img src={uploadedImageUrl} alt="Uploaded food" className="w-full h-full object-cover" />
-                    ) : uploadedFile ? (
-                      <div className="w-full h-full flex items-center justify-center bg-muted">
-                        <Camera className="h-12 w-12 text-muted-foreground" />
-                      </div>
-                    ) : null}
-                    <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
+                    <div className="flex items-center justify-center gap-4">
                       <Button
-                        variant="secondary"
+                        variant="outline"
                         size="sm"
                         onClick={() => {
-                          const input = document.createElement("input");
-                          input.type = "file";
-                          input.accept = "image/png, image/jpeg, image/jpg, image/heic, image/heif";
-                          input.onchange = async () => {
-                            const file = input.files?.[0];
-                            if (!file || !user) return;
-                            try {
-                              const { path, publicUrl, signedUrl } = await uploadFoodImage(file, user.id);
-                              setUploadedFile(file);
-                              setUploadedImageUrl(signedUrl || publicUrl);
-                              setUploadedImagePath(path);
-                            } catch (e) {
-                              console.error(e);
-                              toast({ title: "Error", description: "Failed to upload image.", variant: "destructive" });
-                            }
-                          };
-                          input.click();
+                          setUploadedFile(null);
+                          setUploadedImageUrl(null);
+                          setUploadedImagePath(null);
                         }}
                       >
-                        Change Image
+                        Remove
+                      </Button>
+                      <Button
+                        disabled={analyzing}
+                        onClick={async () => {
+                          if (!uploadedImageUrl || !user || !uploadedImagePath) return;
+                          try {
+                            setAnalyzing(true);
+                            if (!subscription || subscription.subscription_type !== "premium") {
+                              const available = await hasFreeScanAvailable();
+                              if (!available) {
+                                toast({
+                                  title: "Daily limit reached",
+                                  description: "You have used all 3 free scans for today. Upgrade to Premium for unlimited scans.",
+                                });
+                                setAnalyzing(false);
+                                return;
+                              }
+                            }
+                            const result = await analyzeFood(uploadedImageUrl, servings);
+                            const scanId = await saveScanHistory({
+                              userId: user.id,
+                              imagePath: uploadedImagePath,
+                              imageUrl: uploadedImageUrl,
+                              serving: servings,
+                              result: {
+                                ...result.analysis,
+                                ...(result.insights ? { insights: result.insights } : {}),
+                              },
+                            });
+                            if (!subscription || subscription.subscription_type !== "premium") {
+                              try {
+                                const newCount = await decrementFreeScan();
+                                setFreeScanRemaining(newCount);
+                              } catch (error) {
+                                console.error("Failed to decrement free scans", error);
+                              }
+                            }
+                            router.push(`/food-results?id=${scanId}`);
+                            setUploadedFile(null);
+                            setUploadedImageUrl(null);
+                            setUploadedImagePath(null);
+                            setServings(1);
+                          } catch (e) {
+                            console.error(e);
+                            toast({ title: "Error", description: "Failed to analyze image.", variant: "destructive" });
+                          } finally {
+                            setAnalyzing(false);
+                          }
+                        }}
+                        className="flex-1"
+                      >
+                        {analyzing ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Analyzing...
+                          </>
+                        ) : (
+                          "Analyze Food"
+                        )}
                       </Button>
                     </div>
                   </div>
-                </div>
+                )}
+              </CardContent>
+            </Card>
 
-                <div className="flex items-center justify-center gap-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setUploadedFile(null);
-                      setUploadedImageUrl(null);
-                      setUploadedImagePath(null);
-                    }}
-                  >
-                    Remove
-                  </Button>
-                  <Button
-                    disabled={analyzing}
-                    onClick={async () => {
-                      if (!uploadedImageUrl || !user || !uploadedImagePath) return;
-                      try {
-                        setAnalyzing(true);
-                        if (!subscription || subscription.subscription_type !== "premium") {
-                          const available = await hasFreeScanAvailable();
-                          if (!available) {
-                            toast({
-                              title: "Daily limit reached",
-                              description: "You have used all 3 free scans for today. Upgrade to Premium for unlimited scans.",
-                            });
-                            setAnalyzing(false);
-                            return;
-                          }
-                        }
-                        const result = await analyzeFood(uploadedImageUrl, servings);
-                        const scanId = await saveScanHistory({
-                          userId: user.id,
-                          imagePath: uploadedImagePath,
-                          imageUrl: uploadedImageUrl,
-                          serving: servings,
-                          result: {
-                            ...result.analysis,
-                            ...(result.insights ? { insights: result.insights } : {}),
-                          },
-                        });
-                        if (!subscription || subscription.subscription_type !== "premium") {
-                          try {
-                            const newCount = await decrementFreeScan();
-                            setFreeScanRemaining(newCount);
-                          } catch (error) {
-                            console.error("Failed to decrement free scans", error);
-                          }
-                        }
-                        router.push(`/food-results?id=${scanId}`);
-                        setUploadedFile(null);
-                        setUploadedImageUrl(null);
-                        setUploadedImagePath(null);
-                        setServings(1);
-                      } catch (e) {
-                        console.error(e);
-                        toast({ title: "Error", description: "Failed to analyze image.", variant: "destructive" });
-                      } finally {
-                        setAnalyzing(false);
-                      }
-                    }}
-                    className="flex-1"
-                  >
-                    {analyzing ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Analyzing...
-                      </>
-                    ) : (
-                      "Analyze Food"
-                    )}
-                  </Button>
+            {/* Log Foods manually - Below Upload & Analyze (Premium only) */}
+            {subscription && subscription.subscription_type === "premium" && (
+              <Card className="flex flex-col flex-1 mt-8">
+                <CardHeader className="pb-0" style={{ minHeight: '80px' }}>
+                  <CardTitle>Log foods manually</CardTitle>
+                  <CardDescription>Add quick bites without scanning. We&apos;ll estimate macros and include them in your analytics.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-4 space-y-5 flex-1 flex flex-col">
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      Describe each item with quantity (e.g., &quot;2 eggs&quot;, &quot;1 banana&quot;, &quot;protein shake with almond milk&quot;).
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {quickAddOptions.map((item) => (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => quickAddFood(item)}
+                          className="px-3 py-1 rounded-full border text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                        >
+                          {item}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 flex-1">
+                    {manualFoods.map((food, index) => (
+                      <div className="flex gap-2" key={food.id}>
+                        <Input
+                          value={food.value}
+                          onChange={(event) => updateManualFood(food.id, event.target.value)}
+                          placeholder={manualPlaceholders[index % manualPlaceholders.length]}
+                        />
+                        {manualFoods.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="shrink-0"
+                            onClick={() => removeManualFood(food.id)}
+                            aria-label="Remove food"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Button variant="outline" size="sm" onClick={addManualFoodField} className="w-full sm:w-auto">
+                        <Plus className="h-4 w-4 mr-2" /> Add another food
+                      </Button>
+                      <Button onClick={handleManualEntry} disabled={manualLoading} className="w-full sm:w-auto">
+                        {manualLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Logging…
+                          </>
+                        ) : (
+                          "Add to analytics"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Right Section: Sponsored Section with TinyAds (for both free and premium) */}
+          <Card className="flex flex-col h-full">
+            <CardHeader className="pb-1 px-8" style={{ minHeight: '80px' }}>
+              <CardTitle>Our Sponsors</CardTitle>
+              <CardDescription>Reach health-conscious users interested in nutrition tracking, food, and cooking.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 flex-1 flex flex-col">
+              <div className="flex flex-col space-y-1.5  pt-0">
+                <div className="grid grid-cols-2 gap-0 w-full">
+                  {[1, 2, 3, 4].map((index) => (
+                    <div key={index} className="w-full h-full rounded-none overflow-hidden" style={{ minHeight: '480px', height: '480px' }}>
+                      <iframe
+                        width="100%"
+                        height="100%"
+                        frameBorder="0"
+                        className="ta-widget w-full h-full"
+                        data-min-height="480"
+                        id={`widget68ee566289b6c5ef70269ca8-seed${7166 + index}`}
+                        src={`https://app.tinyadz.com/widgets/68ee566289b6c5ef70269ca8?seed=${7166 + index}&previewMode=false&showInPopup=false&theme=light`}
+                        style={{ border: 'none', display: 'block', width: '100%', height: '100%', margin: 0, padding: 0 }}
+                        title={`Advertisement ${index}`}
+                        scrolling="auto"
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
-            )}
             </CardContent>
           </Card>
         </div>
