@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { getRemainingFreeScans, hasFreeScanAvailable, decrementFreeScan } from "@/utils/freeScanLimit";
 import {
@@ -17,6 +18,8 @@ import {
   ArrowRight,
   Upload,
   UtensilsCrossed,
+  Plus,
+  X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getPlatformSubscription } from "@/utils/subscription";
@@ -49,6 +52,122 @@ export function DashboardClient({
   const [uploadedImagePath, setUploadedImagePath] = useState<string | null>(null);
   const [freeScanRemaining, setFreeScanRemaining] = useState<number | null>(null);
   const [userFullName, setUserFullName] = useState<string | null>(initialFullName);
+  const [manualFoods, setManualFoods] = useState<Array<{ id: string; value: string }>>([
+    { id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`, value: "" },
+  ]);
+  const [manualLoading, setManualLoading] = useState(false);
+
+  const manualPlaceholders = ["2 boiled eggs", "Greek yogurt (1 cup)", "1 banana", "Protein shake with almond milk"];
+  const quickAddOptions = ["Handful of almonds", "Oatmeal packet", "Apple", "Dark chocolate square"];
+
+  const addManualFoodField = () => {
+    setManualFoods((prev) => [...prev, { id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${prev.length}`, value: "" }]);
+  };
+
+  const updateManualFood = (id: string, value: string) => {
+    setManualFoods((prev) => prev.map((food) => (food.id === id ? { ...food, value } : food)));
+  };
+
+  const removeManualFood = (id: string) => {
+    setManualFoods((prev) => (prev.length > 1 ? prev.filter((food) => food.id !== id) : prev));
+  };
+
+  const quickAddFood = (text: string) => {
+    setManualFoods((prev) => {
+      const copy = [...prev];
+      const emptyIndex = copy.findIndex((food) => !food.value.trim());
+      if (emptyIndex !== -1) {
+        copy[emptyIndex] = { ...copy[emptyIndex], value: text };
+      } else {
+        copy.push({ id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${copy.length}`, value: text });
+      }
+      return copy;
+    });
+  };
+
+  const handleManualEntry = async () => {
+    const foods = manualFoods.map((item) => item.value.trim()).filter(Boolean);
+
+    if (!foods.length) {
+      toast({
+        title: "Add at least one item",
+        description: 'Include a short description like "2 eggs" or "1 banana".',
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setManualLoading(true);
+      const { data: manualData, error } = await supabase.functions.invoke("manual-food", {
+        body: { foods },
+      });
+      if (error) throw error;
+      if (!manualData?.ok) {
+        throw new Error(manualData?.error || "Unable to estimate nutrition for these foods");
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user) {
+        router.push("/auth");
+        return;
+      }
+
+      const totals = manualData.totals || {};
+      const dishName = `Manual: ${foods.join(", ")}`.slice(0, 200);
+      const manualResult = {
+        dish: dishName,
+        description: "Manually logged foods",
+        tags: ["manual"],
+        servingSize: "1 serving",
+        servingWeightGrams: undefined,
+        servingGuidance: "Manually added to analytics",
+        nutrients: {
+          calories: totals.calories ?? null,
+          protein_g: totals.protein_g ?? null,
+          carbohydrates_g: totals.carbohydrates_g ?? null,
+          fat_g: totals.fat_g ?? null,
+        },
+        ingredients: manualData.items?.map((item: any) => `${item.name}`) ?? foods,
+        instructions: [],
+        additionalInfo: "Logged manually by the user for quick tracking.",
+        youtubeVideoUrl: "",
+        manualItems: manualData.items || [],
+        isManualEntry: true,
+      };
+
+      const { error: insertError } = await (supabase as any).from("food_scans").insert({
+        user_id: session.user.id,
+        image_path: `manual-entry-${Date.now()}-${crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substr(2, 9)}`,
+        image_url: null,
+        serving: 1,
+        result_json: manualResult,
+      });
+      if (insertError) throw insertError;
+
+      setManualFoods([{ id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`, value: "" }]);
+
+      toast({
+        title: "Added to Analytics",
+        description: "Manual foods have been logged successfully.",
+      });
+
+      // Reload recent scans
+      const scans = await fetchRecentScans(session.user.id, 6);
+      setRecentScans(scans);
+    } catch (error: any) {
+      console.error("Manual entry error:", error);
+      toast({
+        title: "Failed to log foods",
+        description: error?.message || "Unable to estimate these foods.",
+        variant: "destructive",
+      });
+    } finally {
+      setManualLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -250,46 +369,113 @@ export function DashboardClient({
         </div>
 
         <div id="upload-section" className="grid md:grid-cols-2 gap-6 mb-8 md:items-stretch">
-          {/* Sponsored Section - Left Side */}
-          <Card className="flex flex-col h-full">
-            <CardHeader className="pb-4">
-              <CardTitle >Sponsored</CardTitle>
-              <CardDescription>Advertisement Space</CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 pb-4">
-              <div className="relative">
-                {/* Four Ad Boxes in 2x2 Grid */}
-                <div className="grid grid-cols-2 gap-3 relative">
-                  {[1, 2, 3, 4].map((index) => (
-                    <div
-                      key={index}
-                      className="border-2 border-dashed border-muted-foreground/40 rounded-lg bg-background/50 min-h-[80px] flex flex-col items-center justify-center text-muted-foreground/70 aspect-square"
-                    >
-                      <Sparkles className="h-4 w-4 mb-1 text-muted-foreground/60" />
-                      <p className="text-[10px] uppercase tracking-wide">Ad Illustration</p>
-                      <span className="text-[9px]">160×120</span>
+          {/* Manual Meal Logs (Premium) or Sponsored Section (Free) - Left Side */}
+          {subscription && subscription.subscription_type === "premium" ? (
+            <Card className="flex flex-col h-full">
+              <CardHeader className="pb-4">
+                <CardTitle>Log foods manually</CardTitle>
+                <CardDescription>Add quick bites without scanning. We&apos;ll estimate macros and include them in your analytics.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 pt-0 pb-4 space-y-5 flex-1 flex flex-col">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Describe each item with quantity (e.g., &quot;2 eggs&quot;, &quot;1 banana&quot;, &quot;protein shake with almond milk&quot;).
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {quickAddOptions.map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => quickAddFood(item)}
+                        className="px-3 py-1 rounded-full border text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                      >
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3 flex-1">
+                  {manualFoods.map((food, index) => (
+                    <div className="flex gap-2" key={food.id}>
+                      <Input
+                        value={food.value}
+                        onChange={(event) => updateManualFood(food.id, event.target.value)}
+                        placeholder={manualPlaceholders[index % manualPlaceholders.length]}
+                      />
+                      {manualFoods.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0"
+                          onClick={() => removeManualFood(food.id)}
+                          aria-label="Remove food"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   ))}
-                  
-                  {/* Informational Content Overlaid in Center */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="p-3 bg-primary/5 rounded-lg border border-primary/10 text-center max-w-[180px] backdrop-blur-sm">
-                      <Sparkles className="h-6 w-6 text-primary/60 mx-auto mb-1.5" />
-                      <p className="text-xs font-medium text-muted-foreground mb-0.5">
-                        Ad Space Available
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mb-1.5">
-                        Reach health-conscious users interested in nutrition tracking
-                      </p>
-                      <p className="text-[9px] text-muted-foreground/70">
-                        Contact us to advertise here
-                      </p>
+                  <Button variant="outline" size="sm" onClick={addManualFoodField} className="w-full sm:w-auto">
+                    <Plus className="h-4 w-4 mr-2" /> Add another food
+                  </Button>
+                </div>
+
+                <div className="flex items-center justify-center mt-auto">
+                  <Button onClick={handleManualEntry} disabled={manualLoading} className="w-full sm:w-auto">
+                    {manualLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Logging…
+                      </>
+                    ) : (
+                      "Add to analytics"
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="flex flex-col h-full">
+              <CardHeader className="pb-4">
+                <CardTitle >Sponsored</CardTitle>
+                <CardDescription>Advertisement Space</CardDescription>
+              </CardHeader>
+              <CardContent className="p-4 pt-0 pb-4">
+                <div className="relative">
+                  {/* Four Ad Boxes in 2x2 Grid */}
+                  <div className="grid grid-cols-2 gap-3 relative">
+                    {[1, 2, 3, 4].map((index) => (
+                      <div
+                        key={index}
+                        className="border-2 border-dashed border-muted-foreground/40 rounded-lg bg-background/50 min-h-[80px] flex flex-col items-center justify-center text-muted-foreground/70 aspect-square"
+                      >
+                        <Sparkles className="h-4 w-4 mb-1 text-muted-foreground/60" />
+                        <p className="text-[10px] uppercase tracking-wide">Ad Illustration</p>
+                        <span className="text-[9px]">160×120</span>
+                      </div>
+                    ))}
+                    
+                    {/* Informational Content Overlaid in Center */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="p-3 bg-primary/5 rounded-lg border border-primary/10 text-center max-w-[180px] backdrop-blur-sm">
+                        <Sparkles className="h-6 w-6 text-primary/60 mx-auto mb-1.5" />
+                        <p className="text-xs font-medium text-muted-foreground mb-0.5">
+                          Ad Space Available
+                        </p>
+                        <p className="text-[10px] text-muted-foreground mb-1.5">
+                          Reach health-conscious users interested in nutrition tracking
+                        </p>
+                        <p className="text-[9px] text-muted-foreground/70">
+                          Contact us to advertise here
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Upload and Analyze - Right Side */}
           <Card className="flex flex-col h-full">

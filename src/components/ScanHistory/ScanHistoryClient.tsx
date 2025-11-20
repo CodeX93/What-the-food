@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Calendar, Trash2, Search, Filter } from "lucide-react";
+import { Camera, Calendar, Trash2, Search, Filter, ArrowLeft } from "lucide-react";
 
 interface Scan {
   id: string;
@@ -116,7 +116,12 @@ export function ScanHistoryClient() {
     <main className="flex-1">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Scan History</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <Button variant="ghost" onClick={() => router.push("/dashboard")} className="px-2">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-3xl md:text-4xl font-bold">Scan History</h1>
+          </div>
           <p className="text-muted-foreground">View and manage all your food scans</p>
         </div>
 

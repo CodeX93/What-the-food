@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Code, Link as LinkIcon, Copy, Check, Trash2, Plus, BarChart3, Zap, Edit, Save, Bookmark, AlertTriangle } from "lucide-react";
+import { Code, Link as LinkIcon, Copy, Check, Trash2, Plus, BarChart3, Zap, Edit, Save, Bookmark, AlertTriangle, ArrowRight, ShieldCheck } from "lucide-react";
 import { getUrl } from "@/utils/url";
 
 type WidgetFormState = {
@@ -51,13 +51,18 @@ const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = REQUEST_TIMEOUT_
   }
 };
 
-export function WidgetDashboardClient() {
+type WidgetDashboardClientProps = {
+  initialSubscription?: any;
+};
+
+export function WidgetDashboardClient({ initialSubscription = null }: WidgetDashboardClientProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [subscription, setSubscription] = useState<any>(null);
+  const [platformSubscription, setPlatformSubscription] = useState<any>(initialSubscription);
   const [savedWidgets, setSavedWidgets] = useState<any[]>([]);
   const [widgetSites, setWidgetSites] = useState<any[]>([]);
   const [apiStats, setApiStats] = useState<any>({ total: 0, today: 0, thisMonth: 0, successful: 0 });
@@ -76,6 +81,7 @@ export function WidgetDashboardClient() {
   const supabaseClient = supabase as any;
   const initialLoadRef = useRef(true);
   const currentWidgetRef = useRef<any>(null);
+  const subscriptionProcessedRef = useRef(false);
   const subscriptionType = subscription?.subscription_type;
 
   const evaluateSiteLimit = useCallback((currentSiteCount: number) => {
@@ -215,113 +221,107 @@ export function WidgetDashboardClient() {
 
         setUser(session.user);
 
-        // Load only subscription first - render page immediately
-        // Add timeout to subscription query
-        const subscriptionPromise = supabaseClient
-          .from("platform_subscriptions")
-          .select("id, subscription_type, is_active")
-          .eq("user_id", session.user.id)
-          .maybeSingle();
-
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("Subscription query timeout")), 2000);
-        });
-
-        let subRes;
-        try {
-          subRes = await Promise.race([subscriptionPromise, timeoutPromise]);
-        } catch (timeoutError) {
-          // If subscription query times out, still render the page
-          console.warn("Subscription query timed out, rendering page anyway");
-          clearTimeout(timeoutId);
-          setLoading(false);
-          // Set a default subscription to allow page to render
-          setSubscription({ subscription_type: "free", is_active: false, site_limit: 1 });
-          return;
+        // Use server-loaded subscription if available, otherwise set defaults
+        // Only process subscription once to prevent infinite loops
+        let isPremiumUser = false;
+        if (!subscriptionProcessedRef.current) {
+          if (initialSubscription) {
+            const subscriptionData = {
+              ...initialSubscription,
+              site_limit: initialSubscription.subscription_type === "premium" ? null : 1,
+            };
+            setSubscription(subscriptionData);
+            setPlatformSubscription(initialSubscription);
+            isPremiumUser = initialSubscription.subscription_type === "premium";
+            setLoading(false);
+          } else {
+            // No subscription found, show free user experience
+            setSubscription({ subscription_type: "free", is_active: false, site_limit: 1 });
+            setPlatformSubscription({ subscription_type: "free", is_active: false });
+            setLoading(false);
+          }
+          subscriptionProcessedRef.current = true;
+        } else {
+          // Use existing subscription state to determine premium status
+          isPremiumUser = platformSubscription?.subscription_type === "premium" || subscription?.subscription_type === "premium";
         }
 
-        if (cancelled) {
-          clearTimeout(timeoutId);
-          return;
-        }
-
-        if (subRes.error) {
-          console.error("Subscription error:", subRes.error);
-          clearTimeout(timeoutId);
-          setLoading(false);
-          // Set default subscription to allow page to render
-          setSubscription({ subscription_type: "free", is_active: false, site_limit: 1 });
-          return;
-        }
-
-        const sub = subRes.data;
-
-        if (!sub) {
-          clearTimeout(timeoutId);
-          router.push("/plans");
-          return;
-        }
-
-        clearTimeout(timeoutId);
-        setSubscription({
-          ...sub,
-          site_limit: sub.subscription_type === "premium" ? null : 1,
-        });
-        
-        // Render page immediately with subscription data
-        setLoading(false);
-
-        // Load widgets in background (non-blocking)
-        supabaseClient
-          .from("widget_settings")
-          .select(
-            "id, widget_id, widget_name, widget_description, primary_color, border_radius, is_default, created_at, custom_text, branding_visible"
-          )
-          .eq("user_id", session.user.id)
-          .order("created_at", { ascending: false })
-          .limit(50)
-          .then(({ data: widgets, error: widgetsError }) => {
-            if (cancelled) return;
-            
-            // Verify user is still authenticated before processing widgets
-            supabaseClient.auth.getSession().then(({ data: { session: verifySession } }) => {
-              if (cancelled || !verifySession?.user) return;
+        // Only load widgets if user is premium
+        if (isPremiumUser) {
+          // Load widgets in background (non-blocking)
+          supabaseClient
+            .from("widget_settings")
+            .select(
+              "id, widget_id, widget_name, widget_description, primary_color, border_radius, is_default, created_at, custom_text, branding_visible"
+            )
+            .eq("user_id", session.user.id)
+            .order("created_at", { ascending: false })
+            .limit(50)
+            .then(({ data: widgets, error: widgetsError }) => {
+              if (cancelled) return;
               
-              if (widgetsError) {
-                console.error("Error loading widgets:", widgetsError);
-                return;
+              // Verify user is still authenticated before processing widgets
+              supabaseClient.auth.getSession().then(({ data: { session: verifySession } }) => {
+                if (cancelled || !verifySession?.user) return;
+                
+                if (widgetsError) {
+                  // Only log non-network errors
+                  const errorMessage = widgetsError.message || String(widgetsError);
+                  const isNetworkError = 
+                    errorMessage.includes("Load failed") ||
+                    errorMessage.includes("Failed to fetch") ||
+                    errorMessage.includes("NetworkError") ||
+                    errorMessage.includes("TypeError") ||
+                    errorMessage.includes("access control");
+                  
+                  if (!isNetworkError) {
+                    console.error("Error loading widgets:", widgetsError);
+                  }
+                  return;
+                }
+
+                if ((widgets as any[]) && (widgets as any[]).length > 0) {
+                  const widgetList = widgets as Array<{ is_default?: boolean }>;
+                  setSavedWidgets(widgetList);
+                  const defaultWidget = widgetList.find((w) => w.is_default) || widgetList[0];
+
+                  if (!currentWidgetRef.current) {
+                    // Load widget details in background, don't block UI
+                    loadWidgetForEditing(defaultWidget).catch((error) => {
+                      if (!cancelled) {
+                        console.error("Error loading widget for editing:", error);
+                      }
+                    });
+                  }
+
+                  if (initialLoadRef.current) {
+                    setActiveTab("saved-widgets");
+                  }
+                } else {
+                  clearEditingContext();
+                  if (initialLoadRef.current) {
+                    handleTabChange("create");
+                  }
+                }
+                initialLoadRef.current = false;
+              });
+            })
+            .catch((error) => {
+              if (cancelled) return;
+              // Only log non-network errors
+              const errorMessage = error?.message || String(error);
+              const isNetworkError = 
+                errorMessage.includes("Load failed") ||
+                errorMessage.includes("Failed to fetch") ||
+                errorMessage.includes("NetworkError") ||
+                errorMessage.includes("TypeError") ||
+                errorMessage.includes("access control");
+              
+              if (!isNetworkError) {
+                console.error("Error loading widgets:", error);
               }
-
-              if ((widgets as any[]) && (widgets as any[]).length > 0) {
-                const widgetList = widgets as Array<{ is_default?: boolean }>;
-                setSavedWidgets(widgetList);
-                const defaultWidget = widgetList.find((w) => w.is_default) || widgetList[0];
-
-                if (!currentWidgetRef.current) {
-                  // Load widget details in background, don't block UI
-                  loadWidgetForEditing(defaultWidget).catch((error) => {
-                    if (!cancelled) {
-                      console.error("Error loading widget for editing:", error);
-                    }
-                  });
-                }
-
-                if (initialLoadRef.current) {
-                  setActiveTab("saved-widgets");
-                }
-              } else {
-                clearEditingContext();
-                if (initialLoadRef.current) {
-                  handleTabChange("create");
-                }
-              }
-              initialLoadRef.current = false;
             });
-          })
-          .catch((error) => {
-            if (cancelled) return;
-            console.error("Error loading widgets:", error);
-          });
+        }
 
         // Load API stats only when user scrolls to stats section (lazy load)
         // Use Intersection Observer to load stats only when visible
@@ -390,6 +390,12 @@ export function WidgetDashboardClient() {
               return;
             }
             
+            // Check if user is premium before loading stats
+            const currentIsPremium = platformSubscription?.subscription_type === "premium" || subscription?.subscription_type === "premium";
+            if (!currentIsPremium) {
+              return; // Don't load stats for free users
+            }
+            
             const startOfToday = new Date();
             startOfToday.setHours(0, 0, 0, 0);
             const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -453,14 +459,27 @@ export function WidgetDashboardClient() {
             })
             .catch((error) => {
               if (cancelled) return;
-              console.error("Error loading API stats:", error);
+              // Only log non-network errors
+              const errorMessage = error?.message || String(error);
+              const isNetworkError = 
+                errorMessage.includes("Load failed") ||
+                errorMessage.includes("Failed to fetch") ||
+                errorMessage.includes("NetworkError") ||
+                errorMessage.includes("TypeError") ||
+                errorMessage.includes("access control");
+              
+              if (!isNetworkError) {
+                console.error("Error loading API stats:", error);
+              }
               // Keep stats at 0 on error
             });
           });
         };
 
-        // Start loading stats when visible or after delay
-        loadStatsWhenVisible();
+        // Only start loading stats if user is premium
+        if (isPremiumUser) {
+          loadStatsWhenVisible();
+        }
       } catch (error: any) {
         if (cancelled) return;
         console.error("Error loading data:", error);
@@ -491,7 +510,7 @@ export function WidgetDashboardClient() {
         statsObserver = null;
       }
     };
-  }, [router, supabaseClient, toast, loadWidgetForEditing, clearEditingContext, handleTabChange]);
+  }, [router, supabaseClient, toast, loadWidgetForEditing, clearEditingContext, handleTabChange, initialSubscription]);
 
   const handleSaveWidget = async (mode: "create" | "edit", saveAsNew: boolean = false) => {
     if (!user) return;
@@ -897,6 +916,10 @@ export function WidgetDashboardClient() {
     );
   };
 
+  // Check if user is premium - subscription_type === "premium" is the key indicator
+  const isPremium = 
+    platformSubscription?.subscription_type === "premium" ||
+    subscription?.subscription_type === "premium";
 
   if (loading) {
     return (
@@ -916,7 +939,7 @@ export function WidgetDashboardClient() {
 
   return (
     <main className="flex-1">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Widget Dashboard</h1>
           <p className="text-muted-foreground">Manage your widget customization, sites, and track usage</p>
@@ -942,7 +965,44 @@ export function WidgetDashboardClient() {
           ))}
         </div>
 
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+        {!isPremium ? (
+          <Card className="mb-8 border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
+            <CardContent className="py-8 px-6">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex-1 text-center md:text-left">
+                  <h2 className="text-2xl md:text-3xl font-bold mb-2">Unlock the Full Widget Experience</h2>
+                  <p className="text-muted-foreground text-lg mb-4">
+                    Upgrade to Premium and get access to unlimited widget customization, multiple sites, and advanced analytics.
+                  </p>
+                  <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Check className="h-5 w-5 text-primary" />
+                      <span>Unlimited widgets</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Check className="h-5 w-5 text-primary" />
+                      <span>Multiple sites</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Check className="h-5 w-5 text-primary" />
+                      <span>Advanced analytics</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <Check className="h-5 w-5 text-primary" />
+                      <span>Remove branding</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex-shrink-0">
+                  <Button size="lg" onClick={() => router.push("/plans")} className="text-base px-8 py-6">
+                    Upgrade to Premium <ArrowRight className="h-5 w-5 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
           <TabsList>
             <TabsTrigger value="saved-widgets">
               <Bookmark className="h-4 w-4 mr-2" /> Saved Widgets ({savedWidgets.length})
@@ -1187,7 +1247,8 @@ export function WidgetDashboardClient() {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
+          </Tabs>
+        )}
       </div>
     </main>
   );

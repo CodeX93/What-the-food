@@ -8,12 +8,16 @@ const WidgetDashboardClient = dynamic(
   { ssr: false }
 );
 
-const WidgetDashboard = () => {
+type WidgetDashboardProps = {
+  initialSubscription?: any;
+};
+
+const WidgetDashboard = ({ initialSubscription }: WidgetDashboardProps) => {
   return (
     <div className="min-h-screen flex flex-col">
       <TopBar />
       <Header />
-      <WidgetDashboardClient />
+      <WidgetDashboardClient initialSubscription={initialSubscription} />
       <Footer />
     </div>
   );

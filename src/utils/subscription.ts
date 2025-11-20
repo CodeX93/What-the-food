@@ -55,13 +55,34 @@ export async function getPlatformSubscription(userId?: string): Promise<Platform
       .maybeSingle();
 
     if (error) {
-      console.error("Error fetching platform subscription:", error);
+      // Only log non-network errors (CORS/network errors are expected in some contexts)
+      const errorMessage = error.message || String(error);
+      const isNetworkError = 
+        error.code === "PGRST116" ||
+        errorMessage.includes("Load failed") ||
+        errorMessage.includes("Failed to fetch") ||
+        errorMessage.includes("NetworkError") ||
+        errorMessage.includes("TypeError");
+      
+      if (!isNetworkError) {
+        console.error("Error fetching platform subscription:", error);
+      }
       return null;
     }
 
     return (data || null) as PlatformSubscriptionRow | null;
-  } catch (error) {
-    console.error("Error fetching platform subscription:", error);
+  } catch (error: any) {
+    // Only log non-network errors
+    const errorMessage = error?.message || String(error) || "";
+    const isNetworkError = 
+      errorMessage.includes("Load failed") ||
+      errorMessage.includes("Failed to fetch") ||
+      errorMessage.includes("NetworkError") ||
+      errorMessage.includes("TypeError");
+    
+    if (!isNetworkError) {
+      console.error("Error fetching platform subscription:", error);
+    }
     return null;
   }
 }
