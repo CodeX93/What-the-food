@@ -456,7 +456,7 @@ export function DashboardClient({
           {/* Left Section: Upload & Analyze (first), then Log Foods manually (below) */}
           <div className="flex flex-col gap-0 h-full ">
             {/* Upload and Analyze - First */}
-            <Card className="flex flex-col flex-1">
+            <Card className="flex flex-col" style={{ flex: '1.18 2 0' }}>
               <CardHeader className="pb-0" style={{ minHeight: '80px' }}>
                 <CardTitle>Upload and Analyze</CardTitle>
                 <CardDescription>PNG, JPG, JPEG, HEIC</CardDescription>
