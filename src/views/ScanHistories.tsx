@@ -8,12 +8,16 @@ const ScanHistoriesClient = dynamic(
   { ssr: false }
 );
 
-const ScanHistories = () => {
+type ScanHistoriesProps = {
+  initialSubscription?: any;
+};
+
+const ScanHistories = ({ initialSubscription }: ScanHistoriesProps) => {
   return (
     <div className="min-h-screen flex flex-col">
       <TopBar />
       <Header />
-      <ScanHistoriesClient />
+      <ScanHistoriesClient initialSubscription={initialSubscription} />
       <Footer />
     </div>
   );

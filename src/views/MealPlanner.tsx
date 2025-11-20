@@ -8,12 +8,16 @@ const MealPlannerClient = dynamic(
   { ssr: false }
 );
 
-const MealPlanner = () => {
+type MealPlannerProps = {
+  initialSubscription?: any;
+};
+
+const MealPlanner = ({ initialSubscription }: MealPlannerProps) => {
   return (
     <div className="min-h-screen flex flex-col">
       <TopBar />
       <Header />
-      <MealPlannerClient />
+      <MealPlannerClient initialSubscription={initialSubscription} />
       <Footer />
     </div>
   );

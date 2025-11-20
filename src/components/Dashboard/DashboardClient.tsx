@@ -56,6 +56,7 @@ export function DashboardClient({
     { id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`, value: "" },
   ]);
   const [manualLoading, setManualLoading] = useState(false);
+  const isPremium = subscription?.subscription_type === "premium";
 
   const manualPlaceholders = ["2 boiled eggs", "Greek yogurt (1 cup)", "1 banana", "Protein shake with almond milk"];
   const quickAddOptions = ["Handful of almonds", "Oatmeal packet", "Apple", "Dark chocolate square"];
@@ -324,7 +325,21 @@ export function DashboardClient({
             </CardHeader>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push("/my-food-analytics")}>
+          <Card
+            className={`cursor-pointer hover:shadow-lg transition-shadow ${!isPremium ? "opacity-80" : ""}`}
+            title={!isPremium ? "Upgrade to Premium to unlock deep analytics" : undefined}
+            onClick={() => {
+              if (!isPremium) {
+                toast({
+                  title: "Premium feature",
+                  description: "Upgrade to a premium plan to view your complete food analytics.",
+                  variant: "warning",
+                });
+                return;
+              }
+              router.push("/my-food-analytics");
+            }}
+          >
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-primary/10 rounded-lg">
@@ -332,13 +347,30 @@ export function DashboardClient({
                 </div>
                 <div>
                   <CardTitle className="text-lg">Analytics</CardTitle>
-                  <CardDescription>View your stats</CardDescription>
+                  <CardDescription>
+                    {isPremium ? "View your stats" : "Premium · Hover for details"}
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push("/scan-histories")}
+          <Card
+            className={`cursor-pointer hover:shadow-lg transition-shadow ${
+              !isPremium ? "opacity-80" : ""
+            }`}
+            title={!isPremium ? "Upgrade to Premium to unlock your full scan history" : undefined}
+            onClick={() => {
+              if (!isPremium) {
+                toast({
+                  title: "Premium feature",
+                  description: "Upgrade to a premium plan to view your complete scan history.",
+                  variant: "warning",
+                });
+                return;
+              }
+              router.push("/scan-histories");
+            }}
           >
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -347,13 +379,29 @@ export function DashboardClient({
                 </div>
                 <div>
                   <CardTitle className="text-lg">History</CardTitle>
-                  <CardDescription>Past scans</CardDescription>
+                  <CardDescription>
+                    {isPremium ? "Past scans" : "Premium · Hover for details"}
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>
           </Card>
 
-          <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => router.push("/meal-planner")}>
+          <Card
+            className={`cursor-pointer hover:shadow-lg transition-shadow ${!isPremium ? "opacity-80" : ""}`}
+            title={!isPremium ? "Upgrade to generate personalized meal plans" : undefined}
+            onClick={() => {
+              if (!isPremium) {
+                toast({
+                  title: "Premium feature",
+                  description: "Upgrade to a premium plan to access the AI meal planner.",
+                  variant: "warning",
+                });
+                return;
+              }
+              router.push("/meal-planner");
+            }}
+          >
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-primary/10 rounded-lg">
@@ -361,7 +409,9 @@ export function DashboardClient({
                 </div>
                 <div>
                   <CardTitle className="text-lg">Meal Planner</CardTitle>
-                  <CardDescription>Personalized meal plan</CardDescription>
+                  <CardDescription>
+                    {isPremium ? "Personalized meal plan" : "Premium · Hover for details"}
+                  </CardDescription>
                 </div>
               </div>
             </CardHeader>

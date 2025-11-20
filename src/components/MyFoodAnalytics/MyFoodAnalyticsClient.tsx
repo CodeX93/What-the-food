@@ -6,7 +6,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Download, RefreshCw, ArrowLeft, CalendarRange, Loader2, Plus, X } from "lucide-react";
+import {
+  Download,
+  RefreshCw,
+  ArrowLeft,
+  CalendarRange,
+  Loader2,
+  Plus,
+  X,
+  Lock,
+  ShieldCheck,
+  Sparkles,
+  ArrowRight,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type ManualItem = {
@@ -47,7 +59,11 @@ const parseNumber = (value: any): number => {
   return 0;
 };
 
-export function MyFoodAnalyticsClient() {
+type MyFoodAnalyticsClientProps = {
+  initialSubscription?: any;
+};
+
+export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnalyticsClientProps) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
@@ -169,7 +185,13 @@ export function MyFoodAnalyticsClient() {
     }
   };
 
+  const isPremium = initialSubscription?.subscription_type === "premium";
+
   const reload = useCallback(async () => {
+    if (!isPremium) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const {
@@ -189,11 +211,15 @@ export function MyFoodAnalyticsClient() {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, isPremium]);
 
   useEffect(() => {
+    if (!isPremium) {
+      setLoading(false);
+      return;
+    }
     void reload();
-  }, [reload]);
+  }, [reload, isPremium]);
 
   useEffect(() => {
     if (!scans.length) return;
@@ -323,6 +349,64 @@ export function MyFoodAnalyticsClient() {
 
   const calorieSeries = buildBarSeries(stats.byDay, (value) => value.calories, maxCal);
   const countSeries = buildBarSeries(stats.byDay, (value) => value.count, maxCount);
+
+  if (!isPremium) {
+    return (
+      <main className="flex-1 bg-gradient-to-b from-background via-background to-muted/30">
+        <div className="container mx-auto px-4 py-16">
+          <Card className="max-w-2xl mx-auto border-primary/30 bg-background/80 backdrop-blur">
+            <CardHeader className="text-center space-y-4">
+              <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                <Lock className="h-7 w-7 text-primary" />
+              </div>
+              <div className="space-y-2">
+                <CardTitle className="text-3xl">Analytics is Premium</CardTitle>
+                <CardDescription className="text-base">
+                  Upgrade to visualize your nutrition trends, daily totals, and AI-estimated manual entries all in one
+                  dashboard.
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6 text-left">
+              <div className="grid sm:grid-cols-2 gap-4">
+                {[
+                  {
+                    icon: <ShieldCheck className="h-5 w-5 text-primary" />,
+                    title: "Unified insights",
+                    body: "See every scan plus manual food logs reflected instantly in your totals.",
+                  },
+                  {
+                    icon: <Sparkles className="h-5 w-5 text-primary" />,
+                    title: "Actionable trends",
+                    body: "Track calories, macros, and top dishes over time with exportable reports.",
+                  },
+                ].map((feature) => (
+                  <div
+                    key={feature.title}
+                    className="p-4 rounded-xl border border-primary/20 bg-primary/5 flex flex-col gap-2"
+                  >
+                    <div className="flex items-center gap-2 font-semibold text-sm">
+                      {feature.icon}
+                      {feature.title}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{feature.body}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="text-center">
+                <Button size="lg" className="px-8" onClick={() => router.push("/plans")}>
+                  Upgrade to Premium <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+                <p className="text-sm text-muted-foreground mt-3">
+                  Already upgraded? Refresh this page after your plan activates.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex-1">

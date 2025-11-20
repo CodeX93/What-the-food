@@ -8,12 +8,16 @@ const MyFoodAnalyticsClient = dynamic(
   { ssr: false }
 );
 
-const MyFoodAnalytics = () => {
+type MyFoodAnalyticsProps = {
+  initialSubscription?: any;
+};
+
+const MyFoodAnalytics = ({ initialSubscription }: MyFoodAnalyticsProps) => {
   return (
     <div className="min-h-screen flex flex-col">
       <TopBar />
       <Header />
-      <MyFoodAnalyticsClient />
+      <MyFoodAnalyticsClient initialSubscription={initialSubscription} />
       <Footer />
     </div>
   );
