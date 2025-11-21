@@ -683,24 +683,20 @@ export function DashboardClient({
               <CardDescription>Reach health-conscious users interested in nutrition tracking, food, and cooking.</CardDescription>
             </CardHeader>
             <CardContent className="p-0 flex-1 flex flex-col">
-              <div className="flex flex-col space-y-1.5  pt-0">
-                <div className="grid grid-cols-2 gap-0 w-full">
-                  {[1, 2, 3, 4].map((index) => (
-                    <div key={index} className="w-full h-full rounded-none overflow-hidden" style={{ minHeight: '480px', height: '480px' }}>
-                      <iframe
-                        width="100%"
-                        height="100%"
-                        frameBorder="0"
-                        className="ta-widget w-full h-full"
-                        data-min-height="480"
-                        id={`widget68ee566289b6c5ef70269ca8-seed${7166 + index}`}
-                        src={`https://app.tinyadz.com/widgets/68ee566289b6c5ef70269ca8?seed=${7166 + index}&previewMode=false&showInPopup=false&theme=light`}
-                        style={{ border: 'none', display: 'block', width: '100%', height: '100%', margin: 0, padding: 0 }}
-                        title={`Advertisement ${index}`}
-                        scrolling="auto"
-                      />
-                    </div>
-                  ))}
+              <div className="flex flex-col space-y-1.5 pt-0">
+                <div className="w-full" style={{ minHeight: '480px' }}>
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    className="ta-widget w-full h-full"
+                    data-min-height="480"
+                    id="widget68ee566289b6c5ef70269ca8"
+                    src="https://app.tinyadz.com/widgets/68ee566289b6c5ef70269ca8?previewMode=false&showInPopup=false&theme=light"
+                    style={{ border: 'none', display: 'block', width: '100%', height: '100%', margin: 0, padding: 0 }}
+                    title="Advertisements"
+                    scrolling="auto"
+                  />
                 </div>
               </div>
             </CardContent>
