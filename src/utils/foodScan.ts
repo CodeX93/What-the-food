@@ -62,12 +62,22 @@ export async function uploadFoodImage(file: File, userId: string): Promise<{ pat
 }
 
 export async function analyzeFood(
-  imageUrl: string,
+  imageUrl: string | null,
   serving: number = 1,
   insightsParams?: { age?: number; gender?: string; activity?: string; goal?: string; optimize?: boolean; weight_kg?: number; height_cm?: number },
-  options?: { overrideIngredients?: string[] }
+  options?: { overrideIngredients?: string[]; manualEntry?: { dish: string; ingredients: string[] } }
 ): Promise<{ analysis: FoodAnalysis; insights?: string; upgrade?: boolean }>{
-  const body: Record<string, unknown> = { imageUrl, serving, ...(insightsParams || {}) };
+  const body: Record<string, unknown> = { serving, ...(insightsParams || {}) };
+  
+  // Support both image-based and manual entry analysis
+  if (options?.manualEntry) {
+    body.manualEntry = options.manualEntry;
+  } else if (imageUrl) {
+    body.imageUrl = imageUrl;
+  } else {
+    throw new Error("Either imageUrl or manualEntry must be provided");
+  }
+  
   if (options?.overrideIngredients && options.overrideIngredients.length > 0) {
     body.overrideIngredients = options.overrideIngredients;
   }
@@ -123,22 +133,26 @@ export async function saveScanHistory(params: {
  */
 export async function getFreshImageUrl(imagePath: string | null, expirySeconds: number = 60 * 60): Promise<string | null> {
   if (!imagePath) {
-    console.warn("getFreshImageUrl: No image path provided");
     return null;
   }
+  
+  // Skip manual entry paths - they don't have actual images in storage
+  if (imagePath.toLowerCase().startsWith("manual-entry")) {
+    return null;
+  }
+  
   try {
     const { data, error } = await supabase.storage.from("FoodScans").createSignedUrl(imagePath, expirySeconds);
     if (error) {
-      console.error("Failed to generate signed URL - error:", error);
+      // Silently handle errors for manual entries or missing files
       return null;
     }
     if (!data?.signedUrl) {
-      console.error("Failed to generate signed URL - no data returned");
       return null;
     }
     return data.signedUrl;
   } catch (e) {
-    console.error("Exception generating signed URL:", e);
+    // Silently handle exceptions
     return null;
   }
 }
@@ -171,18 +185,25 @@ export async function fetchRecentScans(userId: string, limit: number = 10){
       result_json?: any;
       created_at: string;
     }>).map(async (scan) => {
+      const resultJson = scan.result_json as FoodAnalysis | null;
+      const isManualEntry =
+        !!resultJson?.isManualEntry ||
+        (typeof resultJson?.dish === "string" && resultJson.dish.trim().toLowerCase().startsWith("manual"));
+      const hasStorageImage =
+        !!scan.image_path &&
+        !scan.image_path.toLowerCase().startsWith("manual-entry") &&
+        !isManualEntry;
+
       let displayUrl: string | null = null;
-      
-      // Try to generate fresh signed URL from image_path
-      if (scan.image_path) {
-        displayUrl = await getImageUrl(scan.image_path, 60 * 60);
+
+      if (hasStorageImage) {
+        displayUrl = await getImageUrl(scan.image_path as string, 60 * 60);
       }
-      
-      // Fallback to stored image_url if fresh generation fails or no path
-      if (!displayUrl && scan.image_url) {
-        displayUrl = scan.image_url as string;
+
+      if (!displayUrl && typeof scan.image_url === "string" && /^https?:\/\//i.test(scan.image_url)) {
+        displayUrl = scan.image_url;
       }
-      
+
       return {
         ...scan,
         displayUrl,

@@ -81,66 +81,68 @@ export function SharedFoodResults({
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-4">
-            <Card className="overflow-hidden sticky top-6">
-              {imageUrl ? (
-                <div className="aspect-square relative overflow-hidden">
-                  <img src={imageUrl} alt={analysis.dish || "Food"} className="w-full h-full object-cover" />
-                </div>
-              ) : (
-                <div className="aspect-square flex items-center justify-center text-muted-foreground bg-muted">
-                  <Salad className="h-16 w-16 opacity-30" />
-                </div>
-              )}
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <span>Confidence</span>
-                    <TooltipProvider delayDuration={150}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span
-                            role="button"
-                            aria-label="Confidence info"
-                            className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-muted-foreground/40 text-[10px] text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary"
-                          >
-                            <Info className="h-3 w-3" strokeWidth={2} />
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" align="start" className="max-w-xs text-xs leading-relaxed">
-                          AI confidence can fluctuate with image quality, lighting, angle, and other visual factors.
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+        <div className="grid lg:grid-cols-12 gap-6 ">
+          {!(analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")) && (
+            <div className="lg:col-span-4 ">
+              <Card className="overflow-hidden sticky top-6">
+                {imageUrl ? (
+                  <div className="relative overflow-hidden" style={{ aspectRatio: '1 / 0.94' }}>
+                    <img src={imageUrl} alt={analysis.dish || "Food"} className="w-full h-full object-cover" />
                   </div>
-                  <span className="font-semibold">{Math.round((analysis.confidence || 0) * 100)}%</span>
-                </div>
-                <div className="h-2 bg-muted rounded-full mt-2 overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all"
-                    style={{ width: `${Math.round((analysis.confidence || 0) * 100)}%` }}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                ) : (
+                  <div className="flex items-center justify-center text-muted-foreground bg-muted" style={{ aspectRatio: '1 / 0.94' }}>
+                    <Salad className="h-16 w-16 opacity-30" />
+                  </div>
+                )}
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <span>Confidence</span>
+                      <TooltipProvider delayDuration={150}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              role="button"
+                              aria-label="Confidence info"
+                              className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-muted-foreground/40 text-[10px] text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary"
+                            >
+                              <Info className="h-3 w-3" strokeWidth={2} />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" align="start" className="max-w-xs text-xs leading-relaxed">
+                            AI confidence can fluctuate with image quality, lighting, angle, and other visual factors.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <span className="font-semibold">{Math.round((analysis.confidence || 0) * 100)}%</span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full mt-2 overflow-hidden">
+                    <div
+                      className="h-full bg-primary transition-all"
+                      style={{ width: `${Math.round((analysis.confidence || 0) * 100)}%` }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
-          <div className="lg:col-span-8 space-y-6">
+          <div className={`${analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input") ? "lg:col-span-12" : "lg:col-span-8"} space-y-6`}>
             <Card className="relative overflow-hidden">
-              <CardHeader>
-                <div className="space-y-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                    <CardTitle className="text-xl flex items-center gap-2 flex-wrap">
-                      Nutrition Summary
+              <CardHeader className="pb-1">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="overflow-hidden sticky top-6 ">
+                      Nutrition Summary 
                       {servingApproximation && (
-                        <span className="text-base font-normal text-muted-foreground whitespace-nowrap">
+                        <span className="text-base font-normal text-muted-foreground whitespace-nowrap mx-3">
                           (~ {servingApproximation.grams}g)
                         </span>
                       )}
                     </CardTitle>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-sm text-muted-foreground whitespace-nowrap">Servings: {serving}</span>
+                      <span className="text-sm text-muted-foreground whitespace-nowrap font-bold">Servings: {serving}</span>
                     </div>
                   </div>
                   {analysis.description && (
@@ -149,19 +151,19 @@ export function SharedFoodResults({
                     </p>
                   )}
                   {analysis.tags && analysis.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 mb-5">
                       {analysis.tags.map((tag, index) => {
                         const palette = [
-                          "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.4)]",
-                          "bg-sky-50 text-sky-700 border border-sky-200 shadow-[inset_0_0_0_1px_rgba(14,165,233,0.3)]",
-                          "bg-rose-50 text-rose-700 border border-rose-200 shadow-[inset_0_0_0_1px_rgba(244,63,94,0.3)]",
-                          "bg-amber-50 text-amber-700 border border-amber-200 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.4)]",
+                          "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.4)] hover:bg-emerald-500 hover:text-white hover:border-emerald-600 transition-colors",
+                          "bg-sky-50 text-sky-700 border border-sky-200 shadow-[inset_0_0_0_1px_rgba(14,165,233,0.3)] hover:bg-sky-500 hover:text-white hover:border-sky-600 transition-colors",
+                          "bg-rose-50 text-rose-700 border border-rose-200 shadow-[inset_0_0_0_1px_rgba(244,63,94,0.3)] hover:bg-rose-500 hover:text-white hover:border-rose-600 transition-colors",
+                          "bg-amber-50 text-amber-700 border border-amber-200 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.4)] hover:bg-amber-500 hover:text-white hover:border-amber-600 transition-colors",
                         ];
                         const colors = palette[index % palette.length];
                         return (
                           <span
                             key={`${tag}-${index}`}
-                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize tracking-tight ${colors}`}
+                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize tracking-tight ${colors} mb-2`}
                           >
                             {tag}
                           </span>
@@ -189,14 +191,14 @@ export function SharedFoodResults({
                     const Icon = stat.icon;
                     return (
                       <Card key={stat.label} className={`${stat.style} border-2`}>
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-2 mb-2">
+                        <CardContent className="p-2">
+                          <div className="flex items-center ">
                             <Icon className="h-5 w-5" />
                             <span className="text-xs font-medium opacity-80">{stat.label}</span>
                           </div>
-                          <div className="text-2xl font-bold">
+                          <div className="font-bold">
                             {typeof stat.value === "number" ? stat.value.toFixed(stat.suffix === "" ? 0 : 1) : stat.value}
-                            {stat.suffix && <span className="text-lg ml-1">{stat.suffix}</span>}
+                            {stat.suffix && <span className="text-sm ml-1">{stat.suffix}</span>}
                           </div>
                         </CardContent>
                       </Card>
@@ -249,18 +251,10 @@ export function SharedFoodResults({
               </Card>
             )}
 
-            {analysis.additionalInfo && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Additional Information</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {analysis.additionalInfo}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+       
+
+       
+            
 
             {analysis.ingredients && analysis.ingredients.length > 0 && (
               <Card>
@@ -279,8 +273,20 @@ export function SharedFoodResults({
                 </CardContent>
               </Card>
             )}
+{analysis.additionalInfo && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Additional Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {analysis.additionalInfo}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
-            <Card className="border-primary/30">
+                 <Card className="border-primary/30">
               <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-primary/10">
@@ -294,20 +300,33 @@ export function SharedFoodResults({
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {analysis.insights ? (
-                  <div className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
-                    {analysis.insights}
+              <CardContent className="px-6 py-6">
+                <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background px-6 py-6 text-center">
+                  <div className="absolute inset-0 pointer-events-none opacity-40" aria-hidden>
+                    <div className="absolute -top-8 -right-8 h-24 w-24 bg-primary/30 blur-2xl" />
+                    <div className="absolute -bottom-10 -left-10 h-32 w-32 bg-emerald-400/20 blur-2xl" />
                   </div>
-                ) : (
-                  <div className="text-sm leading-relaxed text-muted-foreground">
-                    Personalized insights were not captured for this scan. Generate a new scan
-                    with profile data to unlock AI-guided recommendations.
+                  <div className="relative flex flex-col items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/15 border border-primary/30">
+                      <Sparkles className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <h3 className="text-lg font-semibold tracking-tight">You need a Premium Account for this</h3>
+                      <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                        Get personalized health insights tailored to your unique goals and profile data.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href="/auth">Sign In</Link>
+                      </Button>
+                      <Button size="sm" className="bg-primary hover:bg-primary-hover" asChild>
+                        <Link href="/plans">
+                          <Sparkles className="h-3 w-3 mr-2" /> Get Registered Now
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
-                )}
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  Generated with AI · Informational only
                 </div>
               </CardContent>
             </Card>

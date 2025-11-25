@@ -118,7 +118,7 @@ export function DashboardClient({
       }
 
       const totals = manualData.totals || {};
-      const dishName = `Manual: ${foods.join(", ")}`.slice(0, 200);
+      const dishName = `Manual Input: ${foods.join(", ")}`.slice(0, 200);
       const manualResult = {
         dish: dishName,
         description: "Manually logged foods",
@@ -156,7 +156,7 @@ export function DashboardClient({
         const { data: analyzeData, error: analyzeError } = await supabase.functions.invoke("analyze-food", {
           body: {
             manualEntry: {
-              dish: dishName.replace(/^Manual:\s*/, ""),
+              dish: dishName.replace(/^Manual Input:\s*/, ""),
               ingredients: manualData.items?.map((item: any) => `${item.name}`) ?? foods,
             },
           },

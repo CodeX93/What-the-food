@@ -164,7 +164,16 @@ export function ScanHistoryClient() {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle className="text-lg mb-2">{scan.dish_name || "Unknown Dish"}</CardTitle>
+                      <CardTitle className="text-lg mb-2">
+                        {(() => {
+                          const dish = scan.dish_name || "Unknown Dish";
+                          if (typeof dish === "string" && dish.trim().toLowerCase().startsWith("manual")) {
+                            const cleanDish = dish.replace(/^Manual( Input)?:\s*/i, "");
+                            return `Manual Input: ${cleanDish}`;
+                          }
+                          return dish;
+                        })()}
+                      </CardTitle>
                       <CardDescription className="flex items-center gap-2">
                         <Calendar className="h-3 w-3" />
                         {new Date(scan.created_at).toLocaleDateString()}

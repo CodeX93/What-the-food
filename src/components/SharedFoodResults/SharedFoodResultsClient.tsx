@@ -182,9 +182,9 @@ export function SharedFoodResultsClient({
             <Card className="relative overflow-hidden">
               <CardHeader>
                 <div className="space-y-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                    <CardTitle className="text-xl flex items-center gap-2 flex-wrap">
-                      Nutrition Summary
+                <div className="flex items-center justify-between gap-2">
+                <CardTitle className="overflow-hidden sticky top-6 ">
+                      Nutrition Summaryss
                       {servingApproximation && (
                         <span className="text-base font-normal text-muted-foreground whitespace-nowrap">
                           (~ {servingApproximation.grams}g)

@@ -216,19 +216,33 @@ Based on the dish name and ingredients provided above, generate the analysis. Si
     // When overrides are provided, we need to make it clear this is a complete replacement
     // Move the override instruction BEFORE the image to ensure it's processed first
     parts.splice(1, 0, {
-      text: `CRITICAL: USER INGREDIENT OVERRIDES - COMPLETE REPLACEMENT REQUIRED
+      text: `CRITICAL: USER INGREDIENT OVERRIDES - COMPLETE REPLACEMENT AND RECALCULATION REQUIRED
 
 The user has provided this EXACT ingredient list:
 ${overrideIngredients.join("\n")}
 
-MANDATORY INSTRUCTIONS:
+MANDATORY INSTRUCTIONS - YOU MUST RECALCULATE EVERYTHING FROM SCRATCH:
 1. COMPLETELY IGNORE any ingredients you detect from the image. The image is only for dish identification, NOT for ingredient detection.
 2. Use EXACTLY and ONLY the ingredient list provided above. This is a 100% replacement - do NOT add, combine, or merge with anything from the image.
-3. Recalculate ALL nutrients (calories, protein_g, carbohydrates_g, fat_g, fiber_g, sugar_g) from scratch based SOLELY on these user-provided ingredients.
-4. DO NOT add, combine, or merge with any previous values. Start fresh with ONLY these ingredients.
-5. All ingredient quantities must be in METRIC units (grams, kg, ml, liters). Convert any imperial units (oz, pounds, cups, tbsp, tsp) to metric.
-6. Calculate the total nutrition for the entire dish based exclusively on these ingredients.
-7. The "ingredients" array in your response must match EXACTLY the list above (with metric conversions if needed).`,
+3. NUTRIENTS RECALCULATION: Calculate ALL nutrients (calories, protein_g, carbohydrates_g, fat_g, fiber_g, sugar_g) from scratch by:
+   - Looking up the nutritional values for EACH ingredient in the list
+   - Summing up ALL the nutritional values to get the TOTAL for the entire dish
+   - The nutrients field should represent the TOTAL dish (all ingredients combined)
+   - Use accurate nutritional databases/values for each ingredient
+4. SERVING WEIGHT RECALCULATION: Calculate servingWeightGrams by:
+   - Extracting the gram quantities from EACH ingredient in the list
+   - Adding up ALL the gram quantities to get the TOTAL dish weight
+   - Set servingWeightGrams to this total weight (or a reasonable serving portion if the total is very large)
+   - Example: If ingredients are "200g chicken", "150g rice", "50g vegetables", then servingWeightGrams should be approximately 400g (or a portion like 200g if that's more reasonable)
+5. SERVING GUIDANCE UPDATE: Update servingGuidance to:
+   - Use the NEW recalculated servingWeightGrams value in the example calculation
+   - Format: "To calculate your servings, divide your actual dish weight (in grams) by the projected serving weight shown above (~Xg). For example, if your dish weighs 470g and the projected serving is ~Xg, divide 470 ÷ X = Y servings."
+   - Replace X with the actual servingWeightGrams value you calculated
+6. DESCRIPTION, TAGS, ADDITIONAL INFO: Update these fields to reflect the NEW ingredient list. The description should mention the key ingredients from the new list.
+7. DO NOT use any previous values. DO NOT add, combine, or merge with any previous analysis. Start completely fresh.
+8. All ingredient quantities must be in METRIC units (grams, kg, ml, liters). Convert any imperial units (oz, pounds, cups, tbsp, tsp) to metric.
+9. The "ingredients" array in your response must match EXACTLY the list above (with metric conversions if needed).
+10. CRITICAL: Every single field must be recalculated based on the new ingredients. Do not copy any values from previous analyses.`,
     });
   }
 

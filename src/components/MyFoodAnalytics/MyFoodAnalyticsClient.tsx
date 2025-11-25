@@ -222,7 +222,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
       }
 
       const totals = manualData.totals || {};
-      const dishName = `Manual: ${foods.join(", ")}`.slice(0, 200);
+      const dishName = `Manual Input: ${foods.join(", ")}`.slice(0, 200);
       const manualResult = {
         dish: dishName,
         description: "Manually logged foods",
@@ -260,7 +260,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
         const { data: analyzeData, error: analyzeError } = await supabase.functions.invoke("analyze-food", {
           body: {
             manualEntry: {
-              dish: dishName.replace(/^Manual:\s*/, ""),
+              dish: dishName.replace(/^Manual Input:\s*/, ""),
               ingredients: manualData.items?.map((item: any) => `${item.name}`) ?? foods,
             },
           },
@@ -494,6 +494,38 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
     fiber: 0,
     sugar: 0,
   };
+
+  // Calculate average daily macros for date range (or use today if no range or single day)
+  const macroStats = useMemo(() => {
+    if (startDate && endDate && startDate !== endDate && stats.byDay.length > 0) {
+      // Calculate average across date range
+      const filteredDays = stats.byDay.filter(([date]) => {
+        return date >= startDate && date <= endDate;
+      });
+      
+      if (filteredDays.length > 0) {
+        const totals = filteredDays.reduce((acc, [, values]) => ({
+          calories: acc.calories + values.calories,
+          protein: acc.protein + values.protein,
+          carbs: acc.carbs + values.carbs,
+          fat: acc.fat + values.fat,
+          fiber: acc.fiber + values.fiber,
+          sugar: acc.sugar + values.sugar,
+        }), { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0 });
+        
+        return {
+          calories: totals.calories / filteredDays.length,
+          protein: totals.protein / filteredDays.length,
+          carbs: totals.carbs / filteredDays.length,
+          fat: totals.fat / filteredDays.length,
+          fiber: totals.fiber / filteredDays.length,
+          sugar: totals.sugar / filteredDays.length,
+        };
+      }
+    }
+    // Default to today's stats
+    return todayStats;
+  }, [stats.byDay, startDate, endDate, todayStats]);
 
   // Get daily requirements
   const dailyRequirements = useMemo(() => calculateDailyRequirements(profile), [profile]);
@@ -925,145 +957,133 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
           <Card className="mb-8 mt-8">
             <CardHeader>
               <CardTitle>Macro Distribution</CardTitle>
-              <CardDescription>Today&apos;s macro breakdown based on your intake</CardDescription>
+              <CardDescription>
+                Percentage of daily requirements met based on your intake
+                {startDate && endDate && startDate !== endDate && (
+                  <span className="ml-1">({startDate} to {endDate})</span>
+                )}
+                {startDate && endDate && startDate === endDate && (
+                  <span className="ml-1">({startDate})</span>
+                )}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Pie Chart */}
-                <div className="flex items-center justify-center">
-                  <div className="relative w-64 h-64">
-                    <svg viewBox="0 0 100 100" className="transform -rotate-90">
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="40"
-                        fill="none"
-                        stroke="#e5e7eb"
-                        strokeWidth="8"
-                      />
-                      {(() => {
-                        const totalCalories = todayStats.calories || 1;
-                        const proteinCal = todayStats.protein * 4;
-                        const carbsCal = todayStats.carbs * 4;
-                        const fatCal = todayStats.fat * 9;
-                        
-                        const proteinPercent = (proteinCal / totalCalories) * 100;
-                        const carbsPercent = (carbsCal / totalCalories) * 100;
-                        const fatPercent = (fatCal / totalCalories) * 100;
-
-                        let currentOffset = 0;
-                        const circumference = 2 * Math.PI * 40;
-
-                        return (
-                          <>
-                            <circle
-                              cx="50"
-                              cy="50"
-                              r="40"
-                              fill="none"
-                              stroke="#f472b6"
-                              strokeWidth="8"
-                              strokeDasharray={circumference}
-                              strokeDashoffset={circumference - (proteinPercent / 100) * circumference}
-                              strokeLinecap="round"
-                            />
-                            <circle
-                              cx="50"
-                              cy="50"
-                              r="40"
-                              fill="none"
-                              stroke="#facc15"
-                              strokeWidth="8"
-                              strokeDasharray={circumference}
-                              strokeDashoffset={
-                                circumference -
-                                ((proteinPercent + carbsPercent) / 100) * circumference
-                              }
-                              strokeLinecap="round"
-                              transform={`rotate(${(proteinPercent / 100) * 360} 50 50)`}
-                            />
-                            <circle
-                              cx="50"
-                              cy="50"
-                              r="40"
-                              fill="none"
-                              stroke="#93c5fd"
-                              strokeWidth="8"
-                              strokeDasharray={circumference}
-                              strokeDashoffset={
-                                circumference -
-                                ((proteinPercent + carbsPercent + fatPercent) / 100) * circumference
-                              }
-                              strokeLinecap="round"
-                              transform={`rotate(${((proteinPercent + carbsPercent) / 100) * 360} 50 50)`}
-                            />
-                          </>
-                        );
-                      })()}
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold">{Math.round(todayStats.calories)}</div>
-                        <div className="text-xs text-muted-foreground">kcal</div>
-                      </div>
-                    </div>
+              <div className="space-y-6">
+                {/* Total Calories */}
+                <div className="text-center">
+                  <div className="text-3xl font-bold">{Math.round(macroStats.calories)}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {startDate && endDate && startDate !== endDate ? 'avg kcal/day' : 'kcal'}
                   </div>
                 </div>
-
-                {/* Legend */}
-                <div className="space-y-3">
+                
+                {/* Stacked Bar Chart - Calorie Distribution */}
+                {(() => {
+                  const totalCalories = macroStats.calories || 1;
+                  const proteinCal = macroStats.protein * 4;
+                  const carbsCal = macroStats.carbs * 4;
+                  const fatCal = macroStats.fat * 9;
+                  
+                  const proteinPercent = Math.min((proteinCal / totalCalories) * 100, 100);
+                  const carbsPercent = Math.min((carbsCal / totalCalories) * 100, 100);
+                  const fatPercent = Math.min((fatCal / totalCalories) * 100, 100);
+                  
+                  return (
+                    <div className="h-8 bg-muted rounded-full overflow-hidden flex">
+                      <div
+                        className="bg-red-500 transition-all"
+                        style={{ width: `${proteinPercent}%` }}
+                        title={`Protein: ${Math.round(proteinCal)} kcal (${proteinPercent.toFixed(1)}%)`}
+                      />
+                      <div
+                        className="bg-amber-500 transition-all"
+                        style={{ width: `${carbsPercent}%` }}
+                        title={`Carbs: ${Math.round(carbsCal)} kcal (${carbsPercent.toFixed(1)}%)`}
+                      />
+                      <div
+                        className="bg-sky-500 transition-all"
+                        style={{ width: `${fatPercent}%` }}
+                        title={`Fat: ${Math.round(fatCal)} kcal (${fatPercent.toFixed(1)}%)`}
+                      />
+                    </div>
+                  );
+                })()}
+                
+                {/* Macro Details - Daily Requirements */}
+                <div className="space-y-4">
                   {[
                     {
                       label: "Protein",
-                      value: todayStats.protein,
-                      percent: todayStats.calories
-                        ? ((todayStats.protein * 4) / todayStats.calories) * 100
-                        : 0,
-                      color: "bg-rose-500",
+                      value: macroStats.protein,
                       target: dailyRequirements.protein,
+                      color: "bg-red-500",
+                      textColor: "text-red-600",
                     },
                     {
                       label: "Carbs",
-                      value: todayStats.carbs,
-                      percent: todayStats.calories
-                        ? ((todayStats.carbs * 4) / todayStats.calories) * 100
-                        : 0,
-                      color: "bg-yellow-500",
+                      value: macroStats.carbs,
                       target: dailyRequirements.carbs,
+                      color: "bg-amber-500",
+                      textColor: "text-amber-600",
                     },
                     {
                       label: "Fat",
-                      value: todayStats.fat,
-                      percent: todayStats.calories
-                        ? ((todayStats.fat * 9) / todayStats.calories) * 100
-                        : 0,
-                      color: "bg-sky-500",
+                      value: macroStats.fat,
                       target: dailyRequirements.fat,
+                      color: "bg-sky-500",
+                      textColor: "text-sky-600",
                     },
-                  ].map((macro) => (
-                    <div key={macro.label} className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded ${macro.color}`} />
-                          <span className="font-medium">{macro.label}</span>
+                  ].map((macro) => {
+                    // Calculate percentage of daily requirement (can exceed 100%)
+                    const requirementPercent = macro.target && macro.target > 0
+                      ? (macro.value / macro.target) * 100
+                      : 0;
+                    
+                    return (
+                      <div key={macro.label} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-3 h-3 rounded ${macro.color}`} />
+                            <span className="font-medium">{macro.label}</span>
+                          </div>
+                          <span className={`font-semibold ${requirementPercent >= 100 ? 'text-red-600' : requirementPercent >= 80 ? 'text-amber-600' : macro.textColor}`}>
+                            {macro.value.toFixed(0)}g ({requirementPercent.toFixed(0)}%)
+                          </span>
                         </div>
-                        <span className="text-muted-foreground">
-                          {macro.value.toFixed(0)}g ({macro.percent.toFixed(0)}%)
-                        </span>
-                      </div>
-                      <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={`h-full ${macro.color}`}
-                          style={{ width: `${Math.min(macro.percent, 100)}%` }}
-                        />
-                      </div>
-                      {macro.target && (
-                        <div className="text-xs text-muted-foreground">
-                          Target: {macro.target}g
+                        <div className="h-2 bg-muted rounded-full overflow-hidden relative">
+                          <div
+                            className={`h-full ${macro.color}`}
+                            style={{ 
+                              width: `${Math.min(requirementPercent, 100)}%`,
+                            }}
+                          />
+                          {requirementPercent > 100 && (
+                            <div
+                              className={`h-full ${macro.color} opacity-60`}
+                              style={{ 
+                                width: '100%',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                borderRight: '2px solid rgba(0,0,0,0.3)',
+                                boxSizing: 'border-box'
+                              }}
+                            />
+                          )}
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        {macro.target && (
+                          <div className="text-xs text-muted-foreground">
+                            Target: {macro.target.toFixed(0)}g
+                            {requirementPercent > 100 && (
+                              <span className="ml-2 text-red-600 font-medium">
+                                (Exceeded by {((requirementPercent - 100) / 100 * macro.target).toFixed(0)}g)
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </CardContent>

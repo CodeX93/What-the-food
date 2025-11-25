@@ -24,12 +24,21 @@ export async function fetchRecentScansServer(userId: string, limit: number = 10)
       result_json?: any;
       created_at: string;
     }>).map(async (scan) => {
+      const resultJson = scan.result_json as { isManualEntry?: boolean; dish?: string } | null;
+      const isManualEntry =
+        !!resultJson?.isManualEntry ||
+        (typeof resultJson?.dish === "string" && resultJson.dish.trim().toLowerCase().startsWith("manual"));
+      const hasStorageImage =
+        !!scan.image_path &&
+        !scan.image_path.toLowerCase().startsWith("manual-entry") &&
+        !isManualEntry;
+
       let displayUrl: string | null = null;
 
-      if (scan.image_path) {
+      if (hasStorageImage) {
         const { data: signed, error: signedError } = await supabase.storage
           .from("FoodScans")
-          .createSignedUrl(scan.image_path, 60 * 60);
+          .createSignedUrl(scan.image_path as string, 60 * 60);
 
         if (signedError) {
           console.error("Server: error creating signed URL", signedError);
@@ -38,8 +47,8 @@ export async function fetchRecentScansServer(userId: string, limit: number = 10)
         }
       }
 
-      if (!displayUrl && scan.image_url) {
-        displayUrl = scan.image_url as string;
+      if (!displayUrl && typeof scan.image_url === "string" && /^https?:\/\//i.test(scan.image_url)) {
+        displayUrl = scan.image_url;
       }
 
       return {

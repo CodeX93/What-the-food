@@ -8,7 +8,19 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+
 import {
   Calendar as CalendarIcon,
   ChevronDown,
@@ -19,6 +31,7 @@ import {
   Sparkles,
   ArrowRight,
   Lock,
+  Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getImageUrl } from "@/utils/foodScan";
@@ -33,12 +46,35 @@ export type FoodScan = {
   displayUrl?: string | null;
 };
 
+const DEFAULT_SCAN_IMAGE = "default-food-image.svg";
+
+const isValidRemoteImage = (url?: string | null) => typeof url === "string" && /^https?:\/\//i.test(url);
+
+const isManualEntryScan = (scan: Pick<FoodScan, "result_json"> & { image_path?: string | null }) => {
+  const dish = scan.result_json?.dish;
+  return Boolean(scan.result_json?.isManualEntry || (typeof dish === "string" && dish.trim().toLowerCase().startsWith("manual")));
+};
+
+const shouldAttemptSignedUrl = (scan: Pick<FoodScan, "result_json" | "image_path">) =>
+  Boolean(scan.image_path && !scan.image_path.toLowerCase().startsWith("manual-entry") && !isManualEntryScan(scan));
+
+const fallbackImageForScan = (scan: Pick<FoodScan, "result_json"> & { image_url?: string | null }) => {
+  if (isManualEntryScan(scan as any)) {
+    return DEFAULT_SCAN_IMAGE;
+  }
+  if (isValidRemoteImage(scan.image_url)) {
+    return scan.image_url as string;
+  }
+  return DEFAULT_SCAN_IMAGE;
+};
+
 type ScanHistoriesClientProps = {
   initialSubscription?: any;
 };
 
 export function ScanHistoriesClient({ initialSubscription = null }: ScanHistoriesClientProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [items, setItems] = useState<FoodScan[]>([]);
@@ -48,7 +84,8 @@ export function ScanHistoriesClient({ initialSubscription = null }: ScanHistorie
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const isPremium = initialSubscription?.subscription_type === "premium";
-  const DEFAULT_SCAN_IMAGE = "default-food-image.svg";
+  const [scanToDelete, setScanToDelete] = useState<FoodScan | null>(null);
+  const [deletingScan, setDeletingScan] = useState(false);
 
   useEffect(() => {
     if (!isPremium) {
@@ -60,126 +97,74 @@ export function ScanHistoriesClient({ initialSubscription = null }: ScanHistorie
     let cancelled = false;
 
     const load = async () => {
-
       try {
-        // Fast auth check with timeout
-        const authPromise = supabase.auth.getSession();
-        const authTimeout = new Promise<{ data: { session: null }, error: null }>((resolve) =>
-          setTimeout(() => resolve({ data: { session: null }, error: null }), 2000)
-        );
-
-        let session: any;
-        const authResult = await Promise.race([authPromise, authTimeout]);
-        if (!authResult?.data?.session) {
-          console.warn("Auth check timed out or failed");
-          if (!cancelled) {
-            setItems([]);
-            setLoading(false);
-          }
-          return;
-        }
-        session = authResult.data.session;
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
         if (!session?.user) {
           if (!cancelled) router.push("/auth");
           return;
         }
 
-        // Load only 6 scans initially for faster load
-        const queryPromise = supabase
+        const { data, error, count } = await supabase
           .from("food_scans")
           .select("id, image_url, image_path, serving, result_json, created_at", { count: "exact" })
           .eq("user_id", session.user.id)
           .order("created_at", { ascending: false })
-          .limit(6); // Show 6 scans initially
-
-        const timeoutPromise = new Promise<{ data: null; error: null; count: null }>((resolve) =>
-          setTimeout(() => resolve({ data: null, error: null, count: null }), 2000) // Reduced to 2 seconds
-        );
-
-        const queryResult = await Promise.race([queryPromise, timeoutPromise]);
-        
-        if (!queryResult || !queryResult.data) {
-          // Query timed out, show empty state but don't block the page
-          console.warn("Scan history query timed out");
-          if (!cancelled) {
-            setItems([]);
-            setHasMore(false);
-            setLoading(false);
-          }
-          return;
-        }
-
-        const { data, error, count } = queryResult;
-
-        if (cancelled) return;
+          .limit(6);
 
         if (error) {
-          console.error("Query error:", error);
-          if (!cancelled) {
-            setItems([]);
-            setLoading(false);
-          }
-          return;
+          throw error;
         }
 
         const scans = data || [];
-        
-        // Check if there are more scans
-        if (!cancelled && count !== null) {
-          setHasMore(count > 6);
-        }
-        
-        // Set items immediately with fallback URLs, then load fresh signed URLs in background
         const initialItems = scans.map((scan: any) => ({
           ...scan,
-          displayUrl: scan.image_url || DEFAULT_SCAN_IMAGE,
+          displayUrl: fallbackImageForScan(scan),
         })) as FoodScan[];
 
         if (!cancelled) {
           setItems(initialItems);
+          setHasMore(typeof count === "number" ? count > initialItems.length : false);
           setLoading(false);
         }
 
-        // Load fresh signed URLs in background for all scans with image_path
         Promise.all(
           scans.map(async (scan: any) => {
-            if (cancelled) return null;
-            
-            let displayUrl: string | null = null;
-            
-            // Always try to get fresh signed URL from image_path if available
-            if (scan.image_path) {
-              try {
-                displayUrl = await getImageUrl(scan.image_path, 60 * 60);
-              } catch (err) {
-                console.warn("Failed to load image URL for scan:", scan.id, err);
-                displayUrl = scan.image_url || DEFAULT_SCAN_IMAGE;
-              }
-            } else if (scan.image_url) {
-              displayUrl = scan.image_url;
-            } else {
-              displayUrl = DEFAULT_SCAN_IMAGE;
+            if (cancelled || !shouldAttemptSignedUrl(scan)) {
+              return null;
             }
-            
-            return { id: scan.id, displayUrl: displayUrl || DEFAULT_SCAN_IMAGE };
+
+            try {
+              const displayUrl = await getImageUrl(scan.image_path, 60 * 60);
+              return displayUrl ? { id: scan.id, displayUrl } : null;
+            } catch (err) {
+              console.warn("Failed to load image URL for scan:", scan.id, err);
+              return null;
+            }
           })
         ).then((urls) => {
           if (cancelled) return;
-          
-          // Update items with fresh URLs
+
           setItems((prev) =>
             prev.map((item) => {
               const urlData = urls.find((u) => u?.id === item.id);
-              return urlData && urlData.displayUrl ? { ...item, displayUrl: urlData.displayUrl } : item;
+              return urlData?.displayUrl ? { ...item, displayUrl: urlData.displayUrl } : item;
             })
           );
         });
       } catch (error: any) {
         if (cancelled) return;
-        
+
         console.error("Error loading scans:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load scan history.",
+          variant: "destructive",
+        });
         setItems([]);
+        setHasMore(false);
         setLoading(false);
       }
     };
@@ -189,7 +174,50 @@ export function ScanHistoriesClient({ initialSubscription = null }: ScanHistorie
     return () => {
       cancelled = true;
     };
-  }, [router, isPremium]);
+  }, [router, isPremium, toast]);
+
+  const handleConfirmDelete = async () => {
+    if (!scanToDelete) return;
+    setDeletingScan(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.user) {
+        router.push("/auth");
+        return;
+      }
+
+      const { error } = await supabase.from("food_scans").delete().eq("id", scanToDelete.id);
+      if (error) {
+        throw error;
+      }
+
+      if (scanToDelete.image_path && !scanToDelete.image_path.toLowerCase().startsWith("manual-entry")) {
+        const { error: storageError } = await supabase.storage.from("FoodScans").remove([scanToDelete.image_path]);
+        if (storageError) {
+          console.warn("Failed to delete image from storage:", storageError);
+        }
+      }
+
+      setItems((prev) => prev.filter((scan) => scan.id !== scanToDelete.id));
+      toast({
+        title: "Scan deleted",
+        description: "The scan and its image have been removed.",
+      });
+    } catch (error) {
+      console.error("Failed to delete scan:", error);
+      toast({
+        title: "Failed to delete scan",
+        description: "Please try again in a moment.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingScan(false);
+      setScanToDelete(null);
+    }
+  };
 
   const display = useMemo(() => {
     let filtered = items;
@@ -311,8 +339,9 @@ export function ScanHistoriesClient({ initialSubscription = null }: ScanHistorie
   }
 
   return (
-    <main className="flex-1">
-      <div className="container mx-auto px-4 py-8">
+    <>
+      <main className="flex-1">
+        <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
             <Button variant="ghost" onClick={() => router.push("/dashboard")} className="px-2">
@@ -423,11 +452,34 @@ export function ScanHistoriesClient({ initialSubscription = null }: ScanHistorie
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle className="text-lg">{scan.result_json?.dish || "Food"}</CardTitle>
+                        <CardTitle className="text-lg">
+                          {(() => {
+                            const dish = scan.result_json?.dish || "Food";
+                            const isManual = scan.result_json?.isManualEntry || (typeof dish === "string" && dish.trim().toLowerCase().startsWith("manual"));
+                            if (isManual) {
+                              // If it starts with "Manual:" or "Manual Input:", format it properly
+                              const cleanDish = dish.replace(/^Manual( Input)?:\s*/i, "");
+                              return `Manual Input: ${cleanDish}`;
+                            }
+                            return dish;
+                          })()}
+                        </CardTitle>
                         <CardDescription className="flex items-center gap-2">
                           <CalendarIcon className="h-3 w-3" /> {new Date(scan.created_at).toLocaleString()}
                         </CardDescription>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive color-red-100"
+                        aria-label="Delete scan"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setScanToDelete(scan);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -460,45 +512,43 @@ export function ScanHistoriesClient({ initialSubscription = null }: ScanHistorie
                       const { data: { session } } = await supabase.auth.getSession();
                       if (!session?.user) return;
                       
+                      const start = items.length;
                       const { data: moreData, count } = await supabase
                         .from("food_scans")
                         .select("id, image_url, image_path, serving, result_json, created_at", { count: "exact" })
                         .eq("user_id", session.user.id)
                         .order("created_at", { ascending: false })
-                        .range(items.length, items.length + 5); // Load next 6 scans
+                        .range(start, start + 5); // Load next 6 scans
                       
                       if (moreData) {
-                        // Load image URLs for new scans
-                        const newItems = await Promise.all(
+                        const fallbackItems = moreData.map((scan: any) => ({
+                          ...scan,
+                          displayUrl: fallbackImageForScan(scan),
+                        })) as FoodScan[];
+
+                        const resolvedUrls = await Promise.all(
                           moreData.map(async (scan: any) => {
-                            let displayUrl: string | null = null;
-                            
-                            if (scan.image_path) {
-                              try {
-                                displayUrl = await getImageUrl(scan.image_path, 60 * 60);
-                              } catch (err) {
-                                console.warn("Failed to load image URL for scan:", scan.id, err);
-                                displayUrl = scan.image_url || DEFAULT_SCAN_IMAGE;
-                              }
+                            if (!shouldAttemptSignedUrl(scan)) return null;
+                            try {
+                              const displayUrl = await getImageUrl(scan.image_path, 60 * 60);
+                              return displayUrl ? { id: scan.id, displayUrl } : null;
+                            } catch (err) {
+                              console.warn("Failed to load image URL for scan:", scan.id, err);
+                              return null;
                             }
-                            
-                            if (!displayUrl && scan.image_url) {
-                              displayUrl = scan.image_url;
-                            }
-                            
-                            if (!displayUrl) {
-                              displayUrl = DEFAULT_SCAN_IMAGE;
-                            }
-                            
-                            return {
-                              ...scan,
-                              displayUrl: displayUrl || DEFAULT_SCAN_IMAGE,
-                            } as FoodScan;
                           })
                         );
+
+                        const mergedItems = fallbackItems.map((item) => {
+                          const resolved = resolvedUrls.find((entry) => entry?.id === item.id);
+                          return resolved?.displayUrl ? { ...item, displayUrl: resolved.displayUrl } : item;
+                        });
                         
-                        setItems(prev => [...prev, ...newItems]);
-                        setHasMore(count !== null && (items.length + newItems.length) < count);
+                        setItems((prev) => {
+                          const updated = [...prev, ...mergedItems];
+                          setHasMore(typeof count === "number" ? updated.length < count : false);
+                          return updated;
+                        });
                       }
                     } finally {
                       setLoadingMore(false);
@@ -512,6 +562,36 @@ export function ScanHistoriesClient({ initialSubscription = null }: ScanHistorie
           </>
         )}
       </div>
-    </main>
+      </main>
+
+      <AlertDialog
+        open={!!scanToDelete}
+        onOpenChange={(open) => {
+          if (!open && !deletingScan) {
+            setScanToDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this scan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deleting this scan will permanently remove its analysis and any stored images. Are you sure you want to
+              continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingScan}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={deletingScan}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingScan ? "Deleting..." : "Yes, delete it"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

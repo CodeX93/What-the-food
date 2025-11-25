@@ -197,7 +197,7 @@ export function AnalyticsClient() {
       }
 
       const totals = manualData.totals || {};
-      const dishName = `Manual: ${foods.join(", ")}`.slice(0, 200);
+      const dishName = `Manual Input: ${foods.join(", ")}`.slice(0, 200);
 
       const { error: insertError } = await (supabase as any).from("scans").insert({
         user_id: session.user.id,

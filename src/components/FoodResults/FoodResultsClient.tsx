@@ -537,8 +537,8 @@ export function FoodResultsClient() {
         <head>
           <meta charset="utf-8" />
           <title>${escapeHtml(
-            analysis.isManualEntry || analysis.dish?.startsWith("Manual: ")
-              ? `Manual input: ${analysis.dish?.replace(/^Manual:\s*/, "") || ""}`
+            analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")
+              ? `Manual Input: ${analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || ""}`
               : analysis.dish || "Food Analysis"
           )}</title>
           <style>${pdfStyles}</style>
@@ -549,8 +549,8 @@ export function FoodResultsClient() {
               ${imageHtml}
               <div class="summary">
                 <h1 class="title">${escapeHtml(
-                  analysis.isManualEntry || analysis.dish?.startsWith("Manual: ")
-                    ? `Manual input: ${analysis.dish?.replace(/^Manual:\s*/, "") || ""}`
+                  analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")
+                    ? `Manual Input: ${analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || ""}`
                     : analysis.dish || "Food Analysis"
                 )}</h1>
                 <p class="subtitle">${escapeHtml(
@@ -702,23 +702,71 @@ export function FoodResultsClient() {
     setUpdatingIngredients(true);
     setAnalysisRefreshing(true);
     try {
-      let sourceUrl = imageUrl;
-      if (imagePath) {
-        const fresh = await getImageUrl(imagePath, 60 * 5);
-        if (fresh) {
-          sourceUrl = fresh;
-          setImageUrl(fresh);
+      const isManualEntry = analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input");
+      
+      let updatedAnalysis: FoodAnalysis;
+      
+      if (isManualEntry) {
+        // For manual entries, use manualEntry with updated ingredients
+        // Also pass overrideIngredients to ensure they're used in the analysis
+        const dishName = analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || "Custom Dish";
+        const { analysis: result } = await analyzeFood(null, servings, undefined, {
+          manualEntry: {
+            dish: dishName,
+            ingredients: cleaned,
+          },
+          overrideIngredients: cleaned,
+        });
+        updatedAnalysis = result;
+      } else {
+        // For image-based scans, get fresh image URL
+        // Double-check that imagePath is not a manual entry path
+        const isManualEntryPath = imagePath?.toLowerCase().startsWith("manual-entry");
+        
+        if (isManualEntryPath) {
+          // Fallback: treat as manual entry if path suggests it
+          const dishName = analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || analysis.dish || "Custom Dish";
+          const { analysis: result } = await analyzeFood(null, servings, undefined, {
+            manualEntry: {
+              dish: dishName,
+              ingredients: cleaned,
+            },
+            overrideIngredients: cleaned,
+          });
+          updatedAnalysis = result;
+        } else {
+          // For real image-based scans, get fresh image URL
+          let sourceUrl = imageUrl;
+          if (imagePath && !isManualEntryPath) {
+            try {
+              const fresh = await getImageUrl(imagePath, 60 * 5);
+              if (fresh) {
+                sourceUrl = fresh;
+                setImageUrl(fresh);
+              }
+            } catch (error) {
+              console.warn("Failed to get fresh image URL:", error);
+            }
+          }
+
+          if (!sourceUrl) {
+            throw new Error("Image reference expired. Please re-upload the meal photo.");
+          }
+
+          const { analysis: result } = await analyzeFood(sourceUrl, servings, undefined, {
+            overrideIngredients: cleaned,
+          });
+          updatedAnalysis = result;
         }
       }
 
-      if (!sourceUrl) {
-        throw new Error("Image reference expired. Please re-upload the meal photo.");
-      }
-
-      const { analysis: updatedAnalysis } = await analyzeFood(sourceUrl, servings, undefined, {
-        overrideIngredients: cleaned,
+      // Log the updated analysis for debugging
+      console.log("Updated analysis after ingredient change:", {
+        nutrients: updatedAnalysis.nutrients,
+        servingWeightGrams: updatedAnalysis.servingWeightGrams,
+        ingredients: updatedAnalysis.ingredients,
       });
-
+      
       setAnalysis(updatedAnalysis);
       applyServings(servings);
       setIngredientInput((updatedAnalysis.ingredients ?? []).join("\n"));
@@ -757,8 +805,8 @@ export function FoodResultsClient() {
   const handleShare = async () => {
     try {
       const shareUrl = `${window.location.origin}/shared/${id}`;
-      const dishDisplay = analysis?.isManualEntry || analysis?.dish?.startsWith("Manual: ")
-        ? `Manual input: ${analysis.dish?.replace(/^Manual:\s*/, "") || ""}`
+      const dishDisplay = analysis?.isManualEntry || analysis?.dish?.startsWith("Manual") || analysis?.dish?.startsWith("Manual Input")
+        ? `Manual Input: ${analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || ""}`
         : analysis?.dish || "Food scan";
       const shareData = {
         title: dishDisplay || "Food Analysis Results",
@@ -902,8 +950,8 @@ export function FoodResultsClient() {
       
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
 
-      const dishForFilename = analysis.isManualEntry || analysis.dish?.startsWith("Manual: ")
-        ? `Manual input: ${analysis.dish?.replace(/^Manual:\s*/, "") || ""}`
+      const dishForFilename = analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")
+        ? `Manual Input: ${analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || ""}`
         : analysis.dish || "food-result";
       const safeTitle = dishForFilename.replace(/[^\w\d_-]+/g, "-");
       pdf.save(`${safeTitle}.pdf`);
@@ -1014,9 +1062,26 @@ export function FoodResultsClient() {
         if (loadedAnalysis?.insights) {
           setInsightsText(loadedAnalysis.insights);
         }
+        
+        // Check if this is a manual entry
+        const isManualEntry = loadedAnalysis?.isManualEntry || loadedAnalysis?.dish?.startsWith("Manual") || loadedAnalysis?.dish?.startsWith("Manual Input");
+        const isManualEntryPath = scanRecord.image_path?.toLowerCase().startsWith("manual-entry");
+        
         setImagePath(scanRecord.image_path || "");
-        const freshUrl = scanRecord.image_path ? await getImageUrl(scanRecord.image_path, 60 * 60) : null;
-        setImageUrl(freshUrl || scanRecord.image_url || "");
+        
+        // Only try to get image URL if it's not a manual entry
+        if (!isManualEntry && !isManualEntryPath && scanRecord.image_path) {
+          try {
+            const freshUrl = await getImageUrl(scanRecord.image_path, 60 * 60);
+            setImageUrl(freshUrl || scanRecord.image_url || "");
+          } catch (error) {
+            console.warn("Failed to load image URL, using fallback:", error);
+            setImageUrl(scanRecord.image_url || "");
+          }
+        } else {
+          // For manual entries, don't set image URL
+          setImageUrl("");
+        }
       } finally {
         setLoading(false);
       }
@@ -1057,16 +1122,35 @@ export function FoodResultsClient() {
         }
 
         // Check video availability using YouTube oEmbed API
-        const oEmbedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-        const response = await fetch(oEmbedUrl);
+        // Use AbortController for timeout and better error handling
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
         
-        if (response.ok) {
-          setIsVideoAvailable(true);
-        } else {
+        try {
+          const oEmbedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+          const response = await fetch(oEmbedUrl, {
+            signal: controller.signal,
+            mode: 'cors',
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (response.ok) {
+            setIsVideoAvailable(true);
+          } else {
+            setIsVideoAvailable(false);
+          }
+        } catch (fetchError: any) {
+          clearTimeout(timeoutId);
+          // Silently handle fetch errors (network issues, CORS, timeouts, etc.)
+          if (fetchError.name !== 'AbortError') {
+            // Only log non-timeout errors
+            console.warn("Video availability check failed:", fetchError.message);
+          }
           setIsVideoAvailable(false);
         }
       } catch (error) {
-        console.error("Error checking video availability:", error);
+        // Silently handle parsing errors
         setIsVideoAvailable(false);
       }
     };
@@ -1231,8 +1315,8 @@ export function FoodResultsClient() {
               <div>
                 <h1 className="text-2xl md:text-4xl font-bold flex items-center gap-2">
                   <Salad className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-                  {analysis.isManualEntry || analysis.dish?.startsWith("Manual: ")
-                    ? `Manual input: ${analysis.dish?.replace(/^Manual:\s*/, "") || ""}`
+                  {analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")
+                    ? `Manual Input: ${analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || ""}`
                     : analysis.dish || "Food Result"}
                 </h1>
               </div>
@@ -1285,12 +1369,12 @@ export function FoodResultsClient() {
           </Alert>
         )}
 
-        <div className="grid lg:grid-cols-12 gap-6">
-          {!(analysis.isManualEntry || analysis.dish?.startsWith("Manual: ")) && (
-            <div className="lg:col-span-4">
+        <div className="grid lg:grid-cols-12 gap-6 ">
+          {!(analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")) && (
+            <div className="lg:col-span-4 ">
               <Card className="overflow-hidden sticky top-6">
                 {imageUrl ? (
-                  <div className="aspect-square relative overflow-hidden">
+                  <div className="aspect-square relative overflow-hidden ">
                     <img src={imageUrl} alt={analysis.dish || "Food"} className="w-full h-full object-cover" />
                   </div>
                 ) : (
@@ -1332,12 +1416,12 @@ export function FoodResultsClient() {
             </div>
           )}
 
-          <div className={`${analysis.isManualEntry || analysis.dish?.startsWith("Manual: ") ? "lg:col-span-12" : "lg:col-span-8"} space-y-7`}>
+          <div className={`${analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input") ? "lg:col-span-12" : "lg:col-span-8"} space-y-7`}>
             <Card >
-              <CardHeader>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-4">
-                    <CardTitle className="overflow-hidden sticky top-6 pb-3">
+              <CardHeader className="pb-1">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="overflow-hidden sticky top-6 ">
                       Nutrition Summary 
                       {servingApproximation && (
                         <span className="text-base font-normal text-muted-foreground whitespace-nowrap mx-3">
@@ -1475,19 +1559,19 @@ export function FoodResultsClient() {
                   </div>
                 )}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {[
+                {[
                     { icon: Flame, label: "Calories", value: scaled?.calories ?? "-", suffix: "", style: "bg-orange-100/90 border-orange-200 text-orange-900" },
                     { icon: Beef, label: "Protein", value: scaled?.protein_g ?? "-", suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
                     { icon: Wheat, label: "Carbs", value: scaled?.carbohydrates_g ?? "-", suffix: "g", style: "bg-yellow-100/90 border-yellow-200 text-yellow-900" },
                     { icon: Droplet, label: "Fat", value: scaled?.fat_g ?? "-", suffix: "g", style: "bg-sky-100/90 border-sky-200 text-sky-900" },
                     { icon: Apple, label: "Fiber", value: scaled?.fiber_g ?? "-", suffix: "g", style: "bg-emerald-100/90 border-emerald-200 text-emerald-900" },
-                    { icon: Candy, label: "Sugar", value: scaled?.sugar_g ?? "-", suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
+                    { icon: Candy, label: "Sugar", value: scaled?.sugar_g ?? "-", suffix: "g", style: "bg-pink-100/90 border-pink-200 text-pink-900" },
                   ].map((item, index) => (
                     <div
                       key={index}
                       className={`border rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm ${item.style}`}
                     >
-                      <div className="p-2 rounded-lg bg-background/40">
+                      <div className="p-2">
                         <item.icon className="h-5 w-5" />
                       </div>
                       <div>
@@ -1509,7 +1593,7 @@ export function FoodResultsClient() {
             </Card>
 
             <div className="grid md:grid-cols-2 gap-6">
-              <Card className={analysis.isManualEntry || analysis.dish?.startsWith("Manual: ") ? "md:col-span-2" : ""}>
+              <Card className={analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input") ? "md:col-span-2" : ""}>
                 <CardHeader>
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -1535,7 +1619,7 @@ export function FoodResultsClient() {
                 </CardContent>
               </Card>
 
-              {!(analysis.isManualEntry || analysis.dish?.startsWith("Manual: ")) && (
+              {!(analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")) && (
                 <Card>
                   <CardHeader>
                     <div className="flex items-md center gap-2">
