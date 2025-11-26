@@ -23,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/hooks/use-translation";
 import { getPlatformSubscription } from "@/utils/subscription";
 import { analyzeFood, fetchRecentScans, saveScanHistory, uploadFoodImage } from "@/utils/foodScan";
 import type { User } from "@supabase/supabase-js";
@@ -42,6 +43,7 @@ export function DashboardClient({
 }: DashboardClientProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslation();
   const [user, setUser] = useState<User | null>(initialUser);
   const [subscription, setSubscription] = useState<any>(initialSubscription);
   const [loading, setLoading] = useState(!initialUser);
@@ -92,8 +94,8 @@ export function DashboardClient({
 
     if (!foods.length) {
       toast({
-        title: "Add at least one item",
-        description: 'Include a short description like "2 eggs" or "1 banana".',
+        title: t("dashboard.manual.error.title"),
+        description: t("dashboard.manual.error.description"),
         variant: "destructive",
       });
       return;
@@ -183,8 +185,8 @@ export function DashboardClient({
       setManualFoods([{ id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`, value: "" }]);
 
       toast({
-        title: "Added to Analytics",
-        description: "Manual foods have been logged successfully.",
+        title: t("dashboard.manual.success.title"),
+        description: t("dashboard.manual.success.description"),
       });
 
       // Reload recent scans
@@ -193,8 +195,8 @@ export function DashboardClient({
     } catch (error: any) {
       console.error("Manual entry error:", error);
       toast({
-        title: "Failed to log foods",
-        description: error?.message || "Unable to estimate these foods.",
+        title: t("dashboard.manual.error.log"),
+        description: error?.message || t("dashboard.manual.error.estimate"),
         variant: "destructive",
       });
     } finally {
@@ -263,8 +265,8 @@ export function DashboardClient({
       } catch (error) {
         console.error("Error fetching user data:", error);
         toast({
-          title: "Error",
-          description: "Failed to load dashboard data.",
+          title: t("dashboard.error.title"),
+          description: t("dashboard.error.description"),
           variant: "destructive",
         });
       } finally {
@@ -273,7 +275,7 @@ export function DashboardClient({
     };
 
     fetchUserData();
-  }, [initialScans, initialSubscription, initialUser, initialFullName, router, toast]);
+  }, [initialScans, initialSubscription, initialUser, initialFullName, router, toast, t]);
 
   if (loading) {
     return (
@@ -295,20 +297,20 @@ export function DashboardClient({
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight flex items-center gap-2">
                 <Stars className="h-7 w-7 text-primary" />
                 {userFullName ? (
-                  `Welcome back,  ${userFullName.split(" ").slice(0, 2).join(" ")}`
+                  `${t("dashboard.welcome")},  ${userFullName.split(" ").slice(0, 2).join(" ")}`
                 ) : (
-                  `Welcome back, ${user?.email ? `, ${user.email.split("@")[0]}` : ""}`
+                  `${t("dashboard.welcome")}${user?.email ? `, ${user.email.split("@")[0]}` : ""}`
                 )}
               </h1>
-              <p className="text-muted-foreground mt-1">Scan meals, get instant nutrition, and track progress.</p>
+              <p className="text-muted-foreground mt-1">{t("dashboard.welcome.description")}</p>
             </div>
             {subscription && subscription.subscription_type === "premium" ? (
               <div className="flex items-center gap-2">
                 <span className="px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary border border-primary/20">
-                  <Sparkles className="h-4 w-4 inline mr-1" /> Premium
+                  <Sparkles className="h-4 w-4 inline mr-1" /> {t("dashboard.premium")}
                 </span>
                 <Button variant="outline" size="sm" onClick={() => router.push("/plans")}>
-                  Manage Plan
+                  {t("dashboard.manageplan")}
                 </Button>
               </div>
             ) : (
@@ -316,15 +318,17 @@ export function DashboardClient({
                 <CardContent className="py-3 px-4 flex items-center gap-4">
                   <ShieldCheck className="h-5 w-5 text-primary flex-shrink-0" />
                   <div className="text-sm flex-1">
-                    <div>Unlock unlimited scans with Premium.</div>
+                    <div>{t("dashboard.unlock")}</div>
                     {freeScanRemaining !== null && (
                       <div className="text-xs text-primary/80 mt-1">
-                        {freeScanRemaining} free scan{freeScanRemaining === 1 ? "" : "s"} remaining today.
+                        {t("dashboard.freescans.remaining")
+                          .replace("{count}", freeScanRemaining.toString())
+                          .replace(/{plural}/g, freeScanRemaining === 1 ? "" : "s")}
                       </div>
                     )}
                   </div>
                   <Button size="sm" onClick={() => router.push("/plans")}>
-                    Upgrade <ArrowRight className="h-4 w-4 ml-1" />
+                    {t("dashboard.upgrade")} <ArrowRight className="h-4 w-4 ml-1" />
                   </Button>
                 </CardContent>
               </Card>
@@ -350,8 +354,8 @@ export function DashboardClient({
                   <Camera className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">New Scan</CardTitle>
-                  <CardDescription>Upload Food Photo</CardDescription>
+                  <CardTitle className="text-lg">{t("dashboard.card.scan.title")}</CardTitle>
+                  <CardDescription>{t("dashboard.card.scan.description")}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -363,8 +367,8 @@ export function DashboardClient({
             onClick={() => {
               if (!isPremium) {
                 toast({
-                  title: "Premium feature",
-                  description: "Upgrade to a premium plan to view your complete food analytics.",
+                  title: t("dashboard.premium.feature"),
+                  description: t("dashboard.premium.analytics"),
                   variant: "warning",
                 });
                 return;
@@ -378,9 +382,9 @@ export function DashboardClient({
                   <TrendingUp className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Analytics</CardTitle>
+                  <CardTitle className="text-lg">{t("dashboard.card.analytics.title")}</CardTitle>
                   <CardDescription>
-                    {isPremium ? "View your stats" : "Premium · Hover for details"}
+                    {isPremium ? t("dashboard.card.analytics.description") : t("dashboard.card.analytics.premium")}
                   </CardDescription>
                 </div>
               </div>
@@ -395,8 +399,8 @@ export function DashboardClient({
             onClick={() => {
               if (!isPremium) {
                 toast({
-                  title: "Premium feature",
-                  description: "Upgrade to a premium plan to view your complete scan history.",
+                  title: t("dashboard.premium.feature"),
+                  description: t("dashboard.premium.history"),
                   variant: "warning",
                 });
                 return;
@@ -410,9 +414,9 @@ export function DashboardClient({
                   <Clock className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">History</CardTitle>
+                  <CardTitle className="text-lg">{t("dashboard.card.history.title")}</CardTitle>
                   <CardDescription>
-                    {isPremium ? "Past scans" : "Premium · Hover for details"}
+                    {isPremium ? t("dashboard.card.history.description") : t("dashboard.card.history.premium")}
                   </CardDescription>
                 </div>
               </div>
@@ -425,8 +429,8 @@ export function DashboardClient({
             onClick={() => {
               if (!isPremium) {
                 toast({
-                  title: "Premium feature",
-                  description: "Upgrade to a premium plan to access the AI meal planner.",
+                  title: t("dashboard.premium.feature"),
+                  description: t("dashboard.premium.mealplanner"),
                   variant: "warning",
                 });
                 return;
@@ -440,9 +444,9 @@ export function DashboardClient({
                   <UtensilsCrossed className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Meal Planner</CardTitle>
+                  <CardTitle className="text-lg">{t("dashboard.card.mealplanner.title")}</CardTitle>
                   <CardDescription>
-                    {isPremium ? "Personalized meal plan" : "Premium · Hover for details"}
+                    {isPremium ? t("dashboard.card.mealplanner.description") : t("dashboard.card.mealplanner.premium")}
                   </CardDescription>
                 </div>
               </div>
@@ -458,8 +462,8 @@ export function DashboardClient({
             {/* Upload and Analyze - First */}
             <Card className="flex flex-col" style={{ flex: '1.18 2 0' }}>
               <CardHeader className="pb-0" style={{ minHeight: '80px' }}>
-                <CardTitle>Upload and Analyze</CardTitle>
-                <CardDescription>PNG, JPG, JPEG, HEIC</CardDescription>
+                <CardTitle>{t("dashboard.upload.title")}</CardTitle>
+                <CardDescription>{t("dashboard.upload.formats")}</CardDescription>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col p-4 mb-4 pb-4">
                 {!uploadedFile ? (
@@ -486,9 +490,9 @@ export function DashboardClient({
                     }}
                   >
                     <Upload className="h-14 w-14 text-primary mx-auto mb-4" />
-                    <p className="text-lg font-medium mb-2">Upload Your Food Photo</p>
-                    <p className="text-sm text-muted-foreground mb-4">Drop an image here or click to browse</p>
-                    <Button>Choose File</Button>
+                    <p className="text-lg font-medium mb-2">{t("dashboard.upload.photo")}</p>
+                    <p className="text-sm text-muted-foreground mb-4">{t("dashboard.upload.drop")}</p>
+                    <Button>{t("dashboard.upload.choose")}</Button>
                   </div>
                 ) : (
                   <div className="space-y-4 flex-1 flex flex-col">
@@ -525,7 +529,7 @@ export function DashboardClient({
                               input.click();
                             }}
                           >
-                            Change Image
+                            {t("dashboard.upload.change")}
                           </Button>
                         </div>
                       </div>
@@ -541,7 +545,7 @@ export function DashboardClient({
                           setUploadedImagePath(null);
                         }}
                       >
-                        Remove
+                        {t("dashboard.upload.remove")}
                       </Button>
                       <Button
                         disabled={analyzing}
@@ -553,8 +557,8 @@ export function DashboardClient({
                               const available = await hasFreeScanAvailable();
                               if (!available) {
                                 toast({
-                                  title: "Daily limit reached",
-                                  description: "You have used all 3 free scans for today. Upgrade to Premium for unlimited scans.",
+                                  title: t("dashboard.upload.limit.title"),
+                                  description: t("dashboard.upload.limit.description"),
                                 });
                                 setAnalyzing(false);
                                 return;
@@ -586,7 +590,7 @@ export function DashboardClient({
                             setServings(1);
                           } catch (e) {
                             console.error(e);
-                            toast({ title: "Error", description: "Failed to analyze image.", variant: "destructive" });
+                            toast({ title: t("dashboard.upload.error"), description: t("dashboard.upload.error.analyze"), variant: "destructive" });
                           } finally {
                             setAnalyzing(false);
                           }
@@ -596,10 +600,10 @@ export function DashboardClient({
                         {analyzing ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Analyzing...
+                            {t("dashboard.upload.analyzing")}
                           </>
                         ) : (
-                          "Analyze Food"
+                          t("dashboard.upload.analyze")
                         )}
                       </Button>
                     </div>
@@ -612,13 +616,13 @@ export function DashboardClient({
             {subscription && subscription.subscription_type === "premium" && (
               <Card className="flex flex-col flex-1 mt-8">
                 <CardHeader className="pb-0" style={{ minHeight: '80px' }}>
-                  <CardTitle>Log foods manually</CardTitle>
-                  <CardDescription>Add quick bites without scanning. We&apos;ll estimate macros and include them in your analytics.</CardDescription>
+                  <CardTitle>{t("dashboard.manual.title")}</CardTitle>
+                  <CardDescription>{t("dashboard.manual.description")}</CardDescription>
                 </CardHeader>
                 <CardContent className="p-4 space-y-5 flex-1 flex flex-col">
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">
-                      Describe each item with quantity (e.g., &quot;2 eggs&quot;, &quot;1 banana&quot;, &quot;protein shake with almond milk&quot;).
+                      {t("dashboard.manual.instruction")}
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {quickAddOptions.map((item) => (
@@ -658,15 +662,15 @@ export function DashboardClient({
                     ))}
                     <div className="flex items-center gap-2 flex-wrap">
                       <Button variant="outline" size="sm" onClick={addManualFoodField} className="w-full sm:w-auto">
-                        <Plus className="h-4 w-4 mr-2" /> Add another food
+                        <Plus className="h-4 w-4 mr-2" /> {t("dashboard.manual.add")}
                       </Button>
                       <Button onClick={handleManualEntry} disabled={manualLoading} className="w-full sm:w-auto">
                         {manualLoading ? (
                           <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Logging…
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t("dashboard.manual.logging")}
                           </>
                         ) : (
-                          "Add to analytics"
+                          t("dashboard.manual.addtoanalytics")
                         )}
                       </Button>
                     </div>
@@ -679,8 +683,8 @@ export function DashboardClient({
           {/* Right Section: Sponsored Section with TinyAds (for both free and premium) */}
           <Card className="flex flex-col h-full">
             <CardHeader className="pb-1 px-8" style={{ minHeight: '80px' }}>
-              <CardTitle>Our Sponsors</CardTitle>
-              <CardDescription>Reach health-conscious users interested in nutrition tracking, food, and cooking.</CardDescription>
+              <CardTitle>{t("dashboard.sponsors.title")}</CardTitle>
+              <CardDescription>{t("dashboard.sponsors.description")}</CardDescription>
             </CardHeader>
             <CardContent className="p-0 flex-1 flex flex-col">
               <div className="flex flex-col space-y-1.5 pt-0">

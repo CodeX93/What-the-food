@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/hooks/use-translation";
 import { ArrowLeft, Loader2, Lock, ShieldCheck, Sparkles, ArrowRight } from "lucide-react";
 import { MealPlannerForm, MealPlannerFormData } from "./MealPlannerForm";
 import { MealPlanResults } from "./MealPlanResults";
@@ -87,6 +88,7 @@ type MealPlannerClientProps = {
 export function MealPlannerClient({ initialSubscription = null }: MealPlannerClientProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslation();
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [profile, setProfile] = useState<any>(null);
@@ -140,8 +142,8 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       } catch (error) {
         console.error("Error loading profile:", error);
         toast({
-          title: "Error",
-          description: "Failed to load profile data.",
+          title: t("mealplanner.error.title"),
+          description: t("mealplanner.error.profile"),
           variant: "destructive",
         });
       } finally {
@@ -150,7 +152,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
     };
 
     void loadProfile();
-  }, [router, toast, isPremium]);
+  }, [router, toast, isPremium, t]);
 
   const addDietaryRestriction = () => {
     const input = document.getElementById("dietary-restriction") as HTMLInputElement;
@@ -207,14 +209,14 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
     } catch (error) {
       console.error("Failed to load saved meal plans:", error);
       toast({
-        title: "Error",
-        description: "Could not load your saved meal plans.",
+        title: t("mealplanner.error.title"),
+        description: t("mealplanner.error.saved"),
         variant: "destructive",
       });
     } finally {
       setSavedPlansLoading(false);
     }
-  }, [toast, userId, isPremium]);
+  }, [toast, userId, isPremium, t]);
 
   useEffect(() => {
     if (userId && isPremium) {
@@ -224,7 +226,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
 
   useEffect(() => {
     if (mealPlan) {
-      const defaultTitle = `Meal Plan - ${new Date().toLocaleDateString(undefined, {
+      const defaultTitle = `${t("mealplanner.title")} - ${new Date().toLocaleDateString(undefined, {
         month: "short",
         day: "numeric",
         year: "numeric",
@@ -237,7 +239,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       setEditablePlan(null);
       setIsEditingMeals(false);
     }
-  }, [mealPlan]);
+  }, [mealPlan, t]);
 
   const updateEditablePlan = (updater: (draft: MealPlan) => void) => {
     setEditablePlan((prev) => {
@@ -339,16 +341,16 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
     setMealPlan(JSON.parse(JSON.stringify(editablePlan)));
     setIsEditingMeals(false);
     toast({
-      title: "Meals updated",
-      description: "Ingredient changes have been applied.",
+      title: t("mealplanner.results.updated.title"),
+      description: t("mealplanner.results.updated.description"),
     });
   };
 
   const generateMealPlan = async (formData: MealPlannerFormData) => {
     if (!profile) {
       toast({
-        title: "Profile Required",
-        description: "Please complete your profile first.",
+        title: t("mealplanner.profile.title"),
+        description: t("mealplanner.profile.description"),
         variant: "destructive",
       });
       router.push("/profile");
@@ -413,7 +415,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
 
       if (error) throw error;
       if (!data?.ok) {
-        throw new Error(data?.error || "Failed to generate meal plan");
+        throw new Error(data?.error || t("mealplanner.generate.error.description"));
       }
 
       setMealPlan(data.mealPlan);
@@ -425,14 +427,14 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       setMealFrequency(formData.mealsPerDay.toString());
       
       toast({
-        title: "Meal Plan Generated!",
-        description: "Your personalized meal plan is ready.",
+        title: t("mealplanner.generate.title"),
+        description: t("mealplanner.generate.description"),
       });
     } catch (error: any) {
       console.error("Meal plan generation error:", error);
       toast({
-        title: "Generation Failed",
-        description: error?.message || "Unable to generate meal plan. Please try again.",
+        title: t("mealplanner.generate.error.title"),
+        description: error?.message || t("mealplanner.generate.error.description"),
         variant: "destructive",
       });
     } finally {
@@ -443,8 +445,8 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
   const handleRegeneratePlan = async () => {
     if (!lastFormData) {
       toast({
-        title: "No form data",
-        description: "Please create a new plan first.",
+        title: t("mealplanner.error.nodata"),
+        description: t("mealplanner.error.nodata.description"),
         variant: "destructive",
       });
       return;
@@ -459,15 +461,15 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
 
     if (!userId) {
       toast({
-        title: "Sign in required",
-        description: "Please sign in again to save this meal plan.",
+        title: t("mealplanner.error.title"),
+        description: t("mealplanner.error.signin"),
         variant: "destructive",
       });
       router.push("/auth");
       return;
     }
 
-    const titleToUse = planTitle.trim() || `Meal Plan - ${new Date().toLocaleDateString()}`;
+    const titleToUse = planTitle.trim() || `${t("mealplanner.title")} - ${new Date().toLocaleDateString()}`;
 
     try {
       setSavingPlan(true);
@@ -485,15 +487,15 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       }
 
       toast({
-        title: "Meal plan saved",
-        description: "You can revisit this plan anytime from your saved list.",
+        title: t("mealplanner.plan.saved.title"),
+        description: t("mealplanner.plan.saved.description"),
       });
       await loadSavedPlans();
     } catch (error) {
       console.error("Failed to save meal plan:", error);
       toast({
-        title: "Save failed",
-        description: "We couldn't save this plan. Please try again.",
+        title: t("mealplanner.plan.save.error.title"),
+        description: t("mealplanner.plan.save.error.description"),
         variant: "destructive",
       });
     } finally {
@@ -505,19 +507,19 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
     try {
       const loadedPlan = record.plan;
       setMealPlan(loadedPlan);
-      setPlanTitle(record.title || `Saved Meal Plan - ${formatPlanDate(record.created_at)}`);
+      setPlanTitle(record.title || `${t("mealplanner.saved.title")} - ${formatPlanDate(record.created_at)}`);
       setTargetWeight(record.target_weight ? record.target_weight.toString() : "");
       setTimeframeWeeks(record.timeframe_weeks ? record.timeframe_weeks.toString() : "");
 
       toast({
-        title: "Meal plan loaded",
-        description: record.title ? `Viewing ${record.title}.` : "Viewing saved meal plan.",
+        title: t("mealplanner.plan.loaded.title"),
+        description: record.title ? `${t("mealplanner.plan.loaded.description")} ${record.title}.` : t("mealplanner.plan.loaded.description"),
       });
     } catch (error) {
       console.error("Failed to load saved meal plan:", error);
       toast({
-        title: "Load failed",
-        description: "We couldn't open that meal plan. Please try again.",
+        title: t("mealplanner.plan.load.error.title"),
+        description: t("mealplanner.plan.load.error.description"),
         variant: "destructive",
       });
     }
@@ -535,10 +537,9 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
                 <Lock className="h-7 w-7 text-primary" />
               </div>
               <div className="space-y-2">
-                <CardTitle className="text-3xl">Meal Planner is Premium</CardTitle>
+                <CardTitle className="text-3xl">{t("mealplanner.premium.title")}</CardTitle>
                 <CardDescription className="text-base">
-                  Upgrade to unlock personalized 7-day meal plans, AI exercise guidance, and saved plans tailored to your
-                  goals.
+                  {t("mealplanner.premium.description")}
                 </CardDescription>
               </div>
             </CardHeader>
@@ -547,13 +548,13 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
                 {[
                   {
                     icon: <ShieldCheck className="h-5 w-5 text-primary" />,
-                    title: "Personalized plans",
-                    body: "Gemini crafts daily meals, macros, and serving details using your profile data.",
+                    title: t("mealplanner.premium.feature1.title"),
+                    body: t("mealplanner.premium.feature1.body"),
                   },
                   {
                     icon: <Sparkles className="h-5 w-5 text-primary" />,
-                    title: "7-day coverage",
-                    body: "Get meals, exercise plans, and pro tips for every day of the week plus save for later.",
+                    title: t("mealplanner.premium.feature2.title"),
+                    body: t("mealplanner.premium.feature2.body"),
                   },
                 ].map((feature) => (
                   <div
@@ -570,10 +571,10 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
               </div>
               <div className="text-center">
                 <Button size="lg" className="px-8" onClick={() => router.push("/plans")}>
-                  Upgrade to Premium <ArrowRight className="h-4 w-4 ml-2" />
+                  {t("mealplanner.premium.upgrade")} <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
                 <p className="text-sm text-muted-foreground mt-3">
-                  Already upgraded? Refresh once your subscription is active.
+                  {t("mealplanner.premium.refresh")}
                 </p>
               </div>
             </CardContent>
@@ -599,21 +600,21 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold">Meal Planner</h1>
-            <p className="text-muted-foreground">Get a personalized meal plan tailored to your goals</p>
+            <h1 className="text-3xl md:text-4xl font-bold">{t("mealplanner.title")}</h1>
+            <p className="text-muted-foreground">{t("mealplanner.description")}</p>
           </div>
         </div>
 
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Saved Meal Plans</CardTitle>
-            <CardDescription>Load any plan you&apos;ve saved previously.</CardDescription>
+            <CardTitle>{t("mealplanner.saved.title")}</CardTitle>
+            <CardDescription>{t("mealplanner.saved.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             {savedPlansLoading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Loading saved plans...
+                {t("mealplanner.saved.loading")}
               </div>
             ) : savedPlans.length > 0 ? (
               <div className="space-y-3">
@@ -623,19 +624,19 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
                     className="border rounded-lg p-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
                   >
                     <div>
-                      <p className="font-medium">{plan.title || "Untitled meal plan"}</p>
+                      <p className="font-medium">{plan.title || t("mealplanner.saved.untitled")}</p>
                       <p className="text-xs text-muted-foreground">
-                        Saved {formatPlanDate(plan.created_at)}
-                        {plan.goal ? ` · Goal: ${plan.goal}` : ""}
+                        {t("mealplanner.saved.view")} {formatPlanDate(plan.created_at)}
+                        {plan.goal ? ` · ${t("mealplanner.saved.goal")}: ${plan.goal}` : ""}
                       </p>
                       <div className="text-xs text-muted-foreground flex flex-wrap gap-2 mt-1">
-                        {plan.target_weight !== null && <span>Target: {plan.target_weight}kg</span>}
-                        {plan.timeframe_weeks !== null && <span>Timeline: {plan.timeframe_weeks} weeks</span>}
+                        {plan.target_weight !== null && <span>{t("mealplanner.saved.target")}: {plan.target_weight}kg</span>}
+                        {plan.timeframe_weeks !== null && <span>{t("mealplanner.saved.timeline")}: {plan.timeframe_weeks} {t("mealplanner.saved.weeks")}</span>}
                       </div>
                     </div>
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" onClick={() => handleLoadSavedPlan(plan)}>
-                        View plan
+                        {t("mealplanner.saved.view")}
                       </Button>
                     </div>
                   </div>
@@ -643,7 +644,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                No saved meal plans yet. Generate a plan and tap “Save Plan” to keep it here.
+                {t("mealplanner.saved.none")}
               </p>
             )}
           </CardContent>
@@ -670,13 +671,13 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="w-full md:max-w-sm">
                 <Label htmlFor="plan-title" className="sr-only">
-                  Plan title
+                  {t("mealplanner.plan.title")}
                 </Label>
                 <Input
                   id="plan-title"
                   value={planTitle}
                   onChange={(event) => setPlanTitle(event.target.value)}
-                  placeholder="Name this meal plan"
+                  placeholder={t("mealplanner.plan.title")}
                 />
               </div>
               <div className="flex flex-wrap gap-3">
@@ -688,24 +689,24 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
                   }}
                   variant="outline"
                 >
-                  Create New Plan
+                  {t("mealplanner.plan.create")}
                 </Button>
                 <Button onClick={handleRegeneratePlan} disabled={generating || !lastFormData}>
                   {generating ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Regenerating...
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t("mealplanner.plan.regenerating")}
                     </>
                   ) : (
-                    "Regenerate Plan"
+                    t("mealplanner.plan.regenerate")
                   )}
                 </Button>
                 <Button onClick={handleSaveMealPlan} disabled={savingPlan}>
                   {savingPlan ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t("mealplanner.plan.saving")}
                     </>
                   ) : (
-                    "Save Plan"
+                    t("mealplanner.plan.save")
                   )}
                 </Button>
               </div>

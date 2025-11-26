@@ -40,6 +40,7 @@ import {
 import { getPlatformSubscription } from "@/utils/subscription";
 import type { User } from "@supabase/supabase-js";
 import { calculateBMI, getBMICategory, getIdealWeightRange } from "@/utils/bmi";
+import { useTranslation } from "@/hooks/use-translation";
 
 export type ProfileClientProps = {
   initialUser?: User | null;
@@ -56,6 +57,7 @@ export function ProfileClient({
 }: ProfileClientProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslation();
   const [user, setUser] = useState<User | null>(initialUser);
   const [profile, setProfile] = useState<any>(initialProfile);
   const [loading, setLoading] = useState(!initialUser);
@@ -263,16 +265,16 @@ console.log("hello world");
         updatedProfile.activity_level;
 
       toast({
-        title: "Success",
+        title: t("profile.success"),
         description: isNowComplete 
-          ? "Profile updated and completed! 🎉"
-          : "Profile updated successfully.",
+          ? t("profile.success.completed")
+          : t("profile.success.updated"),
       });
     } catch (error: any) {
       console.error("Error saving profile:", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to save profile. Please try again.",
+        title: t("profile.error"),
+        description: error.message || t("profile.error.save"),
         variant: "destructive",
       });
     } finally {
@@ -290,7 +292,7 @@ console.log("hello world");
               <UserIcon className="h-6 w-6 text-primary animate-pulse" />
             </div>
           </div>
-          <p className="text-muted-foreground animate-pulse">Loading your profile...</p>
+          <p className="text-muted-foreground animate-pulse">{t("profile.loading")}</p>
         </div>
       </main>
     );
@@ -332,13 +334,13 @@ console.log("hello world");
       return !field.value || field.value.toString().trim() === '';
     })
     .map(field => {
-      const labels: Record<string, string> = {
-        full_name: 'Full Name',
-        gender: 'Gender',
-        age: 'Age',
-        weight_kg: 'Weight',
-        height_cm: 'Height',
-      };
+                          const labels: Record<string, string> = {
+                            full_name: t("profile.field.fullname"),
+                            gender: t("profile.field.gender"),
+                            age: t("profile.field.age"),
+                            weight_kg: t("profile.field.weight"),
+                            height_cm: t("profile.field.height"),
+                          };
       return labels[field.key];
     });
 
@@ -354,15 +356,15 @@ console.log("hello world");
                     <AlertCircle className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-lg mb-1">Complete Your Profile</h3>
+                    <h3 className="font-semibold text-lg mb-1">{t("profile.complete.title")}</h3>
                     <p className="text-sm text-muted-foreground mb-3">
                       {missingFields.length > 0 
-                        ? `Please add your ${missingFields.join(', ').toLowerCase()} to get personalized insights.`
-                        : 'Your profile is almost complete!'}
+                        ? t("profile.complete.description").replace("{fields}", missingFields.join(', ').toLowerCase())
+                        : t("profile.complete.almost")}
                     </p>
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Profile Completion</span>
+                        <span className="text-muted-foreground">{t("profile.completion")}</span>
                         <span className="font-semibold text-primary">{completionPercentage}%</span>
                       </div>
                       <div className="h-2.5 bg-muted rounded-full overflow-hidden">
@@ -377,13 +379,13 @@ console.log("hello world");
                             ? field.value !== null && field.value !== undefined && field.value !== ''
                             : field.value && field.value.toString().trim() !== '';
                           const labels: Record<string, string> = {
-                            full_name: 'Full Name',
-                            gender: 'Gender',
-                            age: 'Age',
-                            weight_kg: 'Weight',
-                            height_cm: 'Height',
-                            goal: 'Goal',
-                            activity_level: 'Activity Level',
+                            full_name: t("profile.field.fullname"),
+                            gender: t("profile.field.gender"),
+                            age: t("profile.field.age"),
+                            weight_kg: t("profile.field.weight"),
+                            height_cm: t("profile.field.height"),
+                            goal: t("profile.field.goal"),
+                            activity_level: t("profile.field.activity"),
                           };
                           return (
                             <div
@@ -416,16 +418,16 @@ console.log("hello world");
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent pb-2">
-                Profile Settings
+                {t("profile.settings.title")}
               </h1>
               <p className="text-muted-foreground text-sm sm:text-base">
-                Manage your account information and subscriptions
+                {t("profile.settings.description")}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               {isPremium && (
                 <Badge variant="secondary" className="px-4 py-2 text-sm shadow-md">
-                  <Crown className="h-4 w-4 mr-2" /> Premium
+                  <Crown className="h-4 w-4 mr-2" /> {t("profile.premium")}
                 </Badge>
               )}
             </div>
@@ -439,8 +441,8 @@ console.log("hello world");
                 <UserIcon className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-2xl sm:text-3xl">Profile Information</CardTitle>
-                <CardDescription className="mt-1 text-base">Update your personal information</CardDescription>
+                <CardTitle className="text-2xl sm:text-3xl">{t("profile.information.title")}</CardTitle>
+                <CardDescription className="mt-1 text-base">{t("profile.information.description")}</CardDescription>
               </div>
             </div>
           </CardHeader>
@@ -463,7 +465,7 @@ console.log("hello world");
                 </div>
                 <div className="text-center sm:text-left flex-1 space-y-3">
                   <div>
-                    <h3 className="font-bold text-2xl mb-1">{profile?.full_name || "Your Name"}</h3>
+                    <h3 className="font-bold text-2xl mb-1">{profile?.full_name || t("profile.yourname")}</h3>
                     <p className="text-muted-foreground flex items-center justify-center sm:justify-start gap-2">
                       <Mail className="h-4 w-4" /> {email}
                     </p>
@@ -474,12 +476,12 @@ console.log("hello world");
                     size="sm"
                     onClick={() =>
                       toast({
-                        title: "Coming Soon",
-                        description: "Avatar upload feature will be available soon.",
+                        title: t("profile.comingsoon"),
+                        description: t("profile.avatarcomingsoon"),
                       })
                     }
                   >
-                    <Camera className="h-3 w-3 mr-2" /> Change Photo
+                    <Camera className="h-3 w-3 mr-2" /> {t("profile.changephoto")}
                   </Button>
                 </div>
               </div>
@@ -487,18 +489,18 @@ console.log("hello world");
               <div className="grid sm:grid-cols-2 gap-6">
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="email" className="text-sm font-semibold flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-primary" /> Email Address
+                    <Mail className="h-4 w-4 text-primary" /> {t("profile.email")}
                   </Label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input id="email" type="email" value={email} disabled className="pl-12 h-12 bg-muted/50 border-2" />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1.5">Email cannot be changed</p>
+                  <p className="text-xs text-muted-foreground mt-1.5">{t("profile.email.cannotchange")}</p>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="full_name" className="text-sm font-semibold flex items-center gap-2">
-                    <UserIcon className="h-4 w-4 text-primary" /> Full Name
+                    <UserIcon className="h-4 w-4 text-primary" /> {t("profile.fullname")}
                   </Label>
                   <div className="relative">
                     <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -507,7 +509,7 @@ console.log("hello world");
                       name="full_name"
                       type="text"
                       defaultValue={profile?.full_name || ""}
-                      placeholder="Enter your full name"
+                      placeholder={t("profile.fullname.placeholder")}
                       className="pl-12 h-12 border-2"
                     />
                   </div>
@@ -515,24 +517,24 @@ console.log("hello world");
 
                 <div className="space-y-2">
                   <Label htmlFor="gender" className="text-sm font-semibold flex items-center gap-2">
-                    <Users className="h-4 w-4 text-primary" /> Gender
+                    <Users className="h-4 w-4 text-primary" /> {t("profile.gender")}
                   </Label>
                   <Select value={gender} onValueChange={setGender}>
                     <SelectTrigger className="h-12 border-2">
-                      <SelectValue placeholder="Select gender" />
+                      <SelectValue placeholder={t("profile.gender.select")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="male">Male</SelectItem>
-                      <SelectItem value="female">Female</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                      <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                      <SelectItem value="male">{t("profile.gender.male")}</SelectItem>
+                      <SelectItem value="female">{t("profile.gender.female")}</SelectItem>
+                      <SelectItem value="other">{t("profile.gender.other")}</SelectItem>
+                      <SelectItem value="prefer_not_to_say">{t("profile.gender.prefernot")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="age" className="text-sm font-semibold flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-primary" /> Age
+                    <Calendar className="h-4 w-4 text-primary" /> {t("profile.age")}
                   </Label>
                   <div className="relative">
                     <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -543,7 +545,7 @@ console.log("hello world");
                       max="150"
                       value={age}
                       onChange={(e) => setAge(e.target.value)}
-                      placeholder="Enter your age"
+                      placeholder={t("profile.age.placeholder")}
                       className="pl-12 h-12 border-2"
                     />
                   </div>
@@ -551,7 +553,7 @@ console.log("hello world");
 
                 <div className="space-y-2">
                   <Label htmlFor="weight" className="text-sm font-semibold flex items-center gap-2">
-                    <Scale className="h-4 w-4 text-primary" /> Weight (kg)
+                    <Scale className="h-4 w-4 text-primary" /> {t("profile.weight")}
                   </Label>
                   <div className="relative">
                     <Scale className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -562,7 +564,7 @@ console.log("hello world");
                       step="0.1"
                       value={weight}
                       onChange={(e) => setWeight(e.target.value)}
-                      placeholder="Enter weight in kg"
+                      placeholder={t("profile.weight.placeholder")}
                       className="pl-12 h-12 border-2"
                     />
                   </div>
@@ -570,7 +572,7 @@ console.log("hello world");
 
                 <div className="space-y-2">
                   <Label htmlFor="height" className="text-sm font-semibold flex items-center gap-2">
-                    <Ruler className="h-4 w-4 text-primary" /> Height (cm)
+                    <Ruler className="h-4 w-4 text-primary" /> {t("profile.height")}
                   </Label>
                   <div className="relative">
                     <Ruler className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -581,7 +583,7 @@ console.log("hello world");
                       max="300"
                       value={height}
                       onChange={(e) => setHeight(e.target.value)}
-                      placeholder="Enter height in cm"
+                      placeholder={t("profile.height.placeholder")}
                       className="pl-12 h-12 border-2"
                     />
                   </div>
@@ -592,7 +594,7 @@ console.log("hello world");
                   <div className="sm:col-span-2 p-4 rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-primary/20">
                     <div className="flex items-center justify-between mb-3">
                       <div>
-                        <p className="text-xs text-muted-foreground mb-1 font-medium">Body Mass Index</p>
+                        <p className="text-xs text-muted-foreground mb-1 font-medium">{t("profile.bmi")}</p>
                         <p className="text-2xl font-bold text-foreground">{currentBMI}</p>
                       </div>
                       <Badge 
@@ -610,7 +612,7 @@ console.log("hello world");
                     <p className="text-xs text-muted-foreground mb-2">{bmiCategory.description}</p>
                     {idealWeightRange && (
                       <p className="text-xs text-muted-foreground">
-                        Ideal weight range: {idealWeightRange.min} - {idealWeightRange.max} kg
+                        {t("profile.bmi.idealrange").replace("{min}", idealWeightRange.min.toString()).replace("{max}", idealWeightRange.max.toString())}
                       </p>
                     )}
                   </div>
@@ -618,37 +620,37 @@ console.log("hello world");
 
                 <div className="space-y-2">
                   <Label htmlFor="goal" className="text-sm font-semibold flex items-center gap-2">
-                    <Target className="h-4 w-4 text-primary" /> Health Goal
+                    <Target className="h-4 w-4 text-primary" /> {t("profile.goal")}
                   </Label>
                   <Select value={goal} onValueChange={setGoal}>
                     <SelectTrigger className="h-12 border-2">
-                      <SelectValue placeholder="Select your goal" />
+                      <SelectValue placeholder={t("profile.goal.select")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="weight_loss">Weight Loss</SelectItem>
-                      <SelectItem value="weight_gain">Weight Gain</SelectItem>
-                      <SelectItem value="maintain_weight">Maintain Weight</SelectItem>
-                      <SelectItem value="build_muscle">Build Muscle</SelectItem>
-                      <SelectItem value="improve_fitness">Improve Fitness</SelectItem>
-                      <SelectItem value="general_health">General Health</SelectItem>
+                      <SelectItem value="weight_loss">{t("profile.goal.weightloss")}</SelectItem>
+                      <SelectItem value="weight_gain">{t("profile.goal.weightgain")}</SelectItem>
+                      <SelectItem value="maintain_weight">{t("profile.goal.maintain")}</SelectItem>
+                      <SelectItem value="build_muscle">{t("profile.goal.muscle")}</SelectItem>
+                      <SelectItem value="improve_fitness">{t("profile.goal.fitness")}</SelectItem>
+                      <SelectItem value="general_health">{t("profile.goal.health")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="activity_level" className="text-sm font-semibold flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-primary" /> Activity Level
+                    <Activity className="h-4 w-4 text-primary" /> {t("profile.activity")}
                   </Label>
                   <Select value={activityLevel} onValueChange={setActivityLevel}>
                     <SelectTrigger className="h-12 border-2">
-                      <SelectValue placeholder="Select activity level" />
+                      <SelectValue placeholder={t("profile.activity.select")} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="sedentary">Sedentary (little or no exercise)</SelectItem>
-                      <SelectItem value="light_active">Lightly Active (light exercise 1-3 days/week)</SelectItem>
-                      <SelectItem value="moderately_active">Moderately Active (moderate exercise 3-5 days/week)</SelectItem>
-                      <SelectItem value="very_active">Very Active (hard exercise 6-7 days/week)</SelectItem>
-                      <SelectItem value="extremely_active">Extremely Active (very hard exercise, physical job)</SelectItem>
+                      <SelectItem value="sedentary">{t("profile.activity.sedentary")}</SelectItem>
+                      <SelectItem value="light_active">{t("profile.activity.light")}</SelectItem>
+                      <SelectItem value="moderately_active">{t("profile.activity.moderate")}</SelectItem>
+                      <SelectItem value="very_active">{t("profile.activity.very")}</SelectItem>
+                      <SelectItem value="extremely_active">{t("profile.activity.extreme")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -662,11 +664,11 @@ console.log("hello world");
                 >
                   {saving ? (
                     <>
-                      <Save className="mr-2 h-5 w-5 animate-spin" /> Saving Changes...
+                      <Save className="mr-2 h-5 w-5 animate-spin" /> {t("profile.saving")}
                     </>
                   ) : (
                     <>
-                      <Save className="mr-2 h-5 w-5" /> Save Changes
+                      <Save className="mr-2 h-5 w-5" /> {t("profile.save")}
                     </>
                   )}
                 </Button>
@@ -684,13 +686,13 @@ console.log("hello world");
                     <CreditCard className={`h-6 w-6 ${isPremium ? "text-primary" : "text-muted-foreground"}`} />
                   </div>
                   <div>
-                    <CardTitle className="text-xl sm:text-2xl">Platform Subscription</CardTitle>
-                    <CardDescription className="mt-1">Your main app plan</CardDescription>
+                    <CardTitle className="text-xl sm:text-2xl">{t("profile.subscription.title")}</CardTitle>
+                    <CardDescription className="mt-1">{t("profile.subscription.description")}</CardDescription>
                   </div>
                 </div>
                 {isPremium && (
                   <Badge variant="default" className="shadow-md">
-                    <Crown className="h-3 w-3 mr-1" /> Active
+                    <Crown className="h-3 w-3 mr-1" /> {t("profile.subscription.active")}
                   </Badge>
                 )}
               </div>
@@ -710,9 +712,9 @@ console.log("hello world");
                         )}
                       </div>
                       <div>
-                        <p className="text-xs text-muted-foreground mb-1 font-medium">Current Plan</p>
+                        <p className="text-xs text-muted-foreground mb-1 font-medium">{t("profile.subscription.current")}</p>
                         <p className="font-bold text-xl capitalize">
-                          {subscription.subscription_type === "premium" ? "Premium" : "Free"}
+                          {subscription.subscription_type === "premium" ? t("profile.subscription.premium") : t("profile.subscription.free")}
                         </p>
                       </div>
                     </div>
@@ -720,14 +722,14 @@ console.log("hello world");
 
                   {planName && isPremium && (
                     <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-primary/10">
-                      <p className="text-xs text-muted-foreground mb-2 font-medium">Plan Name</p>
+                      <p className="text-xs text-muted-foreground mb-2 font-medium">{t("profile.subscription.planname")}</p>
                       <p className="font-bold text-lg">{planName}</p>
                     </div>
                   )}
 
                   {subscription.billing_cycle && (
                     <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-primary/10">
-                      <p className="text-xs text-muted-foreground mb-2 font-medium">Billing Cycle</p>
+                      <p className="text-xs text-muted-foreground mb-2 font-medium">{t("profile.subscription.billing")}</p>
                       <p className="font-semibold text-base capitalize flex items-center gap-2">
                         <Calendar className="h-5 w-5 text-primary" />
                         {subscription.billing_cycle}
@@ -737,7 +739,7 @@ console.log("hello world");
 
                   {subscription.current_period_end && (
                     <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 border border-primary/10">
-                      <p className="text-xs text-muted-foreground mb-2 font-medium">Next Billing Date</p>
+                      <p className="text-xs text-muted-foreground mb-2 font-medium">{t("profile.subscription.nextbilling")}</p>
                       <p className="font-semibold text-base">
                         {new Date(subscription.current_period_end).toLocaleDateString("en-US", {
                           month: "short",
@@ -754,8 +756,8 @@ console.log("hello world");
                     <CreditCard className="h-10 w-10 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-muted-foreground mb-2 font-semibold">No subscription found</p>
-                    <p className="text-sm text-muted-foreground mb-6">Choose a plan to get started</p>
+                    <p className="text-muted-foreground mb-2 font-semibold">{t("profile.subscription.notfound")}</p>
+                    <p className="text-sm text-muted-foreground mb-6">{t("profile.subscription.chooseplan")}</p>
                   </div>
                 </div>
               )}
@@ -768,11 +770,11 @@ console.log("hello world");
                 >
                   {isPremium ? (
                     <>
-                      Change Plan <ArrowRight className="ml-2 h-5 w-5" />
+                      {t("profile.subscription.change")} <ArrowRight className="ml-2 h-5 w-5" />
                     </>
                   ) : (
                     <>
-                      Upgrade Plan <Crown className="ml-2 h-5 w-5" />
+                      {t("profile.subscription.upgrade")} <Crown className="ml-2 h-5 w-5" />
                     </>
                   )}
                 </Button>

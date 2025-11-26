@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Code, Link as LinkIcon, Copy, Check, Trash2, Plus, BarChart3, Zap, Edit, Save, Bookmark, AlertTriangle, ArrowRight, ShieldCheck } from "lucide-react";
 import { getUrl } from "@/utils/url";
+import { useTranslation } from "@/hooks/use-translation";
 
 type WidgetFormState = {
   name: string;
@@ -58,6 +59,7 @@ type WidgetDashboardClientProps = {
 export function WidgetDashboardClient({ initialSubscription = null }: WidgetDashboardClientProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -510,7 +512,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         statsObserver = null;
       }
     };
-  }, [router, supabaseClient, toast, loadWidgetForEditing, clearEditingContext, handleTabChange, initialSubscription]);
+  }, [router, supabaseClient, toast, loadWidgetForEditing, clearEditingContext, handleTabChange, initialSubscription, platformSubscription?.subscription_type, subscription?.subscription_type]);
 
   const handleSaveWidget = async (mode: "create" | "edit", saveAsNew: boolean = false) => {
     if (!user) return;
@@ -519,8 +521,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
 
     if (!formState.name.trim()) {
       toast({
-        title: "Error",
-        description: "Please enter a widget name.",
+        title: t("widgetdashboard.toast.error"),
+        description: t("widgetdashboard.toast.name"),
         variant: "destructive",
       });
       return;
@@ -561,8 +563,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         }));
         setActiveTab("saved-widgets");
         toast({
-          title: "Success!",
-          description: "Widget saved successfully.",
+          title: t("widgetdashboard.toast.success"),
+          description: t("widgetdashboard.toast.saved"),
         });
       } else {
         const updateResponse = await withTimeout<any>(
@@ -580,21 +582,21 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         setSavedWidgets((prev) => prev.map((w) => (w.id === currentWidget.id ? updatedWidget : w)));
         loadWidgetForEditing(updatedWidget);
         toast({
-          title: "Success!",
-          description: "Widget updated successfully.",
+          title: t("widgetdashboard.toast.success"),
+          description: t("widgetdashboard.toast.updated"),
         });
       }
     } catch (error: any) {
       console.error("Error saving widget:", error);
       if (error?.message?.includes("timed out")) {
         toast({
-          title: "Saved after delay",
-          description: "The widget was created, but Supabase responded slowly. Refresh if it doesn’t appear.",
+          title: t("widgetdashboard.toast.saved.delay"),
+          description: t("widgetdashboard.toast.saved.delay.description"),
         });
       } else {
         toast({
-          title: "Error",
-          description: "Failed to save widget.",
+          title: t("widgetdashboard.toast.error"),
+          description: t("widgetdashboard.toast.save.failed"),
           variant: "destructive",
         });
       }
@@ -604,7 +606,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
   };
 
   const handleDeleteWidget = async (widgetId: string) => {
-    if (!confirm("Are you sure you want to delete this widget?")) return;
+    if (!confirm(t("widgetdashboard.toast.delete.confirm"))) return;
 
     try {
       const { error } = await supabaseClient.from("widget_settings").delete().eq("id", widgetId);
@@ -624,14 +626,14 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
       }
 
       toast({
-        title: "Success!",
-        description: "Widget deleted successfully.",
+        title: t("widgetdashboard.toast.success"),
+        description: t("widgetdashboard.toast.deleted"),
       });
     } catch (error: any) {
       console.error("Error deleting widget:", error);
       toast({
-        title: "Error",
-        description: "Failed to delete widget.",
+        title: t("widgetdashboard.toast.error"),
+        description: t("widgetdashboard.toast.delete.failed"),
         variant: "destructive",
       });
     }
@@ -640,10 +642,19 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
   const getEmbedCode = (widget?: any) => {
     const widgetId = widget?.widget_id || currentWidget?.widget_id;
     if (!widgetId) return "";
-    const widgetUrl = `${getUrl("/widget/embed")}?id=${widgetId}`;
-    const borderRadiusValue =
-      widget?.border_radius ?? (currentWidget ? editForm.borderRadius : createForm.borderRadius);
-    return `<iframe src="${widgetUrl}" width="100%" height="600" frameborder="0" style="border-radius: ${borderRadiusValue};"></iframe>`;
+    try {
+      const widgetUrl = `${getUrl("/widget/embed")}?id=${widgetId}`;
+      const borderRadiusValue =
+        widget?.border_radius ?? (currentWidget ? editForm.borderRadius : createForm.borderRadius);
+      return `<iframe src="${widgetUrl}" width="100%" height="600" frameborder="0" style="border-radius: ${borderRadiusValue};"></iframe>`;
+    } catch (error) {
+      console.error("Error generating embed code:", error);
+      // Fallback to a basic embed code
+      const widgetUrl = typeof window !== 'undefined' ? `${window.location.origin}/widget/embed?id=${widgetId}` : `/widget/embed?id=${widgetId}`;
+      const borderRadiusValue =
+        widget?.border_radius ?? (currentWidget ? editForm.borderRadius : createForm.borderRadius);
+      return `<iframe src="${widgetUrl}" width="100%" height="600" frameborder="0" style="border-radius: ${borderRadiusValue};"></iframe>`;
+    }
   };
 
   const copyEmbedCode = (widget?: any) => {
@@ -654,8 +665,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
     setCopiedWidgetId(widgetId);
     setTimeout(() => setCopiedWidgetId(null), 2000);
     toast({
-      title: "Copied!",
-      description: "Embed code copied to clipboard.",
+      title: t("widgetdashboard.toast.copied"),
+      description: t("widgetdashboard.toast.copied.description"),
     });
   };
 
@@ -682,15 +693,15 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
       setNewSiteName("");
       evaluateSiteLimit(nextSites.length);
       toast({
-        title: "Success!",
-        description: "Site added successfully.",
+        title: t("widgetdashboard.toast.success"),
+        description: t("widgetdashboard.toast.site.added"),
       });
     } catch (error: any) {
       console.error("Error adding site:", error);
       evaluateSiteLimit(widgetSites.length);
       toast({
-        title: "Error",
-        description: error?.message || "Failed to add site.",
+        title: t("widgetdashboard.toast.error"),
+        description: error?.message || t("widgetdashboard.toast.site.add.failed"),
         variant: "destructive",
       });
     }
@@ -705,14 +716,14 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
       setWidgetSites(nextSites);
       evaluateSiteLimit(nextSites.length);
       toast({
-        title: "Success!",
-        description: "Site removed successfully.",
+        title: t("widgetdashboard.toast.success"),
+        description: t("widgetdashboard.toast.site.removed"),
       });
     } catch (error: any) {
       console.error("Error deleting site:", error);
       toast({
-        title: "Error",
-        description: "Failed to remove site.",
+        title: t("widgetdashboard.toast.error"),
+        description: t("widgetdashboard.toast.site.remove.failed"),
         variant: "destructive",
       });
     }
@@ -751,17 +762,17 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
       return (
         <Card>
           <CardHeader>
-            <CardTitle>Select a widget to edit</CardTitle>
+            <CardTitle>{t("widgetdashboard.form.select")}</CardTitle>
             <CardDescription>
-              Choose a widget from the saved list or create a new widget to start editing its appearance.
+              {t("widgetdashboard.form.select.description")}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <Button variant="outline" className="flex-1" onClick={() => handleTabChange("saved-widgets")}>
-              View Saved Widgets
+              {t("widgetdashboard.form.view")}
             </Button>
             <Button className="flex-1" onClick={() => handleTabChange("create")}>
-              <Plus className="h-4 w-4 mr-2" /> Create Widget
+              <Plus className="h-4 w-4 mr-2" /> {t("widgetdashboard.form.create")}
             </Button>
           </CardContent>
         </Card>
@@ -771,34 +782,34 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{isCreateMode ? "Create New Widget" : "Edit Widget"}</CardTitle>
-          <CardDescription>Customize the appearance of your widget to match your brand</CardDescription>
+          <CardTitle>{isCreateMode ? t("widgetdashboard.form.create.title") : t("widgetdashboard.form.edit.title")}</CardTitle>
+          <CardDescription>{t("widgetdashboard.form.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor={`widget-name-${mode}`}>Widget Name *</Label>
+            <Label htmlFor={`widget-name-${mode}`}>{t("widgetdashboard.form.name")}</Label>
             <Input
               id={`widget-name-${mode}`}
               value={form.name}
               onChange={(event) => updateForm("name", event.target.value)}
-              placeholder="My Custom Widget"
+              placeholder={t("widgetdashboard.form.name.placeholder")}
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={`widget-description-${mode}`}>Description (Optional)</Label>
+            <Label htmlFor={`widget-description-${mode}`}>{t("widgetdashboard.form.description")}</Label>
             <Textarea
               id={`widget-description-${mode}`}
               value={form.description}
               onChange={(event) => updateForm("description", event.target.value)}
-              placeholder="Describe your widget..."
+              placeholder={t("widgetdashboard.form.description.placeholder")}
               rows={2}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={`primary-color-${mode}`}>Primary Color</Label>
+            <Label htmlFor={`primary-color-${mode}`}>{t("widgetdashboard.form.color")}</Label>
             <div className="flex items-center gap-4">
               <Input
                 id={`primary-color-${mode}`}
@@ -812,40 +823,40 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                 value={form.primaryColor}
                 onChange={(event) => updateForm("primaryColor", event.target.value)}
                 className="flex-1"
-                placeholder="#10b981"
+                placeholder={t("widgetdashboard.form.color.placeholder")}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={`border-radius-${mode}`}>Border Radius</Label>
+            <Label htmlFor={`border-radius-${mode}`}>{t("widgetdashboard.form.border")}</Label>
             <Input
               id={`border-radius-${mode}`}
               type="text"
               value={form.borderRadius}
               onChange={(event) => updateForm("borderRadius", event.target.value)}
-              placeholder="8px"
+              placeholder={t("widgetdashboard.form.border.placeholder")}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={`custom-text-${mode}`}>Custom Text (Optional)</Label>
+            <Label htmlFor={`custom-text-${mode}`}>{t("widgetdashboard.form.customtext")}</Label>
             <Input
               id={`custom-text-${mode}`}
               type="text"
               value={form.customText}
               onChange={(event) => updateForm("customText", event.target.value)}
-              placeholder="Enter custom heading text"
+              placeholder={t("widgetdashboard.form.customtext.placeholder")}
             />
           </div>
 
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label htmlFor={`branding-${mode}`}>Show Branding</Label>
+              <Label htmlFor={`branding-${mode}`}>{t("widgetdashboard.form.branding")}</Label>
               <p className="text-sm text-muted-foreground">
-                Display &quot;Powered by WhatTheFood&quot; footer
-                {isFreePlan && " (Upgrade to hide branding)"}
-                {!isFreePlan && !canRemoveBranding && " (Upgrade to remove)"}
+                {t("widgetdashboard.form.branding.description")}
+                {isFreePlan && t("widgetdashboard.form.branding.upgrade")}
+                {!isFreePlan && !canRemoveBranding && t("widgetdashboard.form.branding.upgrade2")}
               </p>
             </div>
             <Button
@@ -858,7 +869,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
               }}
               disabled={isFreePlan || !canToggleBranding}
             >
-              {form.brandingVisible ? "Visible" : "Hidden"}
+              {form.brandingVisible ? t("widgetdashboard.form.branding.visible") : t("widgetdashboard.form.branding.hidden")}
             </Button>
           </div>
 
@@ -869,7 +880,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                 onClick={() => handleSaveWidget("edit", true)}
                 disabled={saving || !editForm.name.trim()}
               >
-                <Plus className="h-4 w-4 mr-2" /> Save as New
+                <Plus className="h-4 w-4 mr-2" /> {t("widgetdashboard.form.saveasnew")}
               </Button>
             )}
             <Button
@@ -877,17 +888,17 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
               disabled={saving || !form.name.trim()}
             >
               {saving ? (
-                isCreateMode ? "Creating..." : "Saving..."
+                isCreateMode ? t("widgetdashboard.form.create.creating") : t("widgetdashboard.form.save.saving")
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-2" /> {isCreateMode ? "Create Widget" : "Save Changes"}
+                  <Save className="h-4 w-4 mr-2" /> {isCreateMode ? t("widgetdashboard.form.create.button") : t("widgetdashboard.form.save")}
                 </>
               )}
             </Button>
           </div>
 
           <div className="border rounded-lg p-4 bg-muted/50">
-            <Label className="mb-2 block">Preview</Label>
+            <Label className="mb-2 block">{t("widgetdashboard.form.preview")}</Label>
             <div className="max-w-xs">
               <Card
                 style={{
@@ -901,7 +912,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                       {form.customText}
                     </h3>
                   )}
-                  <div className="text-center text-sm text-muted-foreground">Widget Preview</div>
+                  <div className="text-center text-sm text-muted-foreground">{t("widgetdashboard.form.preview.text")}</div>
                   {form.brandingVisible && (
                     <div className="mt-4 pt-4 border-t text-center text-xs text-muted-foreground">
                       Powered by <span style={{ color: form.primaryColor }}>WhatTheFood</span>
@@ -931,7 +942,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
               <Code className="h-6 w-6 text-primary animate-pulse" />
             </div>
           </div>
-          <p className="text-muted-foreground animate-pulse">Loading widget dashboard...</p>
+          <p className="text-muted-foreground animate-pulse">{t("widgetdashboard.loading")}</p>
         </div>
       </main>
     );
@@ -941,16 +952,16 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
     <main className="flex-1">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Widget Dashboard</h1>
-          <p className="text-muted-foreground">Manage your widget customization, sites, and track usage</p>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">{t("widgetdashboard.title")}</h1>
+          <p className="text-muted-foreground">{t("widgetdashboard.description")}</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8" data-stats-section>
           {[
-            { label: "Total API Calls", value: apiStats?.total || 0 },
-            { label: "Today", value: apiStats?.today || 0 },
-            { label: "This Month", value: apiStats?.thisMonth || 0 },
-            { label: "Saved Widgets", value: savedWidgets.length },
+            { label: t("widgetdashboard.stats.total"), value: apiStats?.total || 0 },
+            { label: t("widgetdashboard.stats.today"), value: apiStats?.today || 0 },
+            { label: t("widgetdashboard.stats.thismonth"), value: apiStats?.thisMonth || 0 },
+            { label: t("widgetdashboard.stats.saved"), value: savedWidgets.length },
           ].map((stat, index) => (
             <Card key={stat.label}>
               <CardHeader className="pb-3">
@@ -970,32 +981,32 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
             <CardContent className="py-8 px-6">
               <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="flex-1 text-center md:text-left">
-                  <h2 className="text-2xl md:text-3xl font-bold mb-2">Unlock the Full Widget Experience</h2>
+                  <h2 className="text-2xl md:text-3xl font-bold mb-2">{t("widgetdashboard.premium.title")}</h2>
                   <p className="text-muted-foreground text-lg mb-4">
-                    Upgrade to Premium and get access to unlimited widget customization, multiple sites, and advanced analytics.
+                    {t("widgetdashboard.premium.description")}
                   </p>
                   <div className="flex flex-wrap gap-4 justify-center md:justify-start">
                     <div className="flex items-center gap-2 text-sm">
                       <Check className="h-5 w-5 text-primary" />
-                      <span>Unlimited widgets</span>
+                      <span>{t("widgetdashboard.premium.feature1")}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Check className="h-5 w-5 text-primary" />
-                      <span>Multiple sites</span>
+                      <span>{t("widgetdashboard.premium.feature2")}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Check className="h-5 w-5 text-primary" />
-                      <span>Advanced analytics</span>
+                      <span>{t("widgetdashboard.premium.feature3")}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Check className="h-5 w-5 text-primary" />
-                      <span>Remove branding</span>
+                      <span>{t("widgetdashboard.premium.feature4")}</span>
                     </div>
                   </div>
                 </div>
                 <div className="flex-shrink-0">
                   <Button size="lg" onClick={() => router.push("/plans")} className="text-base px-8 py-6">
-                    Upgrade to Premium <ArrowRight className="h-5 w-5 ml-2" />
+                    {t("widgetdashboard.premium.upgrade")} <ArrowRight className="h-5 w-5 ml-2" />
                   </Button>
                 </div>
               </div>
@@ -1005,19 +1016,19 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
           <TabsList>
             <TabsTrigger value="saved-widgets">
-              <Bookmark className="h-4 w-4 mr-2" /> Saved Widgets ({savedWidgets.length})
+              <Bookmark className="h-4 w-4 mr-2" /> {t("widgetdashboard.tabs.saved")} ({savedWidgets.length})
             </TabsTrigger>
             <TabsTrigger value="create">
-              <Plus className="h-4 w-4 mr-2" /> Create Widget
+              <Plus className="h-4 w-4 mr-2" /> {t("widgetdashboard.tabs.create")}
             </TabsTrigger>
             <TabsTrigger value="embed">
-              <Code className="h-4 w-4 mr-2" /> Embed Code
+              <Code className="h-4 w-4 mr-2" /> {t("widgetdashboard.tabs.embed")}
             </TabsTrigger>
             <TabsTrigger value="sites">
-              <LinkIcon className="h-4 w-4 mr-2" /> Sites ({widgetSites.length})
+              <LinkIcon className="h-4 w-4 mr-2" /> {t("widgetdashboard.tabs.sites")} ({widgetSites.length})
             </TabsTrigger>
             <TabsTrigger value="analytics">
-              <BarChart3 className="h-4 w-4 mr-2" /> Analytics
+              <BarChart3 className="h-4 w-4 mr-2" /> {t("widgetdashboard.tabs.analytics")}
             </TabsTrigger>
           </TabsList>
 
@@ -1026,20 +1037,20 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Saved Widgets</CardTitle>
-                    <CardDescription>Manage all your saved widget configurations</CardDescription>
+                    <CardTitle>{t("widgetdashboard.saved.title")}</CardTitle>
+                    <CardDescription>{t("widgetdashboard.saved.description")}</CardDescription>
                   </div>
                   <Button onClick={() => handleTabChange("create")}>
-                    <Plus className="h-4 w-4 mr-2" /> Create New Widget
+                    <Plus className="h-4 w-4 mr-2" /> {t("widgetdashboard.saved.create")}
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
                 {savedWidgets.length === 0 ? (
                   <div className="text-center py-12">
-                    <p className="text-muted-foreground mb-4">No saved widgets yet. Create your first widget!</p>
+                    <p className="text-muted-foreground mb-4">{t("widgetdashboard.saved.none")}</p>
                     <Button onClick={() => handleTabChange("create")}>
-                      <Plus className="h-4 w-4 mr-2" /> Create Widget
+                      <Plus className="h-4 w-4 mr-2" /> {t("widgetdashboard.form.create")}
                     </Button>
                   </div>
                 ) : (
@@ -1055,7 +1066,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                             <CardDescription>{widget.widget_description}</CardDescription>
                           )}
                           {widget.is_default && (
-                            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">Default</span>
+                            <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">{t("widgetdashboard.saved.default")}</span>
                           )}
                         </CardHeader>
                         <CardContent className="space-y-2">
@@ -1075,7 +1086,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                                 }
                               }}
                             >
-                              <Edit className="h-4 w-4 mr-2" /> Edit
+                              <Edit className="h-4 w-4 mr-2" /> {t("widgetdashboard.saved.edit")}
                             </Button>
                             <Button size="sm" variant="outline" onClick={() => copyEmbedCode(widget)}>
                               <Copy className="h-4 w-4" />
@@ -1107,13 +1118,13 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
             {savedWidgets.length === 0 ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>Embed Code</CardTitle>
-                  <CardDescription>Copy the embed code for each widget once you have created one.</CardDescription>
+                  <CardTitle>{t("widgetdashboard.embed.title")}</CardTitle>
+                  <CardDescription>{t("widgetdashboard.embed.description")}</CardDescription>
                 </CardHeader>
                 <CardContent className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">No widgets available. Create a widget to get an embed URL.</p>
+                  <p className="text-muted-foreground mb-4">{t("widgetdashboard.embed.none")}</p>
                   <Button onClick={() => handleTabChange("create")}>
-                    <Plus className="h-4 w-4 mr-2" /> Create Widget
+                    <Plus className="h-4 w-4 mr-2" /> {t("widgetdashboard.form.create")}
                   </Button>
                 </CardContent>
               </Card>
@@ -1127,7 +1138,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                       <CardHeader>
                         <CardTitle>{widget.widget_name}</CardTitle>
                         <CardDescription>
-                          Copy this embed code and paste it into your site to render the widget configuration above.
+                          {t("widgetdashboard.embed.step2")}
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -1138,21 +1149,21 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                           <Button size="sm" className="absolute top-2 right-2" onClick={() => copyEmbedCode(widget)}>
                             {copiedWidgetId === widgetId ? (
                               <>
-                                <Check className="h-4 w-4 mr-2" /> Copied
+                                <Check className="h-4 w-4 mr-2" /> {t("widgetdashboard.embed.copied")}
                               </>
                             ) : (
                               <>
-                                <Copy className="h-4 w-4 mr-2" /> Copy
+                                <Copy className="h-4 w-4 mr-2" /> {t("widgetdashboard.embed.copy")}
                               </>
                             )}
                           </Button>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          <p className="mb-2">Steps to embed:</p>
+                          <p className="mb-2">{t("widgetdashboard.embed.steps")}</p>
                           <ol className="list-decimal list-inside space-y-1 ml-2">
-                            <li>Copy the code snippet above.</li>
-                            <li>Paste it into your website HTML where you want the widget to appear.</li>
-                            <li>The widget will load with your saved styling automatically.</li>
+                            <li>{t("widgetdashboard.embed.step1")}</li>
+                            <li>{t("widgetdashboard.embed.step2")}</li>
+                            <li>{t("widgetdashboard.embed.step3")}</li>
                           </ol>
                         </div>
                       </CardContent>
@@ -1166,32 +1177,32 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           <TabsContent value="sites" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Manage Sites</CardTitle>
-                <CardDescription>Add and manage websites where your widget is embedded</CardDescription>
+                <CardTitle>{t("widgetdashboard.sites.title")}</CardTitle>
+                <CardDescription>{t("widgetdashboard.sites.description")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col gap-3">
                   {siteLimitExceeded && (
                     <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary">
                       <AlertTriangle className="h-4 w-4" />
-                      <span>Site limit reached for your current plan. Upgrade to add more sites.</span>
+                      <span>{t("widgetdashboard.sites.limit")}</span>
                     </div>
                   )}
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Site URL (e.g., https://example.com)"
+                      placeholder={t("widgetdashboard.sites.url.placeholder")}
                       value={newSiteUrl}
                       onChange={(event) => setNewSiteUrl(event.target.value)}
                       className="flex-1"
                     />
                     <Input
-                      placeholder="Site Name (optional)"
+                      placeholder={t("widgetdashboard.sites.name.placeholder")}
                       value={newSiteName}
                       onChange={(event) => setNewSiteName(event.target.value)}
                       className="flex-1"
                     />
                     <Button onClick={handleAddSite} disabled={!currentWidget || siteLimitExceeded}>
-                      <Plus className="h-4 w-4 mr-2" /> Add Site
+                      <Plus className="h-4 w-4 mr-2" /> {t("widgetdashboard.sites.add")}
                     </Button>
                   </div>
                 </div>
@@ -1199,7 +1210,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                 <div className="space-y-2">
                   {widgetSites.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-8">
-                      No sites added yet. Add your first site above.
+                      {t("widgetdashboard.sites.none")}
                     </p>
                   ) : (
                     widgetSites.map((site) => (
@@ -1222,25 +1233,25 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           <TabsContent value="analytics" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>API Usage Analytics</CardTitle>
-                <CardDescription>Track your widget&apos;s API usage and performance</CardDescription>
+                <CardTitle>{t("widgetdashboard.analytics.title")}</CardTitle>
+                <CardDescription>{t("widgetdashboard.analytics.description")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Calls</p>
+                    <p className="text-sm text-muted-foreground">{t("widgetdashboard.analytics.total")}</p>
                     <p className="text-2xl font-bold">{apiStats?.total || 0}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Today</p>
+                    <p className="text-sm text-muted-foreground">{t("widgetdashboard.analytics.today")}</p>
                     <p className="text-2xl font-bold">{apiStats?.today || 0}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">This Month</p>
+                    <p className="text-sm text-muted-foreground">{t("widgetdashboard.analytics.thismonth")}</p>
                     <p className="text-2xl font-bold">{apiStats?.thisMonth || 0}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Successful</p>
+                    <p className="text-sm text-muted-foreground">{t("widgetdashboard.analytics.successful")}</p>
                     <p className="text-2xl font-bold">{apiStats?.successful || 0}</p>
                   </div>
                 </div>

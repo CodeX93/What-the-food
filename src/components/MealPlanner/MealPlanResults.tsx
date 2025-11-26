@@ -26,6 +26,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/hooks/use-translation";
 
 type MealPlanResultsProps = {
   plan: MealPlan;
@@ -110,6 +111,7 @@ export function MealPlanResults({
   onRemoveIngredient,
   onAddIngredient,
 }: MealPlanResultsProps) {
+  const t = useTranslation();
   const dailyCalorieTarget = safeNumber(plan?.dailyCalorieTarget);
   const macroDistribution = plan?.macroDistribution || {
     protein_g: 0,
@@ -149,11 +151,11 @@ export function MealPlanResults({
           </div>
           <div className="flex flex-wrap gap-4">
             <div className="rounded-2xl bg-white/15 px-4 py-3 backdrop-blur">
-              <div className="text-xs uppercase tracking-wide text-white/70">Daily calories</div>
+              <div className="text-xs uppercase tracking-wide text-white/70">{t("analytics.nutrient.calories")}</div>
               <div className="text-2xl font-semibold">{dailyCalorieTarget ? `${dailyCalorieTarget} kcal` : "—"}</div>
             </div>
             <div className="rounded-2xl bg-white/15 px-4 py-3 backdrop-blur">
-              <div className="text-xs uppercase tracking-wide text-white/70">Meal variety</div>
+              <div className="text-xs uppercase tracking-wide text-white/70">{t("mealplanner.saved.timeline")}</div>
               <div className="text-2xl font-semibold">{weeklyMealPlan.length} days</div>
             </div>
           </div>
@@ -161,17 +163,17 @@ export function MealPlanResults({
             {!isEditingMeals ? (
               <Button variant="secondary" className="bg-white text-primary hover:bg-white/90" onClick={onStartEditing}>
                 <Edit3 className="mr-2 h-4 w-4" />
-                Edit meals & ingredients
+                {t("mealplanner.results.edit")}
               </Button>
             ) : (
               <>
                 <Button variant="outline" className="bg-white/10 text-white border-white/40" onClick={onCancelEditing}>
                   <X className="mr-2 h-4 w-4" />
-                  Cancel edits
+                  {t("mealplanner.results.cancel")}
                 </Button>
                 <Button className="bg-white text-primary hover:bg-white/90" onClick={onSaveEdits}>
                   <Save className="mr-2 h-4 w-4" />
-                  Save changes
+                  {t("mealplanner.results.save")}
                 </Button>
               </>
             )}
@@ -184,26 +186,26 @@ export function MealPlanResults({
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary">
               <Flame className="h-5 w-5" />
-              Daily Targets
+              {t("analytics.macro.target")}
             </CardTitle>
-            <CardDescription>Macros & fiber targets for each day</CardDescription>
+            <CardDescription>{t("analytics.macro.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl bg-primary/5 p-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Protein</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("analytics.nutrient.protein")}</p>
                 <p className="text-xl font-semibold">{macroDistribution.protein_g} g</p>
               </div>
               <div className="rounded-2xl bg-primary/5 p-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Carbs</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("analytics.nutrient.carbs")}</p>
                 <p className="text-xl font-semibold">{macroDistribution.carbohydrates_g} g</p>
               </div>
               <div className="rounded-2xl bg-primary/5 p-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Fats</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("analytics.nutrient.fat")}</p>
                 <p className="text-xl font-semibold">{macroDistribution.fat_g} g</p>
               </div>
               <div className="rounded-2xl bg-primary/5 p-3">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Fiber</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("analytics.nutrient.fiber")}</p>
                 <p className="text-xl font-semibold">{macroDistribution.fiber_g} g</p>
               </div>
             </div>

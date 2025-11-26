@@ -10,11 +10,13 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/hooks/use-translation";
 import { Bell, Globe, Shield, Palette, Moon, Sun, Save } from "lucide-react";
 
 export function SettingsClient() {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslation();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -76,14 +78,14 @@ export function SettingsClient() {
       }
 
       toast({
-        title: "Success",
-        description: "Settings saved successfully.",
+        title: t("settings.success"),
+        description: t("settings.success.description"),
       });
     } catch (error) {
       console.error("Error saving settings:", error);
       toast({
-        title: "Error",
-        description: "Failed to save settings.",
+        title: t("settings.error"),
+        description: t("settings.error.description"),
         variant: "destructive",
       });
     } finally {
@@ -111,31 +113,31 @@ export function SettingsClient() {
     <main className="flex-1">
       <div className="container mx-auto px-4 py-8 w-full">
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2 pb-2">Settings</h1>
-          <p className="text-muted-foreground">Manage your account preferences and app settings</p>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2 pb-2">{t("settings.title")}</h1>
+          <p className="text-muted-foreground">{t("settings.description")}</p>
         </div>
 
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center gap-2">
               <Bell className="h-5 w-5" />
-              <CardTitle>Notifications</CardTitle>
+              <CardTitle>{t("settings.notifications.title")}</CardTitle>
             </div>
-            <CardDescription>Manage how you receive notifications</CardDescription>
+            <CardDescription>{t("settings.notifications.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="email-notifications">Email Notifications</Label>
-                <p className="text-sm text-muted-foreground">Receive email updates about your scans and account</p>
+                <Label htmlFor="email-notifications">{t("settings.notifications.email")}</Label>
+                <p className="text-sm text-muted-foreground">{t("settings.notifications.email.description")}</p>
               </div>
               <Switch id="email-notifications" checked={emailNotifications} onCheckedChange={setEmailNotifications} />
             </div>
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="push-notifications">Push Notifications</Label>
-                <p className="text-sm text-muted-foreground">Receive browser push notifications (coming soon)</p>
+                <Label htmlFor="push-notifications">{t("settings.notifications.push")}</Label>
+                <p className="text-sm text-muted-foreground">{t("settings.notifications.push.description")}</p>
               </div>
               <Switch id="push-notifications" checked={pushNotifications} onCheckedChange={setPushNotifications} disabled />
             </div>
@@ -146,39 +148,39 @@ export function SettingsClient() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Palette className="h-5 w-5" />
-              <CardTitle>Appearance</CardTitle>
+              <CardTitle>{t("settings.appearance.title")}</CardTitle>
             </div>
-            <CardDescription>Customize the look and feel of the app</CardDescription>
+            <CardDescription>{t("settings.appearance.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label htmlFor="dark-mode">Dark Mode</Label>
-                <p className="text-sm text-muted-foreground">Enable dark mode theme</p>
+                <Label htmlFor="dark-mode">{t("settings.appearance.darkmode")}</Label>
+                <p className="text-sm text-muted-foreground">{t("settings.appearance.darkmode.description")}</p>
               </div>
               <Switch id="dark-mode" checked={isDarkMode} onCheckedChange={handleThemeToggle} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="theme">Theme Preference</Label>
+              <Label htmlFor="theme">{t("settings.appearance.theme")}</Label>
               <Select value={theme || "system"} onValueChange={handleThemeSelect}>
                 <SelectTrigger id="theme">
-                  <SelectValue placeholder="Select theme" />
+                  <SelectValue placeholder={t("settings.appearance.theme.select")} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="system">
                     <div className="flex items-center gap-2">
-                      <Globe className="h-4 w-4" /> System
+                      <Globe className="h-4 w-4" /> {t("settings.appearance.theme.system")}
                     </div>
                   </SelectItem>
                   <SelectItem value="light">
                     <div className="flex items-center gap-2">
-                      <Sun className="h-4 w-4" /> Light
+                      <Sun className="h-4 w-4" /> {t("settings.appearance.theme.light")}
                     </div>
                   </SelectItem>
                   <SelectItem value="dark">
                     <div className="flex items-center gap-2">
-                      <Moon className="h-4 w-4" /> Dark
+                      <Moon className="h-4 w-4" /> {t("settings.appearance.theme.dark")}
                     </div>
                   </SelectItem>
                 </SelectContent>
@@ -191,24 +193,27 @@ export function SettingsClient() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
-              <CardTitle>Language & Region</CardTitle>
+              <CardTitle>{t("settings.language.title")}</CardTitle>
             </div>
-            <CardDescription>Choose your preferred language</CardDescription>
+            <CardDescription>{t("settings.language.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <Label htmlFor="language">Language</Label>
+              <Label htmlFor="language">{t("settings.language.label")}</Label>
               <Select value={language} onValueChange={setLanguage}>
                 <SelectTrigger id="language">
-                  <SelectValue placeholder="Select language" />
+                  <SelectValue placeholder={t("settings.language.select")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="es">Spanish</SelectItem>
-                  <SelectItem value="fr">French</SelectItem>
-                  <SelectItem value="de">German</SelectItem>
-                  <SelectItem value="it">Italian</SelectItem>
-                  <SelectItem value="pt">Portuguese</SelectItem>
+                  <SelectItem value="en">{t("settings.language.english")}</SelectItem>
+                  <SelectItem value="es">{t("settings.language.spanish")}</SelectItem>
+                  <SelectItem value="fr">{t("settings.language.french")}</SelectItem>
+                  <SelectItem value="de">{t("settings.language.german")}</SelectItem>
+                  <SelectItem value="it">{t("settings.language.italian")}</SelectItem>
+                  <SelectItem value="pt">{t("settings.language.portuguese")}</SelectItem>
+                  <SelectItem value="zh">{t("settings.language.chinese")}</SelectItem>
+                  <SelectItem value="ja">{t("settings.language.japanese")}</SelectItem>
+                  <SelectItem value="ar">{t("settings.language.arabic")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -219,19 +224,19 @@ export function SettingsClient() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
-              <CardTitle>Privacy & Security</CardTitle>
+              <CardTitle>{t("settings.privacy.title")}</CardTitle>
             </div>
-            <CardDescription>Manage your privacy and security settings</CardDescription>
+            <CardDescription>{t("settings.privacy.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button variant="outline" className="w-full justify-start">
-              Change Password
+              {t("settings.privacy.changepassword")}
             </Button>
             <Button variant="outline" className="w-full justify-start">
-              Two-Factor Authentication
+              {t("settings.privacy.twofactor")}
             </Button>
             <Button variant="outline" className="w-full justify-start text-destructive hover:text-destructive">
-              Delete Account
+              {t("settings.privacy.deleteaccount")}
             </Button>
           </CardContent>
         </Card>
@@ -241,11 +246,11 @@ export function SettingsClient() {
             {saving ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                Saving...
+                {t("settings.saving")}
               </>
             ) : (
               <>
-                <Save className="h-4 w-4 mr-2" /> Save Settings
+                <Save className="h-4 w-4 mr-2" /> {t("settings.save")}
               </>
             )}
           </Button>

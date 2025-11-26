@@ -27,6 +27,7 @@ import {
   Minus,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/hooks/use-translation";
 
 type ManualItem = {
   name?: string;
@@ -154,6 +155,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslation();
   const [scans, setScans] = useState<FoodScan[]>([]);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
@@ -196,8 +198,8 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
 
     if (!foods.length) {
       toast({
-        title: "Add at least one item",
-        description: "Include a short description like “2 eggs” or “1 banana”.",
+        title: t("analytics.manual.add"),
+        description: t("analytics.manual.add.description"),
         variant: "destructive",
       });
       return;
@@ -210,7 +212,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
       });
       if (error) throw error;
       if (!manualData?.ok) {
-        throw new Error(manualData?.error || "Unable to estimate nutrition for these foods");
+        throw new Error(manualData?.error || t("analytics.manual.error.description"));
       }
 
       const {
@@ -287,16 +289,16 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
       setManualFoods([{ id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`, value: "" }]);
 
       toast({
-        title: "Added to My Food Analytics",
-        description: "Manual foods have been logged successfully.",
+        title: t("analytics.manual.success.title"),
+        description: t("analytics.manual.success.description"),
       });
 
       await reload();
     } catch (error: any) {
       console.error("Manual entry error:", error);
       toast({
-        title: "Failed to log foods",
-        description: error?.message || "Unable to estimate these foods.",
+        title: t("analytics.manual.error.title"),
+        description: error?.message || t("analytics.manual.error.description"),
         variant: "destructive",
       });
     } finally {
@@ -485,15 +487,17 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
   const countSeries = buildBarSeries(stats.byDay, (value) => value.count, maxCount);
 
   // Calculate today's totals
-  const today = formatDay(new Date().toISOString());
-  const todayStats = stats.byDay.find(([date]) => date === today)?.[1] || {
-    calories: 0,
-    protein: 0,
-    carbs: 0,
-    fat: 0,
-    fiber: 0,
-    sugar: 0,
-  };
+  const todayStats = useMemo(() => {
+    const today = formatDay(new Date().toISOString());
+    return stats.byDay.find(([date]) => date === today)?.[1] || {
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fat: 0,
+      fiber: 0,
+      sugar: 0,
+    };
+  }, [stats.byDay]);
 
   // Calculate average daily macros for date range (or use today if no range or single day)
   const macroStats = useMemo(() => {
@@ -540,10 +544,9 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                 <Lock className="h-7 w-7 text-primary" />
               </div>
               <div className="space-y-2">
-                <CardTitle className="text-3xl">Analytics is Premium</CardTitle>
+                <CardTitle className="text-3xl">{t("analytics.premium.title")}</CardTitle>
                 <CardDescription className="text-base">
-                  Upgrade to visualize your nutrition trends, daily totals, and AI-estimated manual entries all in one
-                  dashboard.
+                  {t("analytics.premium.description")}
                 </CardDescription>
               </div>
             </CardHeader>
@@ -552,13 +555,13 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                 {[
                   {
                     icon: <ShieldCheck className="h-5 w-5 text-primary" />,
-                    title: "Unified insights",
-                    body: "See every scan plus manual food logs reflected instantly in your totals.",
+                    title: t("analytics.premium.feature1.title"),
+                    body: t("analytics.premium.feature1.body"),
                   },
                   {
                     icon: <Sparkles className="h-5 w-5 text-primary" />,
-                    title: "Actionable trends",
-                    body: "Track calories, macros, and top dishes over time with exportable reports.",
+                    title: t("analytics.premium.feature2.title"),
+                    body: t("analytics.premium.feature2.body"),
                   },
                 ].map((feature) => (
                   <div
@@ -575,10 +578,10 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
               </div>
               <div className="text-center">
                 <Button size="lg" className="px-8" onClick={() => router.push("/plans")}>
-                  Upgrade to Premium <ArrowRight className="h-4 w-4 ml-2" />
+                  {t("analytics.premium.upgrade")} <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
                 <p className="text-sm text-muted-foreground mt-3">
-                  Already upgraded? Refresh this page after your plan activates.
+                  {t("analytics.premium.refresh")}
                 </p>
               </div>
             </CardContent>
@@ -597,14 +600,14 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold">My Food Analytics</h1>
-              <p className="text-muted-foreground">Insights from your scan history</p>
+              <h1 className="text-3xl md:text-4xl font-bold">{t("analytics.title")}</h1>
+              <p className="text-muted-foreground">{t("analytics.description")}</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex flex-col">
               <label className="text-xs text-muted-foreground" htmlFor="start-date">
-                From
+                {t("analytics.date.from")}
               </label>
               <Input
                 id="start-date"
@@ -617,7 +620,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
             </div>
             <div className="flex flex-col">
               <label className="text-xs text-muted-foreground" htmlFor="end-date">
-                To
+                {t("analytics.date.to")}
               </label>
               <Input
                 id="end-date"
@@ -641,15 +644,15 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                   setEndDate("");
                 }
               }}
-              title="Reset date range"
+              title={t("analytics.date.reset")}
             >
               <CalendarRange className="h-4 w-4" />
             </Button>
             <Button variant="outline" onClick={reload}>
-              <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+              <RefreshCw className="h-4 w-4 mr-2" /> {t("analytics.refresh")}
             </Button>
             <Button onClick={exportCsv}>
-              <Download className="h-4 w-4 mr-2" /> Export CSV
+              <Download className="h-4 w-4 mr-2" /> {t("analytics.export")}
             </Button>
           </div>
         </div>
@@ -665,11 +668,11 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
             {/* Today's Intake - Horizontal Layout */}
             <Card>
               <CardHeader>
-                <CardTitle>Today&apos;s Intake</CardTitle>
+                <CardTitle>{t("analytics.today.title")}</CardTitle>
                 <CardDescription>
                   {dailyRequirements
-                    ? "Personalized targets based on your profile"
-                    : "Complete your profile to see personalized targets"}
+                    ? t("analytics.today.personalized")
+                    : t("analytics.today.complete")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -677,7 +680,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                   {[
                     {
                       icon: Flame,
-                      label: "Calories",
+                      label: t("analytics.nutrient.calories"),
                       value: Math.round(todayStats.calories),
                       target: dailyRequirements?.calories,
                       unit: "kcal",
@@ -688,7 +691,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                     },
                     {
                       icon: Beef,
-                      label: "Protein",
+                      label: t("analytics.nutrient.protein"),
                       value: Math.round(todayStats.protein),
                       target: dailyRequirements?.protein,
                       unit: "g",
@@ -699,7 +702,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                     },
                     {
                       icon: Wheat,
-                      label: "Carbs",
+                      label: t("analytics.nutrient.carbs"),
                       value: Math.round(todayStats.carbs),
                       target: dailyRequirements?.carbs,
                       unit: "g",
@@ -710,7 +713,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                     },
                     {
                       icon: Droplet,
-                      label: "Fat",
+                      label: t("analytics.nutrient.fat"),
                       value: Math.round(todayStats.fat),
                       target: dailyRequirements?.fat,
                       unit: "g",
@@ -721,7 +724,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                     },
                     {
                       icon: Apple,
-                      label: "Fiber",
+                      label: t("analytics.nutrient.fiber"),
                       value: Math.round(todayStats.fiber),
                       target: dailyRequirements?.fiber,
                       unit: "g",
@@ -732,7 +735,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                     },
                     {
                       icon: Candy,
-                      label: "Sugar",
+                      label: t("analytics.nutrient.sugar"),
                       value: Math.round(todayStats.sugar),
                       target: dailyRequirements?.sugar,
                       unit: "g",
@@ -809,8 +812,8 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
             {/* Daily Calories Chart - Full Width */}
             <Card>
               <CardHeader>
-                <CardTitle>Daily Calories</CardTitle>
-                <CardDescription>Total calories per day</CardDescription>
+                <CardTitle>{t("analytics.chart.calories.title")}</CardTitle>
+                <CardDescription>{t("analytics.chart.calories.description")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="w-full overflow-x-auto">
@@ -845,8 +848,8 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                       ) : (
                         <div className="w-full text-center text-sm text-muted-foreground py-10">
                           {calorieSeries.bars.length
-                            ? "No calorie data in this range."
-                            : "No scan data yet. Analyze a meal to see trends here."}
+                            ? t("analytics.chart.calories.nodata")
+                            : t("analytics.chart.calories.noscans")}
                         </div>
                       )}
                     </div>
@@ -868,8 +871,8 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <Card className="lg:col-span-2">
                 <CardHeader>
-                  <CardTitle>Scans per Day</CardTitle>
-                  <CardDescription>Frequency over time</CardDescription>
+                  <CardTitle>{t("analytics.chart.scans.title")}</CardTitle>
+                  <CardDescription>{t("analytics.chart.scans.description")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="w-full overflow-x-auto">
@@ -904,8 +907,8 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                         ) : (
                           <div className="w-full text-center text-sm text-muted-foreground py-10">
                             {countSeries.bars.length
-                              ? "No scans recorded in this range."
-                              : "No scans recorded yet."}
+                              ? t("analytics.chart.scans.nodata")
+                              : t("analytics.chart.scans.none")}
                           </div>
                         )}
                       </div>
@@ -925,8 +928,8 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
 
               <Card>
                 <CardHeader>
-                  <CardTitle>My Eats</CardTitle>
-                  <CardDescription>Most logged meals </CardDescription>
+                  <CardTitle>{t("analytics.eats.title")}</CardTitle>
+                  <CardDescription>{t("analytics.eats.description")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
@@ -956,11 +959,11 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
         {dailyRequirements && (
           <Card className="mb-8 mt-8">
             <CardHeader>
-              <CardTitle>Macro Distribution</CardTitle>
+              <CardTitle>{t("analytics.macro.title")}</CardTitle>
               <CardDescription>
-                Percentage of daily requirements met based on your intake
+                {t("analytics.macro.description")}
                 {startDate && endDate && startDate !== endDate && (
-                  <span className="ml-1">({startDate} to {endDate})</span>
+                  <span className="ml-1">({startDate} {t("analytics.date.to")} {endDate})</span>
                 )}
                 {startDate && endDate && startDate === endDate && (
                   <span className="ml-1">({startDate})</span>
@@ -973,7 +976,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                 <div className="text-center">
                   <div className="text-3xl font-bold">{Math.round(macroStats.calories)}</div>
                   <div className="text-sm text-muted-foreground">
-                    {startDate && endDate && startDate !== endDate ? 'avg kcal/day' : 'kcal'}
+                    {startDate && endDate && startDate !== endDate ? t("analytics.macro.avg") : t("analytics.macro.kcal")}
                   </div>
                 </div>
                 
@@ -1013,21 +1016,21 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                 <div className="space-y-4">
                   {[
                     {
-                      label: "Protein",
+                      label: t("analytics.nutrient.protein"),
                       value: macroStats.protein,
                       target: dailyRequirements.protein,
                       color: "bg-red-500",
                       textColor: "text-red-600",
                     },
                     {
-                      label: "Carbs",
+                      label: t("analytics.nutrient.carbs"),
                       value: macroStats.carbs,
                       target: dailyRequirements.carbs,
                       color: "bg-amber-500",
                       textColor: "text-amber-600",
                     },
                     {
-                      label: "Fat",
+                      label: t("analytics.nutrient.fat"),
                       value: macroStats.fat,
                       target: dailyRequirements.fat,
                       color: "bg-sky-500",
@@ -1073,10 +1076,10 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                         </div>
                         {macro.target && (
                           <div className="text-xs text-muted-foreground">
-                            Target: {macro.target.toFixed(0)}g
+                            {t("analytics.macro.target")}: {macro.target.toFixed(0)}g
                             {requirementPercent > 100 && (
                               <span className="ml-2 text-red-600 font-medium">
-                                (Exceeded by {((requirementPercent - 100) / 100 * macro.target).toFixed(0)}g)
+                                ({t("analytics.macro.exceeded")} {((requirementPercent - 100) / 100 * macro.target).toFixed(0)}g)
                               </span>
                             )}
                           </div>

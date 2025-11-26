@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Check, Sparkles, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "@/hooks/use-translation";
 import { createCheckoutSession, redirectToCheckout } from "@/utils/stripe";
 import { getPlatformSubscription } from "@/utils/subscription";
 import type { User } from "@supabase/supabase-js";
@@ -46,6 +47,7 @@ export function PlansClient({
 }: PlansClientProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslation();
   const [loading, setLoading] = useState<string | null>(null);
   const [plans, setPlans] = useState<Plan[]>(initialPlans);
   const [isFetchingPlans, setIsFetchingPlans] = useState(initialPlans.length === 0);
@@ -102,8 +104,8 @@ export function PlansClient({
         console.error("Error loading plans:", error);
         if (!cancelled && initialPlans.length === 0) {
           toast({
-            title: "Error",
-            description: "Failed to load plans.",
+            title: t("plans.error.title"),
+            description: t("plans.error.load"),
             variant: "destructive",
           });
         }
@@ -123,11 +125,45 @@ export function PlansClient({
     return () => {
       cancelled = true;
     };
-  }, [initialUser, initialPlans.length, initialSubscription, router, toast]);
+  }, [initialUser, initialPlans.length, initialSubscription, router, toast, t]);
 
   const formatPrice = (price_cents: number, interval: string) => {
     if (interval === "free") return "$0";
     return `$${(price_cents / 100).toFixed(2)}`;
+  };
+
+  const translateFeature = (feature: string): string => {
+    // Map English feature strings to translation keys
+    const featureMap: Record<string, string> = {
+      "Unlimited scans": t("plans.feature.unlimitedscans"),
+      "Advanced nutritional analysis": t("plans.feature.advancednutritional"),
+      "Macro tracking": t("plans.feature.macrotracking"),
+      "Meal planning": t("plans.feature.mealplanning"),
+      "Export reports": t("plans.feature.exportreports"),
+      "Priority support": t("plans.feature.prioritysupport"),
+      "3 scans per day": t("plans.feature.scansperday"),
+      "10 scans per day": t("plans.feature.scansperday"),
+      "Basic nutritional information": t("plans.feature.basicnutritional"),
+      "Scan history": t("plans.feature.scanhistory"),
+      "Email support": t("plans.feature.emailsupport"),
+    };
+    
+    // Return translated feature if found, otherwise return original
+    return featureMap[feature] || feature;
+  };
+
+  const translateDescription = (description: string | undefined, billingCycle: string): string => {
+    if (!description) return "";
+    
+    // Map English descriptions to translation keys
+    const descriptionMap: Record<string, string> = {
+      "Perfect for trying out our service": t("plans.description.free"),
+      "Unlimited access to all features": t("plans.description.premium.monthly"),
+      "Best value - Save with yearly billing": t("plans.description.premium.yearly"),
+    };
+    
+    // Return translated description if found, otherwise return original
+    return descriptionMap[description] || description;
   };
 
   const isCurrentPlan = (plan: Plan) => {
@@ -163,8 +199,8 @@ export function PlansClient({
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
         toast({
-          title: "Error",
-          description: "You must be logged in to cancel your subscription.",
+          title: t("plans.error.title"),
+          description: t("plans.error.login"),
           variant: "destructive",
         });
         return;
@@ -184,7 +220,7 @@ export function PlansClient({
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to cancel subscription");
+        throw new Error(data.error || t("plans.error.cancel"));
       }
 
       // Refresh subscription data
@@ -192,8 +228,8 @@ export function PlansClient({
       setSubscription(sub);
 
       toast({
-        title: "Subscription Cancelled",
-        description: "Your subscription has been cancelled and you've been moved to the Free plan.",
+        title: t("plans.success.cancelled.title"),
+        description: t("plans.success.cancelled.description"),
       });
 
       setShowCancelDialog(false);
@@ -201,8 +237,8 @@ export function PlansClient({
     } catch (error: any) {
       console.error("Cancel subscription error:", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to cancel subscription. Please try again.",
+        title: t("plans.error.title"),
+        description: error.message || t("plans.error.cancel"),
         variant: "destructive",
       });
     } finally {
@@ -240,10 +276,10 @@ export function PlansClient({
         if (error) {
           if (error.code === "23503") {
             throw new Error(
-              "Profile foreign key constraint error. Please run the migration: 20250105000000_fix_profiles_fk_constraint.sql"
+              t("plans.error.profile.fk") || "Profile foreign key constraint error. Please run the migration: 20250105000000_fix_profiles_fk_constraint.sql"
             );
           }
-          throw new Error(`Failed to create profile: ${error.message}`);
+          throw new Error(t("plans.error.profile.create").replace("{message}", error.message) || `Failed to create profile: ${error.message}`);
         }
       };
 
@@ -312,8 +348,8 @@ export function PlansClient({
         }
 
         toast({
-          title: "Free plan activated",
-          description: "You're now on the Free plan. Enjoy 3 scans per day!",
+          title: t("plans.success.free.title"),
+          description: t("plans.success.free.description"),
         });
 
         router.push("/dashboard");
@@ -329,8 +365,8 @@ export function PlansClient({
 
       if (!priceId) {
         toast({
-          title: "Error",
-          description: `Price ID not configured for ${billingCycle} plan. Please contact support.`,
+          title: t("plans.error.title"),
+          description: t("plans.error.priceid").replace("{billingCycle}", billingCycle),
           variant: "destructive",
         });
         return;
@@ -348,8 +384,8 @@ export function PlansClient({
     } catch (error: any) {
       console.error("Error selecting plan:", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to select plan. Please try again.",
+        title: t("plans.error.title"),
+        description: error.message || t("plans.error.select"),
         variant: "destructive",
       });
     } finally {
@@ -362,22 +398,22 @@ export function PlansClient({
       <div className="container mx-auto px-4 py-16">
         <div className="text-center max-w-3xl mx-auto mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-hero bg-clip-text text-transparent">
-            Choose Your Plan
+            {t("plans.title")}
           </h1>
           <p className="text-lg text-muted-foreground mb-6 pb-1" >
-            Select a plan that works best for you. You can upgrade or downgrade at any time.
+            {t("plans.description")}
           </p>
           <Button variant="outline" onClick={() => router.push("/dashboard")} className="mx-auto">
-            Keep using the plan
+            {t("plans.keepusing")}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
           {isFetchingPlans ? (
-            <div className="col-span-3 text-center text-muted-foreground">Loading plans...</div>
+            <div className="col-span-3 text-center text-muted-foreground">{t("plans.loading")}</div>
           ) : plans.length === 0 ? (
-            <div className="col-span-3 text-center text-muted-foreground">No plans configured.</div>
+            <div className="col-span-3 text-center text-muted-foreground">{t("plans.noplans")}</div>
           ) : (
             plans.map((plan) => {
               const billingCycle = plan.billing_cycle ||
@@ -390,9 +426,9 @@ export function PlansClient({
               
               // Determine button text based on current subscription and target plan
               const getButtonText = () => {
-                if (isLoading) return "Processing...";
-                if (isCurrentPaidPlan) return "Cancel Plan";
-                if (isCurrent) return "Current Plan";
+                if (isLoading) return t("plans.button.processing");
+                if (isCurrentPaidPlan) return t("plans.button.cancel");
+                if (isCurrent) return t("plans.button.current");
                 
                 // Check if user has an active premium subscription
                 const hasActivePremium = subscription?.subscription_type === "premium" && subscription?.is_active;
@@ -402,36 +438,36 @@ export function PlansClient({
                 if (billingCycle === "free") {
                   // If user is on premium (monthly or yearly), show "Go Free"
                   if (hasActivePremium) {
-                    return "Go Free";
+                    return t("plans.button.gofree");
                   }
-                  return "Get Started";
+                  return t("plans.button.getstarted");
                 }
                 
                 if (billingCycle === "yearly") {
                   // If user is on premium monthly, show "Go Annually"
                   if (hasActivePremium && currentBillingCycle === "monthly") {
-                    return "Go Annually";
+                    return t("plans.button.goannually");
                   }
                   // If user is on free plan, show "Go Yearly"
                   if (isOnFreePlan) {
-                    return "Go Yearly";
+                    return t("plans.button.goyearly");
                   }
-                  return "Subscribe Yearly";
+                  return t("plans.button.subscribeyearly");
                 }
                 
                 if (billingCycle === "monthly") {
                   // If user is on premium yearly, show "Go Monthly"
                   if (hasActivePremium && currentBillingCycle === "yearly") {
-                    return "Go Monthly";
+                    return t("plans.button.gomonthly");
                   }
                   // If user is on free plan, show "Go Monthly"
                   if (isOnFreePlan) {
-                    return "Go Monthly";
+                    return t("plans.button.gomonthly");
                   }
-                  return "Subscribe Monthly";
+                  return t("plans.button.subscribemonthly");
                 }
                 
-                return "Go";
+                return t("plans.button.go");
               };
               
               const buttonText = getButtonText();
@@ -444,7 +480,7 @@ export function PlansClient({
                   {plan.is_popular && (
                     <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                       <span className="bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-medium">
-                        Most Popular
+                        {t("plans.mostpopular")}
                       </span>
                     </div>
                   )}
@@ -456,17 +492,17 @@ export function PlansClient({
                     <div className="flex items-baseline gap-2">
                       <span className="text-4xl font-bold">{formatPrice(plan.price_cents, plan.interval)}</span>
                       <span className="text-muted-foreground">
-                        {plan.billing_cycle === "monthly" ? "/month" : plan.billing_cycle === "yearly" ? "/year" : "forever"}
+                        {plan.billing_cycle === "monthly" ? t("plans.period.month") : plan.billing_cycle === "yearly" ? t("plans.period.year") : t("plans.period.forever")}
                       </span>
                     </div>
-                    <CardDescription className="mt-2">{plan.description}</CardDescription>
+                    <CardDescription className="mt-2">{translateDescription(plan.description, billingCycle)}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-3 mb-6">
                       {(Array.isArray(plan.features) ? plan.features : []).map((feature, index) => (
                         <li key={index} className="flex items-start gap-2">
                           <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                          <span className="text-sm">{feature}</span>
+                          <span className="text-sm">{translateFeature(feature)}</span>
                         </li>
                       ))}
                     </ul>
@@ -496,19 +532,19 @@ export function PlansClient({
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
+            <AlertDialogTitle>{t("plans.cancel.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to cancel your subscription? You&apos;ll be moved to the Free plan and will lose access to premium features.
+              {t("plans.cancel.description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={cancelling}>Keep Subscription</AlertDialogCancel>
+            <AlertDialogCancel disabled={cancelling}>{t("plans.cancel.keep")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancelSubscription}
               disabled={cancelling}
               className="bg-destructive hover:bg-destructive/90"
             >
-              {cancelling ? "Cancelling..." : "Cancel Subscription"}
+              {cancelling ? t("plans.cancel.cancelling") : t("plans.cancel.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

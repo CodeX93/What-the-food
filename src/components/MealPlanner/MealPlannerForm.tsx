@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { getIdealWeightRange } from "@/utils/bmi";
+import { useTranslation } from "@/hooks/use-translation";
 
 interface MealPlannerFormProps {
   profile: any;
@@ -38,29 +39,30 @@ export interface MealPlannerFormData {
   customRestrictions: string;
 }
 
-const FITNESS_GOALS = [
-  { value: "lose_weight", label: "Lose Weight" },
-  { value: "gain_weight", label: "Gain Weight" },
-  { value: "maintain_weight", label: "Maintain Weight" },
-  { value: "build_muscle", label: "Build Muscle" },
-  { value: "improve_fitness", label: "Improve Fitness" },
+// Base arrays with English values (for backend processing)
+const FITNESS_GOALS_VALUES = [
+  "lose_weight",
+  "gain_weight",
+  "maintain_weight",
+  "build_muscle",
+  "improve_fitness",
 ];
 
-const DIET_TYPES = [
-  { value: "balanced", label: "Balanced" },
-  { value: "keto", label: "Ketogenic (Keto)" },
-  { value: "intermittent_fasting", label: "Intermittent Fasting" },
-  { value: "high_protein", label: "High Protein" },
-  { value: "high_carb", label: "High Carbohydrate" },
-  { value: "low_carb", label: "Low Carbohydrate" },
-  { value: "mediterranean", label: "Mediterranean" },
-  { value: "paleo", label: "Paleo" },
-  { value: "vegan", label: "Vegan" },
-  { value: "vegetarian", label: "Vegetarian" },
-  { value: "gluten_free", label: "Gluten-Free" },
-  { value: "dairy_free", label: "Dairy-Free" },
-  { value: "low_fodmap", label: "Low-FODMAP" },
-  { value: "pescatarian", label: "Pescatarian" },
+const DIET_TYPES_VALUES = [
+  "balanced",
+  "keto",
+  "intermittent_fasting",
+  "high_protein",
+  "high_carb",
+  "low_carb",
+  "mediterranean",
+  "paleo",
+  "vegan",
+  "vegetarian",
+  "gluten_free",
+  "dairy_free",
+  "low_fodmap",
+  "pescatarian",
 ];
 
 const PLAN_DURATIONS = [
@@ -70,7 +72,8 @@ const PLAN_DURATIONS = [
   { value: 30, label: "30d" },
 ];
 
-const ALLERGIES = [
+// English values for allergies and exercises (for backend processing)
+const ALLERGIES_VALUES = [
   "Peanuts",
   "Dairy",
   "Soy",
@@ -85,7 +88,7 @@ const ALLERGIES = [
   "Celery",
 ];
 
-const EXERCISE_OPTIONS = [
+const EXERCISE_OPTIONS_VALUES = [
   "Cardio / Walking",
   "Running / Jogging",
   "Cycling",
@@ -100,7 +103,67 @@ const EXERCISE_OPTIONS = [
   "Outdoor Activities (Hiking, etc.)",
 ];
 
+// Mapping functions for translation keys
+const getFitnessGoalKey = (value: string) => `mealplanner.form.goal.${value}`;
+const getDietTypeKey = (value: string) => `mealplanner.form.diet.${value}`;
+const getAllergyKey = (value: string) => {
+  const keyMap: Record<string, string> = {
+    "Peanuts": "peanuts",
+    "Dairy": "dairy",
+    "Soy": "soy",
+    "Fish": "fish",
+    "Tree nuts": "tree_nuts",
+    "Eggs": "eggs",
+    "Wheat/Gluten": "wheat_gluten",
+    "Shellfish": "shellfish",
+    "Sesame": "sesame",
+    "Sulfites": "sulfites",
+    "Mustard": "mustard",
+    "Celery": "celery",
+  };
+  return `mealplanner.form.allergy.${keyMap[value] || value.toLowerCase().replace(/\s+/g, "_")}`;
+};
+const getExerciseKey = (value: string) => {
+  const keyMap: Record<string, string> = {
+    "Cardio / Walking": "cardio_walking",
+    "Running / Jogging": "running_jogging",
+    "Cycling": "cycling",
+    "Swimming": "swimming",
+    "Strength Training": "strength_training",
+    "Bodyweight / Calisthenics": "bodyweight_calisthenics",
+    "HIIT / Interval Training": "hiit_interval_training",
+    "Yoga / Pilates": "yoga_pilates",
+    "Dance / Zumba": "dance_zumba",
+    "Sports / Team Activities": "sports_team_activities",
+    "Mobility / Stretching": "mobility_stretching",
+    "Outdoor Activities (Hiking, etc.)": "outdoor_activities",
+  };
+  return `mealplanner.form.exercise.${keyMap[value] || value.toLowerCase().replace(/\s+/g, "_").replace(/[\/\(\)]/g, "")}`;
+};
+
 export function MealPlannerForm({ profile, onGenerate, generating }: MealPlannerFormProps) {
+  const t = useTranslation();
+  
+  // Create translated arrays for display
+  const FITNESS_GOALS = FITNESS_GOALS_VALUES.map(value => ({
+    value,
+    label: t(getFitnessGoalKey(value)),
+  }));
+  
+  const DIET_TYPES = DIET_TYPES_VALUES.map(value => ({
+    value,
+    label: t(getDietTypeKey(value)),
+  }));
+  
+  const ALLERGIES = ALLERGIES_VALUES.map(value => ({
+    value,
+    label: t(getAllergyKey(value)),
+  }));
+  
+  const EXERCISE_OPTIONS = EXERCISE_OPTIONS_VALUES.map(value => ({
+    value,
+    label: t(getExerciseKey(value)),
+  }));
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
 
@@ -182,8 +245,8 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
       {/* Progress Bar */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-2xl font-bold">Create Your Diet Plan</h2>
-          <span className="text-sm text-muted-foreground">Step {currentStep} of {totalSteps}</span>
+          <h2 className="text-2xl font-bold">{t("mealplanner.form.title")}</h2>
+          <span className="text-sm text-muted-foreground">{t("mealplanner.form.step")} {currentStep} {t("mealplanner.form.of")} {totalSteps}</span>
         </div>
         <Progress value={progress} className="h-2 bg-muted" />
       </div>
@@ -191,14 +254,14 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
       <Card>
         <CardHeader>
           <CardTitle>
-            {currentStep === 1 && "Fitness Goals"}
-            {currentStep === 2 && "Diet Preferences"}
-            {currentStep === 3 && "Health & Restrictions"}
+            {currentStep === 1 && t("mealplanner.form.step1.title")}
+            {currentStep === 2 && t("mealplanner.form.step2.title")}
+            {currentStep === 3 && t("mealplanner.form.step3.title")}
           </CardTitle>
           <CardDescription>
-            {currentStep === 1 && "Tell us about your fitness goals and preferences"}
-            {currentStep === 2 && "Customize your dietary preferences"}
-            {currentStep === 3 && "Any allergies or restrictions?"}
+            {currentStep === 1 && t("mealplanner.form.step1.description")}
+            {currentStep === 2 && t("mealplanner.form.step2.description")}
+            {currentStep === 3 && t("mealplanner.form.step3.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -206,7 +269,7 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
           {currentStep === 1 && (
             <div className="space-y-6">
               <div>
-                <Label className="text-base font-semibold mb-4 block">Your End Goal</Label>
+                <Label className="text-base font-semibold mb-4 block">{t("mealplanner.form.goal.title")}</Label>
                 <RadioGroup value={endGoal} onValueChange={setEndGoal} className="space-y-3">
                   {FITNESS_GOALS.map((goal) => (
                     <div key={goal.value} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
@@ -221,11 +284,11 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
 
               <div>
                 <Label htmlFor="target-weight" className="text-base font-semibold mb-2 block">
-                  Target Ideal Weight (kg)
+                  {t("mealplanner.form.targetweight")}
                 </Label>
                 {idealWeightRange && (
                   <p className="text-sm text-muted-foreground mb-2">
-                    Ideal range: {idealWeightRange.min} - {idealWeightRange.max} kg
+                    {t("mealplanner.form.targetweight.ideal")}: {idealWeightRange.min} - {idealWeightRange.max} kg
                   </p>
                 )}
                 <Input
@@ -233,58 +296,58 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
                   type="number"
                   value={targetWeight}
                   onChange={(e) => setTargetWeight(e.target.value)}
-                  placeholder={profile?.weight_kg ? `Current: ${profile.weight_kg} kg` : "e.g., 70"}
+                  placeholder={profile?.weight_kg ? `${t("mealplanner.form.targetweight.current")}: ${profile.weight_kg} kg` : t("mealplanner.form.targetweight.placeholder")}
                   className="max-w-xs"
                 />
               </div>
 
               <div>
                 <Label htmlFor="timeframe" className="text-base font-semibold mb-2 block">
-                  Timeframe (weeks)
+                  {t("mealplanner.form.timeframe")}
                 </Label>
                 <Input
                   id="timeframe"
                   type="number"
                   value={timeframe}
                   onChange={(e) => setTimeframe(e.target.value)}
-                  placeholder="e.g., 12"
+                  placeholder={t("mealplanner.form.timeframe.placeholder")}
                   className="max-w-xs"
                 />
               </div>
 
               <div>
                 <Label className="text-base font-semibold mb-4 block">
-                  Exercise Plan
+                  {t("mealplanner.form.exercise.title")}
                 </Label>
                 <p className="text-sm text-muted-foreground mb-3">
-                  Select the workouts you can commit to during this plan.
+                  {t("mealplanner.form.exercise.description")}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {EXERCISE_OPTIONS.map((exercise) => (
                     <div
-                      key={exercise}
+                      key={exercise.value}
                       className="flex items-center space-x-3 p-3 rounded-lg border border-input hover:bg-muted/50 transition-colors"
                     >
                       <Checkbox
-                        id={exercise}
-                        checked={exercisePreferences.includes(exercise)}
-                        onCheckedChange={() => handleExerciseToggle(exercise)}
+                        id={exercise.value}
+                        checked={exercisePreferences.includes(exercise.value)}
+                        onCheckedChange={() => handleExerciseToggle(exercise.value)}
                       />
-                      <Label htmlFor={exercise} className="font-normal cursor-pointer flex-1">
-                        {exercise}
+                      <Label htmlFor={exercise.value} className="font-normal cursor-pointer flex-1">
+                        {exercise.label}
                       </Label>
                     </div>
                   ))}
                 </div>
                 <div className="mt-4">
                   <Label htmlFor="exercise-plan" className="text-sm font-medium mb-2 block">
-                    Additional Exercise Details (Optional)
+                    {t("mealplanner.form.exercise.additional")}
                   </Label>
                   <Textarea
                     id="exercise-plan"
                     value={exercisePlan}
                     onChange={(e) => setExercisePlan(e.target.value)}
-                    placeholder="e.g., Prefer evening workouts, gym access twice a week"
+                    placeholder={t("mealplanner.form.exercise.additional.placeholder")}
                     rows={3}
                   />
                 </div>
@@ -292,13 +355,13 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
 
               <div>
                 <Label htmlFor="additional-info" className="text-base font-semibold mb-2 block">
-                  Additional Information
+                  {t("mealplanner.form.additionalinfo")}
                 </Label>
                 <Textarea
                   id="additional-info"
                   value={additionalInfo}
                   onChange={(e) => setAdditionalInfo(e.target.value)}
-                  placeholder="Any other relevant information about your goals..."
+                  placeholder={t("mealplanner.form.additionalinfo.placeholder")}
                   rows={3}
                 />
               </div>
@@ -309,7 +372,7 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
           {currentStep === 2 && (
             <div className="space-y-6">
               <div>
-                <Label className="text-base font-semibold mb-4 block">Diet Type</Label>
+                <Label className="text-base font-semibold mb-4 block">{t("mealplanner.form.diettype")}</Label>
                 <RadioGroup value={dietType} onValueChange={setDietType} className="space-y-3">
                   {DIET_TYPES.map((diet) => (
                     <div key={diet.value} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
@@ -324,7 +387,7 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
 
               <div>
                 <Label htmlFor="meals-per-day" className="text-base font-semibold mb-2 block">
-                  Number of Meals per Day
+                  {t("mealplanner.form.mealsperday")}
                 </Label>
                 <RadioGroup value={mealsPerDay} onValueChange={setMealsPerDay} className="flex flex-wrap gap-3">
                   {[2, 3, 4, 5, 6].map((num) => (
@@ -339,7 +402,7 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
               </div>
 
               <div>
-                <Label className="text-base font-semibold mb-4 block">Include Snacks?</Label>
+                <Label className="text-base font-semibold mb-4 block">{t("mealplanner.form.includesnacks")}</Label>
                 <RadioGroup
                   value={includeSnacks ? "yes" : "no"}
                   onValueChange={(value) => setIncludeSnacks(value === "yes")}
@@ -348,20 +411,20 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
                   <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
                     <RadioGroupItem value="yes" id="snacks-yes" />
                     <Label htmlFor="snacks-yes" className="font-normal cursor-pointer flex-1">
-                      Yes
+                      {t("mealplanner.form.includesnacks.yes")}
                     </Label>
                   </div>
                   <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
                     <RadioGroupItem value="no" id="snacks-no" />
                     <Label htmlFor="snacks-no" className="font-normal cursor-pointer flex-1">
-                      No
+                      {t("mealplanner.form.includesnacks.no")}
                     </Label>
                   </div>
                 </RadioGroup>
               </div>
 
               <div>
-                <Label className="text-base font-semibold mb-4 block">Plan Duration (days)</Label>
+                <Label className="text-base font-semibold mb-4 block">{t("mealplanner.form.planduration")}</Label>
                 <div className="flex gap-3 flex-wrap mb-4">
                   {PLAN_DURATIONS.map((duration) => (
                     <Button
@@ -394,18 +457,18 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
             <div className="space-y-6">
               <div>
                 <Label className="text-base font-semibold mb-4 block">
-                  Allergies (Select all that apply)
+                  {t("mealplanner.form.allergies")}
                 </Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {ALLERGIES.map((allergy) => (
-                    <div key={allergy} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                    <div key={allergy.value} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
                       <Checkbox
-                        id={allergy}
-                        checked={allergies.includes(allergy)}
-                        onCheckedChange={() => handleAllergyToggle(allergy)}
+                        id={allergy.value}
+                        checked={allergies.includes(allergy.value)}
+                        onCheckedChange={() => handleAllergyToggle(allergy.value)}
                       />
-                      <Label htmlFor={allergy} className="font-normal cursor-pointer flex-1">
-                        {allergy}
+                      <Label htmlFor={allergy.value} className="font-normal cursor-pointer flex-1">
+                        {allergy.label}
                       </Label>
                     </div>
                   ))}
@@ -414,13 +477,13 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
 
               <div>
                 <Label htmlFor="custom-restrictions" className="text-base font-semibold mb-2 block">
-                  Custom Dietary Restrictions (Optional)
+                  {t("mealplanner.form.customrestrictions")}
                 </Label>
                 <Textarea
                   id="custom-restrictions"
                   value={customRestrictions}
                   onChange={(e) => setCustomRestrictions(e.target.value)}
-                  placeholder="e.g., Low sodium, diabetic-friendly"
+                  placeholder={t("mealplanner.form.customrestrictions.placeholder")}
                   rows={3}
                 />
               </div>
@@ -436,7 +499,7 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
               disabled={currentStep === 1}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+              {t("mealplanner.form.back")}
             </Button>
 
             {currentStep < totalSteps ? (
@@ -448,7 +511,7 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
                   (currentStep === 2 && !canProceedStep2)
                 }
               >
-                Next
+                {t("mealplanner.form.next")}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             ) : (
@@ -461,10 +524,10 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
                 {generating ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating...
+                    {t("mealplanner.form.generating")}
                   </>
                 ) : (
-                  "Generate My Plan"
+                  t("mealplanner.form.generate")
                 )}
               </Button>
             )}
