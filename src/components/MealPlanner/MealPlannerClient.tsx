@@ -98,6 +98,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
   const [planTitle, setPlanTitle] = useState("");
   const [editablePlan, setEditablePlan] = useState<MealPlan | null>(null);
   const [isEditingMeals, setIsEditingMeals] = useState(false);
+  const [lastFormData, setLastFormData] = useState<MealPlannerFormData | null>(null);
 
   // Form state - keeping old state for backward compatibility with saved plans
   const [targetWeight, setTargetWeight] = useState<string>("");
@@ -372,13 +373,15 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
           : []),
       ];
 
-      const exerciseSummaryParts = [];
+      const exerciseSummaryParts: string[] = [];
       if (formData.exercisePreferences.length) {
         exerciseSummaryParts.push(`Preferred exercises: ${formData.exercisePreferences.join(", ")}`);
       }
       if (formData.exercisePlan) {
         exerciseSummaryParts.push(formData.exercisePlan);
       }
+
+      setLastFormData(formData);
 
       const { data, error } = await supabase.functions.invoke("meal-planner", {
         body: {
@@ -435,6 +438,18 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleRegeneratePlan = async () => {
+    if (!lastFormData) {
+      toast({
+        title: "No form data",
+        description: "Please create a new plan first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    await generateMealPlan(lastFormData);
   };
 
   const handleSaveMealPlan = async () => {
@@ -675,7 +690,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
                 >
                   Create New Plan
                 </Button>
-                <Button onClick={generateMealPlan} disabled={generating}>
+                <Button onClick={handleRegeneratePlan} disabled={generating || !lastFormData}>
                   {generating ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Regenerating...
