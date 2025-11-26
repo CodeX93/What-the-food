@@ -1,28 +1,32 @@
+"use client";
+
 import { Upload, Sparkles, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const steps = [
-  {
-    icon: Upload,
-    title: "Upload Your Food Photo",
-    description: "Take a picture of your meal or snack. Our AI works with any type of food from any cuisine.",
-    number: "01",
-  },
-  {
-    icon: Sparkles,
-    title: "AI Analyzes Your Meal",
-    description: "Our advanced AI identifies the food, estimates portions, and calculates detailed nutritional information instantly.",
-    number: "02",
-  },
-  {
-    icon: TrendingUp,
-    title: "Get Instant Results",
-    description: "View complete nutritional breakdown including calories, macros, and micronutrients. Track your progress over time.",
-    number: "03",
-  },
-];
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const HowItWorks = () => {
+  const { t } = useLanguage();
+  
+  const steps = [
+    {
+      icon: Upload,
+      title: t("howitworks.step1.title"),
+      description: t("howitworks.step1.description"),
+      number: "01",
+    },
+    {
+      icon: Sparkles,
+      title: t("howitworks.step2.title"),
+      description: t("howitworks.step2.description"),
+      number: "02",
+    },
+    {
+      icon: TrendingUp,
+      title: t("howitworks.step3.title"),
+      description: t("howitworks.step3.description"),
+      number: "03",
+    },
+  ];
   return (
     <section
       id="how-it-works"
@@ -31,10 +35,10 @@ const HowItWorks = () => {
       <div className="container mx-auto px-4 w-full">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12 md:mb-16">
           <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 sm:mb-4 bg-gradient-hero bg-clip-text text-transparent">
-            How It Works
+            {t("howitworks.title")}
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground">
-            Get nutritional insights in three simple steps
+            {t("howitworks.subtitle")}
           </p>
         </div>
 

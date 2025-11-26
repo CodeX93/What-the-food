@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster as ShadcnToaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import TawkWidget from "@/components/Integrations/TawkWidget";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 
 type AppProvidersProps = {
   children: ReactNode;
@@ -17,14 +18,16 @@ export function AppProviders({ children }: AppProvidersProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <TooltipProvider>
-          <ShadcnToaster />
-          <Sonner />
-          <TawkWidget />
-          {children}
-        </TooltipProvider>
-      </ThemeProvider>
+      <LanguageProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <TooltipProvider>
+            <ShadcnToaster />
+            <Sonner />
+            <TawkWidget />
+            {children}
+          </TooltipProvider>
+        </ThemeProvider>
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }

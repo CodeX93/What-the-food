@@ -11,6 +11,7 @@ import { analyzeFood, saveScanHistory, uploadFoodImage } from "@/utils/foodScan"
 import { decrementFreeScan, hasFreeScanAvailable, getFreeScanStatus } from "@/utils/freeScanLimit";
 import { hasActivePremiumSubscription } from "@/utils/subscription";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Hero() {
   const [uploading, setUploading] = useState(false);
@@ -22,6 +23,7 @@ export default function Hero() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const handleGetStarted = () => {
     if (user) {
@@ -147,8 +149,8 @@ export default function Hero() {
         });
         
         toast({
-          title: "Scan complete!",
-          description: `${newCount} free scan${newCount !== 1 ? "s" : ""} remaining. Sign up to save your history!`,
+          title: t("common.scancomplete"),
+          description: `${newCount} ${t("hero.freescansleft")}`,
         });
         
         router.push(`/food-results?id=${scanId}`);
@@ -156,10 +158,10 @@ export default function Hero() {
         if (!isPremium) {
           const available = await hasFreeScanAvailable();
           if (!available) {
-            toast({
-              title: "Daily limit reached",
-              description: "You have used all 3 free scans for today. Upgrade to Premium for unlimited scans.",
-            });
+          toast({
+            title: t("common.dailylimitreached"),
+            description: t("hero.upgradeunlimited"),
+          });
             return;
           }
         }
@@ -198,8 +200,8 @@ export default function Hero() {
     } catch (e: any) {
       console.error("Hero upload error", e);
       toast({
-        title: "Error",
-        description: e?.message || "Failed to analyze image. Please try again.",
+        title: t("common.error"),
+        description: e?.message || t("common.failedanalyze"),
         variant: "destructive",
       });
     } finally {
@@ -226,11 +228,10 @@ export default function Hero() {
           {/* H1 and Description */}
           <div className="w-full text-center">
             <h1 className="text-3xl sm:text-4xl font-bold mb-4 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight">
-              Know What&apos;s Really in Your Food
+              {t("hero.title")}
           </h1>
             <p className="text-base sm:text-lg text-muted-foreground mb-6 leading-relaxed">
-            Upload a photo of any meal and get instant AI-powered nutritional analysis. 
-            Track calories, macros, and make healthier choices effortlessly.
+            {t("hero.description")}
             </p>
           </div>
 
@@ -241,10 +242,10 @@ export default function Hero() {
               className="bg-primary hover:bg-primary-hover text-sm sm:text-base w-full sm:w-auto"
               onClick={handleGetStarted}
             >
-              Get Started Free
+              {t("common.getstartedfree")}
             </Button>
             <Button size="lg" variant="outline" className="text-sm sm:text-base w-full sm:w-auto" asChild>
-              <Link href="/how-it-works">Learn More</Link>
+              <Link href="/how-it-works">{t("common.learnmore")}</Link>
             </Button>
           </div>
 
@@ -252,20 +253,20 @@ export default function Hero() {
           <p className="text-xs sm:text-sm text-muted-foreground text-center">
             {user ? (
               isPremium === null ? (
-                "Checking benefits..."
+                t("hero.checkingbenefits")
               ) : isPremium ? (
-                "Unlimited scans per day"
+                t("hero.unlimitedscans")
               ) : remainingScans === null ? (
-                "Checking your remaining scans..."
+                t("hero.checkingscans")
               ) : remainingScans > 0 ? (
-                `${remainingScans} free scan${remainingScans === 1 ? "" : "s"} remaining today`
+                `${remainingScans} ${t("hero.scansremaining")}`
               ) : (
-                "You have used all free scans for today. Upgrade for unlimited access."
+                t("hero.allscansused")
               )
             ) : remainingScans === null ? (
-              "Checking free scans..."
+              t("hero.checkingfree")
             ) : (
-              `${remainingScans} free scan${remainingScans === 1 ? "" : "s"} remaining • No signup required`
+              `${remainingScans} ${t("hero.nosignup")}`
             )}
           </p>
 
@@ -276,13 +277,13 @@ export default function Hero() {
                 {!previewUrl ? (
                   <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card hover:border-primary/50 transition-colors">
                     <Upload className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
-                    <p className="text-base sm:text-lg font-medium mb-2 text-center">Upload Your Food Photo</p>
+                    <p className="text-base sm:text-lg font-medium mb-2 text-center">{t("hero.uploadfoodphoto")}</p>
                     <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 text-center">
-                  Drop an image here or click to browse
+                  {t("hero.dropimage")}
                 </p>
                     <div className="flex justify-center">
                       <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" onClick={onChooseFile} disabled={uploading}>
-                  Choose File
+                  {t("hero.choosefile")}
                       </Button>
                     </div>
                   </div>
@@ -338,22 +339,22 @@ export default function Hero() {
             <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
               <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />
               <div className="text-left">
-                <p className="text-sm font-semibold text-slate-800 dark:text-white">AI Accuracy</p>
-                <p className="text-xs text-muted-foreground">Understands 10k+ foods</p>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.aiaccuracy")}</p>
+                <p className="text-xs text-muted-foreground">{t("hero.understands10k")}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
               <Timer className="h-5 w-5 text-primary flex-shrink-0" />
               <div className="text-left">
-                <p className="text-sm font-semibold text-slate-800 dark:text-white">Instant Results</p>
-                <p className="text-xs text-muted-foreground">Nutrition in seconds</p>
+                <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.instantresults")}</p>
+                <p className="text-xs text-muted-foreground">{t("hero.nutritionseconds")}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
               <ShieldCheck className="h-5 w-5 text-primary flex-shrink-0" />
               <div className="text-left">
-                <p className="text-sm font-semibold text-slate-800 dark:text-white">Health Focused</p>
-                <p className="text-xs text-muted-foreground">Macros & micronutrients</p>
+                <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.healthfocused")}</p>
+                <p className="text-xs text-muted-foreground">{t("hero.macrosmicronutrients")}</p>
               </div>
             </div>
           </div>
@@ -365,11 +366,10 @@ export default function Hero() {
             {/* Left Section - Value Proposition (aligned with logo) */}
             <div className="w-full text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start">
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight">
-                Know What&apos;s Really in Your Food
+                {t("hero.title")}
               </h1>
               <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed">
-                Upload a photo of any meal and get instant AI-powered nutritional analysis. 
-                Track calories, macros, and make healthier choices effortlessly.
+                {t("hero.description")}
               </p>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-start">
                 <Button
@@ -377,10 +377,10 @@ export default function Hero() {
                   className="bg-primary hover:bg-primary-hover text-sm sm:text-base"
                   onClick={handleGetStarted}
                 >
-                  Get Started Free
+                  {t("common.getstartedfree")}
                 </Button>
                 <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
-                  <Link href="/how-it-works">Learn More</Link>
+                  <Link href="/how-it-works">{t("common.learnmore")}</Link>
                 </Button>
               </div>
 
@@ -389,22 +389,22 @@ export default function Hero() {
                 <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                   <Sparkles className="h-5 w-5 text-primary" />
                   <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white">AI Accuracy</p>
-                    <p className="text-xs text-muted-foreground">Understands 10k+ foods</p>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.aiaccuracy")}</p>
+                    <p className="text-xs text-muted-foreground">{t("hero.understands10k")}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                   <Timer className="h-5 w-5 text-primary" />
                   <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white">Instant Results</p>
-                    <p className="text-xs text-muted-foreground">Nutrition in seconds</p>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.instantresults")}</p>
+                    <p className="text-xs text-muted-foreground">{t("hero.nutritionseconds")}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                   <ShieldCheck className="h-5 w-5 text-primary" />
                   <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white">Health Focused</p>
-                    <p className="text-xs text-muted-foreground">Macros & micronutrients</p>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.healthfocused")}</p>
+                    <p className="text-xs text-muted-foreground">{t("hero.macrosmicronutrients")}</p>
                   </div>
                 </div>
               </div>
@@ -413,20 +413,20 @@ export default function Hero() {
               <p className="text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6">
                 {user ? (
                   isPremium === null ? (
-                    "Checking benefits..."
+                    t("hero.checkingbenefits")
                   ) : isPremium ? (
-                    "Unlimited scans per day"
+                    t("hero.unlimitedscans")
                   ) : remainingScans === null ? (
-                    "Checking your remaining scans..."
+                    t("hero.checkingscans")
                   ) : remainingScans > 0 ? (
-                    `${remainingScans} free scan${remainingScans === 1 ? "" : "s"} remaining today`
+                    `${remainingScans} ${t("hero.scansremaining")}`
                   ) : (
-                    "You have used all free scans for today. Upgrade for unlimited access."
+                    t("hero.allscansused")
                   )
                 ) : remainingScans === null ? (
-                  "Checking free scans..."
+                  t("hero.checkingfree")
                 ) : (
-                  `${remainingScans} free scan${remainingScans === 1 ? "" : "s"} remaining • No signup required`
+                  `${remainingScans} ${t("hero.nosignup")}`
                 )}
               </p>
             </div>
@@ -438,13 +438,13 @@ export default function Hero() {
                   {!previewUrl ? (
                     <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card hover:border-primary/50 transition-colors">
                       <Upload className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
-                      <p className="text-base sm:text-lg font-medium mb-2 text-center">Upload Your Food Photo</p>
+                      <p className="text-base sm:text-lg font-medium mb-2 text-center">{t("hero.uploadfoodphoto")}</p>
                       <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 text-center">
-                        Drop an image here or click to browse
+                        {t("hero.dropimage")}
                       </p>
                       <div className="flex justify-center">
                         <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" onClick={onChooseFile} disabled={uploading}>
-                          Choose File
+                          {t("hero.choosefile")}
                         </Button>
                       </div>
                     </div>
@@ -467,10 +467,10 @@ export default function Hero() {
                           {uploading ? (
                             <>
                               <Loader2 className="h-4 w-4 mr-2 animate-spin"/>
-                              Analyzing...
+                              {t("hero.analyzing")}
                             </>
                           ) : (
-                            "Analyze Food"
+                            t("hero.analyzefood")
                           )}
                         </Button>
                         <Button 
@@ -486,7 +486,7 @@ export default function Hero() {
                           }}
                           disabled={uploading}
                         >
-                          Change Photo
+                          {t("hero.changephoto")}
                         </Button>
                       </div>
                     </div>

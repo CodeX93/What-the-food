@@ -5,47 +5,49 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
-
-const includedPlans = [
-  {
-    name: "Free plan",
-    price: "$0",
-    period: "/month",
-    widgetHighlights: [
-      "Embed with WhatTheFood branding",
-      "1 website connection",
-      "Community support",
-    ],
-    platformHighlights: ["3 scans per day", "Basic insights"],
-  },
-  {
-    name: "Premium plan",
-    price: "$6.99",
-    period: "/month",
-    yearlyPrice: "$69.99/year",
-    widgetHighlights: [
-      "Remove widget branding",
-      "Unlimited website connections",
-      "Priority chat support",
-    ],
-    platformHighlights: ["Unlimited scans", "Full analytics + PDF exports"],
-    popular: true,
-  },
-];
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export function WidgetPricing() {
+  const { t } = useLanguage();
+  
+  const includedPlans = [
+    {
+      name: t("widgetpricing.freeplan.name"),
+      price: "$0",
+      period: "/month",
+      widgetHighlights: [
+        t("widgetpricing.freeplan.widget1"),
+        t("widgetpricing.freeplan.widget2"),
+        t("widgetpricing.freeplan.widget3"),
+      ],
+      platformHighlights: [t("widgetpricing.freeplan.platform1"), t("widgetpricing.freeplan.platform2")],
+    },
+    {
+      name: t("widgetpricing.premiumplan.name"),
+      price: "$6.99",
+      period: "/month",
+      yearlyPrice: "$69.99/year",
+      widgetHighlights: [
+        t("widgetpricing.premiumplan.widget1"),
+        t("widgetpricing.premiumplan.widget2"),
+        t("widgetpricing.premiumplan.widget3"),
+      ],
+      platformHighlights: [t("widgetpricing.premiumplan.platform1"), t("widgetpricing.premiumplan.platform2")],
+      popular: true,
+    },
+  ];
   return (
     <section id="widget-pricing" className="bg-muted/30">
       <div className="container mx-auto px-4 py-16 sm:py-20 lg:py-24">
         <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-12 space-y-4">
           <Badge className="px-4 py-1 text-xs uppercase tracking-wide bg-primary/10 text-primary border border-primary/20">
-            Included with your plan
+            {t("widgetpricing.badge")}
           </Badge>
           <h2 className="text-3xl sm:text-4xl font-bold">
-            Widget access comes with every WhatTheFood subscription
+            {t("widgetpricing.title")}
           </h2>
           <p className="text-muted-foreground text-base sm:text-lg">
-            No separate billing, no extra checkout. Activate the widget as soon as you start a WhatTheFood plan.
+            {t("widgetpricing.description")}
           </p>
         </div>
 
@@ -57,7 +59,7 @@ export function WidgetPricing() {
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-medium">
-                  Most popular
+                  {t("widgetpricing.mostpopular")}
                 </div>
               )}
               <CardHeader>
@@ -68,14 +70,14 @@ export function WidgetPricing() {
                     <span className="text-muted-foreground">{plan.period}</span>
                   </div>
                   {plan.yearlyPrice && (
-                    <p className="text-xs text-muted-foreground">or {plan.yearlyPrice}</p>
+                    <p className="text-xs text-muted-foreground">{t("widgetpricing.or")} {plan.yearlyPrice}</p>
                   )}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground uppercase mb-2">
-                    Widget benefits
+                    {t("widgetpricing.widgetbenefits")}
                   </p>
                   <ul className="space-y-2">
                     {plan.widgetHighlights.map((feature) => (
@@ -88,7 +90,7 @@ export function WidgetPricing() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-muted-foreground uppercase mb-2">
-                    Platform benefits
+                    {t("widgetpricing.platformbenefits")}
                   </p>
                   <ul className="space-y-2">
                     {plan.platformHighlights.map((feature) => (
@@ -106,10 +108,10 @@ export function WidgetPricing() {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-12">
           <Button size="lg" className="w-full sm:w-auto" asChild>
-            <Link href="/pricing">View platform pricing</Link>
+            <Link href="/pricing">{t("widgetpricing.viewplatform")}</Link>
           </Button>
           <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
-            <Link href="/plans">Manage subscription</Link>
+            <Link href="/plans">{t("widgetpricing.managesubscription")}</Link>
           </Button>
         </div>
       </div>

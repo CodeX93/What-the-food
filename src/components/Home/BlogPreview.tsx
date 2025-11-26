@@ -5,23 +5,25 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useBlogPosts } from "@/hooks/useBlogPosts";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const BlogPreview = () => {
   const { data, isLoading } = useBlogPosts(6);
+  const { t } = useLanguage();
 
   return (
     <section className="relative w-full bg-white dark:bg-[#000000] transition-colors duration-300 py-16 sm:py-20 lg:py-24">
       <div className="container mx-auto px-4 w-full relative z-10">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bold mb-1">Latest from Our Blog</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-1">{t("blog.latest")}</h2>
             <p className="text-sm sm:text-base text-muted-foreground">
-              Tips, guides, and insights for healthier eating
+              {t("blog.subtitle")}
             </p>
           </div>
           <Button variant="outline" size="sm" asChild className="hidden sm:flex">
             <Link href="/blog">
-              View All Posts
+              {t("blog.viewall")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
@@ -81,7 +83,7 @@ const BlogPreview = () => {
         <div className="mt-4 text-center md:hidden">
           <Button variant="outline" size="sm" className="mt-9" asChild>
             <Link href="/blog">
-              View All Posts
+              {t("blog.viewall")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>

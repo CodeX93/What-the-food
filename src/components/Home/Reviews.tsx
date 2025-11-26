@@ -2,6 +2,7 @@
 
 import Script from "next/script";
 import { useEffect } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 declare global {
   interface Window {
@@ -14,6 +15,8 @@ declare global {
 const SENJA_SCRIPT_ID = "senja-platform-script";
 
 const Reviews = () => {
+  const { t } = useLanguage();
+  
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -39,9 +42,9 @@ const Reviews = () => {
     <section className="relative w-full bg-emerald-50 dark:bg-[#1C1C1C] transition-colors duration-300 py-16 sm:py-20 lg:py-24">
       <div className="container mx-auto px-4 w-full">
         <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Loved by Thousands</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">{t("reviews.title")}</h2>
           <p className="text-base sm:text-lg text-muted-foreground">
-            See what our users are saying about WhatTheFood
+            {t("reviews.subtitle")}
           </p>
         </div>
 

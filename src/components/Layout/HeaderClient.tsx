@@ -25,7 +25,9 @@ import { Menu, X, User, Settings, LayoutDashboard, LogOut, CreditCard } from "lu
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { NavigationLinks } from "./NavigationLinks";
+import { useLanguage } from "@/contexts/LanguageContext";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 type HeaderClientProps = {
@@ -35,6 +37,7 @@ type HeaderClientProps = {
 export function HeaderClient({ initialUser = null }: HeaderClientProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(initialUser);
   const [loading, setLoading] = useState(!initialUser);
@@ -95,8 +98,8 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
       }
 
       toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
+        title: t("common.loggedout"),
+        description: t("common.loggedoutdesc"),
       });
 
       setUser(null);
@@ -110,15 +113,15 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
         router.refresh();
 
         toast({
-          title: "Logged out",
-          description: "You have been successfully logged out.",
+          title: t("common.loggedout"),
+          description: t("common.loggedoutdesc"),
         });
         return;
       }
 
       toast({
-        title: "Error",
-        description: error.message || "Failed to log out.",
+        title: t("common.error"),
+        description: error.message || t("common.failedlogout"),
         variant: "destructive",
       });
     }
@@ -133,6 +136,7 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
   return (
     <>
       <div className="hidden md:flex items-center space-x-3">
+        <LanguageToggle />
         <ThemeToggle />
         {loading ? (
           <div className="w-20 h-9" />
@@ -151,7 +155,7 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{user.email}</p>
                   <p className="text-xs leading-none text-muted-foreground">
-                    {user.user_metadata?.full_name || "User"}
+                    {user.user_metadata?.full_name || t("nav.user")}
                   </p>
                 </div>
               </DropdownMenuLabel>
@@ -159,35 +163,35 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
               <DropdownMenuItem asChild>
                 <Link href="/dashboard" className="cursor-pointer">
                   <LayoutDashboard className="mr-2 h-4 w-4" />
-                  <span>Dashboard</span>
+                  <span>{t("nav.dashboard")}</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/profile" className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
+                  <span>{t("nav.profile")}</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/settings" className="cursor-pointer">
                   <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
+                  <span>{t("nav.settings")}</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600">
                 <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
+                <span>{t("nav.logout")}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
           <>
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/auth">Sign In</Link>
+              <Link href="/auth">{t("nav.signin")}</Link>
             </Button>
             <Button size="sm" asChild className="bg-primary hover:bg-primary-hover">
-              <Link href="/auth">Get Started</Link>
+              <Link href="/auth">{t("nav.getstarted")}</Link>
             </Button>
           </>
         )}
@@ -197,19 +201,19 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
         <DrawerTrigger asChild>
           <Button variant="ghost" size="icon" className="md:hidden">
             <Menu className="h-6 w-6" />
-            <span className="sr-only">Open menu</span>
+            <span className="sr-only">{t("common.openmenu")}</span>
           </Button>
         </DrawerTrigger>
         <DrawerContent>
           <DrawerHeader className="text-left">
             <div className="flex items-center justify-between mb-4">
               <DrawerTitle className="text-xl font-bold bg-gradient-hero bg-clip-text text-transparent">
-                Menu
+                {t("nav.menu")}
               </DrawerTitle>
               <DrawerClose asChild>
                 <Button variant="ghost" size="icon">
                   <X className="h-5 w-5" />
-                  <span className="sr-only">Close menu</span>
+                  <span className="sr-only">{t("common.closemenu")}</span>
                 </Button>
               </DrawerClose>
             </div>
@@ -218,7 +222,11 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
             <NavigationLinks />
             <div className="flex flex-col space-y-2 pt-4 border-t">
               <div className="flex items-center justify-between px-4 py-3 mb-2 border-b">
-                <span className="text-base font-medium">Theme</span>
+                <span className="text-base font-medium">{t("nav.language")}</span>
+                <LanguageToggle />
+              </div>
+              <div className="flex items-center justify-between px-4 py-3 mb-2 border-b">
+                <span className="text-base font-medium">{t("nav.theme")}</span>
                 <ThemeToggle />
               </div>
 
@@ -228,17 +236,17 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
                 <>
                   <DrawerClose asChild>
                     <Link href="/dashboard" className="text-base font-medium py-3 px-4 rounded-lg hover:bg-muted transition-colors">
-                      Dashboard
+                      {t("nav.dashboard")}
                     </Link>
                   </DrawerClose>
                   <DrawerClose asChild>
                     <Link href="/profile" className="text-base font-medium py-3 px-4 rounded-lg hover:bg-muted transition-colors">
-                      Profile
+                      {t("nav.profile")}
                     </Link>
                   </DrawerClose>
                   <DrawerClose asChild>
                     <Link href="/settings" className="text-base font-medium py-3 px-4 rounded-lg hover:bg-muted transition-colors">
-                      Settings
+                      {t("nav.settings")}
                     </Link>
                   </DrawerClose>
                   <div className="my-2 border-t" />
@@ -248,7 +256,7 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
                       className="w-full text-red-600 hover:text-red-600 hover:bg-red-50"
                       onClick={handleLogout}
                     >
-                      Log out
+                      {t("nav.logout")}
                     </Button>
                   </DrawerClose>
                 </>
@@ -256,12 +264,12 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
                 <>
                   <DrawerClose asChild>
                     <Button variant="outline" className="w-full" asChild>
-                      <Link href="/auth">Sign In</Link>
+                      <Link href="/auth">{t("nav.signin")}</Link>
                     </Button>
                   </DrawerClose>
                   <DrawerClose asChild>
                     <Button className="w-full bg-primary hover:bg-primary-hover" asChild>
-                      <Link href="/auth">Get Started</Link>
+                      <Link href="/auth">{t("nav.getstarted")}</Link>
                     </Button>
                   </DrawerClose>
                 </>

@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 8000): Promise<T> => {
   let timeoutHandle: NodeJS.Timeout | undefined;
@@ -32,6 +33,7 @@ export function WidgetHero() {
   const [checkingSubscription, setCheckingSubscription] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
   const { toast } = useToast();
+  const { t } = useLanguage();
   const supabaseClient = supabase as any;
 
   useEffect(() => {
@@ -67,8 +69,8 @@ export function WidgetHero() {
         // Only show toast for actual network issues
         if (error instanceof Error && error.message.includes("timed out")) {
           toast({
-            title: "Network issue",
-            description: "We couldn't verify your access quickly. You can still explore the page.",
+            title: t("widgethero.networkissue"),
+            description: t("widgethero.networkissuedesc"),
           });
         }
       } finally {
@@ -77,7 +79,7 @@ export function WidgetHero() {
     };
 
     checkAndRedirect();
-  }, [router, supabaseClient, toast]);
+  }, [router, supabaseClient, toast, t]);
 
   useEffect(() => {
     const measureHeader = () => {
@@ -105,7 +107,7 @@ export function WidgetHero() {
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-white dark:bg-[#000000]">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Redirecting to dashboard...</p>
+          <p className="text-sm text-muted-foreground">{t("widgethero.redirecting")}</p>
         </div>
       </div>
     );
@@ -123,18 +125,17 @@ export function WidgetHero() {
             {/* Left Section - Content */}
             <div className="w-full text-center lg:text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start">
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight pb-2">
-                Embeddable Widget included in your plan
+                {t("widgethero.title")}
               </h1>
               <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed">
-                Add WhatTheFood&apos;s AI-powered food scanning to your blog or website. Perfect for food bloggers,
-                nutrition sites, and health platforms—without an extra subscription.
+                {t("widgethero.description")}
               </p>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
                 <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" asChild>
-                  <Link href="/pricing">View Platform Pricing</Link>
+                  <Link href="/pricing">{t("widgethero.viewpricing")}</Link>
                 </Button>
                 <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
-                  <Link href="/how-it-works">How It Works</Link>
+                  <Link href="/how-it-works">{t("widgethero.howitworks")}</Link>
                 </Button>
               </div>
             </div>
@@ -145,15 +146,14 @@ export function WidgetHero() {
                 <CardContent className="p-4 sm:p-6 md:p-8">
                   <div className="space-y-4">
                     <div className="text-left">
-                      <CardTitle className="text-2xl">Launch in Minutes</CardTitle>
+                      <CardTitle className="text-2xl">{t("widgethero.launchinminutes")}</CardTitle>
                       <CardDescription className="text-base mt-2">
-                        Copy the embed code, paste it into your site, and start offering instant nutrition analysis to
-                        your visitors.
+                        {t("widgethero.launchdescription")}
                       </CardDescription>
                     </div>
 
                     <div className="bg-muted/40 rounded-lg p-4 space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Embed Preview</p>
+                      <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">{t("widgethero.embedpreview")}</p>
                       <pre className="bg-background border rounded-lg p-4 text-xs overflow-x-auto">
                         {`<iframe
   src="https://widget.whatthefood.io/embed?ref=YOUR_ID"
@@ -165,7 +165,7 @@ export function WidgetHero() {
                     </div>
 
                     <Button size="lg" className="w-full bg-primary hover:bg-primary-hover" onClick={handleHeroViewPlans}>
-                      View Plans
+                      {t("widgethero.viewplans")}
                     </Button>
                   </div>
                 </CardContent>

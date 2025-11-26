@@ -6,50 +6,52 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-
-const faqs = [
-  {
-    question: "How accurate is the AI food analysis?",
-    answer: "Our AI is trained on millions of food images and nutritional data. While we strive for high accuracy, results are estimates based on visual analysis. Premium users can adjust serving sizes and ingredients for even more precise results.",
-  },
-  {
-    question: "What types of food can I scan?",
-    answer: "You can scan any type of food from any cuisine! Our AI recognizes thousands of dishes, from home-cooked meals to restaurant dishes and packaged foods.",
-  },
-  {
-    question: "How many scans do I get for free?",
-    answer: "Free users get 5 total scans to try the service. After that, you can create a free account for 3 scans per day, or upgrade to Premium for unlimited scans.",
-  },
-  {
-    question: "Can I export my nutrition data?",
-    answer: "Yes! Premium members can export their scan history and nutritional data as PDF reports, perfect for sharing with healthcare providers or personal tracking.",
-  },
-  {
-    question: "What's included in the Premium plan?",
-    answer: "Premium includes unlimited scans, complete scan history, serving adjustment tools, customizable widget for your website, PDF reports, and an ad-free experience with priority support.",
-  },
-  {
-    question: "How does the refund policy work?",
-    answer: "We offer a 30-day money-back guarantee. If you're not satisfied with your Premium subscription, contact us within 30 days for a full refund.",
-  },
-  {
-    question: "Can I use this for dietary restrictions?",
-    answer: "Absolutely! Our detailed nutritional breakdown helps you track specific nutrients relevant to your dietary needs, whether you're managing allergies, following specific diets, or monitoring macros.",
-  },
-  {
-    question: "Is my data secure?",
-    answer: "Yes, we take privacy seriously. Your food scans and data are encrypted and never shared with third parties. Read our full Privacy Policy for details.",
-  },
-];
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const FAQ = () => {
+  const { t } = useLanguage();
+  
+  const faqs = [
+    {
+      question: t("faq.accuracy.question"),
+      answer: t("faq.accuracy.answer"),
+    },
+    {
+      question: t("faq.types.question"),
+      answer: t("faq.types.answer"),
+    },
+    {
+      question: t("faq.freescans.question"),
+      answer: t("faq.freescans.answer"),
+    },
+    {
+      question: t("faq.export.question"),
+      answer: t("faq.export.answer"),
+    },
+    {
+      question: t("faq.premium.question"),
+      answer: t("faq.premium.answer"),
+    },
+    {
+      question: t("faq.refund.question"),
+      answer: t("faq.refund.answer"),
+    },
+    {
+      question: t("faq.dietary.question"),
+      answer: t("faq.dietary.answer"),
+    },
+    {
+      question: t("faq.security.question"),
+      answer: t("faq.security.answer"),
+    },
+  ];
   return (
     <section className="w-full bg-[#F8FAF9] dark:bg-[#111111] transition-colors duration-300">
       <div className="mx-auto w-full max-w-6xl px-6 sm:px-10 lg:px-16 relative z-10 py-16 sm:py-20 lg:py-24">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Frequently Asked Questions</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">{t("faq.title")}</h2>
           <p className="text-base sm:text-lg text-muted-foreground">
-            Everything you need to know about WhatTheFood
+            {t("faq.subtitle")}
           </p>
         </div>
 

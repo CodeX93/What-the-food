@@ -1,7 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { Utensils } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Footer = () => {
+  const { t } = useLanguage();
   return (
     <footer className="bg-gradient-to-b from-[#f4f6f9] via-[#f6f8fb] to-[#fafbfd] dark:from-[#050506] dark:via-[#0b0b0d] dark:to-[#111113] border-t border-slate-200 dark:border-slate-800">
       <div className="container mx-auto px-4 py-10 md:py-14">
@@ -12,47 +16,47 @@ const Footer = () => {
               <span className="text-lg font-semibold text-slate-900 dark:text-white">WhatTheFood</span>
             </Link>
             <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              AI-powered food analysis for healthier living. Scan, analyze, and understand your meals instantly.
+              {t("footer.description")}
             </p>
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Product</h3>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">{t("footer.product")}</h3>
             <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
               <li>
                 <Link href="/features" className="hover:text-primary transition-colors">
-                  Features
+                  {t("nav.features")}
                 </Link>
               </li>
               <li>
                 <Link href="/how-it-works" className="hover:text-primary transition-colors">
-                  How it Works
+                  {t("nav.howitworks")}
                 </Link>
               </li>
               <li>
                 <Link href="/pricing" className="hover:text-primary transition-colors">
-                  Pricing
+                  {t("nav.pricing")}
                 </Link>
               </li>
               <li>
                 <Link href="/widget" className="hover:text-primary transition-colors">
-                  Widget
+                  {t("nav.widget")}
                 </Link>
               </li>
               <li>
                 <Link href="/wall-of-love" className="hover:text-primary transition-colors">
-                  Wall of Love
+                  {t("footer.walloflove")}
                 </Link>
               </li>
             </ul>
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Company</h3>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">{t("footer.company")}</h3>
             <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
               <li>
                 <Link href="/about" className="hover:text-primary transition-colors">
-                  About Us
+                  {t("footer.aboutus")}
                 </Link>
               </li>
               <li>
@@ -62,33 +66,33 @@ const Footer = () => {
                   rel="noopener noreferrer"
                   className="hover:text-primary transition-colors"
                 >
-                  About Founder
+                  {t("footer.aboutfounder")}
                 </a>
               </li>
               <li>
                 <Link href="/blog" className="hover:text-primary transition-colors">
-                  Blog
+                  {t("nav.blog")}
                 </Link>
               </li>
             </ul>
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Legal</h3>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">{t("footer.legal")}</h3>
             <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
               <li>
                 <Link href="/privacy" className="hover:text-primary transition-colors">
-                  Privacy Policy
+                  {t("footer.privacypolicy")}
                 </Link>
               </li>
               <li>
                 <Link href="/terms" className="hover:text-primary transition-colors">
-                  Terms & Conditions
+                  {t("footer.terms")}
                 </Link>
               </li>
               <li>
                 <Link href="/refund" className="hover:text-primary transition-colors">
-                  Refund Policy
+                  {t("footer.refundpolicy")}
                 </Link>
               </li>
               <li>
@@ -98,7 +102,7 @@ const Footer = () => {
                   rel="noopener noreferrer"
                   className="hover:text-primary transition-colors"
                 >
-                  Analytics
+                  {t("footer.analytics")}
                 </a>
               </li>
             </ul>
@@ -106,7 +110,7 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-slate-200 dark:border-slate-800 mt-7 pt-5 text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-          <p>&copy; {new Date().getFullYear()} WhatTheFood. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} WhatTheFood. {t("footer.rights")}</p>
         </div>
       </div>
     </footer>

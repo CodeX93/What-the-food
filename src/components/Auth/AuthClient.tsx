@@ -24,10 +24,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { getPostAuthNavigationPath } from "@/utils/auth-navigation";
 import { getUrl } from "@/utils/url";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export function AuthClient() {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [tabValue, setTabValue] = useState("signin");
@@ -51,13 +53,13 @@ export function AuthClient() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
-      toast({ title: "Success!", description: "You've been signed in successfully." });
+      toast({ title: t("auth.toast.success"), description: t("auth.toast.signedin") });
       const redirectPath = await getPostAuthNavigationPath();
       router.push(redirectPath);
     } catch (error: any) {
       toast({
-        title: "Error signing in",
-        description: error.message || "An error occurred while signing in.",
+        title: t("auth.toast.errorsigningin"),
+        description: error.message || t("auth.toast.errorsigningindesc"),
         variant: "destructive",
       });
     } finally {
@@ -83,21 +85,21 @@ export function AuthClient() {
         setSignupSession(data.session);
 
         toast({
-          title: "Verify your email",
-          description: "We sent you a verification link. Please verify, then sign in to continue.",
+          title: t("auth.toast.verifyemail"),
+          description: t("auth.toast.verifyemaildesc"),
         });
         setTabValue("signin");
       } else {
         toast({
-          title: "Error creating account",
-          description: "User data not returned. Please try again.",
+          title: t("auth.toast.errorcreating"),
+          description: t("auth.toast.userdatanotreturned"),
           variant: "destructive",
         });
       }
     } catch (error: any) {
       toast({
-        title: "Error creating account",
-        description: error.message || "An error occurred while creating your account.",
+        title: t("auth.toast.errorcreating"),
+        description: error.message || t("auth.toast.errorcreatingdesc"),
         variant: "destructive",
       });
     } finally {
@@ -111,7 +113,7 @@ export function AuthClient() {
 
     try {
       if (!signupUserId) {
-        throw new Error("User ID not found. Please start over.");
+        throw new Error(t("auth.toast.useridnotfound"));
       }
 
       let session = signupSession;
@@ -132,19 +134,17 @@ export function AuthClient() {
       });
 
       if (error) {
-        throw new Error(
-          "Unable to save profile right now. Please sign in and complete your profile from the Profile page."
-        );
+        throw new Error(t("auth.toast.unabletosave"));
       }
 
       const { data } = await supabase.auth.getSession();
       const isEmailConfirmed = data.session?.user?.email_confirmed_at;
 
       toast({
-        title: "Profile completed!",
+        title: t("auth.toast.profilecompleted"),
         description: isEmailConfirmed
-          ? "Your profile has been created. Welcome!"
-          : "Your profile has been created. Please check your email to verify your account.",
+          ? t("auth.toast.profilecreated")
+          : t("auth.toast.profilecreatedverify"),
       });
 
       if (isEmailConfirmed) {
@@ -157,8 +157,8 @@ export function AuthClient() {
       }
     } catch (error: any) {
       toast({
-        title: "Error saving profile",
-        description: error.message || "An error occurred while saving your profile.",
+        title: t("auth.toast.errorsaving"),
+        description: error.message || t("auth.toast.errorsavingdesc"),
         variant: "destructive",
       });
     } finally {
@@ -177,8 +177,8 @@ export function AuthClient() {
       if (error) throw error;
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message || "An error occurred with Google authentication.",
+        title: t("auth.toast.error"),
+        description: error.message || t("auth.toast.googleauthdesc"),
         variant: "destructive",
       });
       setIsGoogleLoading(false);
@@ -196,29 +196,28 @@ export function AuthClient() {
         <div className="hidden lg:flex flex-1 flex-col justify-center space-y-6 pl-1">
           <div className="space-y-5 max-w-lg">
             <h1 className="text-4xl font-bold leading-snug text-foreground max-w-sm">
-              Start Your Journey to Better Nutrition
+              {t("auth.hero.title")}
             </h1>
             <p className="text-lg text-muted-foreground dark:text-slate-300">
-              Join thousands of users making healthier choices with AI-powered food analysis, personalized insights,
-              and actionable nutrition guidance.
+              {t("auth.hero.description")}
             </p>
 
             <div className="grid gap-4">
               {[
                 {
                   icon: Camera,
-                  title: "Instant Food Recognition",
-                  description: "Upload a photo and get instant nutritional analysis.",
+                  title: t("auth.hero.feature1.title"),
+                  description: t("auth.hero.feature1.description"),
                 },
                 {
                   icon: BarChart3,
-                  title: "Detailed Nutrition Breakdown",
-                  description: "Track calories, macros, and micronutrients with precision.",
+                  title: t("auth.hero.feature2.title"),
+                  description: t("auth.hero.feature2.description"),
                 },
                 {
                   icon: Zap,
-                  title: "Unlimited Scans (Premium)",
-                  description: "Unlock unlimited scans and advanced features with Premium.",
+                  title: t("auth.hero.feature3.title"),
+                  description: t("auth.hero.feature3.description"),
                 },
               ].map(({ icon: Icon, title, description }) => (
                 <div className="flex items-start gap-3" key={title}>
@@ -239,21 +238,21 @@ export function AuthClient() {
           <Tabs value={tabValue} onValueChange={setTabValue} className="w-full">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold mb-2">
-                {tabValue === "signin" ? "Welcome Back" : "Create Account"}
+                {tabValue === "signin" ? t("auth.welcomeback") : t("auth.createaccount")}
               </h2>
               <p className="text-sm text-muted-foreground">
                 {tabValue === "signin"
-                  ? "Sign in to access your scan history and premium features"
-                  : "Get 3 free scans daily or upgrade to Premium for unlimited access"}
+                  ? t("auth.signin.description")
+                  : t("auth.signup.description")}
               </p>
             </div>
 
             <TabsList className="grid w-full grid-cols-2 mb-6 bg-white/5 dark:bg-black/10 backdrop-blur-sm border-2 border-white/20 dark:border-white/10">
               <TabsTrigger value="signin" className="text-sm font-medium">
-                Sign In
+                {t("auth.signin")}
               </TabsTrigger>
               <TabsTrigger value="signup" className="text-sm font-medium">
-                Sign Up
+                {t("auth.signup")}
               </TabsTrigger>
             </TabsList>
 
@@ -262,7 +261,7 @@ export function AuthClient() {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-sm font-medium">
-                      Email
+                      {t("auth.email")}
                     </Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
@@ -270,7 +269,7 @@ export function AuthClient() {
                         id="email"
                         name="email"
                         type="email"
-                        placeholder="you@example.com"
+                        placeholder={t("auth.email.placeholder")}
                         required
                         className="pl-10 h-11 bg-white/10 dark:bg-black/10 backdrop-blur-sm border-2 border-white/30 dark:border-white/20 focus:border-primary/50"
                       />
@@ -278,7 +277,7 @@ export function AuthClient() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="password" className="text-sm font-medium">
-                      Password
+                      {t("auth.password")}
                     </Label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
@@ -305,7 +304,7 @@ export function AuthClient() {
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
                       <span className="bg-white/10 dark:bg-black/20 backdrop-blur-sm px-2 text-muted-foreground">
-                        Or continue with
+                        {t("auth.orcontinue")}
                       </span>
                     </div>
                   </div>
@@ -335,11 +334,11 @@ export function AuthClient() {
                         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                       />
                     </svg>
-                    {isGoogleLoading ? "Loading..." : "Continue with Google"}
+                    {isGoogleLoading ? t("auth.loading") : t("auth.continuegoogle")}
                   </Button>
 
                   <Button className="w-full h-11 bg-primary hover:bg-primary-hover mt-4" type="submit" disabled={isLoading}>
-                    {isLoading ? "Signing in..." : "Sign In"}
+                    {isLoading ? t("auth.signingin") : t("auth.signin")}
                   </Button>
                 </div>
               </form>
@@ -352,13 +351,13 @@ export function AuthClient() {
                     <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20 mb-4 backdrop-blur-sm">
                       <Sparkles className="h-5 w-5 text-primary" />
                       <p className="text-sm text-muted-foreground">
-                        Get <span className="font-semibold text-foreground">3 free scans daily</span> or upgrade to Premium for unlimited access
+                        {t("auth.freescans.banner")} <span className="font-semibold text-foreground">{t("auth.freescans.daily")}</span> {t("auth.freescans.orupgrade")}
                       </p>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="signup-email" className="text-sm font-medium">
-                        Email
+                        {t("auth.email")}
                       </Label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
@@ -366,7 +365,7 @@ export function AuthClient() {
                           id="signup-email"
                           name="signup-email"
                           type="email"
-                          placeholder="you@example.com"
+                          placeholder={t("auth.email.placeholder")}
                           required
                           className="pl-10 h-11 bg-white/10 dark:bg-black/10 backdrop-blur-sm border-2 border-white/30 dark:border-white/20 focus:border-primary/50"
                         />
@@ -375,7 +374,7 @@ export function AuthClient() {
 
                     <div className="space-y-2">
                       <Label htmlFor="signup-password" className="text-sm font-medium">
-                        Password
+                        {t("auth.password")}
                       </Label>
                       <div className="relative">
                         <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
@@ -395,7 +394,7 @@ export function AuthClient() {
                           {showSignupPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
-                      <p className="text-xs text-muted-foreground">Must be at least 6 characters</p>
+                      <p className="text-xs text-muted-foreground">{t("auth.password.minlength")}</p>
                     </div>
 
                     <div className="relative py-4">
@@ -404,7 +403,7 @@ export function AuthClient() {
                       </div>
                       <div className="relative flex justify-center text-xs uppercase">
                         <span className="bg-white/10 dark:bg-black/20 backdrop-blur-sm px-2 text-muted-foreground">
-                          Or continue with
+                          {t("auth.orcontinue")}
                         </span>
                       </div>
                     </div>
@@ -422,11 +421,11 @@ export function AuthClient() {
                         <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
                         <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                       </svg>
-                      {isGoogleLoading ? "Loading..." : "Sign up with Google"}
+                      {isGoogleLoading ? t("auth.loading") : t("auth.signupgoogle")}
                     </Button>
 
                     <Button className="w-full h-11 bg-primary hover:bg-primary-hover mt-4" type="submit" disabled={isLoading}>
-                      {isLoading ? "Creating account..." : "Create Account"}
+                      {isLoading ? t("auth.creatingaccount") : t("auth.createaccount")}
                     </Button>
                   </div>
                 </form>
@@ -434,15 +433,15 @@ export function AuthClient() {
                 <form onSubmit={handleBioSubmit}>
                   <div className="space-y-4">
                     <div className="text-center mb-6">
-                      <h3 className="text-xl font-bold mb-2">Complete Your Profile</h3>
+                      <h3 className="text-xl font-bold mb-2">{t("auth.completeprofile.title")}</h3>
                       <p className="text-sm text-muted-foreground">
-                        Tell us a bit about yourself to personalize your experience
+                        {t("auth.completeprofile.description")}
                       </p>
                     </div>
 
                     <div className="space-y-2">
                       <Label htmlFor="full-name" className="text-sm font-medium">
-                        Full Name
+                        {t("auth.fullname")}
                       </Label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
@@ -450,7 +449,7 @@ export function AuthClient() {
                           id="full-name"
                           name="full-name"
                           type="text"
-                          placeholder="John Doe"
+                          placeholder={t("auth.fullname.placeholder")}
                           required
                           value={bioData.fullName}
                           onChange={(event) => setBioData({ ...bioData, fullName: event.target.value })}
@@ -461,14 +460,14 @@ export function AuthClient() {
 
                     <div className="space-y-2">
                       <Label htmlFor="bio" className="text-sm font-medium">
-                        Bio (Optional)
+                        {t("auth.bio")}
                       </Label>
                       <div className="relative">
                         <FileText className="absolute left-3 top-3 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
                         <Textarea
                           id="bio"
                           name="bio"
-                          placeholder="Tell us about yourself..."
+                          placeholder={t("auth.bio.placeholder")}
                           value={bioData.bio}
                           onChange={(event) => setBioData({ ...bioData, bio: event.target.value })}
                           rows={4}
@@ -476,12 +475,12 @@ export function AuthClient() {
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        A short bio helps us understand your needs better
+                        {t("auth.bio.help")}
                       </p>
                     </div>
 
                     <Button className="w-full h-11 bg-primary hover:bg-primary-hover mt-4" type="submit" disabled={isLoading}>
-                      {isLoading ? "Saving..." : "Complete Registration"}
+                      {isLoading ? t("auth.saving") : t("auth.completeregistration")}
                     </Button>
 
                     <Button
@@ -496,7 +495,7 @@ export function AuthClient() {
                         setSignupSession(null);
                       }}
                     >
-                      Back
+                      {t("auth.back")}
                     </Button>
                   </div>
                 </form>
@@ -505,13 +504,13 @@ export function AuthClient() {
           </Tabs>
 
           <p className="text-center text-sm text-muted-foreground mt-6 px-4">
-            By continuing, you agree to our {" "}
+            {t("auth.terms")} {" "}
             <Link href="/terms" className="text-primary hover:underline font-medium">
-              Terms
+              {t("auth.termslink")}
             </Link>{" "}
-            and {" "}
+            {t("auth.and")} {" "}
             <Link href="/privacy" className="text-primary hover:underline font-medium">
-              Privacy Policy
+              {t("auth.privacylink")}
             </Link>
           </p>
         </div>

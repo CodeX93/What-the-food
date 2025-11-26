@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getPlatformSubscription } from "@/utils/subscription";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,47 +20,48 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const plans = [
-  {
-    name: "Free",
-    price: "$0",
-    period: "/month",
-    description: "Try out WhatTheFood",
-    features: [
-      "3 scans per day",
-      "No scan history",
-      "Ads included",
-      "No serving adjuster",
-      "No customizable widget",
-      "No PDF reports",
-      "Basic email support",
-    ],
-    cta: "Get Started",
-    popular: false,
-  },
-  {
-    name: "Premium",
-    price: "$6.99",
-    period: "/month",
-    yearlyPrice: "$69.99/year",
-    description: "Everything you need",
-    features: [
-      "Unlimited scans",
-      "Complete scan history",
-      "Ad-free experience",
-      "Serving adjuster",
-      "Customizable widget (included)",
-      "PDF reports",
-      "Premium chat support",
-    ],
-    cta: "Upgrade Now",
-    popular: true,
-  },
-];
-
 const PricingTable = () => {
   const router = useRouter();
   const { toast } = useToast();
+  const { t } = useLanguage();
+  
+  const plans = [
+    {
+      name: t("pricing.free.name"),
+      price: t("pricing.free.price"),
+      period: t("pricing.free.period"),
+      description: t("pricing.free.description"),
+      features: [
+        t("pricing.free.feature1"),
+        t("pricing.free.feature2"),
+        t("pricing.free.feature3"),
+        t("pricing.free.feature4"),
+        t("pricing.free.feature5"),
+        t("pricing.free.feature6"),
+        t("pricing.free.feature7"),
+      ],
+      cta: t("pricing.free.cta"),
+      popular: false,
+    },
+    {
+      name: t("pricing.premium.name"),
+      price: t("pricing.premium.price"),
+      period: t("pricing.premium.period"),
+      yearlyPrice: t("pricing.premium.yearly"),
+      description: t("pricing.premium.description"),
+      features: [
+        t("pricing.premium.feature1"),
+        t("pricing.premium.feature2"),
+        t("pricing.premium.feature3"),
+        t("pricing.premium.feature4"),
+        t("pricing.premium.feature5"),
+        t("pricing.premium.feature6"),
+        t("pricing.premium.feature7"),
+      ],
+      cta: t("pricing.premium.cta"),
+      popular: true,
+    },
+  ];
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -104,7 +106,7 @@ const PricingTable = () => {
 
   const getPlanCTA = (planName: string) => {
     if (!isLoggedIn || !subscription) {
-      return planName === "Free" ? "Get Started" : "Upgrade Now";
+      return planName === t("pricing.free.name") ? t("pricing.free.cta") : t("pricing.premium.cta");
     }
 
     const isPremium = subscription.subscription_type === "premium" && subscription.is_active;
@@ -126,7 +128,7 @@ const PricingTable = () => {
     } else {
       // For free plan - if user is on free plan, show "Current Plan"
       if (isFree) {
-        return "Current Plan";
+        return t("pricing.current");
       }
       // If user is on premium, they can't cancel to free from here, just show "Get Started"
       return "Get Started";
@@ -154,8 +156,8 @@ const PricingTable = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
         toast({
-          title: "Error",
-          description: "You must be logged in to cancel your subscription.",
+          title: t("common.error"),
+          description: t("pricing.cancel"),
           variant: "destructive",
         });
         return;
@@ -183,8 +185,8 @@ const PricingTable = () => {
       setSubscription(sub);
 
       toast({
-        title: "Subscription Cancelled",
-        description: "Your subscription has been cancelled and you've been moved to the Free plan.",
+        title: t("common.success"),
+        description: t("pricing.canceldialog.description"),
       });
 
       setShowCancelDialog(false);
@@ -192,8 +194,8 @@ const PricingTable = () => {
     } catch (error: any) {
       console.error("Cancel subscription error:", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to cancel subscription. Please try again.",
+        title: t("common.error"),
+        description: error.message || t("common.error"),
         variant: "destructive",
       });
     } finally {
@@ -211,7 +213,7 @@ const PricingTable = () => {
     const cta = getPlanCTA(planName);
     
     // Don't do anything if it's the current plan (for Free plan)
-    if (cta === "Current Plan") {
+    if (cta === t("pricing.current")) {
       return;
     }
     
@@ -223,9 +225,9 @@ const PricingTable = () => {
     <section className="w-full bg-white dark:bg-[#000000] transition-colors duration-300">
       <div className="mx-auto w-full max-w-6xl px-6 sm:px-10 lg:px-16 relative z-10 py-16 sm:py-20 lg:py-24">
         <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">Simple, Transparent Pricing</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">{t("pricing.title")}</h2>
           <p className="text-base sm:text-lg text-muted-foreground">
-            Choose the plan that works best for you
+            {t("pricing.subtitle")}
           </p>
         </div>
 
@@ -236,7 +238,7 @@ const PricingTable = () => {
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-medium">
-                  Most Popular
+                  {t("pricing.premium.name")}
                 </div>
               )}
               <CardHeader className="p-4 sm:p-6">
@@ -267,9 +269,9 @@ const PricingTable = () => {
                   className={`w-full text-sm sm:text-base ${plan.popular && !isCurrentPlan(plan.name) ? 'bg-primary hover:bg-primary-hover' : ''}`}
                   variant={plan.popular ? 'default' : 'outline'}
                   onClick={(e) => handlePlanClick(e, plan.name)}
-                  disabled={loading || cancelling || (isCurrentPlan(plan.name) && plan.name === "Free")}
+                  disabled={loading || cancelling || (isCurrentPlan(plan.name) && plan.name === t("pricing.free.name"))}
                 >
-                  {loading || cancelling ? "Loading..." : getPlanCTA(plan.name)}
+                  {loading || cancelling ? t("common.loading") : getPlanCTA(plan.name)}
                 </Button>
               </CardFooter>
             </Card>
@@ -280,19 +282,19 @@ const PricingTable = () => {
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
+            <AlertDialogTitle>{t("pricing.canceldialog.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to cancel your subscription? You&apos;ll be moved to the Free plan and will lose access to premium features.
+              {t("pricing.canceldialog.description")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={cancelling}>Keep Subscription</AlertDialogCancel>
+            <AlertDialogCancel disabled={cancelling}>{t("pricing.canceldialog.keep")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancelSubscription}
               disabled={cancelling}
               className="bg-destructive hover:bg-destructive/90"
             >
-              {cancelling ? "Cancelling..." : "Cancel Subscription"}
+              {cancelling ? t("common.loading") : t("pricing.cancel")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

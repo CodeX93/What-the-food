@@ -1,40 +1,44 @@
+"use client";
+
 import { Camera, BarChart3, History, FileText, Sliders, Sparkles } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const features = [
-  {
-    icon: Camera,
-    title: "AI-Powered Scanning",
-    description: "Simply snap a photo and our advanced AI instantly identifies your food and analyzes its nutritional content.",
-  },
-  {
-    icon: BarChart3,
-    title: "Detailed Nutrition Breakdown",
-    description: "Get comprehensive data on calories, protein, carbs, fats, sugar, fiber, and sodium for every meal.",
-  },
-  {
-    icon: History,
-    title: "Scan History",
-    description: "Track all your meals in one place. Premium members get unlimited access to their complete food diary.",
-  },
-  {
-    icon: FileText,
-    title: "PDF Reports",
-    description: "Export detailed nutritional reports as PDFs. Perfect for sharing with nutritionists or personal tracking.",
-  },
-  {
-    icon: Sliders,
-    title: "Serving Adjustments",
-    description: "Fine-tune portion sizes and ingredients to get the most accurate nutritional information possible.",
-  },
-  {
-    icon: Sparkles,
-    title: "Ad-Free Experience",
-    description: "Premium members enjoy a clean, distraction-free interface focused on your health goals.",
-  },
-];
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Features = () => {
+  const { t } = useLanguage();
+  
+  const features = [
+    {
+      icon: Camera,
+      title: t("features.ai.title"),
+      description: t("features.ai.description"),
+    },
+    {
+      icon: BarChart3,
+      title: t("features.nutrition.title"),
+      description: t("features.nutrition.description"),
+    },
+    {
+      icon: History,
+      title: t("features.history.title"),
+      description: t("features.history.description"),
+    },
+    {
+      icon: FileText,
+      title: t("features.pdf.title"),
+      description: t("features.pdf.description"),
+    },
+    {
+      icon: Sliders,
+      title: t("features.serving.title"),
+      description: t("features.serving.description"),
+    },
+    {
+      icon: Sparkles,
+      title: t("features.adfree.title"),
+      description: t("features.adfree.description"),
+    },
+  ];
   return (
     <section
       id="features"
@@ -42,9 +46,9 @@ const Features = () => {
     >
       <div className="container mx-auto px-4 w-full">
         <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4 pb-2">Powerful Features for Healthy Living</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4 pb-2">{t("features.title")}</h2>
           <p className="text-base sm:text-lg text-muted-foreground">
-            Everything you need to understand and improve your nutrition
+            {t("features.subtitle")}
           </p>
         </div>
 
