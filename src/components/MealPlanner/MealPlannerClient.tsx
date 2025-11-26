@@ -6,36 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import {
-  ArrowLeft,
-  Loader2,
-  Calendar,
-  Target,
-  UtensilsCrossed,
-  Activity,
-  CheckCircle2,
-  Clock,
-  Flame,
-  Apple,
-  Dumbbell,
-  Lock,
-  ShieldCheck,
-  Sparkles,
-  ArrowRight,
-} from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Loader2, Lock, ShieldCheck, Sparkles, ArrowRight } from "lucide-react";
+import { MealPlannerForm, MealPlannerFormData } from "./MealPlannerForm";
+import { MealPlanResults } from "./MealPlanResults";
 
-interface MealPlan {
+export interface MealPlan {
   overview: string;
   dailyCalorieTarget: number;
   dailyCalorieRationale: string;
@@ -103,12 +80,6 @@ const formatPlanDate = (dateString: string) =>
     year: "numeric",
   });
 
-const safeArray = <T,>(value: T[] | undefined | null): T[] => (Array.isArray(value) ? value : []);
-const safeText = (value: string | undefined | null, fallback = "Not specified") =>
-  value && value.trim().length > 0 ? value : fallback;
-const safeNumber = (value: number | undefined | null, fallback = 0) =>
-  typeof value === "number" && Number.isFinite(value) ? value : fallback;
-
 type MealPlannerClientProps = {
   initialSubscription?: any;
 };
@@ -125,8 +96,10 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
   const [savedPlansLoading, setSavedPlansLoading] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
   const [planTitle, setPlanTitle] = useState("");
+  const [editablePlan, setEditablePlan] = useState<MealPlan | null>(null);
+  const [isEditingMeals, setIsEditingMeals] = useState(false);
 
-  // Form state
+  // Form state - keeping old state for backward compatibility with saved plans
   const [targetWeight, setTargetWeight] = useState<string>("");
   const [timeframeWeeks, setTimeframeWeeks] = useState<string>("");
   const [additionalNotes, setAdditionalNotes] = useState<string>("");
@@ -256,12 +229,121 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
         year: "numeric",
       })}`;
       setPlanTitle((prev) => prev || defaultTitle);
+      setEditablePlan(JSON.parse(JSON.stringify(mealPlan)));
+      setIsEditingMeals(false);
     } else {
       setPlanTitle("");
+      setEditablePlan(null);
+      setIsEditingMeals(false);
     }
   }, [mealPlan]);
 
-  const generateMealPlan = async () => {
+  const updateEditablePlan = (updater: (draft: MealPlan) => void) => {
+    setEditablePlan((prev) => {
+      if (!prev) {
+        return prev;
+      }
+      const draft = JSON.parse(JSON.stringify(prev)) as MealPlan;
+      updater(draft);
+      return draft;
+    });
+  };
+
+  const handleMealNameChange = (dayIndex: number, mealIndex: number, value: string) => {
+    updateEditablePlan((draft) => {
+      const day = draft.weeklyMealPlan?.[dayIndex];
+      if (day?.meals?.[mealIndex]) {
+        day.meals[mealIndex].name = value;
+      }
+    });
+  };
+
+  const handleIngredientChange = (
+    dayIndex: number,
+    mealIndex: number,
+    ingredientIndex: number,
+    field: "name" | "quantity" | "calories",
+    value: string
+  ) => {
+    updateEditablePlan((draft) => {
+      const meal = draft.weeklyMealPlan?.[dayIndex]?.meals?.[mealIndex];
+      if (!meal) {
+        return;
+      }
+      if (!Array.isArray(meal.foods)) {
+        meal.foods = [];
+      }
+      if (!meal.foods[ingredientIndex]) {
+        meal.foods[ingredientIndex] = { name: "", quantity: "", calories: 0 };
+      }
+      if (field === "calories") {
+        const parsed = Number(value);
+        meal.foods[ingredientIndex].calories = Number.isFinite(parsed) ? parsed : 0;
+      } else {
+        (meal.foods[ingredientIndex] as any)[field] = value;
+      }
+    });
+  };
+
+  const handleRemoveIngredient = (dayIndex: number, mealIndex: number, ingredientIndex: number) => {
+    updateEditablePlan((draft) => {
+      const foods = draft.weeklyMealPlan?.[dayIndex]?.meals?.[mealIndex]?.foods;
+      if (!foods) {
+        return;
+      }
+      foods.splice(ingredientIndex, 1);
+    });
+  };
+
+  const handleAddIngredient = (dayIndex: number, mealIndex: number) => {
+    updateEditablePlan((draft) => {
+      const meal = draft.weeklyMealPlan?.[dayIndex]?.meals?.[mealIndex];
+      if (!meal) {
+        return;
+      }
+      if (!Array.isArray(meal.foods)) {
+        meal.foods = [];
+      }
+      meal.foods.push({
+        name: "",
+        quantity: "",
+        calories: 0,
+      });
+    });
+  };
+
+  const handleStartEditingMeals = () => {
+    if (!mealPlan) {
+      return;
+    }
+    if (!editablePlan) {
+      setEditablePlan(JSON.parse(JSON.stringify(mealPlan)));
+    }
+    setIsEditingMeals(true);
+  };
+
+  const handleCancelMealEdits = () => {
+    if (mealPlan) {
+      setEditablePlan(JSON.parse(JSON.stringify(mealPlan)));
+    } else {
+      setEditablePlan(null);
+    }
+    setIsEditingMeals(false);
+  };
+
+  const handleSaveMealEdits = () => {
+    if (!editablePlan) {
+      return;
+    }
+    setMealPlan(JSON.parse(JSON.stringify(editablePlan)));
+    setIsEditingMeals(false);
+    toast({
+      title: "Meals updated",
+      description: "Ingredient changes have been applied.",
+    });
+  };
+
+  const generateMealPlan = async (formData: MealPlannerFormData) => {
     if (!profile) {
       toast({
         title: "Profile Required",
@@ -269,15 +351,6 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
         variant: "destructive",
       });
       router.push("/profile");
-      return;
-    }
-
-    if (!targetWeight || !timeframeWeeks) {
-      toast({
-        title: "Missing Information",
-        description: "Please provide target weight and timeframe.",
-        variant: "destructive",
-      });
       return;
     }
 
@@ -291,6 +364,22 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
         return;
       }
 
+      // Build dietary restrictions array from allergies and custom restrictions
+      const allRestrictions = [
+        ...formData.allergies,
+        ...(formData.customRestrictions
+          ? formData.customRestrictions.split(",").map((r) => r.trim()).filter(Boolean)
+          : []),
+      ];
+
+      const exerciseSummaryParts = [];
+      if (formData.exercisePreferences.length) {
+        exerciseSummaryParts.push(`Preferred exercises: ${formData.exercisePreferences.join(", ")}`);
+      }
+      if (formData.exercisePlan) {
+        exerciseSummaryParts.push(formData.exercisePlan);
+      }
+
       const { data, error } = await supabase.functions.invoke("meal-planner", {
         body: {
           profile: {
@@ -302,15 +391,19 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
             activity_level: profile.activity_level || null,
           },
           goalDetails: {
-            targetWeight: parseFloat(targetWeight),
-            timeframeWeeks: parseInt(timeframeWeeks),
-            additionalNotes: additionalNotes || undefined,
+            endGoal: formData.endGoal,
+            targetWeight: formData.targetWeight,
+            timeframeWeeks: formData.timeframe,
+            exercisePlan: exerciseSummaryParts.join(". ") || undefined,
+            additionalNotes: formData.additionalInfo || undefined,
           },
           preferences: {
-            dietaryRestrictions: dietaryRestrictions.length > 0 ? dietaryRestrictions : undefined,
-            mealFrequency: parseInt(mealFrequency),
-            exercisePlan: exercisePlan || undefined,
-            otherTodos: otherTodos.length > 0 ? otherTodos : undefined,
+            dietType: formData.dietType,
+            mealFrequency: formData.mealsPerDay,
+            includeSnacks: formData.includeSnacks,
+            planDuration: formData.planDuration,
+            dietaryRestrictions: allRestrictions.length > 0 ? allRestrictions : undefined,
+            preferredExercises: formData.exercisePreferences.length > 0 ? formData.exercisePreferences : undefined,
           },
         },
       });
@@ -321,6 +414,13 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       }
 
       setMealPlan(data.mealPlan);
+      // Update form state for backward compatibility
+      setTargetWeight(formData.targetWeight.toString());
+      setTimeframeWeeks(formData.timeframe.toString());
+      setAdditionalNotes(formData.additionalInfo);
+      setExercisePlan(formData.exercisePlan);
+      setMealFrequency(formData.mealsPerDay.toString());
+      
       toast({
         title: "Meal Plan Generated!",
         description: "Your personalized meal plan is ready.",
@@ -408,32 +508,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
     }
   };
 
-  const overviewText = safeText(mealPlan?.overview, "Overview was not provided for this plan.");
-  const dailyCalorieTarget = safeNumber(mealPlan?.dailyCalorieTarget);
-  const dailyCalorieRationale = safeText(
-    mealPlan?.dailyCalorieRationale,
-    "Calorie rationale was not provided."
-  );
-  const macroDistribution = mealPlan?.macroDistribution || {
-    protein_g: 0,
-    carbohydrates_g: 0,
-    fat_g: 0,
-    fiber_g: 0,
-    rationale: "Macro distribution was not provided.",
-  };
-  const normalizedExercisePlan = mealPlan
-    ? {
-        types: safeArray(mealPlan.exercisePlan?.types),
-        frequency: safeText(mealPlan.exercisePlan?.frequency),
-        duration: safeText(mealPlan.exercisePlan?.duration),
-        intensity: safeText(mealPlan.exercisePlan?.intensity),
-        specificExercises: safeArray(mealPlan.exercisePlan?.specificExercises),
-        weeklySchedule: safeText(mealPlan.exercisePlan?.weeklySchedule),
-      }
-    : null;
-  const weeklyMealPlan = safeArray(mealPlan?.weeklyMealPlan);
-  const actionItems = safeArray(mealPlan?.actionItems);
-  const tips = safeArray(mealPlan?.tips);
+  const displayPlan = isEditingMeals && editablePlan ? editablePlan : mealPlan;
 
   if (!isPremium) {
     return (
@@ -560,308 +635,22 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
         </Card>
 
         {!mealPlan ? (
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-primary" />
-                  Goal Details
-                </CardTitle>
-                <CardDescription>Set your target and timeframe</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="target-weight">Target Weight (kg)</Label>
-                  <Input
-                    id="target-weight"
-                    type="number"
-                    value={targetWeight}
-                    onChange={(e) => setTargetWeight(e.target.value)}
-                    placeholder={profile?.weight_kg ? `Current: ${profile.weight_kg} kg` : "e.g., 70"}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="timeframe">Timeframe (weeks)</Label>
-                  <Input
-                    id="timeframe"
-                    type="number"
-                    value={timeframeWeeks}
-                    onChange={(e) => setTimeframeWeeks(e.target.value)}
-                    placeholder="e.g., 12"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="notes">Additional Notes</Label>
-                  <Textarea
-                    id="notes"
-                    value={additionalNotes}
-                    onChange={(e) => setAdditionalNotes(e.target.value)}
-                    placeholder="Any specific requirements or preferences..."
-                    rows={3}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <UtensilsCrossed className="h-5 w-5 text-primary" />
-                  Preferences
-                </CardTitle>
-                <CardDescription>Customize your meal plan</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="meal-frequency">Meals per Day</Label>
-                  <Select value={mealFrequency} onValueChange={setMealFrequency}>
-                    <SelectTrigger id="meal-frequency">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="3">3 meals</SelectItem>
-                      <SelectItem value="4">4 meals</SelectItem>
-                      <SelectItem value="5">5 meals</SelectItem>
-                      <SelectItem value="6">6 meals</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="dietary-restriction">Dietary Restrictions</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="dietary-restriction"
-                      placeholder="e.g., Vegetarian, Gluten-free"
-                      onKeyPress={(e) => e.key === "Enter" && addDietaryRestriction()}
-                    />
-                    <Button type="button" variant="outline" onClick={addDietaryRestriction}>
-                      Add
-                    </Button>
-                  </div>
-                  {dietaryRestrictions.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {dietaryRestrictions.map((restriction, idx) => (
-                        <Badge key={idx} variant="secondary" className="cursor-pointer" onClick={() => removeDietaryRestriction(idx)}>
-                          {restriction} ×
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="exercise-plan">Exercise Plan</Label>
-                  <Textarea
-                    id="exercise-plan"
-                    value={exercisePlan}
-                    onChange={(e) => setExercisePlan(e.target.value)}
-                    placeholder="e.g., 30 min cardio 3x/week, strength training 2x/week"
-                    rows={2}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="todo">Additional Todos</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="todo"
-                      value={currentTodo}
-                      onChange={(e) => setCurrentTodo(e.target.value)}
-                      placeholder="e.g., Drink 2L water daily"
-                      onKeyPress={(e) => e.key === "Enter" && addTodo()}
-                    />
-                    <Button type="button" variant="outline" onClick={addTodo}>
-                      Add
-                    </Button>
-                  </div>
-                  {otherTodos.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {otherTodos.map((todo, idx) => (
-                        <Badge key={idx} variant="secondary" className="cursor-pointer" onClick={() => removeTodo(idx)}>
-                          {todo} ×
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <MealPlannerForm profile={profile} onGenerate={generateMealPlan} generating={generating} />
         ) : (
           <div className="space-y-6">
-            <Card className="border-primary/20 bg-primary/5">
-              <CardHeader>
-                <CardTitle>Plan Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground leading-relaxed">{overviewText}</p>
-              </CardContent>
-            </Card>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Flame className="h-5 w-5 text-primary" />
-                    Daily Targets
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <div className="text-sm text-muted-foreground">Calories</div>
-                    <div className="text-2xl font-bold">
-                      {dailyCalorieTarget ? `${dailyCalorieTarget} kcal` : "Not specified"}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">{dailyCalorieRationale}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 pt-3 border-t">
-                    <div>
-                      <div className="text-xs text-muted-foreground">Protein</div>
-                      <div className="font-semibold">{macroDistribution.protein_g}g</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Carbs</div>
-                      <div className="font-semibold">{macroDistribution.carbohydrates_g}g</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Fat</div>
-                      <div className="font-semibold">{macroDistribution.fat_g}g</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Fiber</div>
-                      <div className="font-semibold">{macroDistribution.fiber_g}g</div>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">{macroDistribution.rationale}</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Dumbbell className="h-5 w-5 text-primary" />
-                    Exercise Plan
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <div className="text-sm font-medium mb-2">Types</div>
-                    {normalizedExercisePlan?.types.length ? (
-                      <div className="flex flex-wrap gap-2">
-                        {normalizedExercisePlan.types.map((type, idx) => (
-                          <Badge key={idx} variant="outline">
-                            {type}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No exercise types provided.</p>
-                    )}
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium">Frequency</div>
-                    <div className="text-muted-foreground">
-                      {normalizedExercisePlan?.frequency || "Not specified"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium">Duration</div>
-                    <div className="text-muted-foreground">
-                      {normalizedExercisePlan?.duration || "Not specified"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium">Intensity</div>
-                    <div className="text-muted-foreground">
-                      {normalizedExercisePlan?.intensity || "Not specified"}
-                    </div>
-                  </div>
-                  {normalizedExercisePlan && normalizedExercisePlan.specificExercises.length > 0 && (
-                    <div>
-                      <div className="text-sm font-medium mb-2">Specific Exercises</div>
-                      <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                        {normalizedExercisePlan.specificExercises.map((exercise, idx) => (
-                          <li key={idx}>{exercise}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  <div>
-                    <div className="text-sm font-medium">Weekly Schedule</div>
-                    <div className="text-muted-foreground text-sm">
-                      {normalizedExercisePlan?.weeklySchedule || "Not specified"}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  Weekly Meal Plan
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {weeklyMealPlan.length > 0 ? (
-                  <div className="space-y-6">
-                    {weeklyMealPlan.map((dayPlan, dayIdx) => (
-                      <div key={dayIdx} className="border rounded-lg p-4">
-                        <h3 className="font-semibold text-lg mb-3">{dayPlan.day || `Day ${dayIdx + 1}`}</h3>
-                        <div className="space-y-4">
-                          {safeArray(dayPlan.meals).map((meal, mealIdx) => (
-                            <div key={mealIdx} className="border-l-2 border-primary/30 pl-4">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="font-medium capitalize">{meal?.type || "Meal"}</span>
-                                <span className="text-sm text-muted-foreground">
-                                  {typeof meal?.totalCalories === "number" ? `${meal.totalCalories} kcal` : "—"}
-                                </span>
-                              </div>
-                              <div className="text-sm font-medium mb-1">{meal?.name || "Details not provided"}</div>
-                              <ul className="text-sm text-muted-foreground space-y-1 mb-2">
-                                {safeArray(meal?.foods).map((food, foodIdx) => (
-                                  <li key={foodIdx}>
-                                    • {food?.name || "Food"} ({food?.quantity || "quantity not specified"}) -{" "}
-                                    {typeof food?.calories === "number" ? `${food.calories} kcal` : "—"}
-                                  </li>
-                                ))}
-                              </ul>
-                              <div className="text-xs text-muted-foreground">
-                                P: {meal?.macros?.protein_g ?? "—"}g | C: {meal?.macros?.carbohydrates_g ?? "—"}g | F:{" "}
-                                {meal?.macros?.fat_g ?? "—"}g
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Weekly meal plan details were not provided.</p>
-                )}
-              </CardContent>
-            </Card>
-
-           
-
-            <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Apple className="h-5 w-5 text-primary" />
-                    Tips & Considerations
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {tips.length > 0 ? (
-                    <ul className="list-disc list-inside text-sm text-muted-foreground space-y-2">
-                      {tips.map((tip, idx) => (
-                        <li key={idx}>{tip}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No tips were provided for this plan.</p>
-                  )}
-                </CardContent>
-              </Card>
+            {displayPlan && (
+              <MealPlanResults
+                plan={displayPlan}
+                isEditingMeals={isEditingMeals}
+                onStartEditing={handleStartEditingMeals}
+                onCancelEditing={handleCancelMealEdits}
+                onSaveEdits={handleSaveMealEdits}
+                onMealNameChange={handleMealNameChange}
+                onIngredientChange={handleIngredientChange}
+                onRemoveIngredient={handleRemoveIngredient}
+                onAddIngredient={handleAddIngredient}
+              />
+            )}
 
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="w-full md:max-w-sm">
@@ -876,7 +665,14 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
                 />
               </div>
               <div className="flex flex-wrap gap-3">
-                <Button onClick={() => setMealPlan(null)} variant="outline">
+                <Button
+                  onClick={() => {
+                    setMealPlan(null);
+                    setEditablePlan(null);
+                    setIsEditingMeals(false);
+                  }}
+                  variant="outline"
+                >
                   Create New Plan
                 </Button>
                 <Button onClick={generateMealPlan} disabled={generating}>
@@ -902,26 +698,6 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
           </div>
         )}
 
-        {!mealPlan && (
-          <div className="mt-6">
-            <Button
-              onClick={generateMealPlan}
-              disabled={generating || !targetWeight || !timeframeWeeks}
-              size="lg"
-              className="w-full md:w-auto"
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generating Meal Plan...
-                </>
-              ) : (
-                <>
-                  <UtensilsCrossed className="h-4 w-4 mr-2" /> Generate Meal Plan
-                </>
-              )}
-            </Button>
-          </div>
-        )}
       </div>
     </main>
   );

@@ -19,13 +19,19 @@ interface MealPlannerRequest {
     activity_level?: string;
   };
   goalDetails: {
+    endGoal?: string;
     targetWeight?: number;
     timeframeWeeks?: number;
+    exercisePlan?: string;
     additionalNotes?: string;
   };
   preferences?: {
-    dietaryRestrictions?: string[];
+    dietType?: string;
     mealFrequency?: number;
+    includeSnacks?: boolean;
+    planDuration?: number;
+    dietaryRestrictions?: string[];
+    preferredExercises?: string[];
     exercisePlan?: string;
     otherTodos?: string[];
   };
@@ -99,6 +105,34 @@ Deno.serve(async (req) => {
     }
 
     // Build comprehensive prompt for Gemini
+    const endGoalLabels: Record<string, string> = {
+      lose_weight: "Lose Weight",
+      gain_weight: "Gain Weight",
+      maintain_weight: "Maintain Weight",
+      build_muscle: "Build Muscle",
+      improve_fitness: "Improve Fitness",
+    };
+
+    const dietTypeLabels: Record<string, string> = {
+      balanced: "Balanced",
+      keto: "Ketogenic (Keto)",
+      intermittent_fasting: "Intermittent Fasting",
+      high_protein: "High Protein",
+      high_carb: "High Carbohydrate",
+      low_carb: "Low Carbohydrate",
+      mediterranean: "Mediterranean",
+      paleo: "Paleo",
+      vegan: "Vegan",
+      vegetarian: "Vegetarian",
+      gluten_free: "Gluten-Free",
+      dairy_free: "Dairy-Free",
+      low_fodmap: "Low-FODMAP",
+      pescatarian: "Pescatarian",
+    };
+
+    const planDuration = preferences?.planDuration || 7;
+    const daysText = planDuration === 7 ? "7 days (1 week)" : `${planDuration} days`;
+
     const prompt = `You are an expert nutritionist and meal planning specialist. Create a comprehensive, personalized meal plan based on the following user profile and goals.
 
 USER PROFILE:
@@ -108,17 +142,23 @@ USER PROFILE:
 - Height: ${profile.height_cm ? `${profile.height_cm} cm` : "Not specified"}
 ${bmi ? `- BMI: ${bmi.toFixed(1)} (${bmiCategory})` : ""}
 - Activity Level: ${profile.activity_level || "Not specified"}
-- Goal: ${profile.goal || "Not specified"}
+- Goal: ${goalDetails.endGoal ? endGoalLabels[goalDetails.endGoal] || goalDetails.endGoal : profile.goal || "Not specified"}
 
 GOAL DETAILS:
+- End Goal: ${goalDetails.endGoal ? endGoalLabels[goalDetails.endGoal] || goalDetails.endGoal : "Not specified"}
 - Target Weight: ${goalDetails.targetWeight ? `${goalDetails.targetWeight} kg` : "Not specified"}
 - Timeframe: ${goalDetails.timeframeWeeks ? `${goalDetails.timeframeWeeks} weeks` : "Not specified"}
+${goalDetails.exercisePlan ? `- Exercise Plan: ${goalDetails.exercisePlan}` : ""}
 ${goalDetails.additionalNotes ? `- Additional Notes: ${goalDetails.additionalNotes}` : ""}
 
-PREFERENCES:
-${preferences?.dietaryRestrictions?.length ? `- Dietary Restrictions: ${preferences.dietaryRestrictions.join(", ")}` : "- None specified"}
-- Meal Frequency: ${preferences?.mealFrequency || 3} meals per day
-${preferences?.exercisePlan ? `- Exercise Plan: ${preferences.exercisePlan}` : ""}
+DIET PREFERENCES:
+- Diet Type: ${preferences?.dietType ? dietTypeLabels[preferences.dietType] || preferences.dietType : "Not specified"}
+- Meals per Day: ${preferences?.mealFrequency || 3}
+- Include Snacks: ${preferences?.includeSnacks !== undefined ? (preferences.includeSnacks ? "Yes" : "No") : "Not specified"}
+- Plan Duration: ${daysText}
+${preferences?.preferredExercises?.length ? `- Preferred Exercises: ${preferences.preferredExercises.join(", ")}` : "- Preferred Exercises: Not specified"}
+${preferences?.dietaryRestrictions?.length ? `- Dietary Restrictions/Allergies: ${preferences.dietaryRestrictions.join(", ")}` : "- Dietary Restrictions/Allergies: None specified"}
+${preferences?.exercisePlan ? `- Exercise Plan Notes: ${preferences.exercisePlan}` : ""}
 ${preferences?.otherTodos?.length ? `- Other Todos: ${preferences.otherTodos.join(", ")}` : ""}
 
 TASK:
@@ -135,12 +175,13 @@ Create a detailed, actionable meal plan that includes:
    - Fiber (grams)
    Explain why these ratios are optimal for the user's goal.
 
-4. **Weekly Meal Plan**: CRITICAL - Provide a COMPLETE 7-day meal plan covering ALL days: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, and Sunday. DO NOT skip weekends. Each day must include:
+4. **Weekly Meal Plan**: CRITICAL - Provide a COMPLETE meal plan covering ${planDuration} days. ${planDuration === 7 ? "For a 7-day plan, cover ALL days: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, and Sunday. DO NOT skip weekends." : `For a ${planDuration}-day plan, provide meals for each day sequentially (Day 1, Day 2, etc.).`} Each day must include:
    - Breakfast (with specific foods, quantities in grams/ml, and estimated calories)
    - Lunch (with specific foods, quantities in grams/ml, and estimated calories)
    - Dinner (with specific foods, quantities in grams/ml, and estimated calories)
-   - Snacks (if applicable, with quantities and calories)
-   Each meal should include variety and be practical to prepare. You MUST provide meals for all 7 days of the week.
+   ${preferences?.includeSnacks ? "- Snacks (with quantities and calories)" : ""}
+   Each meal should include variety and be practical to prepare. You MUST provide meals for all ${planDuration} days.
+   IMPORTANT: The meal plan must align with the specified diet type (${preferences?.dietType ? dietTypeLabels[preferences.dietType] || preferences.dietType : "balanced"}) and respect all dietary restrictions and allergies.
 
 5. **Exercise Plan** (MANDATORY): This section is REQUIRED and must be included. Based on the user's goal and activity level, provide a comprehensive exercise plan with:
    - Recommended exercise types (e.g., "Cardio", "Strength Training", "Yoga", "HIIT")
@@ -168,7 +209,9 @@ Create a detailed, actionable meal plan that includes:
    - Provide at least 5-8 practical tips
 
 CRITICAL REQUIREMENTS:
-- **ALL 7 DAYS REQUIRED**: The weeklyMealPlan array MUST contain exactly 7 entries, one for each day: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, and Sunday. DO NOT skip weekends.
+- **ALL DAYS REQUIRED**: The weeklyMealPlan array MUST contain exactly ${planDuration} entries, one for each day. ${planDuration === 7 ? "For 7-day plans, use day names: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, and Sunday. DO NOT skip weekends." : `For ${planDuration}-day plans, use sequential day labels like "Day 1", "Day 2", etc.`}
+- **DIET TYPE COMPLIANCE**: All meals MUST strictly follow the specified diet type (${preferences?.dietType ? dietTypeLabels[preferences.dietType] || preferences.dietType : "balanced"}). For example, if Keto is selected, meals must be high-fat and low-carb. If Intermittent Fasting is selected, adjust meal timing accordingly.
+- **ALLERGY COMPLIANCE**: Absolutely NO foods from the allergy/restriction list should be included in any meal.
 - **Exercise Plan is MANDATORY**: The exercisePlan object MUST be included with all required fields (types, frequency, duration, intensity, specificExercises, weeklySchedule).
 - **Tips & Considerations is MANDATORY**: The tips array MUST be included with at least 5-8 practical tips.
 - Be specific with food quantities (use grams, ml, cups, etc.)
@@ -194,7 +237,7 @@ Format your response as a well-structured JSON object with the following structu
   },
   "weeklyMealPlan": [
     {
-      "day": "Monday",
+      "day": "${planDuration === 7 ? "Monday" : "Day 1"}",
       "meals": [
         {
           "type": "breakfast",
@@ -214,7 +257,7 @@ Format your response as a well-structured JSON object with the following structu
           }
         }
       ]
-    },
+    }${planDuration > 1 ? (planDuration === 7 ? `,
     {
       "day": "Tuesday",
       "meals": [...]
@@ -238,7 +281,8 @@ Format your response as a well-structured JSON object with the following structu
     {
       "day": "Sunday",
       "meals": [...]
-    }
+    }` : `,
+    ... (repeat for Day 2 through Day ${planDuration})`) : ""}
   ],
   "exercisePlan": {
     "types": ["string"], // MANDATORY: Array of exercise types (e.g., ["Cardio", "Strength Training", "Yoga"])
@@ -383,16 +427,17 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
       ];
     }
 
-    // Validate all 7 days are present (auto-fill missing days with guidance)
-    const requiredDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    // Validate all days are present (auto-fill missing days with guidance)
+    const requiredDays = planDuration === 7
+      ? ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+      : Array.from({ length: planDuration }, (_, i) => `Day ${i + 1}`);
     if (!mealPlan.weeklyMealPlan || !Array.isArray(mealPlan.weeklyMealPlan)) {
       console.error("Missing or invalid weeklyMealPlan");
       throw new Error("Weekly meal plan is required but was not generated. Please try again.");
     }
 
-    const createPlaceholderDay = (day: string) => ({
-      day,
-      meals: [
+    const createPlaceholderDay = (day: string) => {
+      const baseMeals = [
         {
           type: "breakfast",
           name: `Repeat a protein-rich breakfast for ${day}`,
@@ -432,7 +477,10 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
           totalCalories: 0,
           macros: { protein_g: 0, carbohydrates_g: 0, fat_g: 0 },
         },
-        {
+      ];
+
+      if (preferences?.includeSnacks) {
+        baseMeals.push({
           type: "snack",
           name: `Snack ideas for ${day}`,
           foods: [
@@ -444,10 +492,15 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
           ],
           totalCalories: 0,
           macros: { protein_g: 0, carbohydrates_g: 0, fat_g: 0 },
-        },
-      ],
-      note: "This placeholder balances protein, carbs, and healthy fats. Adjust calories to hit your daily target.",
-    });
+        });
+      }
+
+      return {
+        day,
+        meals: baseMeals,
+        note: "This placeholder balances protein, carbs, and healthy fats. Adjust calories to hit your daily target.",
+      };
+    };
 
     const dayMap = new Map<string, any>();
     for (const dayEntry of mealPlan.weeklyMealPlan) {
