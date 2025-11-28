@@ -1828,7 +1828,8 @@ export function FoodResultsClient() {
                         </p>
                         <div className="flex flex-wrap justify-center gap-2">
                           <Button
-                            variant="outline"
+                            size="sm"
+                            variant="default"
                             disabled={insightsLoading}
                             onClick={async () => {
                               console.log("Generate Insights clicked", { id, profileAge, profileGender, profileComplete, hasPremiumAccess });
@@ -1905,76 +1906,9 @@ export function FoodResultsClient() {
                             )}
                             Generate Insights
                           </Button>
-                          <Button
-                            variant="outline"
-                            disabled={insightsLoading}
-                            onClick={async () => {
-                              console.log("Optimize clicked", { id, profileAge, profileGender, hasPremiumAccess });
-                              if (!id) {
-                                toast({
-                                  title: "Error",
-                                  description: "Scan ID is missing.",
-                                  variant: "destructive",
-                                });
-                                return;
-                              }
-                              try {
-                                setInsightsLoading(true);
-                                setUpgradeRequired(false);
-                                console.log("Starting optimized insights generation...");
-                                
-                                // Add timeout wrapper (20 seconds max)
-                                const timeoutPromise = new Promise((_, reject) => {
-                                  setTimeout(() => reject(new Error("Insights generation timed out after 20 seconds. Please try again.")), 20000);
-                                });
-                                
-                                const insightsPromise = getPersonalizedInsights({
-                                  scanId: id,
-                                  age: profileAge || undefined,
-                                  gender: profileGender || undefined,
-                                  activity: profileActivityLevel || undefined,
-                                  goal: profileGoal || undefined,
-                                  optimize: true,
-                                  weight_kg: profile?.weight_kg || undefined,
-                                  height_cm: profile?.height_cm || undefined,
-                                });
-                                
-                                console.log("Waiting for optimized insights...");
-                                const res = await Promise.race([insightsPromise, timeoutPromise]) as Awaited<ReturnType<typeof getPersonalizedInsights>>;
-                                console.log("Optimized insights received:", res);
-                                
-                                if (res.upgrade) {
-                                  setUpgradeRequired(true);
-                                  setInsightsText("");
-                                  return;
-                                }
-                                if (res.insights) {
-                                  await persistInsights(res.insights);
-                                  console.log("Optimized insights set successfully");
-                                } else {
-                                  throw new Error("No insights returned from server");
-                                }
-                              } catch (error: any) {
-                                console.error("Failed to generate optimized insights:", error);
-                                toast({
-                                  title: "Insights Generation Failed",
-                                  description: error?.message || "Unable to generate optimized insights. Please try again.",
-                                  variant: "destructive",
-                                });
-                                setInsightsText(""); // Clear any partial state
-                              } finally {
-                                setInsightsLoading(false);
-                                console.log("Optimized insights loading finished");
-                              }
-                            }}
-                          >
-                            {insightsLoading ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <Sparkles className="h-4 w-4 mr-2" />
-                            )}
-                            Optimize
-                          </Button>
+
+                          <Button variant="outline" onClick={() => router.push("/meal-planner")}>Generate Meal Plan</Button>
+                        
                         </div>
                       </div>
                     )}

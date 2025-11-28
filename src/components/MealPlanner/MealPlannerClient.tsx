@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/hooks/use-translation";
-import { ArrowLeft, Loader2, Lock, ShieldCheck, Sparkles, ArrowRight } from "lucide-react";
+import { ArrowLeft, Loader2, Lock, ShieldCheck, Sparkles, ArrowRight, Calendar, BookOpen } from "lucide-react";
 import { MealPlannerForm, MealPlannerFormData } from "./MealPlannerForm";
 import { MealPlanResults } from "./MealPlanResults";
 
@@ -75,7 +76,7 @@ interface SavedMealPlanRecord {
 }
 
 const formatPlanDate = (dateString: string) =>
-  new Date(dateString).toLocaleDateString(undefined, {
+  new Date(dateString).toLocaleDateString('en-US', {
     month: "short",
     day: "numeric",
     year: "numeric",
@@ -101,6 +102,8 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
   const [editablePlan, setEditablePlan] = useState<MealPlan | null>(null);
   const [isEditingMeals, setIsEditingMeals] = useState(false);
   const [lastFormData, setLastFormData] = useState<MealPlannerFormData | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const savedPlansRef = useRef<HTMLDivElement>(null);
 
   // Form state - keeping old state for backward compatibility with saved plans
   const [targetWeight, setTargetWeight] = useState<string>("");
@@ -279,12 +282,66 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       if (!meal.foods[ingredientIndex]) {
         meal.foods[ingredientIndex] = { name: "", quantity: "", calories: 0 };
       }
+      
+      const food = meal.foods[ingredientIndex];
+      
       if (field === "calories") {
         const parsed = Number(value);
-        meal.foods[ingredientIndex].calories = Number.isFinite(parsed) ? parsed : 0;
+        food.calories = Number.isFinite(parsed) ? parsed : 0;
+      } else if (field === "quantity") {
+        // Store the old quantity before updating
+        const oldQuantity = food.quantity || "";
+        
+        // Extract numeric value from quantity string (e.g., "200g" -> 200, "1 cup" -> 1, "2 eggs" -> 2)
+        const extractNumber = (str: string): number => {
+          if (!str) return 0;
+          const match = str.match(/(\d+\.?\d*)/);
+          return match ? parseFloat(match[1]) : 0;
+        };
+        
+        const oldQuantityNum = extractNumber(oldQuantity);
+        const newQuantityNum = extractNumber(value);
+        const currentCalories = food.calories || 0;
+        
+        // Update the quantity field first
+        food.quantity = value;
+        
+        // Auto-calculate calories based on quantity change
+        // If we have a valid quantity change and existing calories, recalculate proportionally
+        if (newQuantityNum > 0 && oldQuantityNum > 0 && currentCalories > 0) {
+          const ratio = newQuantityNum / oldQuantityNum;
+          food.calories = Math.round(currentCalories * ratio);
+        } else if (newQuantityNum > 0 && currentCalories === 0 && oldQuantityNum === 0) {
+          // If no calories set and this is a new quantity, estimate based on common food densities
+          // This is a fallback - ideally calories should already be set
+          const estimatedCaloriesPer100g = 200; // Average estimate
+          food.calories = Math.round((newQuantityNum / 100) * estimatedCaloriesPer100g);
+        }
       } else {
-        (meal.foods[ingredientIndex] as any)[field] = value;
+        (food as any)[field] = value;
       }
+      
+      // Recalculate meal total calories
+      if (Array.isArray(meal.foods)) {
+        meal.totalCalories = meal.foods.reduce((sum, f) => sum + (f.calories || 0), 0);
+      }
+    });
+  };
+  
+  const handleMoveDayUp = (dayIndex: number) => {
+    if (dayIndex === 0) return; // Can't move first day up
+    updateEditablePlan((draft) => {
+      if (!draft.weeklyMealPlan || dayIndex === 0) return;
+      const [movedDay] = draft.weeklyMealPlan.splice(dayIndex, 1);
+      draft.weeklyMealPlan.splice(dayIndex - 1, 0, movedDay);
+    });
+  };
+  
+  const handleMoveDayDown = (dayIndex: number) => {
+    updateEditablePlan((draft) => {
+      if (!draft.weeklyMealPlan || dayIndex >= draft.weeklyMealPlan.length - 1) return;
+      const [movedDay] = draft.weeklyMealPlan.splice(dayIndex, 1);
+      draft.weeklyMealPlan.splice(dayIndex + 1, 0, movedDay);
     });
   };
 
@@ -426,6 +483,9 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       setExercisePlan(formData.exercisePlan);
       setMealFrequency(formData.mealsPerDay.toString());
       
+      // Close modal after successful generation
+      setIsModalOpen(false);
+      
       toast({
         title: t("mealplanner.generate.title"),
         description: t("mealplanner.generate.description"),
@@ -440,6 +500,10 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleScrollToSavedPlans = () => {
+    savedPlansRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleRegeneratePlan = async () => {
@@ -473,17 +537,25 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
 
     try {
       setSavingPlan(true);
-      const { error } = await (supabase as any).from("meal_plans").insert({
+      const { data, error } = await (supabase as any).from("meal_plans").insert({
         user_id: userId,
         title: titleToUse,
         goal: profile?.goal || null,
         target_weight: targetWeight ? parseFloat(targetWeight) : null,
         timeframe_weeks: timeframeWeeks ? parseInt(timeframeWeeks) : null,
         plan: mealPlan,
-      });
+      }).select().single();
 
       if (error) {
         throw error;
+      }
+
+      // Set share_id to the id for easy sharing
+      if (data?.id) {
+        await (supabase as any)
+          .from("meal_plans")
+          .update({ share_id: data.id })
+          .eq("id", data.id);
       }
 
       toast({
@@ -529,7 +601,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
 
   if (!isPremium) {
     return (
-      <main className="flex-1 bg-gradient-to-b from-background via-background to-muted/30">
+      <main className="flex-1 bg-white dark:bg-[#000000] min-h-screen">
         <div className="container mx-auto px-4 py-16">
           <Card className="max-w-2xl mx-auto border-primary/30 bg-background/80 backdrop-blur">
             <CardHeader className="text-center space-y-4">
@@ -586,16 +658,16 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
 
   if (loading) {
     return (
-      <main className="flex-1 flex items-center justify-center">
+      <main className="flex-1 flex items-center justify-center bg-white dark:bg-[#000000] min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
       </main>
     );
   }
 
   return (
-    <main className="flex-1">
+    <main className="flex-1 bg-green-50 dark:bg-background min-h-screen">
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-8">
           <Button variant="ghost" onClick={() => router.push("/dashboard")} className="px-2">
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -605,54 +677,91 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
           </div>
         </div>
 
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>{t("mealplanner.saved.title")}</CardTitle>
-            <CardDescription>{t("mealplanner.saved.description")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {savedPlansLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {t("mealplanner.saved.loading")}
-              </div>
-            ) : savedPlans.length > 0 ? (
-              <div className="space-y-3">
-                {savedPlans.map((plan) => (
-                  <div
-                    key={plan.id}
-                    className="border rounded-lg p-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
+        {/* Hero Section */}
+        <div className="mb-12">
+          <Card className="border-primary/20 bg-gradient-to-br from-primary/20 via-primary/30 to-primary/20">
+            <CardContent className="pt-12 pb-12">
+              <div className="text-center space-y-6 max-w-2xl mx-auto">
+                <h2 className="text-3xl md:text-4xl font-bold">{t("mealplanner.hero.title")}</h2>
+                <p className="text-lg text-muted-foreground">{t("mealplanner.hero.description")}</p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
+                  <Button
+                    size="lg"
+                    onClick={() => setIsModalOpen(true)}
+                    className="w-full sm:w-auto min-w-[200px] bg-primary hover:bg-primary/90"
                   >
-                    <div>
-                      <p className="font-medium">{plan.title || t("mealplanner.saved.untitled")}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {t("mealplanner.saved.view")} {formatPlanDate(plan.created_at)}
-                        {plan.goal ? ` · ${t("mealplanner.saved.goal")}: ${plan.goal}` : ""}
-                      </p>
-                      <div className="text-xs text-muted-foreground flex flex-wrap gap-2 mt-1">
-                        {plan.target_weight !== null && <span>{t("mealplanner.saved.target")}: {plan.target_weight}kg</span>}
-                        {plan.timeframe_weeks !== null && <span>{t("mealplanner.saved.timeline")}: {plan.timeframe_weeks} {t("mealplanner.saved.weeks")}</span>}
+                    <Calendar className="h-5 w-5 mr-2" />
+                    {t("mealplanner.hero.generate")}
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={handleScrollToSavedPlans}
+                    className="w-full sm:w-auto min-w-[200px]"
+                  >
+                    <BookOpen className="h-5 w-5 mr-2" />
+                    {t("mealplanner.hero.saved")}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Saved Meal Plans Section */}
+        <div ref={savedPlansRef} className="mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("mealplanner.saved.title")}</CardTitle>
+              <CardDescription>{t("mealplanner.saved.description")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {savedPlansLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {t("mealplanner.saved.loading")}
+                </div>
+              ) : savedPlans.length > 0 ? (
+                <div className="space-y-3">
+                  {savedPlans.map((plan) => (
+                    <div
+                      key={plan.id}
+                      className="border rounded-lg p-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between"
+                    >
+                      <div>
+                        <p className="font-medium">{plan.title || t("mealplanner.saved.untitled")}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {t("mealplanner.saved.view")} {formatPlanDate(plan.created_at)}
+                          {plan.goal ? ` · ${t("mealplanner.saved.goal")}: ${plan.goal}` : ""}
+                        </p>
+                        <div className="text-xs text-muted-foreground flex flex-wrap gap-2 mt-1">
+                          {plan.target_weight !== null && <span>{t("mealplanner.saved.target")}: {plan.target_weight}kg</span>}
+                          {plan.timeframe_weeks !== null && <span>{t("mealplanner.saved.timeline")}: {plan.timeframe_weeks} {t("mealplanner.saved.weeks")}</span>}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => router.push(`/meal-plan/${plan.id}`)}
+                        >
+                          {t("mealplanner.saved.view")}
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleLoadSavedPlan(plan)}>
-                        {t("mealplanner.saved.view")}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {t("mealplanner.saved.none")}
-              </p>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {t("mealplanner.saved.none")}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
-        {!mealPlan ? (
-          <MealPlannerForm profile={profile} onGenerate={generateMealPlan} generating={generating} />
-        ) : (
+        {/* Meal Plan Results */}
+        {mealPlan && (
           <div className="space-y-6">
             {displayPlan && (
               <MealPlanResults
@@ -665,6 +774,10 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
                 onIngredientChange={handleIngredientChange}
                 onRemoveIngredient={handleRemoveIngredient}
                 onAddIngredient={handleAddIngredient}
+                onMoveDayUp={handleMoveDayUp}
+                onMoveDayDown={handleMoveDayDown}
+                userFirstName={profile?.full_name ? profile.full_name.split(" ")[0] : null}
+                showShareButtons={true}
               />
             )}
 
@@ -714,6 +827,18 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
           </div>
         )}
 
+        {/* Modal for Meal Planner Form */}
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{t("mealplanner.form.title")}</DialogTitle>
+              <DialogDescription>{t("mealplanner.description")}</DialogDescription>
+            </DialogHeader>
+            <div className="mt-4">
+              <MealPlannerForm profile={profile} onGenerate={generateMealPlan} generating={generating} />
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </main>
   );

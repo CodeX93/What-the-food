@@ -133,6 +133,13 @@ All colors MUST be HSL.
   .pdf-capturing [data-collapse-gap-in-pdf="true"] {
     margin-top: 0 !important;
   }
+
+  @media print {
+    .pdf-hide,
+    .print\:hidden {
+      display: none !important;
+    }
+  }
 }
 
 @layer utilities {

@@ -24,9 +24,17 @@ import {
   Sparkles,
   ChevronLeft,
   ChevronRight,
+  Share2,
+  FileDown,
+  Printer,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
+import { useToast } from "@/hooks/use-toast";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import { useRef } from "react";
 
 type MealPlanResultsProps = {
   plan: MealPlan;
@@ -44,6 +52,11 @@ type MealPlanResultsProps = {
   ) => void;
   onRemoveIngredient: (dayIndex: number, mealIndex: number, ingredientIndex: number) => void;
   onAddIngredient: (dayIndex: number, mealIndex: number) => void;
+  onMoveDayUp?: (dayIndex: number) => void;
+  onMoveDayDown?: (dayIndex: number) => void;
+  userFirstName?: string | null;
+  mealPlanId?: string;
+  showShareButtons?: boolean;
 };
 
 const mealTypeStyles: Record<
@@ -110,8 +123,16 @@ export function MealPlanResults({
   onIngredientChange,
   onRemoveIngredient,
   onAddIngredient,
+  onMoveDayUp,
+  onMoveDayDown,
+  userFirstName,
+  mealPlanId,
+  showShareButtons = false,
 }: MealPlanResultsProps) {
   const t = useTranslation();
+  const { toast } = useToast();
+  const planRef = useRef<HTMLDivElement>(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const dailyCalorieTarget = safeNumber(plan?.dailyCalorieTarget);
   const macroDistribution = plan?.macroDistribution || {
     protein_g: 0,
@@ -139,15 +160,190 @@ export function MealPlanResults({
   const getMealStyle = (type?: string) =>
     type ? mealTypeStyles[type.toLowerCase()] || defaultMealStyle : defaultMealStyle;
 
+  const handleShare = async () => {
+    if (!mealPlanId) return;
+    
+    // Use mealPlanId directly as share_id (faster, no DB query needed)
+    const shareUrl = `${window.location.origin}/shared-meal-plan/${mealPlanId}`;
+    const shareData = {
+      title: plan?.overview || "Meal Plan",
+      text: `Check out this meal plan: ${plan?.overview || "Personalized meal plan"}`,
+      url: shareUrl,
+    };
+
+    try {
+      // Try Web Share API first (mobile-friendly)
+      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+        toast({
+          title: "Shared!",
+          description: "Meal plan shared successfully.",
+        });
+      } else {
+        // Fallback: Copy to clipboard
+        await navigator.clipboard.writeText(shareUrl);
+        toast({
+          title: "Link copied!",
+          description: "Meal plan link has been copied to your clipboard.",
+        });
+      }
+    } catch (error: any) {
+      // User cancelled share or clipboard failed
+      if (error.name !== "AbortError") {
+        try {
+          // Final fallback: try clipboard again
+          await navigator.clipboard.writeText(shareUrl);
+          toast({
+            title: "Link copied!",
+            description: "Meal plan link has been copied to your clipboard.",
+          });
+        } catch (clipboardError) {
+          toast({
+            title: "Share failed",
+            description: `Unable to share. Please copy this URL manually: ${shareUrl}`,
+            variant: "destructive",
+          });
+        }
+      }
+    }
+  };
+
+  const handleExportPdf = async () => {
+    if (!planRef.current) return;
+
+    setExportingPdf(true);
+    let iframe: HTMLIFrameElement | null = null;
+
+    try {
+      // Hide buttons before capturing
+      const buttons = planRef.current.querySelectorAll('.pdf-hide');
+      const originalDisplays: string[] = [];
+      buttons.forEach((btn) => {
+        const element = btn as HTMLElement;
+        originalDisplays.push(element.style.display);
+        element.style.display = 'none';
+      });
+
+      // Wait a bit for DOM to update
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Capture the content
+      const canvas = await html2canvas(planRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        ignoreElements: (element) => {
+          return element.classList.contains('pdf-hide');
+        },
+      });
+
+      // Restore buttons immediately
+      buttons.forEach((btn, index) => {
+        (btn as HTMLElement).style.display = originalDisplays[index];
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdfWidth = canvas.width;
+      const pdfHeight = canvas.height;
+
+      // Use A4 format if content is too large
+      const maxWidth = 210 * 3.78; // A4 width in pixels at 72 DPI scaled
+      const maxHeight = 297 * 3.78; // A4 height in pixels at 72 DPI scaled
+
+      let finalWidth = pdfWidth;
+      let finalHeight = pdfHeight;
+
+      if (pdfWidth > maxWidth || pdfHeight > maxHeight) {
+        const scale = Math.min(maxWidth / pdfWidth, maxHeight / pdfHeight);
+        finalWidth = pdfWidth * scale;
+        finalHeight = pdfHeight * scale;
+      }
+
+      const pdf = new jsPDF({
+        unit: "px",
+        format: [finalWidth, finalHeight],
+        compress: true,
+      });
+
+      pdf.addImage(imgData, "PNG", 0, 0, finalWidth, finalHeight, undefined, "FAST");
+
+      const safeTitle = (plan?.overview || "meal-plan").replace(/[^\w\d_-]+/g, "-").substring(0, 50);
+      pdf.save(`${safeTitle}.pdf`);
+
+      toast({
+        title: "PDF ready",
+        description: "Meal plan PDF has been saved to your downloads.",
+      });
+    } catch (error) {
+      console.error("PDF export failed:", error);
+      toast({
+        title: "Export failed",
+        description: "Could not export PDF. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      // Cleanup
+      if (iframe && document.body.contains(iframe)) {
+        document.body.removeChild(iframe);
+      }
+      setExportingPdf(false);
+    }
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8" ref={planRef}>
+      {showShareButtons && (
+        <div className="flex items-center gap-2 print:hidden pdf-hide">
+          <Button size="sm" variant="outline" onClick={handleShare}>
+            <Share2 className="h-4 w-4 mr-2" />
+            Share
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleExportPdf} disabled={exportingPdf}>
+            {exportingPdf ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Preparing…
+              </>
+            ) : (
+              <>
+                <FileDown className="h-4 w-4 mr-2" />
+                PDF
+              </>
+            )}
+          </Button>
+          <Button size="sm" variant="outline" onClick={handlePrint}>
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </Button>
+        </div>
+      )}
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary to-emerald-500 p-8 text-white shadow-lg">
         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "url(/textures/noise.png)" }} />
         <div className="relative flex flex-col gap-6">
           <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-white/80">Personalized meal plan</p>
-            <h2 className="text-3xl md:text-4xl font-bold mt-2">{safeText(plan?.overview)}</h2>
-            <p className="text-white/80 mt-3 max-w-3xl leading-relaxed">{safeText(plan?.dailyCalorieRationale)}</p>
+            <p className="text-sm uppercase tracking-[0.3em] text-white/80">
+              Personalized Meal Plan For{userFirstName ? ` ${userFirstName}` : ""}
+            </p>
+            {(() => {
+              const heading = safeText(plan?.overview, "");
+              const description = safeText(plan?.dailyCalorieRationale, "");
+              
+              return (
+                <>
+                  {heading && (
+                    <h2 className="text-xl md:text-xl font-bold mt-2 line-clamp-1">{heading}</h2>
+                  )}
+                  {description && (
+                    <p className="text-white/80 mt-3 leading-relaxed text-justify">{description}</p>
+                  )}
+                </>
+              );
+            })()}
           </div>
           <div className="flex flex-wrap gap-4">
             <div className="rounded-2xl bg-white/15 px-4 py-3 backdrop-blur">
@@ -181,7 +377,7 @@ export function MealPlanResults({
         </div>
       </section>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2">
         <Card className="shadow-lg border-primary/10">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary">
@@ -213,7 +409,7 @@ export function MealPlanResults({
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg border-primary/10 md:col-span-2">
+        <Card className="shadow-lg border-primary/10">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-primary">
               <Dumbbell className="h-5 w-5" />
@@ -329,11 +525,38 @@ export function MealPlanResults({
             return (
               <Card key={`${dayPlan.day}-${dayIdx}`} className="shadow-md border-muted/40">
               <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <div>
+                <div className="flex-1">
                   <CardTitle>{safeText(dayPlan.day, `Day ${dayIdx + 1}`)}</CardTitle>
-                  {dayPlan.note && <CardDescription>{dayPlan.note}</CardDescription>}
                 </div>
-                <Badge variant="secondary">Day {dayIdx + 1}</Badge>
+                <div className="flex items-center gap-2">
+                  {isEditingMeals && onMoveDayUp && onMoveDayDown && (
+                    <>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onMoveDayUp(dayIdx)}
+                        disabled={dayIdx === 0}
+                        className="h-8 w-8"
+                        title="Move day up"
+                      >
+                        <ChevronLeft className="h-4 w-4 rotate-90" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onMoveDayDown(dayIdx)}
+                        disabled={dayIdx >= (plan.weeklyMealPlan?.length || 0) - 1}
+                        className="h-8 w-8"
+                        title="Move day down"
+                      >
+                        <ChevronRight className="h-4 w-4 rotate-90" />
+                      </Button>
+                    </>
+                  )}
+                  <Badge variant="secondary">Day {dayIdx + 1}</Badge>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {safeArray(dayPlan.meals).map((meal, mealIdx) => {

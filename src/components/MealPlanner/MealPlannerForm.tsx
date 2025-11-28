@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -174,6 +174,15 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
   const [exercisePlan, setExercisePlan] = useState<string>("");
   const [exercisePreferences, setExercisePreferences] = useState<string[]>([]);
   const [additionalInfo, setAdditionalInfo] = useState<string>("");
+  const [additionalDetails, setAdditionalDetails] = useState<string>("");
+  
+  // Initialize additionalDetails from existing fields if they exist
+  useEffect(() => {
+    if ((exercisePlan || additionalInfo) && !additionalDetails) {
+      setAdditionalDetails([exercisePlan, additionalInfo].filter(Boolean).join("\n\n"));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   // Step 2: Diet Preferences
   const [dietType, setDietType] = useState<string>("");
@@ -218,13 +227,16 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
       return;
     }
 
+    // Use additionalDetails if provided, otherwise fall back to individual fields
+    const combinedDetails = additionalDetails.trim() || (exercisePlan && additionalInfo ? `${exercisePlan}\n\n${additionalInfo}` : exercisePlan || additionalInfo || "");
+
     const formData: MealPlannerFormData = {
       endGoal,
       targetWeight: parseFloat(targetWeight),
       timeframe: parseInt(timeframe),
-      exercisePlan,
+      exercisePlan: combinedDetails, // Send combined details to exercisePlan
       exercisePreferences,
-      additionalInfo,
+      additionalInfo: combinedDetails, // Also send to additionalInfo for backend processing
       dietType,
       mealsPerDay: parseInt(mealsPerDay),
       includeSnacks,
@@ -340,30 +352,23 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
                   ))}
                 </div>
                 <div className="mt-4">
-                  <Label htmlFor="exercise-plan" className="text-sm font-medium mb-2 block">
-                    {t("mealplanner.form.exercise.additional")}
+                  <Label htmlFor="additional-details" className="text-base font-semibold mb-2 block">
+                    {t("mealplanner.form.additional.title")} <span className="text-sm font-normal text-muted-foreground">({t("mealplanner.form.additional.optional")})</span>
                   </Label>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {t("mealplanner.form.additional.description")}
+                  </p>
                   <Textarea
-                    id="exercise-plan"
-                    value={exercisePlan}
-                    onChange={(e) => setExercisePlan(e.target.value)}
-                    placeholder={t("mealplanner.form.exercise.additional.placeholder")}
-                    rows={3}
+                    id="additional-details"
+                    value={additionalDetails}
+                    onChange={(e) => setAdditionalDetails(e.target.value)}
+                    placeholder={t("mealplanner.form.additional.placeholder")}
+                    rows={5}
                   />
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {t("mealplanner.form.additional.hint")}
+                  </p>
                 </div>
-              </div>
-
-              <div>
-                <Label htmlFor="additional-info" className="text-base font-semibold mb-2 block">
-                  {t("mealplanner.form.additionalinfo")}
-                </Label>
-                <Textarea
-                  id="additional-info"
-                  value={additionalInfo}
-                  onChange={(e) => setAdditionalInfo(e.target.value)}
-                  placeholder={t("mealplanner.form.additionalinfo.placeholder")}
-                  rows={3}
-                />
               </div>
             </div>
           )}
