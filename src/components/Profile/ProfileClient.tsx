@@ -14,6 +14,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,11 +46,212 @@ import {
   CheckCircle,
   Target,
   Activity,
+  Globe,
 } from "lucide-react";
 import { getPlatformSubscription } from "@/utils/subscription";
 import type { User } from "@supabase/supabase-js";
 import { calculateBMI, getBMICategory, getIdealWeightRange } from "@/utils/bmi";
 import { useTranslation } from "@/hooks/use-translation";
+import { cn } from "@/lib/utils";
+
+// Country list with flag emojis
+const COUNTRIES = [
+  { code: "AF", name: "Afghanistan", flag: "🇦🇫" },
+  { code: "AL", name: "Albania", flag: "🇦🇱" },
+  { code: "DZ", name: "Algeria", flag: "🇩🇿" },
+  { code: "AD", name: "Andorra", flag: "🇦🇩" },
+  { code: "AO", name: "Angola", flag: "🇦🇴" },
+  { code: "AG", name: "Antigua and Barbuda", flag: "🇦🇬" },
+  { code: "AR", name: "Argentina", flag: "🇦🇷" },
+  { code: "AM", name: "Armenia", flag: "🇦🇲" },
+  { code: "AU", name: "Australia", flag: "🇦🇺" },
+  { code: "AT", name: "Austria", flag: "🇦🇹" },
+  { code: "AZ", name: "Azerbaijan", flag: "🇦🇿" },
+  { code: "BS", name: "Bahamas", flag: "🇧🇸" },
+  { code: "BH", name: "Bahrain", flag: "🇧🇭" },
+  { code: "BD", name: "Bangladesh", flag: "🇧🇩" },
+  { code: "BB", name: "Barbados", flag: "🇧🇧" },
+  { code: "BY", name: "Belarus", flag: "🇧🇾" },
+  { code: "BE", name: "Belgium", flag: "🇧🇪" },
+  { code: "BZ", name: "Belize", flag: "🇧🇿" },
+  { code: "BJ", name: "Benin", flag: "🇧🇯" },
+  { code: "BT", name: "Bhutan", flag: "🇧🇹" },
+  { code: "BO", name: "Bolivia", flag: "🇧🇴" },
+  { code: "BA", name: "Bosnia and Herzegovina", flag: "🇧🇦" },
+  { code: "BW", name: "Botswana", flag: "🇧🇼" },
+  { code: "BR", name: "Brazil", flag: "🇧🇷" },
+  { code: "BN", name: "Brunei", flag: "🇧🇳" },
+  { code: "BG", name: "Bulgaria", flag: "🇧🇬" },
+  { code: "BF", name: "Burkina Faso", flag: "🇧🇫" },
+  { code: "BI", name: "Burundi", flag: "🇧🇮" },
+  { code: "KH", name: "Cambodia", flag: "🇰🇭" },
+  { code: "CM", name: "Cameroon", flag: "🇨🇲" },
+  { code: "CA", name: "Canada", flag: "🇨🇦" },
+  { code: "CV", name: "Cape Verde", flag: "🇨🇻" },
+  { code: "CF", name: "Central African Republic", flag: "🇨🇫" },
+  { code: "TD", name: "Chad", flag: "🇹🇩" },
+  { code: "CL", name: "Chile", flag: "🇨🇱" },
+  { code: "CN", name: "China", flag: "🇨🇳" },
+  { code: "CO", name: "Colombia", flag: "🇨🇴" },
+  { code: "KM", name: "Comoros", flag: "🇰🇲" },
+  { code: "CG", name: "Congo (Republic)", flag: "🇨🇬" },
+  { code: "CD", name: "Congo (DRC)", flag: "🇨🇩" },
+  { code: "CR", name: "Costa Rica", flag: "🇨🇷" },
+  { code: "HR", name: "Croatia", flag: "🇭🇷" },
+  { code: "CU", name: "Cuba", flag: "🇨🇺" },
+  { code: "CY", name: "Cyprus", flag: "🇨🇾" },
+  { code: "CZ", name: "Czech Republic", flag: "🇨🇿" },
+  { code: "DK", name: "Denmark", flag: "🇩🇰" },
+  { code: "DJ", name: "Djibouti", flag: "🇩🇯" },
+  { code: "DM", name: "Dominica", flag: "🇩🇲" },
+  { code: "DO", name: "Dominican Republic", flag: "🇩🇴" },
+  { code: "EC", name: "Ecuador", flag: "🇪🇨" },
+  { code: "EG", name: "Egypt", flag: "🇪🇬" },
+  { code: "SV", name: "El Salvador", flag: "🇸🇻" },
+  { code: "GQ", name: "Equatorial Guinea", flag: "🇬🇶" },
+  { code: "ER", name: "Eritrea", flag: "🇪🇷" },
+  { code: "EE", name: "Estonia", flag: "🇪🇪" },
+  { code: "SZ", name: "Eswatini", flag: "🇸🇿" },
+  { code: "ET", name: "Ethiopia", flag: "🇪🇹" },
+  { code: "FJ", name: "Fiji", flag: "🇫🇯" },
+  { code: "FI", name: "Finland", flag: "🇫🇮" },
+  { code: "FR", name: "France", flag: "🇫🇷" },
+  { code: "GA", name: "Gabon", flag: "🇬🇦" },
+  { code: "GM", name: "Gambia", flag: "🇬🇲" },
+  { code: "GE", name: "Georgia", flag: "🇬🇪" },
+  { code: "DE", name: "Germany", flag: "🇩🇪" },
+  { code: "GH", name: "Ghana", flag: "🇬🇭" },
+  { code: "GR", name: "Greece", flag: "🇬🇷" },
+  { code: "GD", name: "Grenada", flag: "🇬🇩" },
+  { code: "GT", name: "Guatemala", flag: "🇬🇹" },
+  { code: "GN", name: "Guinea", flag: "🇬🇳" },
+  { code: "GW", name: "Guinea-Bissau", flag: "🇬🇼" },
+  { code: "GY", name: "Guyana", flag: "🇬🇾" },
+  { code: "HT", name: "Haiti", flag: "🇭🇹" },
+  { code: "HN", name: "Honduras", flag: "🇭🇳" },
+  { code: "HU", name: "Hungary", flag: "🇭🇺" },
+  { code: "IS", name: "Iceland", flag: "🇮🇸" },
+  { code: "IN", name: "India", flag: "🇮🇳" },
+  { code: "ID", name: "Indonesia", flag: "🇮🇩" },
+  { code: "IR", name: "Iran", flag: "🇮🇷" },
+  { code: "IQ", name: "Iraq", flag: "🇮🇶" },
+  { code: "IE", name: "Ireland", flag: "🇮🇪" },
+  { code: "IL", name: "Israel", flag: "🇮🇱" },
+  { code: "IT", name: "Italy", flag: "🇮🇹" },
+  { code: "JM", name: "Jamaica", flag: "🇯🇲" },
+  { code: "JP", name: "Japan", flag: "🇯🇵" },
+  { code: "JO", name: "Jordan", flag: "🇯🇴" },
+  { code: "KZ", name: "Kazakhstan", flag: "🇰🇿" },
+  { code: "KE", name: "Kenya", flag: "🇰🇪" },
+  { code: "KI", name: "Kiribati", flag: "🇰🇮" },
+  { code: "KP", name: "North Korea", flag: "🇰🇵" },
+  { code: "KR", name: "South Korea", flag: "🇰🇷" },
+  { code: "KW", name: "Kuwait", flag: "🇰🇼" },
+  { code: "KG", name: "Kyrgyzstan", flag: "🇰🇬" },
+  { code: "LA", name: "Laos", flag: "🇱🇦" },
+  { code: "LV", name: "Latvia", flag: "🇱🇻" },
+  { code: "LB", name: "Lebanon", flag: "🇱🇧" },
+  { code: "LS", name: "Lesotho", flag: "🇱🇸" },
+  { code: "LR", name: "Liberia", flag: "🇱🇷" },
+  { code: "LY", name: "Libya", flag: "🇱🇾" },
+  { code: "LI", name: "Liechtenstein", flag: "🇱🇮" },
+  { code: "LT", name: "Lithuania", flag: "🇱🇹" },
+  { code: "LU", name: "Luxembourg", flag: "🇱🇺" },
+  { code: "MG", name: "Madagascar", flag: "🇲🇬" },
+  { code: "MW", name: "Malawi", flag: "🇲🇼" },
+  { code: "MY", name: "Malaysia", flag: "🇲🇾" },
+  { code: "MV", name: "Maldives", flag: "🇲🇻" },
+  { code: "ML", name: "Mali", flag: "🇲🇱" },
+  { code: "MT", name: "Malta", flag: "🇲🇹" },
+  { code: "MH", name: "Marshall Islands", flag: "🇲🇭" },
+  { code: "MR", name: "Mauritania", flag: "🇲🇷" },
+  { code: "MU", name: "Mauritius", flag: "🇲🇺" },
+  { code: "MX", name: "Mexico", flag: "🇲🇽" },
+  { code: "FM", name: "Micronesia", flag: "🇫🇲" },
+  { code: "MD", name: "Moldova", flag: "🇲🇩" },
+  { code: "MC", name: "Monaco", flag: "🇲🇨" },
+  { code: "MN", name: "Mongolia", flag: "🇲🇳" },
+  { code: "ME", name: "Montenegro", flag: "🇲🇪" },
+  { code: "MA", name: "Morocco", flag: "🇲🇦" },
+  { code: "MZ", name: "Mozambique", flag: "🇲🇿" },
+  { code: "MM", name: "Myanmar", flag: "🇲🇲" },
+  { code: "NA", name: "Namibia", flag: "🇳🇦" },
+  { code: "NR", name: "Nauru", flag: "🇳🇷" },
+  { code: "NP", name: "Nepal", flag: "🇳🇵" },
+  { code: "NL", name: "Netherlands", flag: "🇳🇱" },
+  { code: "NZ", name: "New Zealand", flag: "🇳🇿" },
+  { code: "NI", name: "Nicaragua", flag: "🇳🇮" },
+  { code: "NE", name: "Niger", flag: "🇳🇪" },
+  { code: "NG", name: "Nigeria", flag: "🇳🇬" },
+  { code: "MK", name: "North Macedonia", flag: "🇲🇰" },
+  { code: "NO", name: "Norway", flag: "🇳🇴" },
+  { code: "OM", name: "Oman", flag: "🇴🇲" },
+  { code: "PK", name: "Pakistan", flag: "🇵🇰" },
+  { code: "PW", name: "Palau", flag: "🇵🇼" },
+  { code: "PA", name: "Panama", flag: "🇵🇦" },
+  { code: "PG", name: "Papua New Guinea", flag: "🇵🇬" },
+  { code: "PY", name: "Paraguay", flag: "🇵🇾" },
+  { code: "PE", name: "Peru", flag: "🇵🇪" },
+  { code: "PH", name: "Philippines", flag: "🇵🇭" },
+  { code: "PL", name: "Poland", flag: "🇵🇱" },
+  { code: "PT", name: "Portugal", flag: "🇵🇹" },
+  { code: "QA", name: "Qatar", flag: "🇶🇦" },
+  { code: "RO", name: "Romania", flag: "🇷🇴" },
+  { code: "RU", name: "Russia", flag: "🇷🇺" },
+  { code: "RW", name: "Rwanda", flag: "🇷🇼" },
+  { code: "KN", name: "Saint Kitts and Nevis", flag: "🇰🇳" },
+  { code: "LC", name: "Saint Lucia", flag: "🇱🇨" },
+  { code: "VC", name: "Saint Vincent and the Grenadines", flag: "🇻🇨" },
+  { code: "WS", name: "Samoa", flag: "🇼🇸" },
+  { code: "SM", name: "San Marino", flag: "🇸🇲" },
+  { code: "ST", name: "Sao Tome and Principe", flag: "🇸🇹" },
+  { code: "SA", name: "Saudi Arabia", flag: "🇸🇦" },
+  { code: "SN", name: "Senegal", flag: "🇸🇳" },
+  { code: "RS", name: "Serbia", flag: "🇷🇸" },
+  { code: "SC", name: "Seychelles", flag: "🇸🇨" },
+  { code: "SL", name: "Sierra Leone", flag: "🇸🇱" },
+  { code: "SG", name: "Singapore", flag: "🇸🇬" },
+  { code: "SK", name: "Slovakia", flag: "🇸🇰" },
+  { code: "SI", name: "Slovenia", flag: "🇸🇮" },
+  { code: "SB", name: "Solomon Islands", flag: "🇸🇧" },
+  { code: "SO", name: "Somalia", flag: "🇸🇴" },
+  { code: "ZA", name: "South Africa", flag: "🇿🇦" },
+  { code: "SS", name: "South Sudan", flag: "🇸🇸" },
+  { code: "ES", name: "Spain", flag: "🇪🇸" },
+  { code: "LK", name: "Sri Lanka", flag: "🇱🇰" },
+  { code: "SD", name: "Sudan", flag: "🇸🇩" },
+  { code: "SR", name: "Suriname", flag: "🇸🇷" },
+  { code: "SE", name: "Sweden", flag: "🇸🇪" },
+  { code: "CH", name: "Switzerland", flag: "🇨🇭" },
+  { code: "SY", name: "Syria", flag: "🇸🇾" },
+  { code: "TW", name: "Taiwan", flag: "🇹🇼" },
+  { code: "TJ", name: "Tajikistan", flag: "🇹🇯" },
+  { code: "TZ", name: "Tanzania", flag: "🇹🇿" },
+  { code: "TH", name: "Thailand", flag: "🇹🇭" },
+  { code: "TL", name: "Timor-Leste", flag: "🇹🇱" },
+  { code: "TG", name: "Togo", flag: "🇹🇬" },
+  { code: "TO", name: "Tonga", flag: "🇹🇴" },
+  { code: "TT", name: "Trinidad and Tobago", flag: "🇹🇹" },
+  { code: "TN", name: "Tunisia", flag: "🇹🇳" },
+  { code: "TR", name: "Turkey", flag: "🇹🇷" },
+  { code: "TM", name: "Turkmenistan", flag: "🇹🇲" },
+  { code: "TV", name: "Tuvalu", flag: "🇹🇻" },
+  { code: "UG", name: "Uganda", flag: "🇺🇬" },
+  { code: "UA", name: "Ukraine", flag: "🇺🇦" },
+  { code: "AE", name: "United Arab Emirates", flag: "🇦🇪" },
+  { code: "GB", name: "United Kingdom", flag: "🇬🇧" },
+  { code: "US", name: "United States", flag: "🇺🇸" },
+  { code: "UY", name: "Uruguay", flag: "🇺🇾" },
+  { code: "UZ", name: "Uzbekistan", flag: "🇺🇿" },
+  { code: "VU", name: "Vanuatu", flag: "🇻🇺" },
+  { code: "VA", name: "Vatican City", flag: "🇻🇦" },
+  { code: "VE", name: "Venezuela", flag: "🇻🇪" },
+  { code: "VN", name: "Vietnam", flag: "🇻🇳" },
+  { code: "YE", name: "Yemen", flag: "🇾🇪" },
+  { code: "ZM", name: "Zambia", flag: "🇿🇲" },
+  { code: "ZW", name: "Zimbabwe", flag: "🇿🇼" }
+].sort((a, b) => a.name.localeCompare(b.name));
+
 
 export type ProfileClientProps = {
   initialUser?: User | null;
@@ -70,6 +281,8 @@ export function ProfileClient({
   );
   const [gender, setGender] = useState<string>(initialProfile?.gender || "");
   const [age, setAge] = useState<string>(initialProfile?.age?.toString() || "");
+  const [country, setCountry] = useState<string>(initialProfile?.country || "");
+  const [countryOpen, setCountryOpen] = useState(false);
   const [weight, setWeight] = useState<string>(initialProfile?.weight_kg?.toString() || "");
   const [height, setHeight] = useState<string>(initialProfile?.height_cm?.toString() || "");
   const [goal, setGoal] = useState<string>(initialProfile?.goal || "");
@@ -92,6 +305,7 @@ export function ProfileClient({
     if (initialProfile) {
       setGender(initialProfile.gender || "");
       setAge(initialProfile.age?.toString() || "");
+      setCountry(initialProfile.country || "");
       setWeight(initialProfile.weight_kg?.toString() || "");
       setHeight(initialProfile.height_cm?.toString() || "");
       setGoal(initialProfile.goal || "");
@@ -148,6 +362,7 @@ console.log("hello world");
           setProfile(profileData);
           setGender(profileData.gender || "");
           setAge(profileData.age?.toString() || "");
+          setCountry(profileData.country || "");
           setWeight(profileData.weight_kg?.toString() || "");
           setHeight(profileData.height_cm?.toString() || "");
           setGoal(profileData.goal || "");
@@ -214,6 +429,7 @@ console.log("hello world");
       // Parse demographic fields
       const genderValue = gender.trim() || null;
       const ageValue = age.trim() ? parseInt(age.trim(), 10) : null;
+      const countryValue = country.trim() || null;
       const weightValue = weight.trim() ? parseFloat(weight.trim()) : null;
       const heightValue = height.trim() ? parseInt(height.trim(), 10) : null;
       const goalValue = goal.trim() || null;
@@ -225,6 +441,7 @@ console.log("hello world");
           full_name: fullName,
           gender: genderValue,
           age: ageValue,
+          country: countryValue,
           weight_kg: weightValue,
           height_cm: heightValue,
           goal: goalValue,
@@ -248,6 +465,7 @@ console.log("hello world");
         // Update state variables to reflect saved values
         setGender(updatedProfile.gender || "");
         setAge(updatedProfile.age?.toString() || "");
+        setCountry(updatedProfile.country || "");
         setWeight(updatedProfile.weight_kg?.toString() || "");
         setHeight(updatedProfile.height_cm?.toString() || "");
         setGoal(updatedProfile.goal || "");
@@ -417,7 +635,7 @@ console.log("hello world");
         <div className="mb-8 sm:mb-12">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent pb-2">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-2 pb-2">
                 {t("profile.settings.title")}
               </h1>
               <p className="text-muted-foreground text-sm sm:text-base">
@@ -451,12 +669,21 @@ console.log("hello world");
               <div className="flex flex-col items-center sm:flex-row gap-8 pb-8 border-b-2 border-dashed">
                 <div className="relative group">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-full blur-xl opacity-30 group-hover:opacity-50 transition-opacity" />
-                  <Avatar className="relative h-32 w-32 sm:h-40 sm:w-40 border-4 border-primary/30 shadow-2xl ring-4 ring-primary/10 transition-all">
-                    <AvatarImage src={profile?.avatar_url} className="object-cover" />
-                    <AvatarFallback className="text-4xl sm:text-5xl bg-gradient-to-br from-primary via-primary to-secondary text-primary-foreground font-bold">
-                      {userInitials}
-                    </AvatarFallback>
-                  </Avatar>
+                    <Avatar className="relative h-32 w-32 sm:h-40 sm:w-40 border-4 border-primary/30 shadow-2xl ring-4 ring-primary/10 transition-all">
+                      <AvatarImage 
+                        src={
+                          profile?.gender === 'male' 
+                            ? '/male-avatar.jpg' 
+                            : profile?.gender === 'female' 
+                            ? '/female-avatar.jpg' 
+                            : '/male-avatar.jpg' // default to male if gender not set
+                        } 
+                        className="object-contain" 
+                      />
+                      <AvatarFallback className="text-4xl sm:text-5xl bg-gradient-to-br from-primary via-primary to-secondary text-primary-foreground font-bold">
+                        {userInitials}
+                      </AvatarFallback>
+                    </Avatar>
                   <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center cursor-pointer backdrop-blur-sm">
                     <div className="bg-white/20 backdrop-blur-md rounded-full p-3">
                       <Camera className="h-6 w-6 text-white" />
@@ -470,19 +697,6 @@ console.log("hello world");
                       <Mail className="h-4 w-4" /> {email}
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      toast({
-                        title: t("profile.comingsoon"),
-                        description: t("profile.avatarcomingsoon"),
-                      })
-                    }
-                  >
-                    <Camera className="h-3 w-3 mr-2" /> {t("profile.changephoto")}
-                  </Button>
                 </div>
               </div>
 
@@ -549,6 +763,63 @@ console.log("hello world");
                       className="pl-12 h-12 border-2"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="country" className="text-sm font-semibold flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-primary" /> {t("profile.country")} <span className="text-xs font-normal text-muted-foreground">({t("profile.optional")})</span>
+                  </Label>
+                  <Popover open={countryOpen} onOpenChange={setCountryOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={countryOpen}
+                        className="w-full h-12 border-2 justify-between font-normal"
+                      >
+                        {country ? (
+                          <span className="flex items-center gap-2 truncate">
+                            <span className="text-lg flex-shrink-0">{COUNTRIES.find((c) => c.code === country)?.flag}</span>
+                            <span className="truncate">{COUNTRIES.find((c) => c.code === country)?.name}</span>
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">{t("profile.country.placeholder")}</span>
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder={t("profile.country.search") || "Search country..."} />
+                        <CommandList>
+                          <CommandEmpty>{t("profile.country.notfound") || "No country found."}</CommandEmpty>
+                          <CommandGroup>
+                            {COUNTRIES.map((countryOption) => (
+                              <CommandItem
+                                key={countryOption.code}
+                                value={`${countryOption.name} ${countryOption.code}`}
+                                onSelect={() => {
+                                  setCountry(countryOption.code === country ? "" : countryOption.code);
+                                  setCountryOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    country === countryOption.code ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <span className="flex items-center gap-2">
+                                  <span className="text-lg">{countryOption.flag}</span>
+                                  <span>{countryOption.name}</span>
+                                </span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="space-y-2">

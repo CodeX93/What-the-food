@@ -1520,12 +1520,12 @@ export function FoodResultsClient() {
                     </div>
                   </div>
                   {analysis.description && (
-                    <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-primary/30 pl-3">
+                    <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-primary/30 pl-3 pt-2 pb-1">
                       {analysis.description}
                     </p>
                   )}
                   {analysis.tags && analysis.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 pb-2">
                       {analysis.tags.map((tag, index) => {
                         const palette = [
                           "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.4)] hover:bg-emerald-500 hover:text-white hover:border-emerald-600 transition-colors",
@@ -1537,7 +1537,7 @@ export function FoodResultsClient() {
                         return (
                           <span
                             key={`${tag}-${index}`}
-                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize tracking-tight ${colors}`}
+                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize tracking-tight  ${colors}`}
                           >
                             {tag}
                           </span>
@@ -1820,7 +1820,7 @@ export function FoodResultsClient() {
                       </div>
                     )}
                     {hasPremiumAccess && !insightsLoading && !insightsText && (
-                      <div className="text-center py-8">
+                      <div className="text-center py-6">
                         <p className="text-sm text-muted-foreground mb-4">
                           {profileComplete 
                             ? "Get personalized health insights tailored to your goals and profile."
@@ -1936,22 +1936,22 @@ export function FoodResultsClient() {
                         data-collapse-gap-in-pdf={insightsText ? "true" : undefined}
                       >
                         {parsedInsights.healthContext && (
-                          <div className="space-y-4">
+                          <div className="space-y-6">
                             {/* Profile Badges */}
                             <div className="flex flex-wrap items-center gap-2">
                               {parsedInsights.demographics && (
-                                <Badge variant="outline" className="text-xs px-3 py-1.5 bg-background/80 border-primary/30">
+                                <Badge variant="outline" className="text-xs px-3  bg-background/80 border-primary/30">
                                   {parsedInsights.demographics}
                                 </Badge>
                               )}
                               {profile?.goal && (
-                                <Badge variant="outline" className="text-xs px-3 py-1.5 bg-primary/10 border-primary/30 text-primary">
+                                <Badge variant="outline" className="text-xs px-3  bg-primary/10 border-primary/30 text-primary">
                                   <Target className="h-3 w-3 mr-1.5" />
                                   {profile.goal.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
                                 </Badge>
                               )}
                               {profile?.activity_level && (
-                                <Badge variant="outline" className="text-xs px-3 py-1.5 bg-primary/10 border-primary/30 text-primary">
+                                <Badge variant="outline" className="text-xs px-3 py-1 bg-primary/10 border-primary/30 text-primary">
                                   <Activity className="h-3 w-3 mr-1.5" />
                                   {profile.activity_level.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
                                 </Badge>

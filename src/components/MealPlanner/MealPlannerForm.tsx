@@ -248,7 +248,7 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
     await onGenerate(formData);
   };
 
-  const canProceedStep1 = endGoal && targetWeight && timeframe && exercisePreferences.length > 0;
+  const canProceedStep1 = endGoal && targetWeight && timeframe; // Exercise preferences are optional
   const canProceedStep2 = dietType && mealsPerDay;
   const canGenerate = canProceedStep1 && canProceedStep2;
 
@@ -256,10 +256,7 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
     <div className="w-full max-w-4xl mx-auto">
       {/* Progress Bar */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-2xl font-bold">{t("mealplanner.form.title")}</h2>
-          <span className="text-sm text-muted-foreground">{t("mealplanner.form.step")} {currentStep} {t("mealplanner.form.of")} {totalSteps}</span>
-        </div>
+        
         <Progress value={progress} className="h-2 bg-muted" />
       </div>
 
@@ -329,7 +326,7 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
 
               <div>
                 <Label className="text-base font-semibold mb-4 block">
-                  {t("mealplanner.form.exercise.title")}
+                  {t("mealplanner.form.exercise.title")} <span className="text-sm font-normal text-muted-foreground">({t("mealplanner.form.additional.optional")})</span>
                 </Label>
                 <p className="text-sm text-muted-foreground mb-3">
                   {t("mealplanner.form.exercise.description")}

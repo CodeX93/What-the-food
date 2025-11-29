@@ -7,10 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/hooks/use-translation";
-import { ArrowLeft, Loader2, Lock, ShieldCheck, Sparkles, ArrowRight, Calendar, BookOpen } from "lucide-react";
+import { ArrowLeft, Loader2, Lock, ShieldCheck, Sparkles, ArrowRight, Calendar, BookOpen, Trash2 } from "lucide-react";
 import { MealPlannerForm, MealPlannerFormData } from "./MealPlannerForm";
 import { MealPlanResults } from "./MealPlanResults";
 
@@ -103,6 +113,12 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
   const [isEditingMeals, setIsEditingMeals] = useState(false);
   const [lastFormData, setLastFormData] = useState<MealPlannerFormData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isMealPlanSaved, setIsMealPlanSaved] = useState(false);
+  const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [planToDelete, setPlanToDelete] = useState<string | null>(null);
+  const [deletingPlan, setDeletingPlan] = useState(false);
   const savedPlansRef = useRef<HTMLDivElement>(null);
 
   // Form state - keeping old state for backward compatibility with saved plans
@@ -345,6 +361,26 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
     });
   };
 
+  const handleSwapDays = (fromIndex: number, toIndex: number) => {
+    updateEditablePlan((draft) => {
+      if (!draft.weeklyMealPlan || fromIndex === toIndex) return;
+      const [movedDay] = draft.weeklyMealPlan.splice(fromIndex, 1);
+      draft.weeklyMealPlan.splice(toIndex, 0, movedDay);
+    });
+  };
+
+  const handleSwapMeals = (fromDayIndex: number, fromMealIndex: number, toDayIndex: number, toMealIndex: number) => {
+    updateEditablePlan((draft) => {
+      if (!draft.weeklyMealPlan) return;
+      const fromDay = draft.weeklyMealPlan[fromDayIndex];
+      const toDay = draft.weeklyMealPlan[toDayIndex];
+      if (!fromDay || !toDay || !fromDay.meals || !toDay.meals) return;
+      
+      const [movedMeal] = fromDay.meals.splice(fromMealIndex, 1);
+      toDay.meals.splice(toMealIndex, 0, movedMeal);
+    });
+  };
+
   const handleRemoveIngredient = (dayIndex: number, mealIndex: number, ingredientIndex: number) => {
     updateEditablePlan((draft) => {
       const foods = draft.weeklyMealPlan?.[dayIndex]?.meals?.[mealIndex]?.foods;
@@ -476,6 +512,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       }
 
       setMealPlan(data.mealPlan);
+      setIsMealPlanSaved(false); // Mark as unsaved when new plan is generated
       // Update form state for backward compatibility
       setTargetWeight(formData.targetWeight.toString());
       setTimeframeWeeks(formData.timeframe.toString());
@@ -558,6 +595,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
           .eq("id", data.id);
       }
 
+      setIsMealPlanSaved(true); // Mark as saved
       toast({
         title: t("mealplanner.plan.saved.title"),
         description: t("mealplanner.plan.saved.description"),
@@ -579,6 +617,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
     try {
       const loadedPlan = record.plan;
       setMealPlan(loadedPlan);
+      setIsMealPlanSaved(true); // Loaded plans are already saved
       setPlanTitle(record.title || `${t("mealplanner.saved.title")} - ${formatPlanDate(record.created_at)}`);
       setTargetWeight(record.target_weight ? record.target_weight.toString() : "");
       setTimeframeWeeks(record.timeframe_weeks ? record.timeframe_weeks.toString() : "");
@@ -596,6 +635,115 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       });
     }
   };
+
+  const handleDeletePlan = (planId: string) => {
+    setPlanToDelete(planId);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeletePlan = async () => {
+    if (!planToDelete || !userId) return;
+
+    setDeletingPlan(true);
+    try {
+      const { error } = await supabase
+        .from("meal_plans")
+        .delete()
+        .eq("id", planToDelete)
+        .eq("user_id", userId);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: t("mealplanner.plan.deleted.title") || "Meal plan deleted",
+        description: t("mealplanner.plan.deleted.description") || "The meal plan has been successfully deleted.",
+      });
+
+      // Reload saved plans list
+      await loadSavedPlans();
+
+      // If the deleted plan is currently being viewed, clear it
+      if (mealPlan && savedPlans.find(p => p.id === planToDelete)) {
+        setMealPlan(null);
+        setEditablePlan(null);
+        setIsEditingMeals(false);
+        setIsMealPlanSaved(false);
+      }
+    } catch (error) {
+      console.error("Failed to delete meal plan:", error);
+      toast({
+        title: t("mealplanner.plan.delete.error.title") || "Delete failed",
+        description: t("mealplanner.plan.delete.error.description") || "Could not delete the meal plan. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingPlan(false);
+      setShowDeleteConfirm(false);
+      setPlanToDelete(null);
+    }
+  };
+
+  const cancelDeletePlan = () => {
+    setShowDeleteConfirm(false);
+    setPlanToDelete(null);
+  };
+
+  // Handle navigation with unsaved changes warning
+  const handleNavigation = (path: string | null) => {
+    if (mealPlan && !isMealPlanSaved) {
+      setPendingNavigation(path);
+      setShowUnsavedWarning(true);
+    } else {
+      if (path) {
+        router.push(path as any);
+      } else {
+        // Clear plan
+        setMealPlan(null);
+        setEditablePlan(null);
+        setIsEditingMeals(false);
+        setIsMealPlanSaved(false);
+      }
+    }
+  };
+
+  const handleConfirmNavigation = () => {
+    setShowUnsavedWarning(false);
+    setIsMealPlanSaved(false); // Reset saved state
+    
+    if (pendingNavigation) {
+      router.push(pendingNavigation as any);
+    } else {
+      // Clear plan
+      setMealPlan(null);
+      setEditablePlan(null);
+      setIsEditingMeals(false);
+    }
+    
+    setPendingNavigation(null);
+  };
+
+  const handleCancelNavigation = () => {
+    setShowUnsavedWarning(false);
+    setPendingNavigation(null);
+  };
+
+  // Warn before page unload
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (mealPlan && !isMealPlanSaved) {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [mealPlan, isMealPlanSaved]);
 
   const displayPlan = isEditingMeals && editablePlan ? editablePlan : mealPlan;
 
@@ -642,7 +790,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
                 ))}
               </div>
               <div className="text-center">
-                <Button size="lg" className="px-8" onClick={() => router.push("/plans")}>
+                <Button size="lg" className="px-8" onClick={() => handleNavigation("/plans")}>
                   {t("mealplanner.premium.upgrade")} <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
                 <p className="text-sm text-muted-foreground mt-3">
@@ -668,7 +816,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
     <main className="flex-1 bg-green-50 dark:bg-background min-h-screen">
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-8">
-          <Button variant="ghost" onClick={() => router.push("/dashboard")} className="px-2">
+          <Button variant="ghost" onClick={() => handleNavigation("/dashboard")} className="px-2">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -743,7 +891,15 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
                         <Button 
                           variant="outline" 
                           size="sm" 
-                          onClick={() => router.push(`/meal-plan/${plan.id}`)}
+                          onClick={() => handleDeletePlan(plan.id)}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleNavigation(`/meal-plan/${plan.id}`)}
                         >
                           {t("mealplanner.saved.view")}
                         </Button>
@@ -776,6 +932,8 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
                 onAddIngredient={handleAddIngredient}
                 onMoveDayUp={handleMoveDayUp}
                 onMoveDayDown={handleMoveDayDown}
+                onSwapDays={handleSwapDays}
+                onSwapMeals={handleSwapMeals}
                 userFirstName={profile?.full_name ? profile.full_name.split(" ")[0] : null}
                 showShareButtons={true}
               />
@@ -795,11 +953,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
               </div>
               <div className="flex flex-wrap gap-3">
                 <Button
-                  onClick={() => {
-                    setMealPlan(null);
-                    setEditablePlan(null);
-                    setIsEditingMeals(false);
-                  }}
+                  onClick={() => handleNavigation(null)}
                   variant="outline"
                 >
                   {t("mealplanner.plan.create")}
@@ -839,6 +993,57 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Unsaved Changes Warning Dialog */}
+        <AlertDialog open={showUnsavedWarning} onOpenChange={setShowUnsavedWarning}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("mealplanner.unsaved.title") || "Unsaved Changes"}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("mealplanner.unsaved.description") || "You have an unsaved meal plan. Are you sure you want to leave? Your meal plan will be lost if you don't save it."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={handleCancelNavigation}>
+                {t("mealplanner.unsaved.cancel") || "Cancel"}
+              </AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmNavigation} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {t("mealplanner.unsaved.confirm") || "Leave Without Saving"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("mealplanner.plan.delete.title") || "Delete Meal Plan"}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t("mealplanner.plan.delete.description") || "Are you sure you want to delete this meal plan? This action cannot be undone."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={cancelDeletePlan} disabled={deletingPlan}>
+                {t("mealplanner.plan.delete.cancel") || "Cancel"}
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={confirmDeletePlan} 
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                disabled={deletingPlan}
+              >
+                {deletingPlan ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    {t("mealplanner.plan.delete.deleting") || "Deleting..."}
+                  </>
+                ) : (
+                  t("mealplanner.plan.delete.confirm") || "Delete"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </main>
   );

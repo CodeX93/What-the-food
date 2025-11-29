@@ -28,6 +28,7 @@ import {
   FileDown,
   Printer,
   Loader2,
+  GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
@@ -41,7 +42,8 @@ type MealPlanResultsProps = {
   isEditingMeals: boolean;
   onStartEditing: () => void;
   onCancelEditing: () => void;
-  onSaveEdits: () => void;
+  onSaveEdits: () => void | Promise<void>;
+  saving?: boolean;
   onMealNameChange: (dayIndex: number, mealIndex: number, value: string) => void;
   onIngredientChange: (
     dayIndex: number,
@@ -54,6 +56,8 @@ type MealPlanResultsProps = {
   onAddIngredient: (dayIndex: number, mealIndex: number) => void;
   onMoveDayUp?: (dayIndex: number) => void;
   onMoveDayDown?: (dayIndex: number) => void;
+  onSwapDays?: (fromIndex: number, toIndex: number) => void;
+  onSwapMeals?: (fromDayIndex: number, fromMealIndex: number, toDayIndex: number, toMealIndex: number) => void;
   userFirstName?: string | null;
   mealPlanId?: string;
   showShareButtons?: boolean;
@@ -119,12 +123,15 @@ export function MealPlanResults({
   onStartEditing,
   onCancelEditing,
   onSaveEdits,
+  saving = false,
   onMealNameChange,
   onIngredientChange,
   onRemoveIngredient,
   onAddIngredient,
   onMoveDayUp,
   onMoveDayDown,
+  onSwapDays,
+  onSwapMeals,
   userFirstName,
   mealPlanId,
   showShareButtons = false,
@@ -133,6 +140,10 @@ export function MealPlanResults({
   const { toast } = useToast();
   const planRef = useRef<HTMLDivElement>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [draggedDayIndex, setDraggedDayIndex] = useState<number | null>(null);
+  const [draggedMealIndex, setDraggedMealIndex] = useState<{ dayIndex: number; mealIndex: number } | null>(null);
+  const [dragOverDayIndex, setDragOverDayIndex] = useState<number | null>(null);
+  const [dragOverMealIndex, setDragOverMealIndex] = useState<{ dayIndex: number; mealIndex: number } | null>(null);
   const dailyCalorieTarget = safeNumber(plan?.dailyCalorieTarget);
   const macroDistribution = plan?.macroDistribution || {
     protein_g: 0,
@@ -295,6 +306,88 @@ export function MealPlanResults({
     window.print();
   };
 
+  // Day drag handlers
+  const handleDayDragStart = (e: React.DragEvent, dayIndex: number) => {
+    if (!isEditingMeals) return;
+    setDraggedDayIndex(dayIndex);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", `day-${dayIndex}`);
+  };
+
+  const handleDayDragOver = (e: React.DragEvent, dayIndex: number) => {
+    if (!isEditingMeals || draggedDayIndex === null) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverDayIndex(dayIndex);
+  };
+
+  const handleDayDragLeave = () => {
+    setDragOverDayIndex(null);
+  };
+
+  const handleDayDrop = (e: React.DragEvent, targetDayIndex: number) => {
+    if (!isEditingMeals || draggedDayIndex === null || draggedDayIndex === targetDayIndex) {
+      setDraggedDayIndex(null);
+      setDragOverDayIndex(null);
+      return;
+    }
+    e.preventDefault();
+    if (onSwapDays) {
+      onSwapDays(draggedDayIndex, targetDayIndex);
+    }
+    setDraggedDayIndex(null);
+    setDragOverDayIndex(null);
+  };
+
+  const handleDayDragEnd = () => {
+    setDraggedDayIndex(null);
+    setDragOverDayIndex(null);
+  };
+
+  // Meal drag handlers
+  const handleMealDragStart = (e: React.DragEvent, dayIndex: number, mealIndex: number) => {
+    if (!isEditingMeals) return;
+    setDraggedMealIndex({ dayIndex, mealIndex });
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", `meal-${dayIndex}-${mealIndex}`);
+  };
+
+  const handleMealDragOver = (e: React.DragEvent, dayIndex: number, mealIndex: number) => {
+    if (!isEditingMeals || draggedMealIndex === null) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverMealIndex({ dayIndex, mealIndex });
+  };
+
+  const handleMealDragLeave = () => {
+    setDragOverMealIndex(null);
+  };
+
+  const handleMealDrop = (e: React.DragEvent, targetDayIndex: number, targetMealIndex: number) => {
+    if (!isEditingMeals || draggedMealIndex === null) return;
+    e.preventDefault();
+    
+    const { dayIndex: fromDayIndex, mealIndex: fromMealIndex } = draggedMealIndex;
+    
+    if (fromDayIndex === targetDayIndex && fromMealIndex === targetMealIndex) {
+      setDraggedMealIndex(null);
+      setDragOverMealIndex(null);
+      return;
+    }
+
+    if (onSwapMeals) {
+      onSwapMeals(fromDayIndex, fromMealIndex, targetDayIndex, targetMealIndex);
+    }
+    
+    setDraggedMealIndex(null);
+    setDragOverMealIndex(null);
+  };
+
+  const handleMealDragEnd = () => {
+    setDraggedMealIndex(null);
+    setDragOverMealIndex(null);
+  };
+
   return (
     <div className="space-y-8" ref={planRef}>
       {showShareButtons && (
@@ -367,9 +460,22 @@ export function MealPlanResults({
                   <X className="mr-2 h-4 w-4" />
                   {t("mealplanner.results.cancel")}
                 </Button>
-                <Button className="bg-white text-primary hover:bg-white/90" onClick={onSaveEdits}>
-                  <Save className="mr-2 h-4 w-4" />
-                  {t("mealplanner.results.save")}
+                <Button 
+                  className="bg-white text-primary hover:bg-white/90" 
+                  onClick={onSaveEdits}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {t("mealplanner.results.saving") || "Saving..."}
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      {t("mealplanner.results.save")}
+                    </>
+                  )}
                 </Button>
               </>
             )}
@@ -522,45 +628,43 @@ export function MealPlanResults({
         <div className="space-y-5">
           {visibleDays.map((dayPlan, index) => {
             const dayIdx = weekStartIndex + index;
+            const isDayDragged = draggedDayIndex === dayIdx;
+            const isDayDragOver = dragOverDayIndex === dayIdx;
+            
             return (
-              <Card key={`${dayPlan.day}-${dayIdx}`} className="shadow-md border-muted/40">
+              <Card 
+                key={`${dayPlan.day}-${dayIdx}`} 
+                className={cn(
+                  "shadow-md border-muted/40 transition-all",
+                  isDayDragged && "opacity-50",
+                  isDayDragOver && "border-primary ring-2 ring-primary/20"
+                )}
+                draggable={isEditingMeals}
+                onDragStart={(e) => handleDayDragStart(e, dayIdx)}
+                onDragOver={(e) => handleDayDragOver(e, dayIdx)}
+                onDragLeave={handleDayDragLeave}
+                onDrop={(e) => handleDayDrop(e, dayIdx)}
+                onDragEnd={handleDayDragEnd}
+              >
               <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <div className="flex-1">
+                <div className="flex-1 flex items-center gap-2">
+                  {isEditingMeals && (
+                    <div className="cursor-move text-muted-foreground hover:text-foreground">
+                      <GripVertical className="h-5 w-5" />
+                    </div>
+                  )}
                   <CardTitle>{safeText(dayPlan.day, `Day ${dayIdx + 1}`)}</CardTitle>
                 </div>
                 <div className="flex items-center gap-2">
-                  {isEditingMeals && onMoveDayUp && onMoveDayDown && (
-                    <>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onMoveDayUp(dayIdx)}
-                        disabled={dayIdx === 0}
-                        className="h-8 w-8"
-                        title="Move day up"
-                      >
-                        <ChevronLeft className="h-4 w-4 rotate-90" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onMoveDayDown(dayIdx)}
-                        disabled={dayIdx >= (plan.weeklyMealPlan?.length || 0) - 1}
-                        className="h-8 w-8"
-                        title="Move day down"
-                      >
-                        <ChevronRight className="h-4 w-4 rotate-90" />
-                      </Button>
-                    </>
-                  )}
                   <Badge variant="secondary">Day {dayIdx + 1}</Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {safeArray(dayPlan.meals).map((meal, mealIdx) => {
                   const style = getMealStyle(meal?.type);
+                  const isMealDragged = draggedMealIndex?.dayIndex === dayIdx && draggedMealIndex?.mealIndex === mealIdx;
+                  const isMealDragOver = dragOverMealIndex?.dayIndex === dayIdx && dragOverMealIndex?.mealIndex === mealIdx;
+                  
                   return (
                     <div
                       key={`${meal?.type}-${mealIdx}`}
@@ -569,8 +673,23 @@ export function MealPlanResults({
                         style.bg,
                         style.border,
                         isEditingMeals && "ring-2 ring-offset-2 ring-offset-background ring-primary/50",
+                        isMealDragged && "opacity-50",
+                        isMealDragOver && "ring-4 ring-primary/30"
                       )}
+                      draggable={isEditingMeals}
+                      onDragStart={(e) => handleMealDragStart(e, dayIdx, mealIdx)}
+                      onDragOver={(e) => handleMealDragOver(e, dayIdx, mealIdx)}
+                      onDragLeave={handleMealDragLeave}
+                      onDrop={(e) => handleMealDrop(e, dayIdx, mealIdx)}
+                      onDragEnd={handleMealDragEnd}
                     >
+                      {isEditingMeals && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="cursor-move text-muted-foreground hover:text-foreground">
+                            <GripVertical className="h-4 w-4" />
+                          </div>
+                        </div>
+                      )}
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex items-center gap-3">
                           <span

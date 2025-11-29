@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage, type Language } from "@/contexts/LanguageContext";
-import { Globe, Shield, Lock, Eye, EyeOff } from "lucide-react";
+import { Globe, Shield, Lock, Eye, EyeOff, LogOut } from "lucide-react";
 
 export function SettingsClient() {
   const router = useRouter();
@@ -27,6 +27,7 @@ export function SettingsClient() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -122,6 +123,58 @@ export function SettingsClient() {
       });
     } finally {
       setChangingPassword(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      // Clear client session first
+      const { error: clientError } = await supabase.auth.signOut({ scope: "local" });
+      if (clientError && clientError.message !== "Auth session missing!") {
+        throw clientError;
+      }
+
+      // Sign out from server session
+      const response = await fetch("/api/auth/signout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+      });
+      if (!response.ok && response.status !== 401) {
+        const data = await response.json().catch(() => null);
+        const message = data?.error || "Failed to clear session.";
+        throw new Error(message);
+      }
+
+      toast({
+        title: t("settings.logout.success") || "Logged out",
+        description: t("settings.logout.success.description") || "You have been successfully logged out.",
+      });
+
+      router.push("/");
+      router.refresh();
+    } catch (error: any) {
+      if (error?.message === "Auth session missing!") {
+        router.push("/");
+        router.refresh();
+        toast({
+          title: t("settings.logout.success") || "Logged out",
+          description: t("settings.logout.success.description") || "You have been successfully logged out.",
+        });
+        return;
+      }
+
+      console.error("Error logging out:", error);
+      toast({
+        title: t("settings.logout.error") || "Logout failed",
+        description: error?.message || t("settings.logout.error.description") || "Could not log out. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoggingOut(false);
     }
   };
 
@@ -276,6 +329,36 @@ export function SettingsClient() {
                 <>
                   <Lock className="h-4 w-4 mr-2" />
                   {t("settings.password.change")}
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <LogOut className="h-5 w-5" />
+              <CardTitle>{t("settings.logout.title")}</CardTitle>
+            </div>
+            <CardDescription>{t("settings.logout.description")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={handleLogout} 
+              disabled={loggingOut} 
+              variant="destructive"
+              className="w-full"
+            >
+              {loggingOut ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  {t("settings.logout.loggingOut") || "Logging out..."}
+                </>
+              ) : (
+                <>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  {t("settings.logout.button") || "Log Out"}
                 </>
               )}
             </Button>
