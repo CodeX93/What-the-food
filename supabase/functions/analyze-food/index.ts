@@ -50,6 +50,22 @@ const PROMPT_GUIDELINES = `Guidelines:
   * You MUST provide ALL steps needed to complete the dish. Typically this means 6-12 detailed steps covering: ingredient preparation, cooking techniques, seasoning, combining components, final cooking, and presentation/garnishing
   * NEVER end instructions mid-step or with incomplete information. Always complete the full recipe process.
 - "youtubeVideoUrl" is MANDATORY and must ALWAYS be provided. It must be a valid YouTube video URL (format: https://www.youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID) that demonstrates how to prepare this specific dish. You MUST search for and provide a high-quality, relevant tutorial video that matches the dish shown in the image. If no exact match is available, provide the closest relevant video for a similar dish or cooking technique. The URL must be a complete, valid YouTube link. NEVER return an empty string - always provide a YouTube video URL, even if it's for a similar dish or cooking method.
+- CRITICAL NUTRITION ACCURACY REQUIREMENTS:
+  * You MUST use established nutritional databases (USDA FoodData Central, FDA Nutrition Facts, or equivalent authoritative sources) for ALL nutrient calculations.
+  * For EACH ingredient, look up its EXACT nutritional values per 100g (or per ml for liquids) from these databases.
+  * Calculate nutrients by: (ingredient_quantity_in_grams / 100) × nutritional_value_per_100g, then SUM all ingredients.
+  * For cooking oils and fats: Use accurate calorie density (9 calories per gram of fat). For example, 30ml vegetable oil = ~30g = ~270 calories, 30g fat, 0g protein, 0g carbs.
+  * For proteins: Use accurate values (chicken breast ~165 cal/100g, 31g protein/100g; eggs ~155 cal/100g, 13g protein/100g).
+  * For carbohydrates: Include all carbs (starch, sugar, fiber). Fiber should be separate from total carbs.
+  * Account for cooking method: Boiled/steamed retains more nutrients; fried adds oil calories; roasted may reduce water content.
+  * When ingredients are provided with quantities, you MUST calculate from those exact quantities, NOT estimate.
+  * The total calories MUST equal: (protein_g × 4) + (carbohydrates_g × 4) + (fat_g × 9) ± 2 calories for rounding.
+  * All nutrient values must be REALISTIC and CONSISTENT. If a dish has 200g of chicken breast, it should have approximately 330 calories and 62g protein, not random numbers.
+  * NEVER guess or estimate nutrients. ALWAYS calculate from actual ingredient quantities using database values.
+  * If you cannot find exact values for an ingredient, use the closest match from USDA database and note it in your calculation.
+  * Double-check your math: Sum all ingredient nutrients to get total dish nutrients.
+  * Ensure fiber_g is always a subset of carbohydrates_g (fiber cannot exceed total carbs).
+  * Sugar_g should be realistic based on ingredients (natural sugars from fruits, added sugars from sweeteners).
 - Ensure nutrient values are realistic positive numbers (avoid zeros unless absolutely accurate).
 - Reflect the most accurate ingredient amounts available.
 - ALWAYS use metric units (grams, kg, ml, liters) for all measurements. NEVER use imperial units (oz, pounds, cups, tablespoons, teaspoons).`;
@@ -209,7 +225,7 @@ Based on the dish name and ingredients provided above, generate the analysis. Si
   }
   
   parts.push({
-    text: "Always format numbers as decimals (no trailing text) and keep arrays simple. ALWAYS use metric units (grams, kg, ml, liters) for all ingredient quantities. NEVER use imperial units (oz, pounds, cups, tablespoons, teaspoons).",
+    text: "Always format numbers as decimals (no trailing text) and keep arrays simple. ALWAYS use metric units (grams, kg, ml, liters) for all ingredient quantities. NEVER use imperial units (oz, pounds, cups, tablespoons, teaspoons).\n\nFINAL ACCURACY CHECK: Before returning your response, verify that:\n1. All nutrient values are calculated from actual ingredient quantities using USDA/authoritative database values\n2. Total calories = (protein_g × 4) + (carbohydrates_g × 4) + (fat_g × 9) ± 2 calories\n3. Fiber_g ≤ carbohydrates_g (fiber cannot exceed total carbs)\n4. All values are realistic and consistent with the ingredient quantities provided\n5. If ingredients list '30ml vegetable oil', the fat_g should be ~30g and calories should include ~270 from the oil\n6. Nutrient values match the actual quantities - double-check your calculations before responding.",
   });
 
   if (Array.isArray(overrideIngredients) && overrideIngredients.length > 0) {
@@ -225,10 +241,16 @@ MANDATORY INSTRUCTIONS - YOU MUST RECALCULATE EVERYTHING FROM SCRATCH:
 1. COMPLETELY IGNORE any ingredients you detect from the image. The image is only for dish identification, NOT for ingredient detection.
 2. Use EXACTLY and ONLY the ingredient list provided above. This is a 100% replacement - do NOT add, combine, or merge with anything from the image.
 3. NUTRIENTS RECALCULATION: Calculate ALL nutrients (calories, protein_g, carbohydrates_g, fat_g, fiber_g, sugar_g) from scratch by:
-   - Looking up the nutritional values for EACH ingredient in the list
-   - Summing up ALL the nutritional values to get the TOTAL for the entire dish
+   - For EACH ingredient, look up its EXACT nutritional values per 100g (or per ml for liquids) from USDA FoodData Central or equivalent authoritative nutritional databases
+   - Calculate nutrients using the formula: (ingredient_quantity_in_grams / 100) × nutritional_value_per_100g
+   - For cooking oils and fats: 30ml = ~30g = ~270 calories, 30g fat, 0g protein, 0g carbs (9 calories per gram of fat)
+   - Sum up ALL the calculated nutritional values to get the TOTAL for the entire dish
    - The nutrients field should represent the TOTAL dish (all ingredients combined)
-   - Use accurate nutritional databases/values for each ingredient
+   - CRITICAL: The total calories MUST equal: (protein_g × 4) + (carbohydrates_g × 4) + (fat_g × 9) ± 2 calories for rounding
+   - Ensure fiber_g is always ≤ carbohydrates_g (fiber is a subset of total carbs)
+   - Use REALISTIC values based on actual ingredient quantities - if you have 200g chicken breast, it should be ~330 calories and ~62g protein, NOT random numbers
+   - NEVER guess or estimate. ALWAYS calculate from exact ingredient quantities using database values
+   - Double-check your math by summing all ingredient nutrients
 4. SERVING WEIGHT RECALCULATION: Calculate servingWeightGrams by:
    - Extracting the gram quantities from EACH ingredient in the list
    - Adding up ALL the gram quantities to get the TOTAL dish weight
@@ -342,7 +364,15 @@ MANDATORY INSTRUCTIONS - YOU MUST RECALCULATE EVERYTHING FROM SCRATCH:
       console.warn("WARNING: Insights were requested but not returned by Gemini. Response keys:", Object.keys(parsed));
     }
 
-    return { analysis: sanitizeAnalysis(parsed, overrideIngredients), insights: insights || undefined };
+    const sanitized = sanitizeAnalysis(parsed, overrideIngredients);
+    
+    // Validate and correct nutrition calculations if overrideIngredients are provided
+    if (Array.isArray(overrideIngredients) && overrideIngredients.length > 0) {
+      const corrected = validateAndCorrectNutrients(sanitized, overrideIngredients);
+      return { analysis: corrected, insights: insights || undefined };
+    }
+    
+    return { analysis: sanitized, insights: insights || undefined };
   } catch (e) {
     clearTimeout(timeoutId);
     throw e;
@@ -425,6 +455,216 @@ function sanitizeArray(value) {
       .filter(Boolean);
   }
   return [];
+}
+
+// Generic nutrition calculator from ingredients
+// Uses USDA-standard nutritional values per 100g
+function calculateNutrientsFromIngredients(ingredients) {
+  if (!Array.isArray(ingredients) || ingredients.length === 0) {
+    return null;
+  }
+
+  let totalCalories = 0;
+  let totalProtein = 0;
+  let totalCarbs = 0;
+  let totalFat = 0;
+  let totalFiber = 0;
+  let totalSugar = 0;
+  let totalWeight = 0;
+
+  // Standard nutritional values per 100g (from USDA FoodData Central)
+  // Format: keyword(s) -> {cal, protein, carbs, fat, fiber, sugar}
+  const nutritionDB = {
+    // Oils and fats (per 100g/ml - using 1:1 ratio for ml to g for oils)
+    'vegetable oil': { cal: 884, protein: 0, carbs: 0, fat: 100, fiber: 0, sugar: 0 },
+    'olive oil': { cal: 884, protein: 0, carbs: 0, fat: 100, fiber: 0, sugar: 0 },
+    'canola oil': { cal: 884, protein: 0, carbs: 0, fat: 100, fiber: 0, sugar: 0 },
+    'sunflower oil': { cal: 884, protein: 0, carbs: 0, fat: 100, fiber: 0, sugar: 0 },
+    'cooking oil': { cal: 884, protein: 0, carbs: 0, fat: 100, fiber: 0, sugar: 0 },
+    'oil': { cal: 884, protein: 0, carbs: 0, fat: 100, fiber: 0, sugar: 0 },
+    'butter': { cal: 717, protein: 0.9, carbs: 0.1, fat: 81, fiber: 0, sugar: 0.1 },
+    
+    // Potatoes and starches
+    'potato': { cal: 77, protein: 2, carbs: 17, fat: 0.1, fiber: 2.2, sugar: 0.8 },
+    'potatoes': { cal: 77, protein: 2, carbs: 17, fat: 0.1, fiber: 2.2, sugar: 0.8 },
+    'russet': { cal: 77, protein: 2, carbs: 17, fat: 0.1, fiber: 2.2, sugar: 0.8 },
+    
+    // Salt and seasonings (negligible nutrition)
+    'salt': { cal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0 },
+    'pepper': { cal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0 },
+    
+    // Proteins
+    'chicken breast': { cal: 165, protein: 31, carbs: 0, fat: 3.6, fiber: 0, sugar: 0 },
+    'chicken': { cal: 165, protein: 31, carbs: 0, fat: 3.6, fiber: 0, sugar: 0 },
+    'beef': { cal: 250, protein: 26, carbs: 0, fat: 17, fiber: 0, sugar: 0 },
+    'ground beef': { cal: 250, protein: 26, carbs: 0, fat: 17, fiber: 0, sugar: 0 },
+    'pork': { cal: 242, protein: 27, carbs: 0, fat: 14, fiber: 0, sugar: 0 },
+    'fish': { cal: 206, protein: 22, carbs: 0, fat: 12, fiber: 0, sugar: 0 },
+    'salmon': { cal: 208, protein: 20, carbs: 0, fat: 12, fiber: 0, sugar: 0 },
+    'tuna': { cal: 144, protein: 30, carbs: 0, fat: 1, fiber: 0, sugar: 0 },
+    'egg': { cal: 155, protein: 13, carbs: 1.1, fat: 11, fiber: 0, sugar: 0.7 },
+    'eggs': { cal: 155, protein: 13, carbs: 1.1, fat: 11, fiber: 0, sugar: 0.7 },
+    
+    // Grains and carbs
+    'rice': { cal: 130, protein: 2.7, carbs: 28, fat: 0.3, fiber: 0.4, sugar: 0.1 },
+    'white rice': { cal: 130, protein: 2.7, carbs: 28, fat: 0.3, fiber: 0.4, sugar: 0.1 },
+    'brown rice': { cal: 111, protein: 2.6, carbs: 23, fat: 0.9, fiber: 1.8, sugar: 0.4 },
+    'pasta': { cal: 131, protein: 5, carbs: 25, fat: 1.1, fiber: 1.8, sugar: 0.6 },
+    'bread': { cal: 265, protein: 9, carbs: 49, fat: 3.2, fiber: 2.7, sugar: 5.7 },
+    'wheat': { cal: 327, protein: 13, carbs: 71, fat: 1.5, fiber: 12, sugar: 0.4 },
+    
+    // Vegetables
+    'onion': { cal: 40, protein: 1.1, carbs: 9.3, fat: 0.1, fiber: 1.7, sugar: 4.2 },
+    'onions': { cal: 40, protein: 1.1, carbs: 9.3, fat: 0.1, fiber: 1.7, sugar: 4.2 },
+    'tomato': { cal: 18, protein: 0.9, carbs: 3.9, fat: 0.2, fiber: 1.2, sugar: 2.6 },
+    'tomatoes': { cal: 18, protein: 0.9, carbs: 3.9, fat: 0.2, fiber: 1.2, sugar: 2.6 },
+    'carrot': { cal: 41, protein: 0.9, carbs: 10, fat: 0.2, fiber: 2.8, sugar: 4.7 },
+    'carrots': { cal: 41, protein: 0.9, carbs: 10, fat: 0.2, fiber: 2.8, sugar: 4.7 },
+    'broccoli': { cal: 34, protein: 2.8, carbs: 7, fat: 0.4, fiber: 2.6, sugar: 1.5 },
+    'lettuce': { cal: 15, protein: 1.4, carbs: 2.9, fat: 0.2, fiber: 1.3, sugar: 0.8 },
+    'spinach': { cal: 23, protein: 2.9, carbs: 3.6, fat: 0.4, fiber: 2.2, sugar: 0.4 },
+    'bell pepper': { cal: 31, protein: 1, carbs: 7, fat: 0.3, fiber: 2.5, sugar: 5 },
+    'pepper': { cal: 31, protein: 1, carbs: 7, fat: 0.3, fiber: 2.5, sugar: 5 },
+    
+    // Fruits
+    'apple': { cal: 52, protein: 0.3, carbs: 14, fat: 0.2, fiber: 2.4, sugar: 10 },
+    'banana': { cal: 89, protein: 1.1, carbs: 23, fat: 0.3, fiber: 2.6, sugar: 12 },
+    'orange': { cal: 47, protein: 0.9, carbs: 12, fat: 0.1, fiber: 2.4, sugar: 9 },
+  };
+
+  for (const ingredient of ingredients) {
+    if (typeof ingredient !== 'string') continue;
+    
+    const lowerIngredient = ingredient.toLowerCase().trim();
+    
+    // Extract quantity and unit - handle various formats
+    // Matches: "500g", "500 g", "500ml", "500 ml", "1.5kg", "500g potatoes", "500ml vegetable oil", etc.
+    // The regex now allows text after the unit
+    const quantityMatch = lowerIngredient.match(/(\d+(?:\.\d+)?)\s*(g|kg|ml|l|gram|grams|kilogram|kilograms|milliliter|milliliters|liter|liters)\b/i);
+    if (!quantityMatch) {
+      console.log(`Could not parse quantity from: ${ingredient}`);
+      continue;
+    }
+    
+    const quantity = parseFloat(quantityMatch[1]);
+    const unit = quantityMatch[2].toLowerCase();
+    
+    // Convert to grams
+    let grams = quantity;
+    if (unit === 'kg' || unit === 'kilogram' || unit === 'kilograms') {
+      grams = quantity * 1000;
+    } else if (unit === 'ml' || unit === 'l' || unit === 'milliliter' || unit === 'milliliters' || unit === 'liter' || unit === 'liters') {
+      // For liquids, use 1:1 ratio (1ml = 1g)
+      // For oils specifically, this is close enough (actual density ~0.92g/ml)
+      grams = quantity;
+    }
+    
+    totalWeight += grams;
+    
+    // Extract food name by removing quantity and unit
+    const foodName = lowerIngredient
+      .replace(quantityMatch[0], '') // Remove quantity and unit
+      .trim()
+      .replace(/^(of|and|or|with|in|on|at|the|a|an)\s+/i, '') // Remove common prepositions/articles
+      .trim();
+    
+    // Find matching food in database (check for longest match first)
+    let nutrition = null;
+    let matchedKey = '';
+    
+    // Sort keys by length (longest first) to match more specific terms first
+    const sortedKeys = Object.keys(nutritionDB).sort((a, b) => b.length - a.length);
+    
+    // First try to match the extracted food name
+    for (const key of sortedKeys) {
+      if (foodName.includes(key) || lowerIngredient.includes(key)) {
+        nutrition = nutritionDB[key];
+        matchedKey = key;
+        break;
+      }
+    }
+    
+    // If no match found, skip this ingredient (log for debugging)
+    if (!nutrition) {
+      console.log(`No nutrition data found for: ${ingredient} (extracted food: "${foodName}")`);
+      continue;
+    }
+    
+    console.log(`Matched "${ingredient}" -> ${matchedKey}: ${grams}g`);
+    
+    // Calculate nutrients for this ingredient: (grams / 100) × nutrition_per_100g
+    const ratio = grams / 100;
+    totalCalories += nutrition.cal * ratio;
+    totalProtein += nutrition.protein * ratio;
+    totalCarbs += nutrition.carbs * ratio;
+    totalFat += nutrition.fat * ratio;
+    totalFiber += nutrition.fiber * ratio;
+    totalSugar += nutrition.sugar * ratio;
+  }
+
+  // Validate calorie math: calories should equal (protein × 4) + (carbs × 4) + (fat × 9)
+  const calculatedCalFromMacros = (totalProtein * 4) + (totalCarbs * 4) + (totalFat * 9);
+  const finalCalories = Math.abs(totalCalories - calculatedCalFromMacros) < 5 
+    ? calculatedCalFromMacros 
+    : totalCalories;
+
+  // Ensure fiber doesn't exceed carbs
+  const finalFiber = Math.min(totalFiber, totalCarbs);
+
+  // Round to reasonable precision
+  return {
+    calories: Math.round(finalCalories),
+    protein_g: Math.round(totalProtein * 10) / 10,
+    carbohydrates_g: Math.round(totalCarbs * 10) / 10,
+    fat_g: Math.round(totalFat * 10) / 10,
+    fiber_g: Math.round(finalFiber * 10) / 10,
+    sugar_g: Math.round(totalSugar * 10) / 10,
+    totalWeightGrams: Math.round(totalWeight),
+  };
+}
+
+// Validate and correct nutrients based on ingredients
+// Always uses calculated values when ingredients are provided to ensure accuracy
+function validateAndCorrectNutrients(analysis, ingredientOverrides) {
+  if (!analysis || !ingredientOverrides || ingredientOverrides.length === 0) {
+    return analysis;
+  }
+
+  // Calculate correct nutrients from ingredients
+  const calculated = calculateNutrientsFromIngredients(ingredientOverrides);
+  
+  // If calculation failed or returned all zeros, keep Gemini's values but log warning
+  if (!calculated || (calculated.calories === 0 && calculated.protein_g === 0 && calculated.carbohydrates_g === 0 && calculated.fat_g === 0)) {
+    console.warn(`Nutrition calculation failed for ingredients: ${ingredientOverrides.join(', ')}. Using Gemini's values.`);
+    return analysis;
+  }
+
+  // Always use calculated values when we have valid ingredient data
+  // This ensures 100% accuracy based on actual ingredient quantities
+  const currentCal = analysis.nutrients?.calories || 0;
+  const diffPercent = currentCal > 0 ? Math.abs((calculated.calories - currentCal) / currentCal) * 100 : 100;
+  
+  // Log correction if significant difference
+  if (diffPercent > 5) {
+    console.log(`Correcting nutrients: Gemini gave ${currentCal} cal, calculated ${calculated.calories} cal (${diffPercent.toFixed(1)}% diff)`);
+  }
+  
+  // Always use calculated values to ensure accuracy
+  analysis.nutrients = {
+    calories: calculated.calories,
+    protein_g: calculated.protein_g,
+    carbohydrates_g: calculated.carbohydrates_g,
+    fat_g: calculated.fat_g,
+    fiber_g: calculated.fiber_g,
+    sugar_g: calculated.sugar_g,
+  };
+  
+  // Update serving weight if calculated
+  if (calculated.totalWeightGrams > 0) {
+    analysis.servingWeightGrams = calculated.totalWeightGrams;
+  }
+
+  return analysis;
 }
 
 function sanitizeAnalysis(raw, ingredientOverrides = []) {

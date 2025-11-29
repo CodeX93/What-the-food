@@ -105,6 +105,7 @@ export function FoodResultsClient() {
   const [imageUrl, setImageUrl] = useState<string>("");
   const [imagePath, setImagePath] = useState<string>("");
   const [analysis, setAnalysis] = useState<FoodAnalysis | null>(null);
+  const [originalAnalysis, setOriginalAnalysis] = useState<FoodAnalysis | null>(null);
   // These will be populated from profile automatically
   const [profileAge, setProfileAge] = useState<number | null>(null);
   const [profileGender, setProfileGender] = useState<string | null>(null);
@@ -699,6 +700,45 @@ export function FoodResultsClient() {
       return;
     }
 
+    // Check if ingredients match the original - if so, restore original analysis
+    if (originalAnalysis && originalAnalysis.ingredients) {
+      const originalIngredients = originalAnalysis.ingredients
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .sort()
+        .join("\n");
+      const currentIngredients = cleaned
+        .sort()
+        .join("\n");
+      
+      if (originalIngredients === currentIngredients) {
+        // Ingredients match original - restore original analysis
+        setAnalysis(JSON.parse(JSON.stringify(originalAnalysis)));
+        applyServings(servings);
+        setIngredientInput((originalAnalysis.ingredients ?? []).join("\n"));
+        setIngredientEditorOpen(false);
+        setInsightsText(originalAnalysis.insights || "");
+        setUpgradeRequired(false);
+        
+        if (id) {
+          try {
+            await (supabase as any)
+              .from("food_scans")
+              .update({ result_json: originalAnalysis })
+              .eq("id", id);
+          } catch (err) {
+            console.error("Failed to persist restored analysis", err);
+          }
+        }
+        
+        toast({
+          title: "Ingredients restored",
+          description: "Original nutrition values have been restored.",
+        });
+        return;
+      }
+    }
+
     setUpdatingIngredients(true);
     setAnalysisRefreshing(true);
     try {
@@ -1059,6 +1099,10 @@ export function FoodResultsClient() {
         setSavedServings(scanRecord.serving || 1);
         const loadedAnalysis = (scanRecord.result_json as FoodAnalysis) || null;
         setAnalysis(loadedAnalysis);
+        // Store the original analysis to restore if user reverts changes
+        if (loadedAnalysis) {
+          setOriginalAnalysis(JSON.parse(JSON.stringify(loadedAnalysis)));
+        }
         if (loadedAnalysis?.insights) {
           setInsightsText(loadedAnalysis.insights);
         }
