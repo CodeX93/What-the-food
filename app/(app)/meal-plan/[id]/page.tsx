@@ -18,7 +18,7 @@ export default async function MealPlanPage({
 
   const { data: mealPlanData, error } = await (supabase as any)
     .from("meal_plans")
-    .select("*")
+    .select("id, user_id, title, goal, target_weight, timeframe_weeks, plan, created_at, language")
     .eq("id", params.id)
     .eq("user_id", session.user.id)
     .single();
@@ -36,6 +36,7 @@ export default async function MealPlanPage({
       targetWeight={mealPlanData.target_weight}
       timeframeWeeks={mealPlanData.timeframe_weeks}
       createdAt={mealPlanData.created_at}
+      language={mealPlanData.language || 'en'}
     />
   );
 }

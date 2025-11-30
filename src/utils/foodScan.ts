@@ -122,6 +122,7 @@ export async function saveScanHistory(params: {
     image_url: params.imageUrl, // Store as fallback, but we'll generate fresh URLs when displaying
     serving: params.serving,
     result_json: params.result as any,
+    language: 'en', // All new scans are generated in English
   }).select("id").single();
   if (error) throw error;
   return data.id as string;

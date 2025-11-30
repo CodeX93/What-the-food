@@ -20,6 +20,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/hooks/use-translation";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { ArrowLeft, Loader2, Lock, ShieldCheck, Sparkles, ArrowRight, Calendar, BookOpen, Trash2 } from "lucide-react";
 import { MealPlannerForm, MealPlannerFormData } from "./MealPlannerForm";
 import { MealPlanResults } from "./MealPlanResults";
@@ -76,6 +77,7 @@ export interface MealPlan {
 }
 
 interface SavedMealPlanRecord {
+  language?: string;
   id: string;
   title: string | null;
   goal: string | null;
@@ -100,6 +102,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
   const router = useRouter();
   const { toast } = useToast();
   const t = useTranslation();
+  const { language: userLanguage } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [profile, setProfile] = useState<any>(null);
@@ -196,6 +199,71 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
     setOtherTodos(otherTodos.filter((_, i) => i !== index));
   };
 
+  // Helper function to translate meal plan if needed
+  const translateMealPlanIfNeeded = async (planData: any, planId: string, currentLanguage: string): Promise<MealPlan> => {
+    // Get user's default language from profile
+    const { data: profileData } = await (supabase as any)
+      .from("profiles")
+      .select("default_language")
+      .eq("id", userId)
+      .maybeSingle();
+    
+    const targetLanguage = profileData?.default_language || userLanguage || 'en';
+    
+    console.log("translateMealPlanIfNeeded - currentLanguage:", currentLanguage, "targetLanguage:", targetLanguage);
+    
+    // If already in the correct language, return as-is
+    if (currentLanguage === targetLanguage) {
+      console.log("Languages match, returning original plan");
+      return planData.plan as MealPlan;
+    }
+
+    try {
+      console.log("Calling translate-content edge function...");
+      // Call translate-content edge function
+      const { data: translateData, error: translateError } = await supabase.functions.invoke("translate-content", {
+        body: {
+          content: planData.plan,
+          sourceLanguage: currentLanguage,
+          targetLanguage: targetLanguage,
+          contentType: 'meal_plan',
+        },
+      });
+
+      console.log("Translation response:", { 
+        ok: translateData?.ok, 
+        hasContent: !!translateData?.translatedContent,
+        error: translateError 
+      });
+
+      if (translateError || !translateData?.ok || !translateData.translatedContent) {
+        console.error("Translation failed, using original:", translateError, translateData);
+        return planData.plan as MealPlan;
+      }
+
+      console.log("Translation successful, updating database...");
+      // Update database with translated content
+      const { error: updateError } = await (supabase as any)
+        .from("meal_plans")
+        .update({
+          plan: translateData.translatedContent,
+          language: targetLanguage,
+        })
+        .eq("id", planId);
+
+      if (updateError) {
+        console.error("Failed to update database with translated plan:", updateError);
+      } else {
+        console.log("Database updated successfully with translated plan");
+      }
+
+      return translateData.translatedContent as MealPlan;
+    } catch (error) {
+      console.error("Translation error:", error);
+      return planData.plan as MealPlan;
+    }
+  };
+
   const loadSavedPlans = useCallback(async () => {
     if (!userId || !isPremium) {
       setSavedPlans([]);
@@ -206,7 +274,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       setSavedPlansLoading(true);
       const { data, error } = await (supabase as any)
         .from("meal_plans")
-        .select("id,title,goal,target_weight,timeframe_weeks,plan,created_at")
+        .select("id,title,goal,target_weight,timeframe_weeks,plan,created_at,language")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
@@ -214,6 +282,8 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
         throw error;
       }
 
+      // Don't translate when loading the list - just fetch and display as-is
+      // Translation will happen when user clicks to view a specific plan
       const normalized = (data || []).map((item: any) => ({
         id: item.id,
         title: item.title,
@@ -222,6 +292,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
         timeframe_weeks: item.timeframe_weeks,
         created_at: item.created_at,
         plan: item.plan as MealPlan,
+        language: item.language || 'en',
       }));
 
       setSavedPlans(normalized);
@@ -511,7 +582,43 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
         throw new Error(data?.error || t("mealplanner.generate.error.description"));
       }
 
-      setMealPlan(data.mealPlan);
+      let generatedPlan = data.mealPlan;
+      
+      // Translate the generated plan if user's language is not English
+      // Get user's default language from profile
+      const { data: profileData } = await (supabase as any)
+        .from("profiles")
+        .select("default_language")
+        .eq("id", session.user.id)
+        .maybeSingle();
+      
+      const targetLanguage = profileData?.default_language || userLanguage || 'en';
+      
+      // If user's language is not English, translate the plan before showing
+      if (targetLanguage !== 'en') {
+        try {
+          const { data: translateData, error: translateError } = await supabase.functions.invoke("translate-content", {
+            body: {
+              content: generatedPlan,
+              sourceLanguage: 'en',
+              targetLanguage: targetLanguage,
+              contentType: 'meal_plan',
+            },
+          });
+
+          if (!translateError && translateData?.ok && translateData.translatedContent) {
+            generatedPlan = translateData.translatedContent;
+          } else {
+            console.error("Translation failed, showing original plan:", translateError);
+            // Continue with English version if translation fails
+          }
+        } catch (translateError) {
+          console.error("Translation error:", translateError);
+          // Continue with English version if translation fails
+        }
+      }
+
+      setMealPlan(generatedPlan);
       setIsMealPlanSaved(false); // Mark as unsaved when new plan is generated
       // Update form state for backward compatibility
       setTargetWeight(formData.targetWeight.toString());
@@ -574,6 +681,16 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
 
     try {
       setSavingPlan(true);
+      // Determine the language of the current plan (might be translated)
+      // Get user's default language to determine what language to save
+      const { data: profileData } = await (supabase as any)
+        .from("profiles")
+        .select("default_language")
+        .eq("id", userId)
+        .maybeSingle();
+      
+      const planLanguage = profileData?.default_language || userLanguage || 'en';
+      
       const { data, error } = await (supabase as any).from("meal_plans").insert({
         user_id: userId,
         title: titleToUse,
@@ -581,6 +698,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
         target_weight: targetWeight ? parseFloat(targetWeight) : null,
         timeframe_weeks: timeframeWeeks ? parseInt(timeframeWeeks) : null,
         plan: mealPlan,
+        language: planLanguage, // Save the plan in the language it's currently displayed
       }).select().single();
 
       if (error) {
@@ -613,9 +731,45 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
     }
   };
 
-  const handleLoadSavedPlan = (record: SavedMealPlanRecord) => {
+  const handleLoadSavedPlan = async (record: SavedMealPlanRecord) => {
     try {
-      const loadedPlan = record.plan;
+      // Translate plan if needed before loading
+      const recordWithLang = record as any;
+      const currentLanguage = recordWithLang.language || 'en';
+      
+      console.log("Loading plan - Current language:", currentLanguage);
+      
+      // Get user's default language
+      const { data: profileData } = await (supabase as any)
+        .from("profiles")
+        .select("default_language")
+        .eq("id", userId)
+        .maybeSingle();
+      
+      const targetLanguage = profileData?.default_language || userLanguage || 'en';
+      console.log("Loading plan - Target language:", targetLanguage);
+
+      let loadedPlan = record.plan;
+      
+      // If language doesn't match, translate it
+      if (currentLanguage !== targetLanguage) {
+        console.log("Languages don't match, translating from", currentLanguage, "to", targetLanguage);
+        toast({
+          title: t("mealplanner.plan.loading.title") || "Loading plan...",
+          description: t("mealplanner.plan.loading.translating") || "Translating to your preferred language...",
+        });
+        
+        const translatedPlan = await translateMealPlanIfNeeded(
+          { plan: record.plan },
+          record.id,
+          currentLanguage
+        );
+        loadedPlan = translatedPlan;
+        console.log("Translation complete, plan loaded");
+      } else {
+        console.log("Languages match, no translation needed");
+      }
+
       setMealPlan(loadedPlan);
       setIsMealPlanSaved(true); // Loaded plans are already saved
       setPlanTitle(record.title || `${t("mealplanner.saved.title")} - ${formatPlanDate(record.created_at)}`);

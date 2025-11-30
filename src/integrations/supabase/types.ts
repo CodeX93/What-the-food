@@ -48,6 +48,7 @@ export type Database = {
           created_at: string
           goal: string | null
           id: string
+          language: string
           plan: Json
           target_weight: number | null
           timeframe_weeks: number | null
@@ -58,6 +59,7 @@ export type Database = {
           created_at?: string
           goal?: string | null
           id?: string
+          language?: string
           plan: Json
           target_weight?: number | null
           timeframe_weeks?: number | null
@@ -68,6 +70,7 @@ export type Database = {
           created_at?: string
           goal?: string | null
           id?: string
+          language?: string
           plan?: Json
           target_weight?: number | null
           timeframe_weeks?: number | null

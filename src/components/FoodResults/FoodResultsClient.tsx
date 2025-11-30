@@ -46,6 +46,8 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useTranslation } from "@/hooks/use-translation";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -66,6 +68,8 @@ export function FoodResultsClient() {
   const id = searchParams?.get("id") ?? null;
   const router = useRouter();
   const { toast } = useToast();
+  const { language: userLanguage } = useLanguage();
+  const t = useTranslation();
 
   const [loading, setLoading] = useState(true);
   const [servings, setServings] = useState(1);
@@ -858,15 +862,15 @@ export function FoodResultsClient() {
       if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
         await navigator.share(shareData);
         toast({
-          title: "Shared!",
-          description: "Food analysis results shared successfully.",
+          title: t("foodresults.share.success"),
+          description: t("foodresults.share.success.description"),
         });
       } else {
         // Fallback: Copy to clipboard
         await navigator.clipboard.writeText(shareUrl);
         toast({
-          title: "Link copied!",
-          description: "Food analysis link has been copied to your clipboard.",
+          title: t("foodresults.share.copied"),
+          description: t("foodresults.share.copied.description"),
         });
       }
     } catch (error: any) {
@@ -883,8 +887,8 @@ export function FoodResultsClient() {
           });
         } catch (clipboardError) {
           toast({
-            title: "Share failed",
-            description: "Unable to share. Please copy the URL manually.",
+            title: t("foodresults.share.error"),
+            description: t("foodresults.share.error.description"),
             variant: "destructive",
           });
         }
@@ -996,8 +1000,8 @@ export function FoodResultsClient() {
       const safeTitle = dishForFilename.replace(/[^\w\d_-]+/g, "-");
       pdf.save(`${safeTitle}.pdf`);
       toast({
-        title: "PDF ready",
-        description: "We saved a share-ready report to your downloads.",
+        title: t("foodresults.pdf.ready"),
+        description: t("foodresults.pdf.ready.description"),
       });
 
       if (workingIframe && document.body.contains(workingIframe)) {
@@ -1079,7 +1083,7 @@ export function FoodResultsClient() {
 
         const { data, error } = await supabase
           .from("food_scans")
-          .select("image_url, image_path, serving, result_json")
+          .select("image_url, image_path, serving, result_json, language")
           .eq("id", id)
           .maybeSingle();
 
@@ -1093,11 +1097,57 @@ export function FoodResultsClient() {
           result_json?: unknown;
           image_path?: string | null;
           image_url?: string | null;
+          language?: string;
         };
 
         applyServings(scanRecord.serving || 1);
         setSavedServings(scanRecord.serving || 1);
-        const loadedAnalysis = (scanRecord.result_json as FoodAnalysis) || null;
+        let loadedAnalysis = (scanRecord.result_json as FoodAnalysis) || null;
+        
+        // Check if translation is needed
+        const currentLanguage = scanRecord.language || 'en';
+        let targetLanguage = userLanguage || 'en';
+        
+        // Get user's default language from profile if authenticated
+        if (user) {
+          const { data: profileData } = await (supabase as any)
+            .from("profiles")
+            .select("default_language")
+            .eq("id", user.id)
+            .maybeSingle();
+          targetLanguage = profileData?.default_language || userLanguage || 'en';
+        }
+
+        // Translate if needed
+        if (loadedAnalysis && currentLanguage !== targetLanguage && user) {
+          try {
+            const { data: translateData, error: translateError } = await supabase.functions.invoke("translate-content", {
+              body: {
+                content: loadedAnalysis,
+                sourceLanguage: currentLanguage,
+                targetLanguage: targetLanguage,
+                contentType: 'food_scan',
+              },
+            });
+
+            if (!translateError && translateData?.ok && translateData.translatedContent) {
+              loadedAnalysis = translateData.translatedContent as FoodAnalysis;
+              
+              // Update database with translated content
+              await (supabase as any)
+                .from("food_scans")
+                .update({
+                  result_json: loadedAnalysis,
+                  language: targetLanguage,
+                })
+                .eq("id", id);
+            }
+          } catch (translateError) {
+            console.error("Translation error:", translateError);
+            // Continue with original analysis on error
+          }
+        }
+
         setAnalysis(loadedAnalysis);
         // Store the original analysis to restore if user reverts changes
         if (loadedAnalysis) {
@@ -1132,7 +1182,7 @@ export function FoodResultsClient() {
     };
 
     load();
-  }, [id, router]);
+  }, [id, router, userLanguage]);
 
   useEffect(() => {
     if (analysis) {
@@ -1360,15 +1410,15 @@ export function FoodResultsClient() {
                 <h1 className="text-2xl md:text-4xl font-bold flex items-center gap-2">
                   <Salad className="h-6 w-6 md:h-8 md:w-8 text-primary" />
                   {analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")
-                    ? `Manual Input: ${analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || ""}`
-                    : analysis.dish || "Food Result"}
+                    ? `${t("foodresults.manual.input")}: ${analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || ""}`
+                    : analysis.dish || t("foodresults.title")}
                 </h1>
               </div>
             </div>
             <div className="flex items-center gap-2 pdf-hide">
               <Button size="sm" variant="outline" onClick={handleShare}>
                 <Share2 className="h-4 w-4 mr-2" />
-                Share
+                {t("foodresults.share")}
               </Button>
               <TooltipProvider delayDuration={200}>
                 <Tooltip>
@@ -1381,13 +1431,13 @@ export function FoodResultsClient() {
                         variant={!hasPremiumAccess ? "outline" : "default"}
                       >
                         {exportingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
-                        {exportingPdf ? "Preparing…" : "PDF"}
+                        {exportingPdf ? t("foodresults.pdf.preparing") : t("foodresults.pdf")}
                       </Button>
                     </div>
                   </TooltipTrigger>
                   {!hasPremiumAccess && (
                     <TooltipContent side="bottom" className="max-w-xs">
-                      <p>You need to upgrade your plan to download the results in PDF</p>
+                      <p>{t("foodresults.pdf.upgrade")}</p>
                     </TooltipContent>
                   )}
                 </Tooltip>
@@ -1399,15 +1449,15 @@ export function FoodResultsClient() {
         {isAuthenticated && !profileComplete && (
           <Alert className="mb-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
             <User className="h-4 w-4 text-primary" />
-            <AlertTitle className="font-semibold">Complete Your Profile</AlertTitle>
+            <AlertTitle className="font-semibold">{t("foodresults.complete.profile.title")}</AlertTitle>
             <AlertDescription className="mt-1">
-              Complete your profile to get more personalized nutrition insights and recommendations tailored to your age, gender, weight, and height.
+              {t("foodresults.complete.profile.description")}
               <Button
                 variant="link"
                 className="p-0 h-auto ml-1 text-primary font-semibold underline"
                 onClick={() => router.push("/profile")}
               >
-                Complete Profile →
+                {t("foodresults.complete.profile.button")}
               </Button>
             </AlertDescription>
           </Alert>
@@ -1429,7 +1479,7 @@ export function FoodResultsClient() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <span>Confidence</span>
+                      <span>{t("foodresults.confidence")}</span>
                       <TooltipProvider delayDuration={150}>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -1442,7 +1492,7 @@ export function FoodResultsClient() {
                             </span>
                           </TooltipTrigger>
                           <TooltipContent side="top" align="start" className="max-w-xs text-xs leading-relaxed">
-                            AI confidence can fluctuate with image quality, lighting, angle, and other visual factors.
+                            {t("foodresults.confidence.tooltip")}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -1466,7 +1516,7 @@ export function FoodResultsClient() {
                 <div className="space-y-1">
                   <div className="flex items-center justify-between gap-2">
                     <CardTitle className="overflow-hidden sticky top-6 ">
-                      Nutrition Summary 
+                      {t("foodresults.nutrition.summary")} 
                       {servingApproximation && (
                         <span className="text-base font-normal text-muted-foreground whitespace-nowrap mx-3">
                           (~ {servingApproximation.grams}g)
@@ -1474,7 +1524,7 @@ export function FoodResultsClient() {
                       )}
                     </CardTitle>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-sm text-muted-foreground whitespace-nowrap">Servings</span>
+                      <span className="text-sm text-muted-foreground whitespace-nowrap">{t("foodresults.servings")}</span>
                       <input
                         type="text"
                         inputMode="decimal"
@@ -1532,24 +1582,24 @@ export function FoodResultsClient() {
 
                               if (error) {
                                 console.error("Failed to update serving in database:", error);
-                                toast({
-                                  title: "Error",
-                                  description: `Failed to save: ${error.message}`,
-                                  variant: "destructive",
-                                });
+                              toast({
+                                title: t("foodresults.error"),
+                                description: `${t("foodresults.error.save")} ${error.message}`,
+                                variant: "destructive",
+                              });
                                 return;
                               }
 
                               setSavedServings(servings);
                               toast({
-                                title: "Servings saved",
-                                description: "Your serving size has been updated successfully.",
+                                title: t("foodresults.servings.saved.title"),
+                                description: t("foodresults.servings.saved.description"),
                               });
                             } catch (error: any) {
                               console.error("Failed to update serving in database:", error);
                               toast({
-                                title: "Error",
-                                description: error?.message || "Failed to save serving size. Please try again.",
+                                title: t("foodresults.error"),
+                                description: error?.message || t("foodresults.error.servings"),
                                 variant: "destructive",
                               });
                             } finally {
@@ -1558,7 +1608,7 @@ export function FoodResultsClient() {
                           }}
                           disabled={savingServings}
                         >
-                          {savingServings ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save"}
+                          {savingServings ? <Loader2 className="h-4 w-4 animate-spin" /> : t("foodresults.save")}
                         </Button>
                       )}
                     </div>
@@ -1839,15 +1889,15 @@ export function FoodResultsClient() {
                     {!profileComplete && (
                       <Alert className="mb-6 border-amber-200 bg-amber-50 text-amber-900">
                         <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Complete Your Profile</AlertTitle>
+                        <AlertTitle>{t("foodresults.complete.profile.title")}</AlertTitle>
                         <AlertDescription>
-                          Complete your profile to get personalized insights automatically. 
+                          {t("foodresults.complete.profile.insights")}
                           <Button
                             variant="link"
                             className="p-0 h-auto ml-1 text-amber-900 font-semibold underline"
                             onClick={() => router.push("/profile")}
                           >
-                            Complete Profile →
+                            {t("foodresults.complete.profile.button")}
                           </Button>
                         </AlertDescription>
                       </Alert>
@@ -1856,10 +1906,10 @@ export function FoodResultsClient() {
                       <div className="flex flex-col items-center justify-center py-8 space-y-3">
                         <div className="flex items-center">
                           <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-                          <span className="text-sm text-muted-foreground">Generating personalized insights...</span>
+                          <span className="text-sm text-muted-foreground">{t("foodresults.insights.generating")}</span>
                         </div>
                         <p className="text-xs text-muted-foreground/70 text-center max-w-md">
-                          This may take up to 15 seconds.
+                          {t("foodresults.insights.timeout")}
                         </p>
                       </div>
                     )}
@@ -1867,8 +1917,8 @@ export function FoodResultsClient() {
                       <div className="text-center py-6">
                         <p className="text-sm text-muted-foreground mb-4">
                           {profileComplete 
-                            ? "Get personalized health insights tailored to your goals and profile."
-                            : "Generate personalized insights. Complete your profile for more accurate recommendations."}
+                            ? t("foodresults.insights.complete")
+                            : t("foodresults.insights.incomplete")}
                         </p>
                         <div className="flex flex-wrap justify-center gap-2">
                           <Button
@@ -1888,8 +1938,8 @@ export function FoodResultsClient() {
                               // Allow generation even with partial profile data
                               if (!profileAge || !profileGender) {
                                 toast({
-                                  title: "Incomplete Profile",
-                                  description: "Insights will be generated with limited personalization. Complete your profile for better results.",
+                                  title: t("foodresults.insights.incomplete.title"),
+                                  description: t("foodresults.insights.incomplete.description"),
                                   variant: "default",
                                 });
                               }

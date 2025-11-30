@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "@/hooks/use-translation";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 
 type MealPlanViewClientProps = {
@@ -18,6 +19,7 @@ type MealPlanViewClientProps = {
   targetWeight: number | null;
   timeframeWeeks: number | null;
   createdAt: string;
+  language?: string;
 };
 
 export function MealPlanViewClient({
@@ -28,14 +30,17 @@ export function MealPlanViewClient({
   targetWeight,
   timeframeWeeks,
   createdAt,
+  language: planLanguage = 'en',
 }: MealPlanViewClientProps) {
   const router = useRouter();
   const t = useTranslation();
   const { toast } = useToast();
+  const { language: userLanguage } = useLanguage();
   const [profile, setProfile] = useState<any>(null);
   const [editablePlan, setEditablePlan] = useState<MealPlan | null>(null);
   const [isEditingMeals, setIsEditingMeals] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [translating, setTranslating] = useState(false);
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -52,11 +57,90 @@ export function MealPlanViewClient({
     void loadProfile();
   }, []);
 
+  // Translate plan if needed when component loads
   useEffect(() => {
-    if (mealPlan) {
-      setEditablePlan(JSON.parse(JSON.stringify(mealPlan)));
-    }
-  }, [mealPlan]);
+    const translatePlanIfNeeded = async () => {
+      const currentLanguage = planLanguage || 'en';
+      
+      // Get user session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        setEditablePlan(JSON.parse(JSON.stringify(mealPlan)));
+        return;
+      }
+      
+      // Get user's default language
+      const { data: profileData } = await (supabase as any)
+        .from("profiles")
+        .select("default_language")
+        .eq("id", session.user.id)
+        .maybeSingle();
+      
+      const targetLanguage = profileData?.default_language || userLanguage || 'en';
+      
+      // If language doesn't match, translate it
+      if (currentLanguage !== targetLanguage) {
+        setTranslating(true);
+        
+        try {
+          toast({
+            title: t("mealplanner.plan.loading.title") || "Loading plan...",
+            description: t("mealplanner.plan.loading.translating") || "Translating to your preferred language...",
+          });
+
+          const { data: translateData, error: translateError } = await supabase.functions.invoke("translate-content", {
+            body: {
+              content: mealPlan,
+              sourceLanguage: currentLanguage,
+              targetLanguage: targetLanguage,
+              contentType: 'meal_plan',
+            },
+          });
+
+          console.log("Translation response:", { 
+            ok: translateData?.ok, 
+            hasContent: !!translateData?.translatedContent,
+            error: translateError 
+          });
+
+          if (!translateError && translateData?.ok && translateData.translatedContent) {
+            // Update database with translated content
+            const { error: updateError } = await (supabase as any)
+              .from("meal_plans")
+              .update({
+                plan: translateData.translatedContent,
+                language: targetLanguage,
+              })
+              .eq("id", mealPlanId);
+
+            if (updateError) {
+              console.error("Failed to update database with translated plan:", updateError);
+            } else {
+              console.log("Database updated successfully with translated plan");
+            }
+
+            // Update local state with translated plan
+            setEditablePlan(translateData.translatedContent);
+          } else {
+            console.error("Translation failed, using original:", translateError);
+            setEditablePlan(JSON.parse(JSON.stringify(mealPlan)));
+          }
+        } catch (error) {
+          console.error("Translation error:", error);
+          setEditablePlan(JSON.parse(JSON.stringify(mealPlan)));
+        } finally {
+          setTranslating(false);
+        }
+      } else {
+        console.log("Languages match, no translation needed");
+        setEditablePlan(JSON.parse(JSON.stringify(mealPlan)));
+      }
+    };
+
+    void translatePlanIfNeeded();
+  }, [mealPlan, planLanguage, userLanguage, mealPlanId, t, toast]);
+
+  // Removed - translation logic now handles setting editablePlan
 
   const userFirstName = profile?.full_name?.split(' ')[0] || null;
   const displayPlan = editablePlan || mealPlan;
@@ -294,7 +378,16 @@ export function MealPlanViewClient({
           </p>
         </div>
 
-        {displayPlan && (
+        {translating ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center space-y-3">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+              <p className="text-sm text-muted-foreground">
+                {t("mealplanner.plan.loading.translating") || "Translating to your preferred language..."}
+              </p>
+            </div>
+          </div>
+        ) : displayPlan ? (
           <MealPlanResults
             plan={displayPlan}
             isEditingMeals={isEditingMeals}
@@ -314,7 +407,7 @@ export function MealPlanViewClient({
             mealPlanId={mealPlanId}
             showShareButtons={true}
           />
-        )}
+        ) : null}
       </div>
     </main>
   );

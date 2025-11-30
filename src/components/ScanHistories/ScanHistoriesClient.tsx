@@ -109,7 +109,7 @@ export function ScanHistoriesClient({ initialSubscription = null }: ScanHistorie
 
         const { data, error, count } = await supabase
           .from("food_scans")
-          .select("id, image_url, image_path, serving, result_json, created_at", { count: "exact" })
+          .select("id, image_url, image_path, serving, result_json, created_at, language", { count: "exact" })
           .eq("user_id", session.user.id)
           .order("created_at", { ascending: false })
           .limit(6);
@@ -515,7 +515,7 @@ export function ScanHistoriesClient({ initialSubscription = null }: ScanHistorie
                       const start = items.length;
                       const { data: moreData, count } = await supabase
                         .from("food_scans")
-                        .select("id, image_url, image_path, serving, result_json, created_at", { count: "exact" })
+                        .select("id, image_url, image_path, serving, result_json, created_at, language", { count: "exact" })
                         .eq("user_id", session.user.id)
                         .order("created_at", { ascending: false })
                         .range(start, start + 5); // Load next 6 scans

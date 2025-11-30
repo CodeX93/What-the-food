@@ -150,6 +150,7 @@ export function DashboardClient({
         image_url: null,
         serving: 1,
         result_json: manualResult,
+        language: 'en', // All new scans are generated in English
       });
       if (insertError) throw insertError;
 
