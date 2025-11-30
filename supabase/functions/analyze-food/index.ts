@@ -117,6 +117,156 @@ async function fetchAndEncodeImage(url) {
   }
 }
 
+// Dedicated function for recalculating nutrition from edited ingredients only
+// This is simpler and more accurate than the full image analysis flow
+async function recalculateNutritionFromIngredients(dishName: string, ingredients: string[], existingAnalysis: any) {
+  if (!GEMINI_API_KEY) throw new Error("Missing API key");
+  if (!Array.isArray(ingredients) || ingredients.length === 0) {
+    throw new Error("Ingredients list is required");
+  }
+
+  const RECALCULATION_PROMPT = `You are a nutrition calculation expert. Your ONLY job is to recalculate nutrition values from an ingredient list.
+
+DISH NAME: ${dishName}
+
+INGREDIENT LIST (EXACT - DO NOT MODIFY):
+${ingredients.map((ing, idx) => `${idx + 1}. ${ing}`).join("\n")}
+
+YOUR TASK: Calculate accurate nutrition values for this dish based ONLY on the ingredient list above.
+
+CRITICAL REQUIREMENTS:
+1. For EACH ingredient, look up its EXACT nutritional values per 100g (or per ml for liquids) from USDA FoodData Central database
+2. Calculate nutrients for each ingredient using: (ingredient_quantity_in_grams / 100) × nutritional_value_per_100g
+3. IMPORTANT EXAMPLES:
+   - Vegetable oil: 100ml = 100g = 884 calories, 0g protein, 0g carbs, 100g fat
+   - Potatoes: 100g = 77 calories, 2g protein, 17g carbs, 0.1g fat, 2.2g fiber, 0.8g sugar
+   - Chicken breast: 100g = 165 calories, 31g protein, 0g carbs, 3.6g fat
+   - Salt/seasonings: Negligible calories (0 or near 0)
+4. Sum up ALL calculated nutritional values from ALL ingredients to get the TOTAL for the entire dish
+5. CRITICAL VALIDATION: Total calories MUST equal: (protein_g × 4) + (carbohydrates_g × 4) + (fat_g × 9) ± 2 calories
+6. Ensure fiber_g ≤ carbohydrates_g (fiber is a subset of total carbs)
+7. Calculate servingWeightGrams by summing all gram quantities from ingredients
+8. If an ingredient quantity increases, nutrition values MUST increase proportionally
+9. If an ingredient quantity decreases, nutrition values MUST decrease proportionally
+10. NEVER guess or estimate. ALWAYS calculate from exact ingredient quantities using USDA database values
+
+Return ONLY a JSON object with this exact structure:
+{
+  "nutrients": {
+    "calories": number,
+    "protein_g": number,
+    "carbohydrates_g": number,
+    "fat_g": number,
+    "fiber_g": number,
+    "sugar_g": number
+  },
+  "servingWeightGrams": number
+}
+
+DO NOT include any other fields. DO NOT add explanations. Return ONLY the JSON object.`;
+
+  const payload = {
+    contents: [{
+      parts: [{ text: RECALCULATION_PROMPT }],
+    }],
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens: 500,
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "object",
+        properties: {
+          nutrients: {
+            type: "object",
+            properties: {
+              calories: { type: "number" },
+              protein_g: { type: "number" },
+              carbohydrates_g: { type: "number" },
+              fat_g: { type: "number" },
+              fiber_g: { type: "number" },
+              sugar_g: { type: "number" }
+            },
+            required: ["calories", "protein_g", "carbohydrates_g", "fat_g", "fiber_g", "sugar_g"]
+          },
+          servingWeightGrams: { type: "number" }
+        },
+        required: ["nutrients", "servingWeightGrams"]
+      },
+      topP: 0.95,
+      topK: 40,
+    }
+  };
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      }
+    );
+    clearTimeout(timeoutId);
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      throw new Error(`Gemini ${resp.status}: ${text.slice(0, 150)}`);
+    }
+
+    const data = await resp.json();
+    const text = data?.candidates?.[0]?.content?.parts?.map(p => p?.text || "").join("").trim();
+    
+    if (!text) throw new Error("Empty response");
+
+    const jsonStr = text.replace(/^```(?:json)?|```$/gi, "").trim();
+    let parsed;
+    
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch {
+      parsed = JSON.parse(jsonrepair(jsonStr));
+    }
+
+    // Validate the response
+    if (!parsed.nutrients || !parsed.servingWeightGrams) {
+      throw new Error("Invalid response structure");
+    }
+
+    // Validate calorie math
+    const { calories, protein_g, carbohydrates_g, fat_g } = parsed.nutrients;
+    const calculatedCal = (protein_g * 4) + (carbohydrates_g * 4) + (fat_g * 9);
+    const diff = Math.abs(calories - calculatedCal);
+    
+    if (diff > 5) {
+      console.warn(`Calorie validation failed: ${calories} vs calculated ${calculatedCal} (diff: ${diff})`);
+      // Use calculated calories for accuracy
+      parsed.nutrients.calories = Math.round(calculatedCal);
+    }
+
+    // Update the existing analysis with new nutrition values
+    const updatedAnalysis = {
+      ...existingAnalysis,
+      nutrients: parsed.nutrients,
+      servingWeightGrams: parsed.servingWeightGrams,
+      ingredients: ingredients, // Update ingredients list
+    };
+
+    // Update serving guidance with new weight
+    if (parsed.servingWeightGrams) {
+      updatedAnalysis.servingGuidance = `To calculate your servings, divide your actual dish weight (in grams) by the projected serving weight shown above (~${Math.round(parsed.servingWeightGrams)}g). For example, if your dish weighs ${Math.round(parsed.servingWeightGrams * 1.5)}g and the projected serving is ~${Math.round(parsed.servingWeightGrams)}g, divide ${Math.round(parsed.servingWeightGrams * 1.5)} ÷ ${Math.round(parsed.servingWeightGrams)} = 1.5 servings. This tells you how many servings your portion contains.`;
+    }
+
+    return updatedAnalysis;
+  } catch (e) {
+    clearTimeout(timeoutId);
+    throw new Error(`Recalculation failed: ${e?.message || e}`);
+  }
+}
+
 async function callGemini(imageBase64, mimeType, options = {}) {
   if (!GEMINI_API_KEY) throw new Error("Missing API key");
 
@@ -240,17 +390,22 @@ ${overrideIngredients.join("\n")}
 MANDATORY INSTRUCTIONS - YOU MUST RECALCULATE EVERYTHING FROM SCRATCH:
 1. COMPLETELY IGNORE any ingredients you detect from the image. The image is only for dish identification, NOT for ingredient detection.
 2. Use EXACTLY and ONLY the ingredient list provided above. This is a 100% replacement - do NOT add, combine, or merge with anything from the image.
-3. NUTRIENTS RECALCULATION: Calculate ALL nutrients (calories, protein_g, carbohydrates_g, fat_g, fiber_g, sugar_g) from scratch by:
-   - For EACH ingredient, look up its EXACT nutritional values per 100g (or per ml for liquids) from USDA FoodData Central or equivalent authoritative nutritional databases
-   - Calculate nutrients using the formula: (ingredient_quantity_in_grams / 100) × nutritional_value_per_100g
-   - For cooking oils and fats: 30ml = ~30g = ~270 calories, 30g fat, 0g protein, 0g carbs (9 calories per gram of fat)
-   - Sum up ALL the calculated nutritional values to get the TOTAL for the entire dish
-   - The nutrients field should represent the TOTAL dish (all ingredients combined)
-   - CRITICAL: The total calories MUST equal: (protein_g × 4) + (carbohydrates_g × 4) + (fat_g × 9) ± 2 calories for rounding
+3. NUTRIENTS RECALCULATION - THIS IS CRITICAL FOR ACCURACY:
+   - For EACH ingredient in the list, you MUST look up its EXACT nutritional values per 100g (or per ml for liquids) from USDA FoodData Central database
+   - Calculate nutrients for each ingredient using: (ingredient_quantity_in_grams / 100) × nutritional_value_per_100g
+   - IMPORTANT EXAMPLES:
+     * Vegetable oil: 100ml = 100g = 884 calories, 0g protein, 0g carbs, 100g fat
+     * Potatoes: 100g = 77 calories, 2g protein, 17g carbs, 0.1g fat
+     * Chicken breast: 100g = 165 calories, 31g protein, 0g carbs, 3.6g fat
+     * Salt/seasonings: Negligible calories (0 or near 0)
+   - Sum up ALL the calculated nutritional values from ALL ingredients to get the TOTAL for the entire dish
+   - The nutrients field must represent the TOTAL dish (all ingredients combined)
+   - CRITICAL VALIDATION: The total calories MUST equal: (protein_g × 4) + (carbohydrates_g × 4) + (fat_g × 9) ± 2 calories for rounding
    - Ensure fiber_g is always ≤ carbohydrates_g (fiber is a subset of total carbs)
-   - Use REALISTIC values based on actual ingredient quantities - if you have 200g chicken breast, it should be ~330 calories and ~62g protein, NOT random numbers
-   - NEVER guess or estimate. ALWAYS calculate from exact ingredient quantities using database values
-   - Double-check your math by summing all ingredient nutrients
+   - Use REALISTIC values based on actual ingredient quantities - if you have 500g potatoes, it should be ~385 calories and ~10g protein, NOT random numbers
+   - If you reduce an ingredient quantity (e.g., 500ml oil → 250ml oil), the calories and fat MUST decrease proportionally and similarly for other ingredients. Also if an ingredient quantity increases, the calories and fat MUST increase proportionally.If if an ingredient quantity is decreases, the calories and fat MUST decrease proportionally and similarly for other ingredients.
+   - NEVER guess or estimate. ALWAYS calculate from exact ingredient quantities using USDA database values
+   - Double-check your math by summing all ingredient nutrients before finalizing
 4. SERVING WEIGHT RECALCULATION: Calculate servingWeightGrams by:
    - Extracting the gram quantities from EACH ingredient in the list
    - Adding up ALL the gram quantities to get the TOTAL dish weight
@@ -366,11 +521,9 @@ MANDATORY INSTRUCTIONS - YOU MUST RECALCULATE EVERYTHING FROM SCRATCH:
 
     const sanitized = sanitizeAnalysis(parsed, overrideIngredients);
     
-    // Validate and correct nutrition calculations if overrideIngredients are provided
-    if (Array.isArray(overrideIngredients) && overrideIngredients.length > 0) {
-      const corrected = validateAndCorrectNutrients(sanitized, overrideIngredients);
-      return { analysis: corrected, insights: insights || undefined };
-    }
+    // Trust Gemini's calculations when overrideIngredients are provided
+    // Gemini has been instructed to recalculate from scratch using USDA database values
+    // No need to override with our limited database - let Gemini do the work
     
     return { analysis: sanitized, insights: insights || undefined };
   } catch (e) {
@@ -755,7 +908,24 @@ Deno.serve(async (req) => {
       height_cm,
       overrideIngredients = [],
       manualEntry, // { dish: string, ingredients: string[] }
+      recalculateOnly = false, // New flag for ingredient-only recalculation
+      existingAnalysis = null, // Existing analysis to update
     } = await req.json();
+    
+    // Handle ingredient-only recalculation (no image analysis)
+    if (recalculateOnly && existingAnalysis && Array.isArray(overrideIngredients) && overrideIngredients.length > 0) {
+      const dishName = existingAnalysis.dish || "Custom Dish";
+      const updatedAnalysis = await recalculateNutritionFromIngredients(
+        dishName,
+        overrideIngredients,
+        existingAnalysis
+      );
+      console.log(`Recalculation time: ${Date.now() - startTime}ms`);
+      return new Response(
+        JSON.stringify({ ok: true, serving, analysis: updatedAnalysis }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     
     // Support manual entries without image
     const isManualEntry = !!manualEntry && !imageUrl;

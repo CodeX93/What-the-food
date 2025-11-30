@@ -95,6 +95,34 @@ export async function analyzeFood(
   };
 }
 
+// Dedicated function for recalculating nutrition from edited ingredients only
+export async function recalculateNutritionFromIngredients(
+  existingAnalysis: FoodAnalysis,
+  editedIngredients: string[],
+  serving: number = 1
+): Promise<FoodAnalysis> {
+  if (!Array.isArray(editedIngredients) || editedIngredients.length === 0) {
+    throw new Error("Ingredients list is required");
+  }
+
+  const body = {
+    recalculateOnly: true,
+    existingAnalysis: existingAnalysis,
+    overrideIngredients: editedIngredients,
+    serving,
+  };
+
+  const { data, error } = await supabase.functions.invoke<AnalyzeFoodResponse>("analyze-food", {
+    body,
+  });
+
+  if (error || !data?.ok) {
+    throw new Error(data?.error || error?.message || "Recalculation failed");
+  }
+
+  return data.analysis as FoodAnalysis;
+}
+
 export function scaleNutrients(base: FoodAnalysis["nutrients"] | undefined, multiplier: number){
   const scale = (v?: number) => (typeof v === "number" ? Math.round(v * multiplier * 10) / 10 : undefined);
   return {

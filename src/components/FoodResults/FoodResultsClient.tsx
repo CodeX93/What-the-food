@@ -11,6 +11,7 @@ import {
   type FoodAnalysis,
   getPersonalizedInsights,
   getImageUrl,
+  recalculateNutritionFromIngredients,
 } from "@/utils/foodScan";
 import { hasActivePremiumSubscription } from "@/utils/subscription";
 import { calculateBMI, getBMICategory } from "@/utils/bmi";
@@ -746,63 +747,13 @@ export function FoodResultsClient() {
     setUpdatingIngredients(true);
     setAnalysisRefreshing(true);
     try {
-      const isManualEntry = analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input");
-      
-      let updatedAnalysis: FoodAnalysis;
-      
-      if (isManualEntry) {
-        // For manual entries, use manualEntry with updated ingredients
-        // Also pass overrideIngredients to ensure they're used in the analysis
-        const dishName = analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || "Custom Dish";
-        const { analysis: result } = await analyzeFood(null, servings, undefined, {
-          manualEntry: {
-            dish: dishName,
-            ingredients: cleaned,
-          },
-          overrideIngredients: cleaned,
-        });
-        updatedAnalysis = result;
-      } else {
-        // For image-based scans, get fresh image URL
-        // Double-check that imagePath is not a manual entry path
-        const isManualEntryPath = imagePath?.toLowerCase().startsWith("manual-entry");
-        
-        if (isManualEntryPath) {
-          // Fallback: treat as manual entry if path suggests it
-          const dishName = analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || analysis.dish || "Custom Dish";
-          const { analysis: result } = await analyzeFood(null, servings, undefined, {
-            manualEntry: {
-              dish: dishName,
-              ingredients: cleaned,
-            },
-            overrideIngredients: cleaned,
-          });
-          updatedAnalysis = result;
-        } else {
-          // For real image-based scans, get fresh image URL
-          let sourceUrl = imageUrl;
-          if (imagePath && !isManualEntryPath) {
-            try {
-              const fresh = await getImageUrl(imagePath, 60 * 5);
-              if (fresh) {
-                sourceUrl = fresh;
-                setImageUrl(fresh);
-              }
-            } catch (error) {
-              console.warn("Failed to get fresh image URL:", error);
-            }
-          }
-
-          if (!sourceUrl) {
-            throw new Error("Image reference expired. Please re-upload the meal photo.");
-          }
-
-          const { analysis: result } = await analyzeFood(sourceUrl, servings, undefined, {
-            overrideIngredients: cleaned,
-          });
-          updatedAnalysis = result;
-        }
-      }
+      // Use dedicated recalculation function for ingredient edits
+      // This is more accurate and faster than full image re-analysis
+      const updatedAnalysis = await recalculateNutritionFromIngredients(
+        analysis,
+        cleaned,
+        servings
+      );
 
       // Log the updated analysis for debugging
       console.log("Updated analysis after ingredient change:", {
