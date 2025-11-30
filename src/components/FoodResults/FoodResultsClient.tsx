@@ -1468,12 +1468,12 @@ export function FoodResultsClient() {
             <div className="lg:col-span-4 ">
               <Card className="overflow-hidden sticky top-6">
                 {imageUrl ? (
-                  <div className="aspect-square relative overflow-hidden ">
-                    <img src={imageUrl} alt={analysis.dish || "Food"} className="w-full h-full object-cover" />
+                  <div className="relative overflow-hidden" style={{ paddingBottom: 'calc(100% + 20px)' }}>
+                    <img src={imageUrl} alt={analysis.dish || "Food"} className="absolute inset-0 w-full h-full object-cover" />
                   </div>
                 ) : (
-                  <div className="aspect-square flex items-center justify-center text-muted-foreground bg-muted">
-                    <Salad className="h-16 w-16 opacity-30" />
+                  <div className="relative flex items-center justify-center text-muted-foreground bg-muted" style={{ paddingBottom: 'calc(100% + 20px)' }}>
+                    <Salad className="absolute inset-0 m-auto h-16 w-16 opacity-30" />
                   </div>
                 )}
                 <CardContent className="p-4">
@@ -1825,7 +1825,7 @@ export function FoodResultsClient() {
                   )}
                 </div>
               </CardHeader>
-              <CardContent className="pt-6">
+              <CardContent className="pt-4">
                 {checkingPremium ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -2026,7 +2026,7 @@ export function FoodResultsClient() {
 
                     {parsedInsights && (
                       <div
-                        className="mt-6 space-y-6"
+                        className="space-y-6"
                         data-collapse-gap-in-pdf={insightsText ? "true" : undefined}
                       >
                         {parsedInsights.healthContext && (
