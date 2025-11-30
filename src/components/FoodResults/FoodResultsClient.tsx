@@ -1350,26 +1350,28 @@ export function FoodResultsClient() {
   return (
     <>
       <main className="flex-1">
-      <div className="container mx-auto px-4 py-6 md:py-8 relative w-full" ref={reportRef}>
-        <div className="mb-6 md:mb-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" onClick={() => router.back()} className="px-2">
-                <ArrowLeft className="h-5 w-5" />
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8 relative w-full" ref={reportRef}>
+        <div className="mb-4 sm:mb-6 md:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+              <Button variant="ghost" onClick={() => router.back()} className="px-2 flex-shrink-0">
+                <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
-              <div>
-                <h1 className="text-2xl md:text-4xl font-bold flex items-center gap-2">
-                  <Salad className="h-6 w-6 md:h-8 md:w-8 text-primary" />
-                  {analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")
-                    ? `${t("foodresults.manual.input")}: ${analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || ""}`
-                    : analysis.dish || t("foodresults.title")}
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold flex items-center gap-1 sm:gap-2 truncate">
+                  <Salad className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-primary flex-shrink-0" />
+                  <span className="truncate">
+                    {analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")
+                      ? `${t("foodresults.manual.input")}: ${analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || ""}`
+                      : analysis.dish || t("foodresults.title")}
+                  </span>
                 </h1>
               </div>
             </div>
-            <div className="flex items-center gap-2 pdf-hide">
-              <Button size="sm" variant="outline" onClick={handleShare}>
-                <Share2 className="h-4 w-4 mr-2" />
-                {t("foodresults.share")}
+            <div className="flex items-center gap-2 pdf-hide flex-shrink-0">
+              <Button size="sm" variant="outline" onClick={handleShare} className="text-xs sm:text-sm">
+                <Share2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">{t("foodresults.share")}</span>
               </Button>
               <TooltipProvider delayDuration={200}>
                 <Tooltip>
@@ -1380,9 +1382,10 @@ export function FoodResultsClient() {
                         onClick={handleExportPdf}
                         disabled={exportingPdf || !hasPremiumAccess}
                         variant={!hasPremiumAccess ? "outline" : "default"}
+                        className="text-xs sm:text-sm"
                       >
-                        {exportingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
-                        {exportingPdf ? t("foodresults.pdf.preparing") : t("foodresults.pdf")}
+                        {exportingPdf ? <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2 animate-spin" /> : <FileDown className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />}
+                        <span className="hidden sm:inline">{exportingPdf ? t("foodresults.pdf.preparing") : t("foodresults.pdf")}</span>
                       </Button>
                     </div>
                   </TooltipTrigger>
@@ -1398,14 +1401,14 @@ export function FoodResultsClient() {
         </div>
 
         {isAuthenticated && !profileComplete && (
-          <Alert className="mb-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
-            <User className="h-4 w-4 text-primary" />
-            <AlertTitle className="font-semibold">{t("foodresults.complete.profile.title")}</AlertTitle>
-            <AlertDescription className="mt-1">
+          <Alert className="mb-4 sm:mb-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
+            <User className="h-4 w-4 text-primary flex-shrink-0" />
+            <AlertTitle className="font-semibold text-sm sm:text-base">{t("foodresults.complete.profile.title")}</AlertTitle>
+            <AlertDescription className="mt-1 text-xs sm:text-sm">
               {t("foodresults.complete.profile.description")}
               <Button
                 variant="link"
-                className="p-0 h-auto ml-1 text-primary font-semibold underline"
+                className="p-0 h-auto ml-1 text-primary font-semibold underline text-xs sm:text-sm"
                 onClick={() => router.push("/profile")}
               >
                 {t("foodresults.complete.profile.button")}
@@ -1414,16 +1417,16 @@ export function FoodResultsClient() {
           </Alert>
         )}
 
-        <div className="grid lg:grid-cols-12 gap-6 ">
+        <div className="grid lg:grid-cols-12 gap-4 sm:gap-6">
           {!(analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")) && (
-            <div className="lg:col-span-4 ">
-              <Card className="overflow-hidden sticky top-6">
+            <div className="lg:col-span-4">
+              <Card className="overflow-hidden lg:sticky lg:top-6">
                 {imageUrl ? (
-                  <div className="relative overflow-hidden" style={{ paddingBottom: 'calc(100% + 20px)' }}>
+                  <div className="relative overflow-hidden" style={{ paddingBottom: 'calc(100% + 24px)' }}>
                     <img src={imageUrl} alt={analysis.dish || "Food"} className="absolute inset-0 w-full h-full object-cover" />
                   </div>
                 ) : (
-                  <div className="relative flex items-center justify-center text-muted-foreground bg-muted" style={{ paddingBottom: 'calc(100% + 20px)' }}>
+                  <div className="relative flex items-center justify-center text-muted-foreground bg-muted" style={{ paddingBottom: 'calc(100% + 24px)' }}>
                     <Salad className="absolute inset-0 m-auto h-16 w-16 opacity-30" />
                   </div>
                 )}
@@ -1461,25 +1464,25 @@ export function FoodResultsClient() {
             </div>
           )}
 
-          <div className={`${analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input") ? "lg:col-span-12" : "lg:col-span-8"} space-y-7`}>
-            <Card >
-              <CardHeader className="pb-1">
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="overflow-hidden sticky top-6 ">
-                      {t("foodresults.nutrition.summary")} 
+          <div className={`${analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input") ? "lg:col-span-12" : "lg:col-span-8"} space-y-4 sm:space-y-6 lg:space-y-7`}>
+            <Card className="pb-[40px]">
+              <CardHeader className="pb-3 pt-4 sm:pt-5">
+                <div className="space-y-2 sm:space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2">
+                    <CardTitle className="text-lg sm:text-xl lg:text-2xl overflow-hidden">
+                      <span className="block sm:inline">{t("foodresults.nutrition.summary")}</span>
                       {servingApproximation && (
-                        <span className="text-base font-normal text-muted-foreground whitespace-nowrap mx-3">
+                        <span className="text-sm sm:text-base font-normal text-muted-foreground whitespace-nowrap sm:mx-2 ml-0 sm:ml-3 block sm:inline">
                           (~ {servingApproximation.grams}g)
                         </span>
                       )}
                     </CardTitle>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-sm text-muted-foreground whitespace-nowrap">{t("foodresults.servings")}</span>
+                      <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{t("foodresults.servings")}</span>
                       <input
                         type="text"
                         inputMode="decimal"
-                        className="border rounded-lg px-3 py-2 w-28 text-center font-medium bg-background flex-shrink-0"
+                        className="border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 w-20 sm:w-28 text-center font-medium bg-background flex-shrink-0 text-sm sm:text-base"
                         value={servingsInput}
                         onChange={(e) => {
                           const raw = e.target.value;
@@ -1522,6 +1525,7 @@ export function FoodResultsClient() {
                       {isAuthenticated && servings !== savedServings && (
                         <Button
                           size="sm"
+                          className="text-xs sm:text-sm px-2 sm:px-3"
                           onClick={async () => {
                             if (!id) return;
                             try {
@@ -1565,12 +1569,12 @@ export function FoodResultsClient() {
                     </div>
                   </div>
                   {analysis.description && (
-                    <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-primary/30 pl-3 pt-2 pb-1">
+                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed border-l-2 border-primary/30 pl-2 sm:pl-3 pt-1">
                       {analysis.description}
                     </p>
                   )}
                   {analysis.tags && analysis.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pb-2">
+                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
                       {analysis.tags.map((tag, index) => {
                         const palette = [
                           "bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.4)] hover:bg-emerald-500 hover:text-white hover:border-emerald-600 transition-colors",
@@ -1592,18 +1596,18 @@ export function FoodResultsClient() {
                   )}
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-3 sm:pt-4">
                 {analysis.servingGuidance && (
-                  <div className="mb-4 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-primary">
+                  <div className="mb-4 sm:mb-5 rounded-lg border border-primary/20 bg-primary/5 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-primary">
                     {analysis.servingGuidance}
                   </div>
                 )}
                 {!analysis.servingGuidance && servingApproximation && (
-                  <div className="mb-4 rounded-lg border border-muted/50 bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+                  <div className="mb-4 sm:mb-5 rounded-lg border border-muted/50 bg-muted/40 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-muted-foreground">
                     <span className="font-medium text-foreground">{servingApproximation.label}</span> ≈ {servingApproximation.grams} grams. To adjust servings, divide your dish weight (in grams) by {servingApproximation.grams}. For example, 650 g ÷ {servingApproximation.grams} ≈ {(650 / servingApproximation.grams).toFixed(1)} servings.
                   </div>
                 )}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                 {[
                     { icon: Flame, label: "Calories", value: scaled?.calories ?? "-", suffix: "", style: "bg-orange-100/90 border-orange-200 text-orange-900" },
                     { icon: Beef, label: "Protein", value: scaled?.protein_g ?? "-", suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
@@ -1614,14 +1618,14 @@ export function FoodResultsClient() {
                   ].map((item, index) => (
                     <div
                       key={index}
-                      className={`border rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm ${item.style}`}
+                      className={`border rounded-xl px-2 sm:px-3 md:px-4 py-2.5 sm:py-3 md:py-3.5 flex items-center gap-2 sm:gap-3 shadow-sm ${item.style}`}
                     >
-                      <div className="p-2">
-                        <item.icon className="h-5 w-5" />
+                      <div className="p-1.5 sm:p-2 flex-shrink-0">
+                        <item.icon className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
                       </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">{item.label}</div>
-                        <div className="text-xl font-semibold">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs sm:text-sm text-muted-foreground mb-0.5">{item.label}</div>
+                        <div className="text-base sm:text-lg md:text-xl font-semibold">
                           {item.value}
                           {item.value !== "-" ? item.suffix : ""}
                         </div>
@@ -1637,27 +1641,27 @@ export function FoodResultsClient() {
               )}
             </Card>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
               <Card className={analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input") ? "md:col-span-2" : ""}>
-                <CardHeader>
-                  <div className="flex items-center justify-between gap-3">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between gap-2 sm:gap-3">
                     <div className="flex items-center gap-2">
-                      <Apple className="h-5 w-5 text-primary" />
-                      <CardTitle>Ingredients</CardTitle>
+                      <Apple className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                      <CardTitle className="text-base sm:text-lg">Ingredients</CardTitle>
                     </div>
-                    <Button variant="outline" size="sm" onClick={handleOpenIngredientEditor}>
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Edit
+                    <Button variant="outline" size="sm" onClick={handleOpenIngredientEditor} className="text-xs sm:text-sm px-2 sm:px-3">
+                      <Pencil className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Edit</span>
                     </Button>
                   </div>
-                  <CardDescription>Detected/estimated ingredients</CardDescription>
+                  <CardDescription className="text-xs sm:text-sm">Detected/estimated ingredients</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ul className="space-y-2">
+                  <ul className="space-y-2 sm:space-y-2.5">
                     {analysis.ingredients?.map((ing, i) => (
                       <li key={i} className="flex items-start gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                        <span className="text-sm">{ing}</span>
+                        <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-primary mt-0.5 sm:mt-1 flex-shrink-0" />
+                        <span className="text-xs sm:text-sm leading-relaxed">{ing}</span>
                       </li>
                     ))}
                   </ul>
@@ -1666,15 +1670,15 @@ export function FoodResultsClient() {
 
               {!(analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")) && (
                 <Card>
-                  <CardHeader>
-                    <div className="flex items-md center gap-2">
-                      <Zap className="h-5 w-5 text-primary" />
-                      <CardTitle>How to Prepare</CardTitle>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                      <CardTitle className="text-base sm:text-lg">How to Prepare</CardTitle>
                     </div>
-                    <CardDescription>Step-by-step instructions</CardDescription>
+                    <CardDescription className="text-xs sm:text-sm">Step-by-step instructions</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <ol className="space-y-4">
+                    <ol className="space-y-3 sm:space-y-4">
                       {analysis.instructions?.map((step, i) => {
                         // Parse step to extract bold title and description
                         // Handle both markdown **bold** and plain text formats
@@ -1684,17 +1688,17 @@ export function FoodResultsClient() {
                         const description = hasBoldTitle ? boldMatch[2] : step;
                         
                         return (
-                          <li key={i} className="flex gap-3">
-                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium mt-0.5">
+                          <li key={i} className="flex gap-2 sm:gap-3">
+                            <span className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs sm:text-sm font-medium mt-0.5">
                               {i + 1}
                             </span>
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               {title && (
-                                <p className="text-sm font-semibold text-foreground mb-1.5">
+                                <p className="text-xs sm:text-sm font-semibold text-foreground mb-1 sm:mb-1.5">
                                   {title}
                               </p>
                             )}
-                            <p className="text-sm leading-relaxed text-foreground/90">
+                            <p className="text-xs sm:text-sm leading-relaxed text-foreground/90">
                               {description}
                             </p>
                           </div>
@@ -1745,11 +1749,11 @@ export function FoodResultsClient() {
 
             {analysis.additionalInfo && (
               <Alert className="border-amber-200 bg-amber-50 text-amber-900">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 mt-0.5" />
-                  <div>
-                    <AlertTitle>Additional Information</AlertTitle>
-                    <AlertDescription className="text-sm leading-relaxed">
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <AlertTitle className="text-sm sm:text-base">Additional Information</AlertTitle>
+                    <AlertDescription className="text-xs sm:text-sm leading-relaxed mt-1">
                       {analysis.additionalInfo}
                     </AlertDescription>
                   </div>
@@ -1759,19 +1763,19 @@ export function FoodResultsClient() {
 
             <Card className="border-primary/20">
               <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Target className="h-5 w-5 text-primary" />
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                    <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                      <Target className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     </div>
-                    <div>
-                      <CardTitle className="flex items-center gap-2">Personalized Health Context</CardTitle>
-                      <CardDescription>Demographic-aware insights tailored to your goals</CardDescription>
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="text-base sm:text-lg lg:text-xl flex items-center gap-1 sm:gap-2">Personalized Health Context</CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">Demographic-aware insights tailored to your goals</CardDescription>
                     </div>
                   </div>
                   {(upgradeRequired || !hasPremiumAccess) && (
-                    <span className="text-xs bg-primary/10 text-primary px-3 py-1 rounded-full flex items-center gap-1 border border-primary/20">
-                      <Sparkles className="h-3 w-3" /> Premium
+                    <span className="text-xs bg-primary/10 text-primary px-2 sm:px-3 py-1 rounded-full flex items-center gap-1 border border-primary/20 flex-shrink-0 self-start sm:self-center">
+                      <Sparkles className="h-3 w-3" /> <span className="hidden sm:inline">Premium</span>
                     </span>
                   )}
                 </div>
@@ -1782,53 +1786,53 @@ export function FoodResultsClient() {
                     <Loader2 className="h-6 w-6 animate-spin text-primary" />
                   </div>
                 ) : !hasPremiumAccess ? (
-                  <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-8 text-center">
+                  <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-4 sm:p-6 md:p-8 text-center">
                     <div className="absolute inset-0 pointer-events-none opacity-40" aria-hidden>
                       <div className="absolute -top-10 -right-10 h-32 w-32 bg-primary/30 blur-3xl" />
                       <div className="absolute -bottom-12 -left-12 h-40 w-40 bg-emerald-400/20 blur-3xl" />
                     </div>
-                    <div className="relative flex flex-col items-center gap-4">
-                      <div className="p-4 rounded-2xl bg-primary/15 border border-primary/30 shadow-inner">
-                        <Crown className="h-8 w-8 text-primary" />
+                    <div className="relative flex flex-col items-center gap-3 sm:gap-4">
+                      <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-primary/15 border border-primary/30 shadow-inner">
+                        <Crown className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
                       </div>
                       <div className="space-y-2">
-                        <h3 className="text-2xl font-semibold tracking-tight">Get Premium to unlock this section</h3>
-                        <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                        <h3 className="text-lg sm:text-xl md:text-2xl font-semibold tracking-tight">Get Premium to unlock this section</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground max-w-md mx-auto px-2">
                           Personalized Health Context provides AI-powered wellness guidance tailored to your unique goals. Upgrade to reveal insights crafted specifically for you.
                         </p>
                       </div>
-                      <div className="flex flex-wrap justify-center gap-3">
+                      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 w-full">
                         {!isAuthenticated && (
-                          <Button variant="outline" onClick={() => router.push("/auth")}>
+                          <Button variant="outline" onClick={() => router.push("/auth")} size="sm" className="text-xs sm:text-sm">
                             Sign In
                           </Button>
                         )}
-                        <Button className="bg-primary hover:bg-primary-hover" onClick={() => router.push("/plans")}>
-                          <Sparkles className="h-4 w-4 mr-2" /> Explore Premium
+                        <Button className="bg-primary hover:bg-primary-hover text-xs sm:text-sm" size="sm" onClick={() => router.push("/plans")}>
+                          <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" /> <span className="hidden sm:inline">Explore Premium</span><span className="sm:hidden">Premium</span>
                         </Button>
                       </div>
-                      <div className="mt-6 grid sm:grid-cols-3 gap-4 text-left w-full max-w-3xl">
-                        <div className="rounded-xl border border-primary/10 bg-background/60 p-4">
-                          <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
-                            <Heart className="h-4 w-4 text-primary" /> Tailored Guidance
+                      <div className="mt-4 sm:mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-left w-full max-w-3xl">
+                        <div className="rounded-lg sm:rounded-xl border border-primary/10 bg-background/60 p-3 sm:p-4">
+                          <h4 className="text-xs sm:text-sm font-semibold mb-1 flex items-center gap-1.5 sm:gap-2">
+                            <Heart className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" /> <span>Tailored Guidance</span>
                           </h4>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground leading-relaxed">
                             Receive context-aware advice that adapts to your age, activity level, and health goals.
                           </p>
                         </div>
-                        <div className="rounded-xl border border-primary/10 bg-background/60 p-4">
-                          <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
-                            <Lightbulb className="h-4 w-4 text-primary" /> Smart Substitutions
+                        <div className="rounded-lg sm:rounded-xl border border-primary/10 bg-background/60 p-3 sm:p-4">
+                          <h4 className="text-xs sm:text-sm font-semibold mb-1 flex items-center gap-1.5 sm:gap-2">
+                            <Lightbulb className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" /> <span>Smart Substitutions</span>
                           </h4>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground leading-relaxed">
                             Unlock creative ingredient swaps to make every meal healthier without compromising taste.
                           </p>
                         </div>
-                        <div className="rounded-xl border border-primary/10 bg-background/60 p-4">
-                          <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
-                            <Shield className="h-4 w-4 text-primary" /> Premium Dashboard
+                        <div className="rounded-lg sm:rounded-xl border border-primary/10 bg-background/60 p-3 sm:p-4 sm:col-span-2 lg:col-span-1">
+                          <h4 className="text-xs sm:text-sm font-semibold mb-1 flex items-center gap-1.5 sm:gap-2">
+                            <Shield className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" /> <span>Premium Dashboard</span>
                           </h4>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground leading-relaxed">
                             Track your progress with advanced analytics and save personalized recommendations.
                           </p>
                         </div>
@@ -2025,7 +2029,7 @@ export function FoodResultsClient() {
                             </div>
 
                             {/* Enhanced Insights Display */}
-                            <div className="grid md:grid-cols-2 gap-4">
+                            <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
                               {/* Key Recommendations & Tips Card */}
                               <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
                                 <CardHeader className="pb-3">
@@ -2111,10 +2115,10 @@ export function FoodResultsClient() {
       </div>
       </main>
       <Dialog open={ingredientEditorOpen} onOpenChange={setIngredientEditorOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Edit detected ingredients</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">Edit detected ingredients</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Adjust the ingredient list and quantities. We&apos;ll recalculate the nutrition based on your edits.
             </DialogDescription>
           </DialogHeader>
@@ -2124,16 +2128,17 @@ export function FoodResultsClient() {
               value={ingredientInput}
               onChange={(e) => setIngredientInput(e.target.value)}
               placeholder={"250g cooked chickpeas\n30g tahini\n15ml olive oil\nPaprika, to taste"}
+              className="text-sm sm:text-base"
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               Enter one ingredient per line. Use metric units (grams, kg, ml, liters) for quantities. Imperial units (cups, tbsp, oz) will be automatically converted to metric.
             </p>
           </div>
-          <DialogFooter className="pt-2">
-            <Button variant="outline" onClick={() => setIngredientEditorOpen(false)} disabled={updatingIngredients}>
+          <DialogFooter className="pt-2 flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIngredientEditorOpen(false)} disabled={updatingIngredients} className="w-full sm:w-auto text-sm">
               Cancel
             </Button>
-            <Button onClick={handleIngredientUpdate} disabled={updatingIngredients}>
+            <Button onClick={handleIngredientUpdate} disabled={updatingIngredients} className="w-full sm:w-auto text-sm">
               {updatingIngredients ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Updating...
