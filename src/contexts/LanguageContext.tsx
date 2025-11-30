@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export type Language = "en" | "es" | "fr" | "de" | "it" | "pt" | "zh" | "ja" | "ar";
 
@@ -494,6 +495,9 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.activity.moderate": "Moderately Active (moderate exercise 3-5 days/week)",
     "profile.activity.very": "Very Active (hard exercise 6-7 days/week)",
     "profile.activity.extreme": "Extremely Active (very hard exercise, physical job)",
+    "profile.language": "Default Language",
+    "profile.language.select": "Select your default language",
+    "profile.language.description": "This will be your default language when you sign in",
     "profile.save": "Save Changes",
     "profile.saving": "Saving Changes...",
     "profile.success": "Success",
@@ -1452,6 +1456,9 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.activity.moderate": "Moderadamente Activo (ejercicio moderado 3-5 días/semana)",
     "profile.activity.very": "Muy Activo (ejercicio intenso 6-7 días/semana)",
     "profile.activity.extreme": "Extremadamente Activo (ejercicio muy intenso, trabajo físico)",
+    "profile.language": "Idioma Predeterminado",
+    "profile.language.select": "Selecciona tu idioma predeterminado",
+    "profile.language.description": "Este será tu idioma predeterminado cuando inicies sesión",
     "profile.save": "Guardar Cambios",
     "profile.saving": "Guardando Cambios...",
     "profile.success": "Éxito",
@@ -2410,6 +2417,9 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.activity.moderate": "Modérément Actif (exercice modéré 3-5 jours/semaine)",
     "profile.activity.very": "Très Actif (exercice intense 6-7 jours/semaine)",
     "profile.activity.extreme": "Extrêmement Actif (exercice très intense, travail physique)",
+    "profile.language": "Langue par Défaut",
+    "profile.language.select": "Sélectionnez votre langue par défaut",
+    "profile.language.description": "Ce sera votre langue par défaut lorsque vous vous connecterez",
     "profile.save": "Enregistrer les Modifications",
     "profile.saving": "Enregistrement des Modifications...",
     "profile.success": "Succès",
@@ -3368,6 +3378,9 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.activity.moderate": "Mäßig Aktiv (mäßige Bewegung 3-5 Tage/Woche)",
     "profile.activity.very": "Sehr Aktiv (intensive Bewegung 6-7 Tage/Woche)",
     "profile.activity.extreme": "Extrem Aktiv (sehr intensive Bewegung, körperliche Arbeit)",
+    "profile.language": "Standardsprache",
+    "profile.language.select": "Wählen Sie Ihre Standardsprache",
+    "profile.language.description": "Dies ist Ihre Standardsprache beim Anmelden",
     "profile.save": "Änderungen Speichern",
     "profile.saving": "Änderungen werden gespeichert...",
     "profile.success": "Erfolg",
@@ -4326,6 +4339,9 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.activity.moderate": "Moderatamente Attivo (esercizio moderato 3-5 giorni/settimana)",
     "profile.activity.very": "Molto Attivo (esercizio intenso 6-7 giorni/settimana)",
     "profile.activity.extreme": "Estremamente Attivo (esercizio molto intenso, lavoro fisico)",
+    "profile.language": "Lingua Predefinita",
+    "profile.language.select": "Seleziona la tua lingua predefinita",
+    "profile.language.description": "Questa sarà la tua lingua predefinita quando accedi",
     "profile.save": "Salva Modifiche",
     "profile.saving": "Salvataggio Modifiche...",
     "profile.success": "Successo",
@@ -5284,6 +5300,9 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.activity.moderate": "Moderadamente Ativo (exercício moderado 3-5 dias/semana)",
     "profile.activity.very": "Muito Ativo (exercício intenso 6-7 dias/semana)",
     "profile.activity.extreme": "Extremamente Ativo (exercício muito intenso, trabalho físico)",
+    "profile.language": "Idioma Padrão",
+    "profile.language.select": "Selecione seu idioma padrão",
+    "profile.language.description": "Este será seu idioma padrão quando você fizer login",
     "profile.save": "Salvar Alterações",
     "profile.saving": "Salvando Alterações...",
     "profile.success": "Sucesso",
@@ -6242,6 +6261,9 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.activity.moderate": "中度活动（每周3-5天中度运动）",
     "profile.activity.very": "高度活动（每周6-7天剧烈运动）",
     "profile.activity.extreme": "极度活动（非常剧烈的运动，体力工作）",
+    "profile.language": "默认语言",
+    "profile.language.select": "选择您的默认语言",
+    "profile.language.description": "这将是您登录时的默认语言",
     "profile.save": "保存更改",
     "profile.saving": "正在保存更改...",
     "profile.success": "成功",
@@ -7200,6 +7222,9 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.activity.moderate": "中程度の活動（週3-5日の中程度の運動）",
     "profile.activity.very": "非常に活動的（週6-7日の激しい運動）",
     "profile.activity.extreme": "極めて活動的（非常に激しい運動、肉体労働）",
+    "profile.language": "デフォルト言語",
+    "profile.language.select": "デフォルト言語を選択",
+    "profile.language.description": "ログイン時のデフォルト言語になります",
     "profile.save": "変更を保存",
     "profile.saving": "変更を保存中...",
     "profile.success": "成功",
@@ -8158,6 +8183,9 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.activity.moderate": "نشط بشكل معتدل (تمرين معتدل 3-5 أيام/أسبوع)",
     "profile.activity.very": "نشط جداً (تمرين قوي 6-7 أيام/أسبوع)",
     "profile.activity.extreme": "نشط للغاية (تمرين قوي جداً، عمل بدني)",
+    "profile.language": "اللغة الافتراضية",
+    "profile.language.select": "اختر لغتك الافتراضية",
+    "profile.language.description": "ستكون هذه لغتك الافتراضية عند تسجيل الدخول",
     "profile.save": "حفظ التغييرات",
     "profile.saving": "جارٍ حفظ التغييرات...",
     "profile.success": "نجح",
@@ -8660,38 +8688,115 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // Load language from localStorage on mount
-    const savedLanguage = localStorage.getItem("language") as Language;
-    let initialLanguage: Language = "en";
-    
-    if (savedLanguage && translations[savedLanguage]) {
-      initialLanguage = savedLanguage;
-    } else {
-      // Try to detect browser language
-      const browserLang = navigator.language.split("-")[0] as Language;
-      if (translations[browserLang]) {
-        initialLanguage = browserLang;
+    const loadLanguage = async () => {
+      // First, try to load from user's profile
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const { data: profile, error: profileError } = await (supabase as any)
+            .from("profiles")
+            .select("default_language")
+            .eq("id", session.user.id)
+            .maybeSingle();
+          
+          if (profileError) {
+            console.error("Error fetching profile for language:", profileError);
+          }
+          
+          if (profile?.default_language && translations[profile.default_language as Language]) {
+            const profileLanguage = profile.default_language as Language;
+            setLanguageState(profileLanguage);
+            localStorage.setItem("language", profileLanguage);
+            
+            // Update HTML lang and dir attributes
+            if (typeof document !== "undefined") {
+              document.documentElement.lang = profileLanguage;
+              if (profileLanguage === "ar") {
+                document.documentElement.dir = "rtl";
+              } else {
+                document.documentElement.dir = "ltr";
+              }
+            }
+            
+            setMounted(true);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Error loading language from profile:", error);
       }
-    }
-    
-    setLanguageState(initialLanguage);
-    
-    // Update HTML lang and dir attributes
-    if (typeof document !== "undefined") {
-      document.documentElement.lang = initialLanguage;
-      if (initialLanguage === "ar") {
-        document.documentElement.dir = "rtl";
+      
+      // Fallback to localStorage or browser language
+      const savedLanguage = localStorage.getItem("language") as Language;
+      let initialLanguage: Language = "en";
+      
+      if (savedLanguage && translations[savedLanguage]) {
+        initialLanguage = savedLanguage;
       } else {
-        document.documentElement.dir = "ltr";
+        // Try to detect browser language
+        const browserLang = navigator.language.split("-")[0] as Language;
+        if (translations[browserLang]) {
+          initialLanguage = browserLang;
+        }
       }
-    }
+      
+      setLanguageState(initialLanguage);
+      
+      // Update HTML lang and dir attributes
+      if (typeof document !== "undefined") {
+        document.documentElement.lang = initialLanguage;
+        if (initialLanguage === "ar") {
+          document.documentElement.dir = "rtl";
+        } else {
+          document.documentElement.dir = "ltr";
+        }
+      }
+      
+      setMounted(true);
+    };
     
-    setMounted(true);
+    void loadLanguage();
+
+    // Listen for auth state changes to reload language when user logs in
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        // Reload language from profile when user signs in
+        try {
+          const { data: profile } = await (supabase as any)
+            .from("profiles")
+            .select("default_language")
+            .eq("id", session.user.id)
+            .maybeSingle();
+          
+          if (profile?.default_language && translations[profile.default_language as Language]) {
+            const profileLanguage = profile.default_language as Language;
+            setLanguageState(profileLanguage);
+            localStorage.setItem("language", profileLanguage);
+            
+            if (typeof document !== "undefined") {
+              document.documentElement.lang = profileLanguage;
+              if (profileLanguage === "ar") {
+                document.documentElement.dir = "rtl";
+              } else {
+                document.documentElement.dir = "ltr";
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error reloading language on auth change:", error);
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const setLanguage = (lang: Language) => {
+  const setLanguage = async (lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem("language", lang);
+    
     // Update HTML lang attribute
     if (typeof document !== "undefined") {
       document.documentElement.lang = lang;
@@ -8701,6 +8806,20 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       } else {
         document.documentElement.dir = "ltr";
       }
+    }
+    
+    // Save to user's profile if logged in
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await (supabase as any)
+          .from("profiles")
+          .update({ default_language: lang })
+          .eq("id", session.user.id);
+      }
+    } catch (error) {
+      console.error("Error saving language to profile:", error);
+      // Don't throw - language change should still work even if profile update fails
     }
   };
 

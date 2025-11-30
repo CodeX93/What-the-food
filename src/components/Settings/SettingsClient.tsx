@@ -57,12 +57,45 @@ export function SettingsClient() {
     void checkAuth();
   }, [router]);
 
-  const handleLanguageChange = (newLanguage: string) => {
-    setLanguage(newLanguage as Language);
-    toast({
-      title: t("settings.success"),
-      description: t("settings.success.description"),
-    });
+  const handleLanguageChange = async (newLanguage: string) => {
+    try {
+      // Update language context immediately
+      setLanguage(newLanguage as Language);
+      
+      // Save to profile table in database
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        const { error } = await (supabase as any)
+          .from("profiles")
+          .update({ default_language: newLanguage })
+          .eq("id", session.user.id);
+        
+        if (error) {
+          console.error("Error saving language to profile:", error);
+          toast({
+            title: t("settings.error"),
+            description: t("settings.error.description") || "Failed to save language preference",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+      
+      toast({
+        title: t("settings.success"),
+        description: t("settings.success.description"),
+      });
+    } catch (error) {
+      console.error("Error changing language:", error);
+      toast({
+        title: t("settings.error"),
+        description: t("settings.error.description") || "Failed to save language preference",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleChangePassword = async () => {
