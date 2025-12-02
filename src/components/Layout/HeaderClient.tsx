@@ -25,6 +25,7 @@ import { Menu, X, User, Settings, LayoutDashboard, LogOut, CreditCard } from "lu
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { NavigationLinks } from "./NavigationLinks";
 import { useLanguage } from "@/contexts/LanguageContext";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
@@ -135,6 +136,7 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
   return (
     <>
       <div className="hidden md:flex items-center space-x-3">
+        <LanguageToggle />
         <ThemeToggle />
         {loading ? (
           <div className="w-20 h-9" />
@@ -219,6 +221,10 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
           <div className="px-4 pb-4 space-y-4">
             <NavigationLinks />
             <div className="flex flex-col space-y-2 pt-4 border-t">
+              <div className="flex items-center justify-between px-4 py-3 mb-2 border-b">
+                <span className="text-base font-medium">{t("nav.language")}</span>
+                <LanguageToggle />
+              </div>
               <div className="flex items-center justify-between px-4 py-3 mb-2 border-b">
                 <span className="text-base font-medium">{t("nav.theme")}</span>
                 <ThemeToggle />
