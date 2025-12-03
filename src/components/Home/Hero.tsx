@@ -5,7 +5,7 @@ import { Upload, Loader2, Sparkles, ShieldCheck, Timer } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeFood, saveScanHistory, uploadFoodImage } from "@/utils/foodScan";
 import { decrementFreeScan, hasFreeScanAvailable, getFreeScanStatus } from "@/utils/freeScanLimit";
@@ -21,6 +21,9 @@ export default function Hero() {
   const [isPremium, setIsPremium] = useState<boolean | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [socialProofMargin, setSocialProofMargin] = useState<number>(0);
+  const uploadContainerRef = useRef<HTMLDivElement>(null);
+  const leftSectionRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -80,6 +83,63 @@ export default function Hero() {
       }
     };
   }, [previewUrl]);
+
+  // Align social proof with bottom of upload container
+  useEffect(() => {
+    const alignSocialProof = () => {
+      if (uploadContainerRef.current && leftSectionRef.current) {
+        const socialProofElement = leftSectionRef.current.querySelector('[data-social-proof]') as HTMLElement;
+        
+        if (socialProofElement) {
+          // Get the Card's bottom position
+          const cardRect = uploadContainerRef.current.getBoundingClientRect();
+          const cardBottom = cardRect.bottom;
+          
+          // Get the left section's top position
+          const leftSectionRect = leftSectionRef.current.getBoundingClientRect();
+          const leftSectionTop = leftSectionRect.top;
+          
+          // Calculate the Card's height from the left section's top
+          const cardHeightFromLeftTop = cardBottom - leftSectionTop;
+          
+          // Get all content above social proof (including margins)
+          let contentAboveHeight = 0;
+          const children = Array.from(leftSectionRef.current.children);
+          const socialProofIndex = children.indexOf(socialProofElement);
+          
+          for (let i = 0; i < socialProofIndex; i++) {
+            const child = children[i] as HTMLElement;
+            const childRect = child.getBoundingClientRect();
+            const computedStyle = window.getComputedStyle(child);
+            const marginBottom = parseFloat(computedStyle.marginBottom) || 0;
+            contentAboveHeight += childRect.height + marginBottom;
+          }
+          
+          // Get social proof height
+          const socialProofHeight = socialProofElement.getBoundingClientRect().height;
+          
+          // Calculate margin needed: card bottom should align with social proof bottom
+          // cardHeightFromLeftTop = contentAboveHeight + margin + socialProofHeight
+          const marginNeeded = cardHeightFromLeftTop - contentAboveHeight - socialProofHeight;
+          
+          if (marginNeeded > 0) {
+            setSocialProofMargin(marginNeeded);
+          } else {
+            setSocialProofMargin(0);
+          }
+        }
+      }
+    };
+
+    // Use setTimeout to ensure DOM is fully rendered
+    const timeoutId = setTimeout(alignSocialProof, 100);
+    window.addEventListener('resize', alignSocialProof);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', alignSocialProof);
+    };
+  }, [previewUrl, user, isPremium, remainingScans]);
 
 
   const onChooseFile = async () => {
@@ -227,38 +287,69 @@ export default function Hero() {
         <div className="flex flex-col lg:hidden w-full gap-6">
           {/* H1 and Description */}
           <div className="w-full text-center">
-            <div className="inline-block" style={{ maxWidth: '100%' }}>
+            <div className="inline-block max-w-[32rem] sm:max-w-[36rem] mx-auto">
               <h1 className="text-3xl sm:text-4xl font-bold mb-4 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                 {(() => {
                   const title = t("hero.title");
-                  const parts = title.split("WTFood");
+                  const parts = title.split(/Food Meals|food meals|Comidas|comidas|Repas|repas|Mahlzeiten|mahlzeiten|Pasti|pasti|Refeições|refeições|餐食|食事|وجبات/i);
+                  const match = title.match(/Food Meals|food meals|Comidas|comidas|Repas|repas|Mahlzeiten|mahlzeiten|Pasti|pasti|Refeições|refeições|餐食|食事|وجبات/i);
                   return (
                     <>
                       <span className="text-black dark:text-white whitespace-normal">{parts[0]}</span>
-                      <span className="text-primary whitespace-normal">WTFood</span>
+                      {match && <span className="text-primary whitespace-normal">{match[0]}</span>}
                       {parts[1] && <span className="text-black dark:text-white whitespace-normal">{parts[1]}</span>}
                     </>
                   );
                 })()}
-              </h1>
+          </h1>
               <p className="text-base sm:text-lg text-muted-foreground mb-6 leading-relaxed block text-center sm:text-left" style={{ width: '100%', maxWidth: '90%', fontSize: '125%', wordWrap: 'break-word', overflowWrap: 'break-word', boxSizing: 'border-box', marginLeft: 'auto', marginRight: 'auto' }}>
-                {t("hero.description")}
-              </p>
+            {t("hero.description")}
+            </p>
             </div>
           </div>
 
           {/* Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center w-full">
-            <Button
-              size="lg"
-              className="bg-primary hover:bg-primary-hover text-sm sm:text-base w-full sm:w-auto"
-              onClick={handleGetStarted}
-            >
-              {t("common.getstartedfree")}
-            </Button>
-            <Button size="lg" variant="outline" className="text-sm sm:text-base w-full sm:w-auto" asChild>
-              <Link href="/how-it-works">{t("common.learnmore")}</Link>
-            </Button>
+            {!user ? (
+              <>
+                <Button
+                  size="lg"
+                  className="bg-primary hover:bg-primary-hover text-sm sm:text-base w-full sm:w-auto"
+                  onClick={handleGetStarted}
+                >
+                  {t("common.getstartedforfree")}
+                </Button>
+                <Button size="lg" variant="outline" className="text-sm sm:text-base w-full sm:w-auto" asChild>
+                  <Link href="/how-it-works">{t("common.howitworks")}</Link>
+                </Button>
+              </>
+            ) : isPremium ? (
+              <>
+                <Button
+                  size="lg"
+                  className="bg-primary hover:bg-primary-hover text-sm sm:text-base w-full sm:w-auto"
+                  asChild
+                >
+                  <Link href="/my-food-analytics">{t("common.macroanalytics")}</Link>
+                </Button>
+                <Button size="lg" variant="outline" className="text-sm sm:text-base w-full sm:w-auto" asChild>
+                  <Link href="/scan-histories">{t("common.scanhistory")}</Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  size="lg"
+                  className="bg-primary hover:bg-primary-hover text-sm sm:text-base w-full sm:w-auto"
+                  asChild
+                >
+                  <Link href="/pricing">{t("common.gopremium")}</Link>
+                </Button>
+                <Button size="lg" variant="outline" className="text-sm sm:text-base w-full sm:w-auto" asChild>
+                  <Link href="/pricing">{t("common.unlockfeatures")}</Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Free scans text */}
@@ -282,41 +373,9 @@ export default function Hero() {
             )}
           </p>
 
-          {/* Social proof row for mobile - below free scans text */}
-          <div className="flex items-center justify-center gap-3">
-            <div className="flex -space-x-2">
-              <img 
-                src="https://i.pravatar.cc/150?img=12" 
-                alt="User" 
-                className="h-10 w-10 rounded-full border-2 border-background object-cover"
-              />
-              <img 
-                src="https://i.pravatar.cc/150?img=33" 
-                alt="User" 
-                className="h-10 w-10 rounded-full border-2 border-background object-cover"
-              />
-              <img 
-                src="https://i.pravatar.cc/150?img=47" 
-                alt="User" 
-                className="h-10 w-10 rounded-full border-2 border-background object-cover"
-              />
-              <img 
-                src="https://i.pravatar.cc/150?img=68" 
-                alt="User" 
-                className="h-10 w-10 rounded-full border-2 border-background object-cover"
-              />
-              <img 
-                src="https://i.pravatar.cc/150?img=70" 
-                alt="User" 
-                className="h-10 w-10 rounded-full border-2 border-background object-cover"
-              />
-            </div>
-            <p className="text-sm text-muted-foreground">{t("hero.lovedby")}</p>
-          </div>
-
           {/* Upload Card */}
           <div className="w-full">
-            <Card>
+            <Card className="dark:border-white">
               <CardContent className="p-4 sm:p-6 md:p-8">
                 {!previewUrl ? (
                   <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card hover:border-primary/50 transition-colors">
@@ -378,23 +437,65 @@ export default function Hero() {
             </Card>
           </div>
 
+          {/* Social proof row for mobile - below upload card */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-[15px]">
+            <div className="flex -space-x-2">
+              <img 
+                src="https://cdn.senja.io/public/media/2Gy86pCPjyR9b6zUwJjDPws2.jpeg?width=63&height=63&format=webp" 
+                alt="User" 
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+              <img 
+                src="https://cdn.senja.io/public/media/dN36G7tuWI2QNvUY3GvxqhHS.jpeg?width=63&height=63&format=webp" 
+                alt="User" 
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+              <img 
+                src="https://cdn.senja.io/public/media/MuiigrWvcefNTcmrlhlLhbcD.jpeg?width=63&height=63&format=webp" 
+                alt="User" 
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+              <img 
+                src="https://cdn.senja.io/public/media/s5QLCiQI0A7sPgfkroHekVgI.jpeg?width=63&height=63&format=webp" 
+                alt="User" 
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+              <img 
+                src="https://cdn.senja.io/public/media/MieZXnLYNCXCycU6M5JBD9zL.jpeg?width=63&height=63&format=webp" 
+                alt="User" 
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+              <img 
+                src="https://cdn.senja.io/public/media/dYNtwNMbfIVzHIYhO017e8VW.jpeg?width=63&height=63&format=webp" 
+                alt="User" 
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+              <img 
+                src="https://cdn.senja.io/public/media/cxWlU3GytKVXfnpUIu2bLRnV.png?width=63&height=63&format=webp" 
+                alt="User" 
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground text-center whitespace-nowrap">{t("hero.lovedby")}</p>
+          </div>
+
           {/* Feature boxes - after upload card on mobile */}
           <div className="grid grid-cols-1 gap-3 sm:gap-4 mt-6 w-full">
-            <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+            <div className="flex items-center gap-3 rounded-xl border border-input dark:border-white bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
               <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />
               <div className="text-left">
                     <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.aiaccuracy")}</p>
                 <p className="text-xs text-muted-foreground">{t("hero.understands10k")}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+            <div className="flex items-center gap-3 rounded-xl border border-input dark:border-white bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
               <Timer className="h-5 w-5 text-primary flex-shrink-0" />
               <div className="text-left">
                 <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.instantresults")}</p>
                 <p className="text-xs text-muted-foreground">{t("hero.nutritionseconds")}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+            <div className="flex items-center gap-3 rounded-xl border border-input dark:border-white bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
               <ShieldCheck className="h-5 w-5 text-primary flex-shrink-0" />
               <div className="text-left">
                 <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.healthfocused")}</p>
@@ -408,40 +509,71 @@ export default function Hero() {
         <div className="hidden lg:flex items-center w-full">
           <div className="w-full flex flex-row items-start justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
             {/* Left Section - Value Proposition (aligned with logo) */}
-            <div className="w-full text-left max-w-2xl lg:max-w-[40rem] xl:max-w-[44rem] lg:pr-8 xl:pr-12 self-start">
+            <div ref={leftSectionRef} className="w-full text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start flex flex-col lg:mt-1.5 xl:mt-2">
               <div className="inline-block">
                 <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                   {(() => {
                     const title = t("hero.title");
-                    const parts = title.split("WTFood");
+                    const parts = title.split(/Food Meals|food meals|Comidas|comidas|Repas|repas|Mahlzeiten|mahlzeiten|Pasti|pasti|Refeições|refeições|餐食|食事|وجبات/i);
+                    const match = title.match(/Food Meals|food meals|Comidas|comidas|Repas|repas|Mahlzeiten|mahlzeiten|Pasti|pasti|Refeições|refeições|餐食|食事|وجبات/i);
                     return (
                       <>
                         <span className="text-black dark:text-white whitespace-normal">{parts[0]}</span>
-                        <span className="text-primary whitespace-normal">WTFood</span>
+                        {match && <span className="text-primary whitespace-normal">{match[0]}</span>}
                         {parts[1] && <span className="text-black dark:text-white whitespace-normal">{parts[1]}</span>}
                       </>
                     );
                   })()}
-                </h1>
+              </h1>
                 <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed block" style={{ width: '100%', maxWidth: '90%', lineHeight: '1.6', fontSize: '125%', wordWrap: 'break-word', overflowWrap: 'break-word', boxSizing: 'border-box' }}>
-                  {t("hero.description")}
-                </p>
+                {t("hero.description")}
+              </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-start">
-                <Button
-                  size="lg"
-                  className="bg-primary hover:bg-primary-hover text-sm sm:text-base"
-                  onClick={handleGetStarted}
-                >
-                  {t("common.getstartedfree")}
-                </Button>
-                <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
-                  <Link href="/how-it-works">{t("common.learnmore")}</Link>
-                </Button>
+                {!user ? (
+                  <>
+                    <Button
+                      size="lg"
+                      className="bg-primary hover:bg-primary-hover text-sm sm:text-base"
+                      onClick={handleGetStarted}
+                    >
+                      {t("common.getstartedforfree")}
+                    </Button>
+                    <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
+                      <Link href="/how-it-works">{t("common.howitworks")}</Link>
+                    </Button>
+                  </>
+                ) : isPremium ? (
+                  <>
+                    <Button
+                      size="lg"
+                      className="bg-primary hover:bg-primary-hover text-sm sm:text-base"
+                      asChild
+                    >
+                      <Link href="/my-food-analytics">{t("common.macroanalytics")}</Link>
+                    </Button>
+                    <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
+                      <Link href="/scan-histories">{t("common.scanhistory")}</Link>
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      size="lg"
+                      className="bg-primary hover:bg-primary-hover text-sm sm:text-base"
+                      asChild
+                    >
+                      <Link href="/pricing">{t("common.gopremium")}</Link>
+                    </Button>
+                    <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
+                      <Link href="/pricing">{t("common.unlockfeatures")}</Link>
+                    </Button>
+                  </>
+                )}
               </div>
 
               {/* Free scans text for desktop - after CTAs */}
-              <p className="text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6 mb-8">
                 {user ? (
                   isPremium === null ? (
                     t("hero.checkingbenefits")
@@ -460,32 +592,54 @@ export default function Hero() {
                   `${remainingScans} ${t("hero.nosignup")}`
                 )}
               </p>
+              
+
+
+
+
+
+
 
               {/* Social proof row for desktop - below free scans text */}
-              <div className="flex items-center gap-3 mt-4">
+              <div data-social-proof className="flex items-center gap-3" style={{ marginTop: `${socialProofMargin}px` }}>
                 <div className="flex -space-x-2">
                   <img 
-                    src="https://i.pravatar.cc/150?img=12" 
+                    src="https://cdn.senja.io/public/media/2Gy86pCPjyR9b6zUwJjDPws2.jpeg?width=63&height=63&format=webp" 
                     alt="User" 
                     className="h-10 w-10 rounded-full border-2 border-background object-cover"
                   />
                   <img 
-                    src="https://i.pravatar.cc/150?img=33" 
+                    src="https://cdn.senja.io/public/media/dN36G7tuWI2QNvUY3GvxqhHS.jpeg?width=63&height=63&format=webp" 
                     alt="User" 
                     className="h-10 w-10 rounded-full border-2 border-background object-cover"
                   />
                   <img 
-                    src="https://i.pravatar.cc/150?img=47" 
+                    src="https://cdn.senja.io/public/media/MuiigrWvcefNTcmrlhlLhbcD.jpeg?width=63&height=63&format=webp" 
                     alt="User" 
                     className="h-10 w-10 rounded-full border-2 border-background object-cover"
                   />
                   <img 
-                    src="https://i.pravatar.cc/150?img=68" 
+                    src="https://cdn.senja.io/public/media/s5QLCiQI0A7sPgfkroHekVgI.jpeg?width=63&height=63&format=webp" 
                     alt="User" 
                     className="h-10 w-10 rounded-full border-2 border-background object-cover"
                   />
                   <img 
-                    src="https://i.pravatar.cc/150?img=70" 
+                    src="https://cdn.senja.io/public/media/MieZXnLYNCXCycU6M5JBD9zL.jpeg?width=63&height=63&format=webp" 
+                    alt="User" 
+                    className="h-10 w-10 rounded-full border-2 border-background object-cover"
+                  />
+                  <img 
+                    src="https://cdn.senja.io/public/media/dYNtwNMbfIVzHIYhO017e8VW.jpeg?width=63&height=63&format=webp" 
+                    alt="User" 
+                    className="h-10 w-10 rounded-full border-2 border-background object-cover"
+                  />
+                  <img 
+                    src="https://cdn.senja.io/public/media/cxWlU3GytKVXfnpUIu2bLRnV.png?width=63&height=63&format=webp" 
+                    alt="User" 
+                    className="h-10 w-10 rounded-full border-2 border-background object-cover"
+                  />
+                  <img 
+                    src="https://cdn.senja.io/public/media/LhMjqn20ib2xiNbIRDKUTWiu.jpeg?width=63&height=63&format=webp" 
                     alt="User" 
                     className="h-10 w-10 rounded-full border-2 border-background object-cover"
                   />
@@ -495,8 +649,8 @@ export default function Hero() {
             </div>
 
             {/* Right Section - Upload Placeholder (aligned with profile) */}
-            <div className="w-full max-w-lg lg:max-w-[32rem] xl:max-w-[36rem] self-start lg:ml-auto lg:mt-1.5 xl:mt-2">
-              <Card>
+            <div className="w-full max-w-lg lg:max-w-[32rem] xl:max-w-[36rem] self-start lg:ml-auto lg:mt-1.5 xl:mt-2 flex flex-col">
+              <Card className="dark:border-white" ref={uploadContainerRef}>
                 <CardContent className="p-4 sm:p-6 md:p-8">
                   {!previewUrl ? (
                     <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card hover:border-primary/50 transition-colors">
@@ -559,21 +713,21 @@ export default function Hero() {
               
               {/* Feature boxes for desktop - below upload container */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6">
-                <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-3 rounded-xl border border-input dark:border-white bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                   <Sparkles className="h-5 w-5 text-primary" />
                   <div>
                     <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.aiaccuracy")}</p>
                     <p className="text-xs text-muted-foreground">{t("hero.understands10k")}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-3 rounded-xl border border-input dark:border-white bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                   <Timer className="h-5 w-5 text-primary" />
                   <div>
                     <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.instantresults")}</p>
                     <p className="text-xs text-muted-foreground">{t("hero.nutritionseconds")}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-3 rounded-xl border border-input dark:border-white bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                   <ShieldCheck className="h-5 w-5 text-primary" />
                   <div>
                     <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.healthfocused")}</p>

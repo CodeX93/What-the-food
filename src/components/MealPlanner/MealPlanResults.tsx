@@ -419,7 +419,7 @@ export function MealPlanResults({
                   alt={userFirstName || "Profile"}
                   className="h-12 w-12 rounded-full border-2 border-white/60 object-cover shadow-md"
                 />
-                <p className="text-sm uppercase tracking-[0.3em] text-white/80">
+            <p className="text-sm uppercase tracking-[0.3em] text-white/80">
                   Personalized Meal Plan For {userFirstName || "You"}
                 </p>
               </div>
@@ -427,7 +427,7 @@ export function MealPlanResults({
             {!profileAvatarUrl && (
               <p className="text-sm uppercase tracking-[0.3em] text-white/80">
                 Personalized Meal Plan For {userFirstName || "You"}
-              </p>
+            </p>
             )}
             {(() => {
               const heading = safeText(plan?.overview, "");

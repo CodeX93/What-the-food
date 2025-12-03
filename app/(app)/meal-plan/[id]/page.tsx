@@ -34,16 +34,16 @@ export default async function MealPlanPage({
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-muted/20">
       <TopBar />
       <Header />
-      <MealPlanViewClient
-        mealPlanId={params.id}
-        mealPlan={mealPlanData.plan}
-        title={mealPlanData.title}
-        goal={mealPlanData.goal}
-        targetWeight={mealPlanData.target_weight}
-        timeframeWeeks={mealPlanData.timeframe_weeks}
-        createdAt={mealPlanData.created_at}
+    <MealPlanViewClient
+      mealPlanId={params.id}
+      mealPlan={mealPlanData.plan}
+      title={mealPlanData.title}
+      goal={mealPlanData.goal}
+      targetWeight={mealPlanData.target_weight}
+      timeframeWeeks={mealPlanData.timeframe_weeks}
+      createdAt={mealPlanData.created_at}
         language={mealPlanData.language || "en"}
-      />
+    />
       <Footer />
     </div>
   );

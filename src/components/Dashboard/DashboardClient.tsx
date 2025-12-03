@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { getRemainingFreeScans, hasFreeScanAvailable, decrementFreeScan } from "@/utils/freeScanLimit";
 import {
@@ -59,6 +60,7 @@ export function DashboardClient({
     { id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`, value: "" },
   ]);
   const [manualLoading, setManualLoading] = useState(false);
+  const [iframeHeight, setIframeHeight] = useState(1100);
   const isPremium = subscription?.subscription_type === "premium";
 
   const manualPlaceholders = ["2 boiled eggs", "Greek yogurt (1 cup)", "1 banana", "Protein shake with almond milk"];
@@ -278,6 +280,200 @@ export function DashboardClient({
     fetchUserData();
   }, [initialScans, initialSubscription, initialUser, initialFullName, router, toast, t]);
 
+  // Handle iframe resizing for tinyAds widget - dynamic height based on content
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Set responsive initial height based on screen size
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const updateIframeHeight = () => {
+      const width = window.innerWidth;
+      if (width < 640) {
+        // Extra small screens - need more height for stacked cards
+        setIframeHeight(1800);
+      } else if (width < 768) {
+        // Small screens (mobile)
+        setIframeHeight(1600);
+      } else {
+        // Desktop
+        setIframeHeight(1100);
+      }
+    };
+    
+    updateIframeHeight();
+    window.addEventListener('resize', updateIframeHeight);
+    
+    return () => {
+      window.removeEventListener('resize', updateIframeHeight);
+    };
+  }, []);
+
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    // Listen for messages from tinyAds iframe (if they support it)
+    const handleMessage = (event: MessageEvent) => {
+      // Accept messages from tinyAds domain (with or without trailing slash)
+      const allowedOrigins = ['https://app.tinyadz.com', 'https://app.tinyadz.com/', 'https://tinyadz.com', 'https://tinyadz.com/'];
+      if (!allowedOrigins.includes(event.origin)) return;
+      
+      if (event.data && typeof event.data === 'object') {
+        // Handle resize messages from tinyAds
+        if (event.data.type === 'resize' && event.data.height) {
+          const newHeight = Math.max(event.data.height, 480);
+          iframe.style.height = `${newHeight}px`;
+          setIframeHeight(newHeight);
+        }
+        // Handle height updates in various formats
+        if (event.data.height && typeof event.data.height === 'number') {
+          const newHeight = Math.max(event.data.height, 480);
+          iframe.style.height = `${newHeight}px`;
+          setIframeHeight(newHeight);
+        }
+        // Handle iframe-resize events
+        if (event.data.type === 'iframe-resize' && event.data.height) {
+          const newHeight = Math.max(event.data.height, 480);
+          iframe.style.height = `${newHeight}px`;
+          setIframeHeight(newHeight);
+        }
+        // Handle any message with a height property
+        if (event.data.height) {
+          const newHeight = Math.max(Number(event.data.height) || 480, 480);
+          iframe.style.height = `${newHeight}px`;
+          setIframeHeight(newHeight);
+        }
+      }
+      
+      // Also check for string messages
+      if (typeof event.data === 'string') {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.height || data.type === 'resize') {
+            const newHeight = Math.max(Number(data.height) || 480, 480);
+            iframe.style.height = `${newHeight}px`;
+          }
+        } catch (e) {
+          // Not JSON, ignore
+        }
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('message', handleMessage);
+    }
+
+    // Function to check and update iframe height
+    const checkHeight = () => {
+      try {
+        const iframeDocument = iframe.contentDocument || iframe.contentWindow?.document;
+        if (iframeDocument) {
+          const height = Math.max(
+            iframeDocument.body?.scrollHeight || 0,
+            iframeDocument.body?.offsetHeight || 0,
+            iframeDocument.documentElement?.scrollHeight || 0,
+            iframeDocument.documentElement?.offsetHeight || 0,
+            iframeDocument.documentElement?.clientHeight || 0
+          );
+          if (height > 0) {
+            const currentHeight = parseInt(iframe.style.height || '0');
+            // Update if height changed significantly (more than 10px difference)
+            if (Math.abs(height - currentHeight) > 10) {
+              iframe.style.height = `${height}px`;
+              setIframeHeight(height);
+            }
+          }
+        }
+      } catch (e) {
+        // Cross-origin restrictions - this is expected, use postMessage instead
+        // Try to request height from iframe via postMessage
+        if (iframe.contentWindow) {
+          iframe.contentWindow.postMessage({ type: 'requestHeight' }, 'https://app.tinyadz.com');
+        }
+      }
+    };
+
+    // Handle window resize and zoom changes
+    const handleResize = () => {
+      if (typeof window === 'undefined') return;
+      // Re-check height when viewport changes (zoom, resize, etc.)
+      setTimeout(() => {
+        checkHeight();
+        if (iframe.contentWindow) {
+          iframe.contentWindow.postMessage({ type: 'requestHeight' }, 'https://app.tinyadz.com');
+        }
+      }, 100);
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize);
+    }
+
+    // Check height after iframe loads
+    const handleLoad = () => {
+      // Request height from tinyAds via postMessage
+      if (iframe.contentWindow) {
+        iframe.contentWindow.postMessage({ type: 'requestHeight' }, 'https://app.tinyadz.com');
+      }
+      
+      // Wait for content to render, then set initial height based on content
+      setTimeout(() => {
+        checkHeight();
+        if (iframe.contentWindow) {
+          iframe.contentWindow.postMessage({ type: 'requestHeight' }, 'https://app.tinyadz.com');
+        }
+      }, 500);
+      setTimeout(() => {
+        checkHeight();
+        if (iframe.contentWindow) {
+          iframe.contentWindow.postMessage({ type: 'requestHeight' }, 'https://app.tinyadz.com');
+        }
+      }, 1500);
+      setTimeout(() => {
+        checkHeight();
+        if (iframe.contentWindow) {
+          iframe.contentWindow.postMessage({ type: 'requestHeight' }, 'https://app.tinyadz.com');
+        }
+      }, 3000);
+    };
+
+    iframe.addEventListener('load', handleLoad);
+
+    // Periodic checks to catch dynamic content changes when new cards are added
+    const interval = setInterval(() => {
+      checkHeight();
+      // Also request height via postMessage periodically with multiple message formats
+      if (iframe.contentWindow) {
+        iframe.contentWindow.postMessage({ type: 'requestHeight' }, 'https://app.tinyadz.com');
+        iframe.contentWindow.postMessage({ action: 'getHeight', source: 'parent' }, 'https://app.tinyadz.com');
+        // Try to trigger a resize event
+        iframe.contentWindow.postMessage({ type: 'resize', action: 'update' }, 'https://app.tinyadz.com');
+      }
+    }, 2000);
+
+    // Also use ResizeObserver if available (for the container)
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        checkHeight();
+      });
+      resizeObserver.observe(iframe);
+    }
+
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('message', handleMessage);
+        window.removeEventListener('resize', handleResize);
+      }
+      clearInterval(interval);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+      iframe.removeEventListener('load', handleLoad);
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -425,7 +621,7 @@ export function DashboardClient({
           </Card>
 
           <Card
-            className={`cursor-pointer hover:shadow-lg transition-shadow ${!isPremium ? "opacity-80" : ""}`}
+            className={`cursor-pointer hover:shadow-lg transition-shadow relative ${!isPremium ? "opacity-80" : ""}`}
             title={!isPremium ? "Upgrade to generate personalized meal plans" : undefined}
             onClick={() => {
               if (!isPremium) {
@@ -436,17 +632,25 @@ export function DashboardClient({
                 });
                 return;
               }
-              router.push("/meal-planner");
+              // Feature coming soon - show toast instead of navigating
+              toast({
+                title: "Coming Soon",
+                description: "The Meal Planner feature is currently under development and will be available soon. Thank you for your patience!",
+                variant: "orange",
+              });
             }}
           >
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <UtensilsCrossed className="h-6 w-6 text-primary" />
+            <Badge className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-orange-500 text-white border-0 text-xs sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 z-10">
+              Coming Soon
+            </Badge>
+            <CardHeader className="pr-16 sm:pr-20">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-2 sm:p-3 bg-primary/10 rounded-lg shrink-0">
+                  <UtensilsCrossed className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                 </div>
-                <div>
-                  <CardTitle className="text-lg">{t("dashboard.card.mealplanner.title")}</CardTitle>
-                  <CardDescription>
+                <div className="min-w-0 flex-1">
+                  <CardTitle className="text-base sm:text-lg leading-tight">{t("dashboard.card.mealplanner.title")}</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm mt-1">
                     {isPremium ? t("dashboard.card.mealplanner.description") : t("dashboard.card.mealplanner.premium")}
                   </CardDescription>
                 </div>
@@ -457,16 +661,16 @@ export function DashboardClient({
 
         <Script src="https://cdn.tinysnippet.net/scripts/v2.0/manager.js" strategy="lazyOnload" />
 
-        <div id="upload-section" className="grid md:grid-cols-2 gap-6 mb-2 md:items-stretch">
+        <div id="upload-section" className="grid md:grid-cols-2 gap-6 mb-2 md:items-start">
           {/* Left Section: Upload & Analyze (first), then Log Foods manually (below) */}
-          <div className="flex flex-col gap-0 h-full ">
+          <div className="flex flex-col gap-0">
             {/* Upload and Analyze - First */}
-            <Card className="flex flex-col" style={{ flex: '1.18 2 0' }}>
+            <Card className="flex flex-col">
               <CardHeader className="pb-0" style={{ minHeight: '80px' }}>
                 <CardTitle>{t("dashboard.upload.title")}</CardTitle>
                 <CardDescription>{t("dashboard.upload.formats")}</CardDescription>
               </CardHeader>
-              <CardContent className="flex-1 flex flex-col p-4 mb-4 pb-4">
+              <CardContent className="flex flex-col p-4 mb-4 pb-4">
                 {!uploadedFile ? (
                   <div
                     className="border-2 border-dashed border-primary/30 rounded-lg p-10 cursor-pointer bg-muted/30 text-center hover:border-primary/50 transition-colors flex-1 flex flex-col items-center justify-center"
@@ -615,12 +819,12 @@ export function DashboardClient({
 
             {/* Log Foods manually - Below Upload & Analyze (Premium only) */}
             {subscription && subscription.subscription_type === "premium" && (
-              <Card className="flex flex-col flex-1 mt-8">
+              <Card className="flex flex-col mt-8">
                 <CardHeader className="pb-0" style={{ minHeight: '80px' }}>
                   <CardTitle>{t("dashboard.manual.title")}</CardTitle>
                   <CardDescription>{t("dashboard.manual.description")}</CardDescription>
                 </CardHeader>
-                <CardContent className="p-4 space-y-5 flex-1 flex flex-col">
+                <CardContent className="p-4 space-y-5 flex flex-col">
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">
                       {t("dashboard.manual.instruction")}
@@ -682,25 +886,34 @@ export function DashboardClient({
           </div>
 
           {/* Right Section: Sponsored Section with TinyAds (for both free and premium) */}
-          <Card className="flex flex-col h-full">
+          <Card className="flex flex-col">
             <CardHeader className="pb-1 px-8" style={{ minHeight: '80px' }}>
               <CardTitle>{t("dashboard.sponsors.title")}</CardTitle>
               <CardDescription>{t("dashboard.sponsors.description")}</CardDescription>
             </CardHeader>
-            <CardContent className="p-0 flex-1 flex flex-col">
-              <div className="flex flex-col space-y-1.5 pt-0">
-                <div className="w-full" style={{ minHeight: '480px' }}>
+            <CardContent className="p-0 flex flex-col">
+              <div className="flex flex-col w-full">
+                <div className="w-full" id="sponsor-iframe-container" style={{ minHeight: '480px' }}>
                   <iframe
+                    ref={iframeRef}
                     width="100%"
-                    height="100%"
                     frameBorder="0"
-                    className="ta-widget w-full h-full"
+                    className="ta-widget w-full"
                     data-min-height="480"
                     id="widget68ee566289b6c5ef70269ca8"
-                    src="https://app.tinyadz.com/widgets/68ee566289b6c5ef70269ca8?previewMode=false&showInPopup=false&theme=light"
-                    style={{ border: 'none', display: 'block', width: '100%', height: '100%', margin: 0, padding: 0 }}
+                    src="https://app.tinyadz.com/widgets/68ee566289b6c5ef70269ca8?previewMode=false&showInPopup=false&theme=light&layout=grid"
+                    style={{ 
+                      border: 'none', 
+                      display: 'block', 
+                      width: '100%', 
+                      minHeight: '480px', 
+                      height: `${iframeHeight}px`, 
+                      margin: 0, 
+                      padding: 0 
+                    }}
                     title="Advertisements"
-                    scrolling="auto"
+                    scrolling="no"
+                    allow="autoplay; encrypted-media"
                   />
                 </div>
               </div>

@@ -50,12 +50,18 @@ const translations: Record<Language, Record<string, string>> = {
     "common.closemenu": "Close menu",
     "common.learnmore": "Learn More",
     "common.getstartedfree": "Get Started Free",
+    "common.getstartedforfree": "Get Started For Free",
+    "common.howitworks": "How it Works",
+    "common.gopremium": "Go Premium",
+    "common.unlockfeatures": "Unlock Features",
+    "common.macroanalytics": "Macro Analytics",
+    "common.scanhistory": "Scan History",
     "common.scancomplete": "Scan complete!",
     "common.dailylimitreached": "Daily limit reached",
     "common.failedanalyze": "Failed to analyze image. Please try again.",
     
     // Hero Section
-    "hero.title": "Know What's Really in Your Food With ",
+    "hero.title": "It's Like Shazam, But For Your Food Meals",
     "hero.description": "Upload a photo of any meal and get instant AI-powered nutritional analysis. Track calories, macros, and make healthier choices effortlessly.",
     "hero.uploadphoto": "Upload Photo",
     "hero.remaining": "remaining",
@@ -82,7 +88,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "Nutrition in seconds",
     "hero.healthfocused": "Health Focused",
     "hero.macrosmicronutrients": "Macros & micronutrients",
-    "hero.lovedby": "Loved by 201+ creators",
+    "hero.lovedby": "Loved by 10,000+ Food Detectives",
     
     // Features Section
     "features.title": "Powerful Features for Healthy Living",
@@ -1058,12 +1064,18 @@ const translations: Record<Language, Record<string, string>> = {
     "common.closemenu": "Cerrar menú",
     "common.learnmore": "Saber más",
     "common.getstartedfree": "Comenzar gratis",
+    "common.getstartedforfree": "Comenzar Gratis",
+    "common.howitworks": "Cómo Funciona",
+    "common.gopremium": "Ir a Premium",
+    "common.unlockfeatures": "Desbloquear Funciones",
+    "common.macroanalytics": "Análisis de Macros",
+    "common.scanhistory": "Historial de Escaneos",
     "common.scancomplete": "¡Escaneo completo!",
     "common.dailylimitreached": "Límite diario alcanzado",
     "common.failedanalyze": "Error al analizar la imagen. Por favor, inténtalo de nuevo.",
     
     // Hero Section
-    "hero.title": "Descubre Qué Hay Realmente en Tu Comida",
+    "hero.title": "Es Como Shazam, Pero Para Tus Comidas",
     "hero.description": "Sube una foto de cualquier comida y obtén un análisis nutricional instantáneo con IA. Rastrea calorías, macros y toma decisiones más saludables sin esfuerzo.",
     "hero.uploadphoto": "Subir Foto",
     "hero.remaining": "restantes",
@@ -1090,7 +1102,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "Nutrición en segundos",
     "hero.healthfocused": "Enfocado en la Salud",
     "hero.macrosmicronutrients": "Macros y micronutrientes",
-    "hero.lovedby": "Amado por más de 201 creadores",
+    "hero.lovedby": "Amado por más de 10,000 Detectives de Alimentos",
     
     // Features Section
     "features.title": "Funciones Poderosas para una Vida Saludable",
@@ -2058,12 +2070,18 @@ const translations: Record<Language, Record<string, string>> = {
     "common.closemenu": "Fermer le menu",
     "common.learnmore": "En savoir plus",
     "common.getstartedfree": "Commencer gratuitement",
+    "common.getstartedforfree": "Commencer Gratuitement",
+    "common.howitworks": "Comment ça Marche",
+    "common.gopremium": "Passer à Premium",
+    "common.unlockfeatures": "Débloquer les Fonctionnalités",
+    "common.macroanalytics": "Analyse des Macros",
+    "common.scanhistory": "Historique des Scans",
     "common.scancomplete": "Scan terminé !",
     "common.dailylimitreached": "Limite quotidienne atteinte",
     "common.failedanalyze": "Échec de l'analyse de l'image. Veuillez réessayer.",
     
     // Hero Section
-    "hero.title": "Découvrez ce qui se trouve vraiment dans votre nourriture",
+    "hero.title": "C'est Comme Shazam, Mais Pour Vos Repas",
     "hero.description": "Téléchargez une photo de n'importe quel repas et obtenez une analyse nutritionnelle instantanée alimentée par l'IA. Suivez les calories, les macros et faites des choix plus sains sans effort.",
     "hero.uploadphoto": "Télécharger une photo",
     "hero.remaining": "restants",
@@ -2090,7 +2108,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "Nutrition en secondes",
     "hero.healthfocused": "Axé sur la santé",
     "hero.macrosmicronutrients": "Macros et micronutriments",
-    "hero.lovedby": "Aimé par plus de 201 créateurs",
+    "hero.lovedby": "Aimé par plus de 10 000 Détectives Alimentaires",
     
     // Features Section
     "features.title": "Fonctionnalités puissantes pour une vie saine",
@@ -3058,12 +3076,18 @@ const translations: Record<Language, Record<string, string>> = {
     "common.closemenu": "Menü schließen",
     "common.learnmore": "Mehr erfahren",
     "common.getstartedfree": "Kostenlos starten",
+    "common.getstartedforfree": "Kostenlos Starten",
+    "common.howitworks": "Wie es Funktioniert",
+    "common.gopremium": "Zu Premium Wechseln",
+    "common.unlockfeatures": "Funktionen Freischalten",
+    "common.macroanalytics": "Makro-Analyse",
+    "common.scanhistory": "Scan-Verlauf",
     "common.scancomplete": "Scan abgeschlossen!",
     "common.dailylimitreached": "Tageslimit erreicht",
     "common.failedanalyze": "Bildanalyse fehlgeschlagen. Bitte versuchen Sie es erneut.",
     
     // Hero Section
-    "hero.title": "Wissen Sie, was wirklich in Ihrem Essen ist",
+    "hero.title": "Es Ist Wie Shazam, Aber Für Ihre Mahlzeiten",
     "hero.description": "Laden Sie ein Foto von jeder Mahlzeit hoch und erhalten Sie sofortige KI-gestützte Nährwertanalyse. Verfolgen Sie Kalorien, Makros und treffen Sie mühelos gesündere Entscheidungen.",
     "hero.uploadphoto": "Foto hochladen",
     "hero.remaining": "verbleibend",
@@ -3090,7 +3114,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "Ernährung in Sekunden",
     "hero.healthfocused": "Gesundheitsorientiert",
     "hero.macrosmicronutrients": "Makros & Mikronährstoffe",
-    "hero.lovedby": "Geliebt von über 201 Erstellern",
+    "hero.lovedby": "Geliebt von über 10.000 Lebensmittel-Detektiven",
     
     // Features Section
     "features.title": "Leistungsstarke Funktionen für ein gesundes Leben",
@@ -4022,12 +4046,18 @@ const translations: Record<Language, Record<string, string>> = {
     "common.closemenu": "Chiudi menu",
     "common.learnmore": "Scopri di più",
     "common.getstartedfree": "Inizia gratuitamente",
+    "common.getstartedforfree": "Inizia Gratuitamente",
+    "common.howitworks": "Come Funziona",
+    "common.gopremium": "Passa a Premium",
+    "common.unlockfeatures": "Sblocca Funzionalità",
+    "common.macroanalytics": "Analisi delle Macro",
+    "common.scanhistory": "Cronologia Scansioni",
     "common.scancomplete": "Scansione completata!",
     "common.dailylimitreached": "Limite giornaliero raggiunto",
     "common.failedanalyze": "Analisi dell'immagine fallita. Riprova.",
     
     // Hero Section
-    "hero.title": "Scopri cosa c'è davvero nel tuo cibo",
+    "hero.title": "È Come Shazam, Ma Per I Tuoi Pasti",
     "hero.description": "Carica una foto di qualsiasi pasto e ottieni un'analisi nutrizionale istantanea alimentata dall'IA. Traccia calorie, macro e fai scelte più sane senza sforzo.",
     "hero.uploadphoto": "Carica foto",
     "hero.remaining": "rimanenti",
@@ -4054,7 +4084,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "Nutrizione in secondi",
     "hero.healthfocused": "Focalizzato sulla salute",
     "hero.macrosmicronutrients": "Macro e micronutrienti",
-    "hero.lovedby": "Amato da oltre 201 creatori",
+    "hero.lovedby": "Amato da oltre 10.000 Detective del Cibo",
     
     // Features Section
     "features.title": "Funzionalità potenti per una vita sana",
@@ -4986,12 +5016,18 @@ const translations: Record<Language, Record<string, string>> = {
     "common.closemenu": "Fechar menu",
     "common.learnmore": "Saiba mais",
     "common.getstartedfree": "Começar grátis",
+    "common.getstartedforfree": "Começar Grátis",
+    "common.howitworks": "Como Funciona",
+    "common.gopremium": "Fazer Upgrade para Premium",
+    "common.unlockfeatures": "Desbloquear Recursos",
+    "common.macroanalytics": "Análise de Macros",
+    "common.scanhistory": "Histórico de Scans",
     "common.scancomplete": "Escaneamento concluído!",
     "common.dailylimitreached": "Limite diário atingido",
     "common.failedanalyze": "Falha ao analisar a imagem. Por favor, tente novamente.",
     
     // Hero Section
-    "hero.title": "Saiba o que está realmente na sua comida",
+    "hero.title": "É Como Shazam, Mas Para Suas Refeições",
     "hero.description": "Envie uma foto de qualquer refeição e obtenha análise nutricional instantânea alimentada por IA. Rastreie calorias, macros e faça escolhas mais saudáveis sem esforço.",
     "hero.uploadphoto": "Enviar foto",
     "hero.remaining": "restantes",
@@ -5018,7 +5054,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "Nutrição em segundos",
     "hero.healthfocused": "Focado na saúde",
     "hero.macrosmicronutrients": "Macros e micronutrientes",
-    "hero.lovedby": "Amado por mais de 201 criadores",
+    "hero.lovedby": "Amado por mais de 10.000 Detetives de Alimentos",
     
     // Features Section
     "features.title": "Recursos poderosos para uma vida saudável",
@@ -5950,12 +5986,18 @@ const translations: Record<Language, Record<string, string>> = {
     "common.closemenu": "关闭菜单",
     "common.learnmore": "了解更多",
     "common.getstartedfree": "免费开始",
+    "common.getstartedforfree": "免费开始",
+    "common.howitworks": "工作原理",
+    "common.gopremium": "升级到高级版",
+    "common.unlockfeatures": "解锁功能",
+    "common.macroanalytics": "宏分析",
+    "common.scanhistory": "扫描历史",
     "common.scancomplete": "扫描完成！",
     "common.dailylimitreached": "已达到每日限制",
     "common.failedanalyze": "分析图像失败。请重试。",
     
     // Hero Section
-    "hero.title": "了解您食物中的真实成分",
+    "hero.title": "就像 Shazam，但适用于您的餐食",
     "hero.description": "上传任何餐食的照片，即可获得即时AI驱动的营养分析。追踪卡路里、宏量营养素，轻松做出更健康的选择。",
     "hero.uploadphoto": "上传照片",
     "hero.remaining": "剩余",
@@ -5982,7 +6024,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "几秒钟内获得营养信息",
     "hero.healthfocused": "健康导向",
     "hero.macrosmicronutrients": "宏量和微量营养素",
-    "hero.lovedby": "受到201+位创作者喜爱",
+    "hero.lovedby": "受到10,000+位食物侦探喜爱",
     
     // Features Section
     "features.title": "健康生活的强大功能",
@@ -6914,12 +6956,18 @@ const translations: Record<Language, Record<string, string>> = {
     "common.closemenu": "メニューを閉じる",
     "common.learnmore": "詳細を見る",
     "common.getstartedfree": "無料で始める",
+    "common.getstartedforfree": "無料で始める",
+    "common.howitworks": "使い方",
+    "common.gopremium": "プレミアムにアップグレード",
+    "common.unlockfeatures": "機能を解除",
+    "common.macroanalytics": "マクロ分析",
+    "common.scanhistory": "スキャン履歴",
     "common.scancomplete": "スキャン完了！",
     "common.dailylimitreached": "1日の制限に達しました",
     "common.failedanalyze": "画像の分析に失敗しました。もう一度お試しください。",
     
     // Hero Section
-    "hero.title": "食べ物に本当に何が入っているか知る",
+    "hero.title": "Shazamのようなものですが、食事用です",
     "hero.description": "あらゆる食事の写真をアップロードして、即座にAIによる栄養分析を取得。カロリー、マクロを追跡し、簡単に健康的な選択をしましょう。",
     "hero.uploadphoto": "写真をアップロード",
     "hero.remaining": "残り",
@@ -6946,7 +6994,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "数秒で栄養情報",
     "hero.healthfocused": "健康重視",
     "hero.macrosmicronutrients": "マクロとミクロ栄養素",
-    "hero.lovedby": "201人以上のクリエイターに愛されています",
+    "hero.lovedby": "10,000人以上のフード探偵に愛されています",
     
     // Features Section
     "features.title": "健康的な生活のための強力な機能",
@@ -7878,12 +7926,18 @@ const translations: Record<Language, Record<string, string>> = {
     "common.closemenu": "إغلاق القائمة",
     "common.learnmore": "اعرف المزيد",
     "common.getstartedfree": "ابدأ مجاناً",
+    "common.getstartedforfree": "ابدأ مجاناً",
+    "common.howitworks": "كيف يعمل",
+    "common.gopremium": "الترقية إلى المميز",
+    "common.unlockfeatures": "فتح الميزات",
+    "common.macroanalytics": "تحليل المغذيات الكبيرة",
+    "common.scanhistory": "سجل المسح",
     "common.scancomplete": "اكتمل المسح!",
     "common.dailylimitreached": "تم الوصول إلى الحد اليومي",
     "common.failedanalyze": "فشل تحليل الصورة. يرجى المحاولة مرة أخرى.",
     
     // Hero Section
-    "hero.title": "اعرف ما هو موجود حقاً في طعامك",
+    "hero.title": "إنه مثل Shazam، ولكن لوجباتك",
     "hero.description": "قم بتحميل صورة لأي وجبة واحصل على تحليل غذائي فوري مدعوم بالذكاء الاصطناعي. تتبع السعرات الحرارية والماكرو واتخذ خيارات أكثر صحة بسهولة.",
     "hero.uploadphoto": "تحميل صورة",
     "hero.remaining": "متبقي",
@@ -7910,7 +7964,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "التغذية في ثوانٍ",
     "hero.healthfocused": "مركز على الصحة",
     "hero.macrosmicronutrients": "الماكرو والمايكرونutrients",
-    "hero.lovedby": "محبوب من قبل أكثر من 201 منشئ",
+    "hero.lovedby": "محبوب من قبل أكثر من 10,000 من محققي الطعام",
     
     // Features Section
     "features.title": "ميزات قوية لحياة صحية",

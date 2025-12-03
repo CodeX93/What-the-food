@@ -46,7 +46,7 @@ const Features = () => {
     >
       <div className="container mx-auto px-4 w-full">
         <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4 pb-2">{t("features.title")}</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">{t("features.title")}</h2>
           <p className="text-base sm:text-lg text-muted-foreground">
             {t("features.subtitle")}
           </p>

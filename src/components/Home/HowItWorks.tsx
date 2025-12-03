@@ -34,7 +34,7 @@ const HowItWorks = () => {
     >
       <div className="container mx-auto px-4 w-full">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12 md:mb-16">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 sm:mb-4 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">
             {(() => {
               const title = t("howitworks.title");
               // Split on "works" or "Works" (case insensitive)
@@ -43,7 +43,7 @@ const HowItWorks = () => {
                 return (
                   <>
                     <span className="text-black dark:text-white whitespace-normal">{parts[0]}</span>
-                    <span className="text-primary whitespace-normal">{parts[1]?.trim()}</span>
+                    <span className="text-primary whitespace-normal"> {parts[1]?.trim()}</span>
                     {parts[2] && <span className="text-black dark:text-white whitespace-normal">{parts[2]}</span>}
                   </>
                 );
@@ -56,26 +56,18 @@ const HowItWorks = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 w-full relative">
-          {/* Connecting line for desktop */}
-          <div className="hidden md:block absolute top-7 sm:top-8 md:top-9 left-8 right-8 h-0.5 bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20 z-0" />
-          
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 w-full">
           {steps.map((step, index) => {
             const IconComponent = step.icon;
             return (
-              <div key={index} className="relative z-10 flex flex-col pt-7 sm:pt-8 md:pt-9">
-                {/* Step Number Badge - positioned outside the card */}
-                <div className="absolute top-0 left-1/2 transform -translate-x-1/2 z-30">
-                  <div className="bg-gradient-hero w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center shadow-lg border-2 sm:border-4 border-background">
-                    <span className="text-sm sm:text-base md:text-lg font-bold text-white">{index + 1}</span>
-              </div>
-                </div>
-                
-                <Card className="relative overflow-hidden border-2 border-input bg-card/50 backdrop-blur-sm h-full flex flex-col mt-3 sm:mt-4 md:mt-5">
-                  {/* Large step number in background */}
-                  {/* <div className="absolute top-4 sm:top-6 right-4 sm:right-6 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-primary/5 select-none pointer-events-none">
-                    {step.number}
-                  </div> */}
+              <div key={index} className="relative z-10 flex flex-col">
+                <Card className="relative overflow-hidden border-2 border-input bg-card/50 backdrop-blur-sm h-full flex flex-col">
+                  {/* Step Number as watermark */}
+                  <div className="absolute top-4 sm:top-6 left-4 sm:left-6 z-0 pointer-events-none select-none">
+                    <span className="text-4xl sm:text-5xl md:text-6xl font-bold text-primary dark:text-white">
+                      {index + 1}
+                    </span>
+                  </div>
                   
                   <CardHeader className="pt-10 sm:pt-12 md:pt-14 pb-0">
                     <div className="bg-gradient-hero w-14 h-14 sm:w-16 sm:h-16 md:w-[4.5rem] md:h-[4.5rem] lg:w-20 lg:h-20 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6 mx-auto shadow-lg">
@@ -85,7 +77,7 @@ const HowItWorks = () => {
                       {step.title}
                     </CardTitle>
               </CardHeader>
-                  <CardContent className="px-4 sm:px-6 md:px-8 pb-6 sm:pb-8 md:pb-10 pt-4 sm:pt-6">
+                  <CardContent className="px-4 sm:px-6 md:px-8 pb-6 sm:pb-8 md:pb-10 pt-0 -mt-2 sm:-mt-3">
                     <p className="text-sm sm:text-base md:text-lg text-muted-foreground text-center leading-relaxed">
                       {step.description}
                     </p>
