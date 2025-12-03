@@ -61,6 +61,7 @@ type MealPlanResultsProps = {
   userFirstName?: string | null;
   mealPlanId?: string;
   showShareButtons?: boolean;
+  profileAvatarUrl?: string | null;
 };
 
 const mealTypeStyles: Record<
@@ -135,6 +136,7 @@ export function MealPlanResults({
   userFirstName,
   mealPlanId,
   showShareButtons = false,
+  profileAvatarUrl,
 }: MealPlanResultsProps) {
   const t = useTranslation();
   const { toast } = useToast();
@@ -223,35 +225,30 @@ export function MealPlanResults({
     if (!planRef.current) return;
 
     setExportingPdf(true);
-    let iframe: HTMLIFrameElement | null = null;
 
     try {
-      // Hide buttons before capturing
-      const buttons = planRef.current.querySelectorAll('.pdf-hide');
-      const originalDisplays: string[] = [];
+      // Clone the content so we can hide controls in the clone without affecting the UI
+      const source = planRef.current;
+      const clone = source.cloneNode(true) as HTMLElement;
+      clone.style.position = "fixed";
+      clone.style.top = "0";
+      clone.style.left = "-9999px";
+      clone.style.width = `${source.offsetWidth}px`;
+      clone.style.pointerEvents = "none";
+      document.body.appendChild(clone);
+
+      // Hide pdf-only elements in the clone
+      const buttons = clone.querySelectorAll(".pdf-hide");
       buttons.forEach((btn) => {
-        const element = btn as HTMLElement;
-        originalDisplays.push(element.style.display);
-        element.style.display = 'none';
+        (btn as HTMLElement).style.display = "none";
       });
 
-      // Wait a bit for DOM to update
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Capture the content
-      const canvas = await html2canvas(planRef.current, {
+      // Capture the cloned content
+      const canvas = await html2canvas(clone, {
         scale: 2,
         useCORS: true,
         backgroundColor: "#ffffff",
         logging: false,
-        ignoreElements: (element) => {
-          return element.classList.contains('pdf-hide');
-        },
-      });
-
-      // Restore buttons immediately
-      buttons.forEach((btn, index) => {
-        (btn as HTMLElement).style.display = originalDisplays[index];
       });
 
       const imgData = canvas.toDataURL("image/png");
@@ -294,10 +291,6 @@ export function MealPlanResults({
         variant: "destructive",
       });
     } finally {
-      // Cleanup
-      if (iframe && document.body.contains(iframe)) {
-        document.body.removeChild(iframe);
-      }
       setExportingPdf(false);
     }
   };
@@ -418,10 +411,24 @@ export function MealPlanResults({
       <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary to-emerald-500 p-8 text-white shadow-lg">
         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: "url(/textures/noise.png)" }} />
         <div className="relative flex flex-col gap-6">
-          <div>
-            <p className="text-sm uppercase tracking-[0.3em] text-white/80">
-              Personalized Meal Plan For{userFirstName ? ` ${userFirstName}` : ""}
-            </p>
+          <div className="flex flex-col gap-3">
+            {profileAvatarUrl && (
+              <div className="flex items-center gap-3">
+                <img
+                  src={profileAvatarUrl}
+                  alt={userFirstName || "Profile"}
+                  className="h-12 w-12 rounded-full border-2 border-white/60 object-cover shadow-md"
+                />
+                <p className="text-sm uppercase tracking-[0.3em] text-white/80">
+                  Personalized Meal Plan For {userFirstName || "You"}
+                </p>
+              </div>
+            )}
+            {!profileAvatarUrl && (
+              <p className="text-sm uppercase tracking-[0.3em] text-white/80">
+                Personalized Meal Plan For {userFirstName || "You"}
+              </p>
+            )}
             {(() => {
               const heading = safeText(plan?.overview, "");
               const description = safeText(plan?.dailyCalorieRationale, "");
@@ -429,7 +436,9 @@ export function MealPlanResults({
               return (
                 <>
                   {heading && (
-                    <h2 className="text-xl md:text-xl font-bold mt-2 line-clamp-1">{heading}</h2>
+                    <h2 className="text-xl md:text-xl font-bold mt-2 line-clamp-2 max-h-[3.5rem]">
+                      {heading}
+                    </h2>
                   )}
                   {description && (
                     <p className="text-white/80 mt-3 leading-relaxed text-justify">{description}</p>

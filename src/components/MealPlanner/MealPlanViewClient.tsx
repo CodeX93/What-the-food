@@ -142,7 +142,8 @@ export function MealPlanViewClient({
 
   // Removed - translation logic now handles setting editablePlan
 
-  const userFirstName = profile?.full_name?.split(' ')[0] || null;
+  const userFirstName = profile?.full_name?.split(" ")[0] || null;
+  const profileAvatarUrl = profile?.avatar_url || null;
   const displayPlan = editablePlan || mealPlan;
 
   const updateEditablePlan = (updater: (draft: MealPlan) => void) => {
@@ -406,6 +407,7 @@ export function MealPlanViewClient({
             userFirstName={userFirstName}
             mealPlanId={mealPlanId}
             showShareButtons={true}
+            profileAvatarUrl={profileAvatarUrl}
           />
         ) : null}
       </div>

@@ -1,6 +1,9 @@
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { redirect } from "next/navigation";
 import { MealPlanViewClient } from "@/components/MealPlanner/MealPlanViewClient";
+import TopBar from "@/components/Layout/TopBar";
+import Header from "@/components/Layout/Header";
+import Footer from "@/components/Layout/Footer";
 
 export default async function MealPlanPage({
   params,
@@ -28,16 +31,21 @@ export default async function MealPlanPage({
   }
 
   return (
-    <MealPlanViewClient
-      mealPlanId={params.id}
-      mealPlan={mealPlanData.plan}
-      title={mealPlanData.title}
-      goal={mealPlanData.goal}
-      targetWeight={mealPlanData.target_weight}
-      timeframeWeeks={mealPlanData.timeframe_weeks}
-      createdAt={mealPlanData.created_at}
-      language={mealPlanData.language || 'en'}
-    />
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-background via-background to-muted/20">
+      <TopBar />
+      <Header />
+      <MealPlanViewClient
+        mealPlanId={params.id}
+        mealPlan={mealPlanData.plan}
+        title={mealPlanData.title}
+        goal={mealPlanData.goal}
+        targetWeight={mealPlanData.target_weight}
+        timeframeWeeks={mealPlanData.timeframe_weeks}
+        createdAt={mealPlanData.created_at}
+        language={mealPlanData.language || "en"}
+      />
+      <Footer />
+    </div>
   );
 }
 

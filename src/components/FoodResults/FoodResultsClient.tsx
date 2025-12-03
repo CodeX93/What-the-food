@@ -124,6 +124,7 @@ export function FoodResultsClient() {
   const [hasPremiumAccess, setHasPremiumAccess] = useState(false);
   const [checkingPremium, setCheckingPremium] = useState(true);
   const [profile, setProfile] = useState<any>(null);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [profileComplete, setProfileComplete] = useState(true);
   const [ingredientEditorOpen, setIngredientEditorOpen] = useState(false);
   const [ingredientInput, setIngredientInput] = useState("");
@@ -243,6 +244,19 @@ export function FoodResultsClient() {
       return `<p class="muted">Personalized insights were not generated for this scan.</p>`;
     })();
 
+    const profileHeaderHtml =
+      profileAvatarUrl && profile?.full_name
+        ? `
+      <div class="profile-header">
+        <div class="profile-avatar">
+          <img src="${profileAvatarUrl}" alt="${escapeHtml(profile.full_name)}" />
+        </div>
+        <div class="profile-meta">
+          <div class="profile-name">${escapeHtml(profile.full_name)}</div>
+        </div>
+      </div>`
+        : "";
+
     const pdfStyles = `
       :root {
         --mint: #10b981;
@@ -298,6 +312,38 @@ export function FoodResultsClient() {
         display: flex;
         gap: 24px;
         align-items: flex-start;
+      }
+      .profile-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .profile-avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: 999px;
+        overflow: hidden;
+        border: 2px solid #22c55e33;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+        flex-shrink: 0;
+        background: #e5e7eb;
+      }
+      .profile-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .profile-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .profile-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #111827;
       }
       .hero-img {
         width: 320px;
@@ -554,6 +600,7 @@ export function FoodResultsClient() {
             <div class="card header-card">
               ${imageHtml}
               <div class="summary">
+                ${profileHeaderHtml}
                 <h1 class="title">${escapeHtml(
                   analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")
                     ? `Manual Input: ${analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || ""}`
@@ -992,15 +1039,16 @@ export function FoodResultsClient() {
             const premium = await hasActivePremiumSubscription(user.id);
             setHasPremiumAccess(premium);
             
-            // Fetch profile to check completion
+            // Fetch profile to check completion and avatar
             const { data: profileData } = await (supabase as any)
               .from("profiles")
-              .select("full_name, gender, age, weight_kg, height_cm, goal, activity_level")
+              .select("full_name, gender, age, weight_kg, height_cm, goal, activity_level, avatar_url")
               .eq("id", user.id)
               .maybeSingle();
             
             if (profileData) {
               setProfile(profileData);
+              setProfileAvatarUrl(profileData.avatar_url || null);
               // Set profile values for insights
               setProfileAge(profileData.age || null);
               setProfileGender(profileData.gender || null);

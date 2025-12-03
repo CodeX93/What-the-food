@@ -107,6 +107,8 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
   const [generating, setGenerating] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  
   const [userId, setUserId] = useState<string | null>(null);
   const [savedPlans, setSavedPlans] = useState<SavedMealPlanRecord[]>([]);
   const [savedPlansLoading, setSavedPlansLoading] = useState(false);
@@ -161,6 +163,8 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
 
         if (error) throw error;
         setProfile(profileData);
+        setProfileAvatarUrl(profileData?.avatar_url || null);
+        setProfileAvatarUrl(profileData?.avatar_url || null);
       } catch (error) {
         console.error("Error loading profile:", error);
         toast({
@@ -1089,6 +1093,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
                 onSwapDays={handleSwapDays}
                 onSwapMeals={handleSwapMeals}
                 userFirstName={profile?.full_name ? profile.full_name.split(" ")[0] : null}
+                profileAvatarUrl={profileAvatarUrl || null}
                 showShareButtons={true}
               />
             )}
