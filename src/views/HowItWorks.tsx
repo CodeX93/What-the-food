@@ -71,7 +71,7 @@ function HowItWorksPage() {
               return (
                 <Card
                   key={index}
-                  className="relative flex flex-col border border-slate-200/70 dark:border-white/10 bg-white/95 dark:bg-white/5 backdrop-blur-sm shadow-lg hover:shadow-strong transition-all duration-300 hover:border-primary/30 dark:hover:border-primary/30"
+                  className="relative flex flex-col border border-input bg-white/95 dark:bg-white/5 backdrop-blur-sm shadow-lg hover:shadow-strong transition-all duration-300 hover:border-primary/30 dark:hover:border-primary/30"
                 >
                   <CardContent className="flex flex-1 flex-col gap-5 p-6 sm:p-8">
                     <div className="flex items-center justify-between">

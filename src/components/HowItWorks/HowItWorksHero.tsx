@@ -33,8 +33,22 @@ export function HowItWorksHero() {
         <div className="w-full flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
           {/* Left Section - Content */}
           <div className="w-full text-center lg:text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight pb-2">
-              {t("howitworkshero.title")}
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+              {(() => {
+                const title = t("howitworkshero.title");
+                // Split on "works" or "Works" (case insensitive) and similar words in other languages
+                const parts = title.split(/(\s+works|\s+Works|\s+Funciona|\s+funciona|\s+Marche|\s+marche|\s+Funktioniert|\s+funktioniert|\s+Funziona|\s+funziona|\s+funciona|\s+Funciona|\s+工作原理|\s+仕組み|\s+يعمل|\s+يعمل)/i);
+                if (parts.length > 1) {
+                  return (
+                    <>
+                      <span className="text-black dark:text-white whitespace-normal">{parts[0]}</span>
+                      <span className="text-primary whitespace-normal ml-2">{parts[1]?.trim()}</span>
+                      {parts[2] && <span className="text-black dark:text-white whitespace-normal">{parts[2]}</span>}
+                    </>
+                  );
+                }
+                return <span className="text-black dark:text-white">{title}</span>;
+              })()}
             </h1>
             <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed">
               {t("howitworkshero.description")}
@@ -48,19 +62,19 @@ export function HowItWorksHero() {
               </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-              <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                 <div className="text-center sm:text-left">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("howitworkshero.foodsdetected")}</p>
                   <p className="text-2xl sm:text-3xl font-semibold text-primary mt-1">12K+</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                 <div className="text-center sm:text-left">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("howitworkshero.accuracy")}</p>
                   <p className="text-2xl sm:text-3xl font-semibold text-primary mt-1">97%</p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+              <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                 <div className="text-center sm:text-left">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("howitworkshero.timetoinsight")}</p>
                   <p className="text-2xl sm:text-3xl font-semibold text-primary mt-1">30s</p>

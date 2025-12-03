@@ -20,8 +20,18 @@ export function FeaturesHero() {
           <div className="w-full flex flex-row items-start justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
             {/* Left Section - Value Proposition (aligned with logo) */}
             <div className="w-full text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight pb-2">
-                {t("featureshero.title")}
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+                {(() => {
+                  const title = t("featureshero.title");
+                  const parts = title.split("Healthy Living");
+                  return (
+                    <>
+                      <span className="text-black dark:text-white whitespace-normal">{parts[0]}</span>
+                      <span className="text-primary whitespace-normal">Healthy Living</span>
+                      {parts[1] && <span className="text-black dark:text-white whitespace-normal">{parts[1]}</span>}
+                    </>
+                  );
+                })()}
               </h1>
               <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed">
                 {t("featureshero.description")}
@@ -37,21 +47,21 @@ export function FeaturesHero() {
 
               {/* Feature boxes for desktop - below CTAs */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 sm:mt-7 lg:mt-8">
-                <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                   <Sparkles className="h-5 w-5 text-primary" />
                   <div>
                     <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.aiaccuracy")}</p>
                     <p className="text-xs text-muted-foreground">{t("hero.understands10k")}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                   <Timer className="h-5 w-5 text-primary" />
                   <div>
                     <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.instantresults")}</p>
                     <p className="text-xs text-muted-foreground">{t("hero.nutritionseconds")}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                   <ShieldCheck className="h-5 w-5 text-primary" />
                   <div>
                     <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.healthfocused")}</p>
@@ -113,8 +123,18 @@ export function FeaturesHero() {
         <div className="flex flex-col lg:hidden w-full gap-6">
           {/* H1 and Description */}
           <div className="w-full text-center">
-            <h1 className="text-3xl sm:text-4xl font-bold mb-4 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight pb-1">
-              {t("featureshero.title")}
+            <h1 className="text-3xl sm:text-4xl font-bold mb-4 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+              {(() => {
+                const title = t("featureshero.title");
+                const parts = title.split("Healthy Living");
+                return (
+                  <>
+                    <span className="text-black dark:text-white whitespace-normal">{parts[0]}</span>
+                    <span className="text-primary whitespace-normal">Healthy Living</span>
+                    {parts[1] && <span className="text-black dark:text-white whitespace-normal">{parts[1]}</span>}
+                  </>
+                );
+              })()}
             </h1>
             <p className="text-base sm:text-lg text-muted-foreground mb-6 leading-relaxed">
               {t("featureshero.description")}
@@ -138,21 +158,21 @@ export function FeaturesHero() {
 
           {/* Feature boxes - after trusted by text on mobile */}
           <div className="grid grid-cols-1 gap-3 sm:gap-4 mt-6 w-full">
-            <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+            <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
               <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />
               <div className="text-left">
                 <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.aiaccuracy")}</p>
                 <p className="text-xs text-muted-foreground">{t("hero.understands10k")}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+            <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
               <Timer className="h-5 w-5 text-primary flex-shrink-0" />
               <div className="text-left">
                 <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.instantresults")}</p>
                 <p className="text-xs text-muted-foreground">{t("hero.nutritionseconds")}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+            <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
               <ShieldCheck className="h-5 w-5 text-primary flex-shrink-0" />
               <div className="text-left">
                 <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.healthfocused")}</p>

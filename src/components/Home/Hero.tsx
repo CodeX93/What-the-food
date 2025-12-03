@@ -227,12 +227,24 @@ export default function Hero() {
         <div className="flex flex-col lg:hidden w-full gap-6">
           {/* H1 and Description */}
           <div className="w-full text-center">
-            <h1 className="text-3xl sm:text-4xl font-bold mb-4 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight">
-              {t("hero.title")}
-          </h1>
-            <p className="text-base sm:text-lg text-muted-foreground mb-6 leading-relaxed">
-            {t("hero.description")}
-            </p>
+            <div className="inline-block" style={{ maxWidth: '100%' }}>
+              <h1 className="text-3xl sm:text-4xl font-bold mb-4 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+                {(() => {
+                  const title = t("hero.title");
+                  const parts = title.split("WTFood");
+                  return (
+                    <>
+                      <span className="text-black dark:text-white whitespace-normal">{parts[0]}</span>
+                      <span className="text-primary whitespace-normal">WTFood</span>
+                      {parts[1] && <span className="text-black dark:text-white whitespace-normal">{parts[1]}</span>}
+                    </>
+                  );
+                })()}
+              </h1>
+              <p className="text-base sm:text-lg text-muted-foreground mb-6 leading-relaxed block text-center sm:text-left" style={{ width: '100%', maxWidth: '90%', fontSize: '125%', wordWrap: 'break-word', overflowWrap: 'break-word', boxSizing: 'border-box', marginLeft: 'auto', marginRight: 'auto' }}>
+                {t("hero.description")}
+              </p>
+            </div>
           </div>
 
           {/* Buttons */}
@@ -247,6 +259,28 @@ export default function Hero() {
             <Button size="lg" variant="outline" className="text-sm sm:text-base w-full sm:w-auto" asChild>
               <Link href="/how-it-works">{t("common.learnmore")}</Link>
             </Button>
+          </div>
+
+          {/* Social proof row for mobile - below CTAs */}
+          <div className="flex items-center justify-center gap-3">
+            <div className="flex -space-x-2">
+              <div className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-yellow-400 to-red-500 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+                <div className="h-full w-full bg-gradient-to-br from-yellow-400 to-red-500" />
+              </div>
+              <div className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+                <div className="h-full w-full bg-gradient-to-br from-slate-600 to-slate-800" />
+              </div>
+              <div className="h-10 w-10 rounded-full border-2 border-background bg-blue-500 flex items-center justify-center text-white font-semibold text-sm">
+                ?
+              </div>
+              <div className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+                <div className="h-full w-full bg-gradient-to-br from-slate-400 to-slate-600" />
+              </div>
+              <div className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+                <div className="h-full w-full bg-gradient-to-br from-slate-700 to-slate-900" />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">{t("hero.lovedby")}</p>
           </div>
 
           {/* Free scans text */}
@@ -272,7 +306,7 @@ export default function Hero() {
 
           {/* Upload Card */}
           <div className="w-full">
-            <Card className="shadow-strong">
+            <Card>
               <CardContent className="p-4 sm:p-6 md:p-8">
                 {!previewUrl ? (
                   <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card hover:border-primary/50 transition-colors">
@@ -336,21 +370,21 @@ export default function Hero() {
 
           {/* Feature boxes - after upload card on mobile */}
           <div className="grid grid-cols-1 gap-3 sm:gap-4 mt-6 w-full">
-            <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+            <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
               <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />
               <div className="text-left">
                     <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.aiaccuracy")}</p>
                 <p className="text-xs text-muted-foreground">{t("hero.understands10k")}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+            <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
               <Timer className="h-5 w-5 text-primary flex-shrink-0" />
               <div className="text-left">
                 <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.instantresults")}</p>
                 <p className="text-xs text-muted-foreground">{t("hero.nutritionseconds")}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+            <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
               <ShieldCheck className="h-5 w-5 text-primary flex-shrink-0" />
               <div className="text-left">
                 <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.healthfocused")}</p>
@@ -364,13 +398,25 @@ export default function Hero() {
         <div className="hidden lg:flex items-center w-full">
           <div className="w-full flex flex-row items-start justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
             {/* Left Section - Value Proposition (aligned with logo) */}
-            <div className="w-full text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 bg-gradient-hero bg-clip-text text-transparent leading-tight tracking-tight">
-                {t("hero.title")}
-              </h1>
-              <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed">
-                {t("hero.description")}
-              </p>
+            <div className="w-full text-left max-w-2xl lg:max-w-[40rem] xl:max-w-[44rem] lg:pr-8 xl:pr-12 self-start">
+              <div className="inline-block">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+                  {(() => {
+                    const title = t("hero.title");
+                    const parts = title.split("WTFood");
+                    return (
+                      <>
+                        <span className="text-black dark:text-white whitespace-normal">{parts[0]}</span>
+                        <span className="text-primary whitespace-normal">WTFood</span>
+                        {parts[1] && <span className="text-black dark:text-white whitespace-normal">{parts[1]}</span>}
+                      </>
+                    );
+                  })()}
+                </h1>
+                <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed block" style={{ width: '100%', maxWidth: '90%', lineHeight: '1.6', fontSize: '125%', wordWrap: 'break-word', overflowWrap: 'break-word', boxSizing: 'border-box' }}>
+                  {t("hero.description")}
+                </p>
+              </div>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-start">
                 <Button
                   size="lg"
@@ -384,29 +430,26 @@ export default function Hero() {
                 </Button>
               </div>
 
-              {/* Feature boxes for desktop - below CTAs */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 sm:mt-7 lg:mt-8">
-                <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.aiaccuracy")}</p>
-                    <p className="text-xs text-muted-foreground">{t("hero.understands10k")}</p>
+              {/* Social proof row for desktop - below CTAs */}
+              <div className="flex items-center gap-3 mt-6 sm:mt-7 lg:mt-8">
+                <div className="flex -space-x-2">
+                  <div className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-yellow-400 to-red-500 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+                    <div className="h-full w-full bg-gradient-to-br from-yellow-400 to-red-500" />
+                  </div>
+                  <div className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+                    <div className="h-full w-full bg-gradient-to-br from-slate-600 to-slate-800" />
+                  </div>
+                  <div className="h-10 w-10 rounded-full border-2 border-background bg-blue-500 flex items-center justify-center text-white font-semibold text-sm">
+                    ?
+                  </div>
+                  <div className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+                    <div className="h-full w-full bg-gradient-to-br from-slate-400 to-slate-600" />
+                  </div>
+                  <div className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
+                    <div className="h-full w-full bg-gradient-to-br from-slate-700 to-slate-900" />
                   </div>
                 </div>
-                <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-                  <Timer className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.instantresults")}</p>
-                    <p className="text-xs text-muted-foreground">{t("hero.nutritionseconds")}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-                  <ShieldCheck className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.healthfocused")}</p>
-                    <p className="text-xs text-muted-foreground">{t("hero.macrosmicronutrients")}</p>
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground">{t("hero.lovedby")}</p>
               </div>
 
               {/* Free scans text for desktop - after feature boxes */}
@@ -433,7 +476,7 @@ export default function Hero() {
 
             {/* Right Section - Upload Placeholder (aligned with profile) */}
             <div className="w-full max-w-lg lg:max-w-[32rem] xl:max-w-[36rem] self-start lg:ml-auto lg:mt-1.5 xl:mt-2">
-              <Card className="shadow-strong">
+              <Card>
                 <CardContent className="p-4 sm:p-6 md:p-8">
                   {!previewUrl ? (
                     <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card hover:border-primary/50 transition-colors">
@@ -493,6 +536,31 @@ export default function Hero() {
                   )}
             </CardContent>
           </Card>
+              
+              {/* Feature boxes for desktop - below upload container */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6">
+                <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.aiaccuracy")}</p>
+                    <p className="text-xs text-muted-foreground">{t("hero.understands10k")}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+                  <Timer className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.instantresults")}</p>
+                    <p className="text-xs text-muted-foreground">{t("hero.nutritionseconds")}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
+                  <ShieldCheck className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.healthfocused")}</p>
+                    <p className="text-xs text-muted-foreground">{t("hero.macrosmicronutrients")}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -34,8 +34,22 @@ const HowItWorks = () => {
     >
       <div className="container mx-auto px-4 w-full">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12 md:mb-16">
-          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 sm:mb-4 bg-gradient-hero bg-clip-text text-transparent">
-            {t("howitworks.title")}
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-3 sm:mb-4 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+            {(() => {
+              const title = t("howitworks.title");
+              // Split on "works" or "Works" (case insensitive)
+              const parts = title.split(/(\s+works|\s+Works)/i);
+              if (parts.length > 1) {
+                return (
+                  <>
+                    <span className="text-black dark:text-white whitespace-normal">{parts[0]}</span>
+                    <span className="text-primary whitespace-normal">{parts[1]?.trim()}</span>
+                    {parts[2] && <span className="text-black dark:text-white whitespace-normal">{parts[2]}</span>}
+                  </>
+                );
+              }
+              return <span className="text-black dark:text-white">{title}</span>;
+            })()}
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-muted-foreground">
             {t("howitworks.subtitle")}
@@ -57,7 +71,7 @@ const HowItWorks = () => {
               </div>
                 </div>
                 
-                <Card className="relative overflow-hidden border-2 border-transparent bg-card/50 backdrop-blur-sm h-full flex flex-col mt-3 sm:mt-4 md:mt-5">
+                <Card className="relative overflow-hidden border-2 border-input bg-card/50 backdrop-blur-sm h-full flex flex-col mt-3 sm:mt-4 md:mt-5">
                   {/* Large step number in background */}
                   {/* <div className="absolute top-4 sm:top-6 right-4 sm:right-6 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-primary/5 select-none pointer-events-none">
                     {step.number}

@@ -55,7 +55,7 @@ const translations: Record<Language, Record<string, string>> = {
     "common.failedanalyze": "Failed to analyze image. Please try again.",
     
     // Hero Section
-    "hero.title": "Know What's Really in Your Food",
+    "hero.title": "Know What's Really in Your Food With ",
     "hero.description": "Upload a photo of any meal and get instant AI-powered nutritional analysis. Track calories, macros, and make healthier choices effortlessly.",
     "hero.uploadphoto": "Upload Photo",
     "hero.remaining": "remaining",
@@ -82,6 +82,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "Nutrition in seconds",
     "hero.healthfocused": "Health Focused",
     "hero.macrosmicronutrients": "Macros & micronutrients",
+    "hero.lovedby": "Loved by 201+ creators",
     
     // Features Section
     "features.title": "Powerful Features for Healthy Living",
@@ -229,7 +230,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan4": "Athlete Fuel",
     
     // How It Works Hero
-    "howitworkshero.title": "Snap, scan, and know exactly what's on your plate",
+    "howitworkshero.title": "How it Works ",
     "howitworkshero.description": "Skip the manual tracking. WhatTheFood recognizes your meal, estimates portions, and surfaces accurate nutrition instantly.",
     "howitworkshero.startscan": "Start Free Scan",
     "howitworkshero.viewplans": "View Plans",
@@ -1087,6 +1088,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "Nutrición en segundos",
     "hero.healthfocused": "Enfocado en la Salud",
     "hero.macrosmicronutrients": "Macros y micronutrientes",
+    "hero.lovedby": "Amado por más de 201 creadores",
     
     // Features Section
     "features.title": "Funciones Poderosas para una Vida Saludable",
@@ -1228,7 +1230,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan4": "Combustible para Atletas",
     
     // How It Works Hero
-    "howitworkshero.title": "Captura, escanea y sabe exactamente qué hay en tu plato",
+    "howitworkshero.title": "Cómo Funciona ",
     "howitworkshero.description": "Omite el seguimiento manual. WhatTheFood reconoce tu comida, estima las porciones y muestra la nutrición precisa instantáneamente.",
     "howitworkshero.startscan": "Iniciar Escaneo Gratis",
     "howitworkshero.viewplans": "Ver Planes",
@@ -2084,6 +2086,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "Nutrition en secondes",
     "hero.healthfocused": "Axé sur la santé",
     "hero.macrosmicronutrients": "Macros et micronutriments",
+    "hero.lovedby": "Aimé par plus de 201 créateurs",
     
     // Features Section
     "features.title": "Fonctionnalités puissantes pour une vie saine",
@@ -2225,7 +2228,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan4": "Carburant pour athlètes",
     
     // How It Works Hero
-    "howitworkshero.title": "Photographiez, scannez et sachez exactement ce qui est dans votre assiette",
+    "howitworkshero.title": "Comment ça Marche ",
     "howitworkshero.description": "Oubliez le suivi manuel. WhatTheFood reconnaît votre repas, estime les portions et affiche une nutrition précise instantanément.",
     "howitworkshero.startscan": "Démarrer le scan gratuit",
     "howitworkshero.viewplans": "Voir les plans",
@@ -3081,6 +3084,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "Ernährung in Sekunden",
     "hero.healthfocused": "Gesundheitsorientiert",
     "hero.macrosmicronutrients": "Makros & Mikronährstoffe",
+    "hero.lovedby": "Geliebt von über 201 Erstellern",
     
     // Features Section
     "features.title": "Leistungsstarke Funktionen für ein gesundes Leben",
@@ -3222,7 +3226,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan4": "Athleten-Kraftstoff",
     
     // How It Works Hero
-    "howitworkshero.title": "Fotografieren, scannen und wissen Sie genau, was auf Ihrem Teller ist",
+    "howitworkshero.title": "Wie es Funktioniert ",
     "howitworkshero.description": "Überspringen Sie die manuelle Verfolgung. WhatTheFood erkennt Ihre Mahlzeit, schätzt Portionen und zeigt sofort genaue Nährwerte an.",
     "howitworkshero.startscan": "Kostenlosen Scan starten",
     "howitworkshero.viewplans": "Pläne ansehen",
@@ -4042,6 +4046,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "Nutrizione in secondi",
     "hero.healthfocused": "Focalizzato sulla salute",
     "hero.macrosmicronutrients": "Macro e micronutrienti",
+    "hero.lovedby": "Amato da oltre 201 creatori",
     
     // Features Section
     "features.title": "Funzionalità potenti per una vita sana",
@@ -4183,7 +4188,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan4": "Carburante per Atleti",
     
     // How It Works Hero
-    "howitworkshero.title": "Scatta, scansiona e sappi esattamente cosa c'è nel tuo piatto",
+    "howitworkshero.title": "Come Funziona ",
     "howitworkshero.description": "Salta il monitoraggio manuale. WhatTheFood riconosce il tuo pasto, stima le porzioni e mostra una nutrizione accurata istantaneamente.",
     "howitworkshero.startscan": "Inizia scansione gratuita",
     "howitworkshero.viewplans": "Visualizza piani",
@@ -5003,6 +5008,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "Nutrição em segundos",
     "hero.healthfocused": "Focado na saúde",
     "hero.macrosmicronutrients": "Macros e micronutrientes",
+    "hero.lovedby": "Amado por mais de 201 criadores",
     
     // Features Section
     "features.title": "Recursos poderosos para uma vida saudável",
@@ -5144,7 +5150,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan4": "Combustível para Atletas",
     
     // How It Works Hero
-    "howitworkshero.title": "Fotografe, escaneie e saiba exatamente o que está no seu prato",
+    "howitworkshero.title": "Como Funciona ",
     "howitworkshero.description": "Pule o rastreamento manual. WhatTheFood reconhece sua refeição, estima porções e mostra nutrição precisa instantaneamente.",
     "howitworkshero.startscan": "Iniciar escaneamento gratuito",
     "howitworkshero.viewplans": "Ver planos",
@@ -5964,6 +5970,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "几秒钟内获得营养信息",
     "hero.healthfocused": "健康导向",
     "hero.macrosmicronutrients": "宏量和微量营养素",
+    "hero.lovedby": "受到201+位创作者喜爱",
     
     // Features Section
     "features.title": "健康生活的强大功能",
@@ -6105,7 +6112,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan4": "运动员燃料",
     
     // How It Works Hero
-    "howitworkshero.title": "拍摄、扫描，准确了解您盘子里的食物",
+    "howitworkshero.title": "工作原理 ",
     "howitworkshero.description": "跳过手动追踪。WhatTheFood识别您的餐食，估算份量，并立即显示准确的营养信息。",
     "howitworkshero.startscan": "开始免费扫描",
     "howitworkshero.viewplans": "查看计划",
@@ -6925,6 +6932,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "数秒で栄養情報",
     "hero.healthfocused": "健康重視",
     "hero.macrosmicronutrients": "マクロとミクロ栄養素",
+    "hero.lovedby": "201人以上のクリエイターに愛されています",
     
     // Features Section
     "features.title": "健康的な生活のための強力な機能",
@@ -7066,7 +7074,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan4": "アスリート燃料",
     
     // How It Works Hero
-    "howitworkshero.title": "撮影、スキャンして、プレートに何があるかを正確に知る",
+    "howitworkshero.title": "仕組み ",
     "howitworkshero.description": "手動追跡をスキップ。WhatTheFoodは食事を認識し、ポーションを推定し、即座に正確な栄養情報を表示します。",
     "howitworkshero.startscan": "無料スキャンを開始",
     "howitworkshero.viewplans": "プランを表示",
@@ -7886,6 +7894,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.nutritionseconds": "التغذية في ثوانٍ",
     "hero.healthfocused": "مركز على الصحة",
     "hero.macrosmicronutrients": "الماكرو والمايكرونutrients",
+    "hero.lovedby": "محبوب من قبل أكثر من 201 منشئ",
     
     // Features Section
     "features.title": "ميزات قوية لحياة صحية",
@@ -8027,7 +8036,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan4": "وقود للرياضيين",
     
     // How It Works Hero
-    "howitworkshero.title": "التقط، امسح واعرف بالضبط ما في طبقك",
+    "howitworkshero.title": " كيف يعمل",
     "howitworkshero.description": "تخطى التتبع اليدوي. يتعرف WhatTheFood على وجبتك، ويقدر الحصص، ويعرض معلومات غذائية دقيقة على الفور.",
     "howitworkshero.startscan": "ابدأ مسح مجاني",
     "howitworkshero.viewplans": "عرض الخطط",
