@@ -26,6 +26,7 @@ import {
 import { Check, ChevronsUpDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -287,7 +288,9 @@ export function ProfileClient({
   const [height, setHeight] = useState<string>(initialProfile?.height_cm?.toString() || "");
   const [goal, setGoal] = useState<string>(initialProfile?.goal || "");
   const [activityLevel, setActivityLevel] = useState<string>(initialProfile?.activity_level || "");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (initialUser) {
@@ -406,6 +409,116 @@ console.log("hello world");
       cancelled = true;
     };
   }, [initialUser, router]);
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!user || !isPremium) return;
+
+    try {
+      setUploadingAvatar(true);
+      
+      // Upload to Supabase storage
+      const cleanName = file.name.replace(/[^a-zA-Z0-9_.-]/g, "_");
+      const ext = cleanName.split(".").pop() || "jpg";
+      const filename = `avatar_${Date.now()}.${ext}`;
+      const path = `${user.id}/${filename}`;
+
+      // Upload to avatars bucket (or use FoodScans if avatars doesn't exist)
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, file, {
+          upsert: true,
+          cacheControl: "3600",
+        });
+
+      if (uploadError) {
+        // Try FoodScans bucket as fallback
+        const { error: fallbackError } = await supabase.storage
+          .from("FoodScans")
+          .upload(`avatars/${path}`, file, {
+            upsert: true,
+            cacheControl: "3600",
+          });
+        
+        if (fallbackError) {
+          throw fallbackError;
+        }
+        
+        const { data: pub } = supabase.storage.from("FoodScans").getPublicUrl(`avatars/${path}`);
+        const avatarUrl = pub.publicUrl;
+        
+        // Update profile with avatar URL
+        const { error: updateError } = await (supabase as any)
+          .from("profiles")
+          .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+          .eq("id", user.id);
+
+        if (updateError) throw updateError;
+
+        // Update user metadata
+        const { error: metadataError } = await supabase.auth.updateUser({
+          data: { avatar_url: avatarUrl },
+        });
+
+        if (metadataError) throw metadataError;
+
+        // Update local state
+        setProfile((prev: any) => ({ ...prev, avatar_url: avatarUrl }));
+        toast({
+          title: t("profile.changephoto"),
+          description: "Profile image updated successfully",
+        });
+      } else {
+        const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+        const avatarUrl = pub.publicUrl;
+        
+        // Update profile with avatar URL
+        const { error: updateError } = await (supabase as any)
+          .from("profiles")
+          .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+          .eq("id", user.id);
+
+        if (updateError) throw updateError;
+
+        // Update user metadata
+        const { error: metadataError } = await supabase.auth.updateUser({
+          data: { avatar_url: avatarUrl },
+        });
+
+        if (metadataError) throw metadataError;
+
+        // Update local state
+        setProfile((prev: any) => ({ ...prev, avatar_url: avatarUrl }));
+        toast({
+          title: t("profile.changephoto"),
+          description: "Profile image updated successfully",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error uploading avatar:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload profile image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleAvatarClick = () => {
+    if (!isPremium) {
+      toast({
+        title: "Premium Required",
+        description: t("profile.premiumrequired"),
+        variant: "default",
+      });
+      return;
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
 
   const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -667,29 +780,71 @@ console.log("hello world");
           <CardContent>
             <form ref={formRef} onSubmit={handleSave} className="space-y-6">
               <div className="flex flex-col items-center sm:flex-row gap-8 pb-8 border-b-2 border-dashed">
-                <div className="relative group">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-full blur-xl opacity-30 group-hover:opacity-50 transition-opacity" />
-                    <Avatar className="relative h-32 w-32 sm:h-40 sm:w-40 border-4 border-primary/30 shadow-2xl ring-4 ring-primary/10 transition-all">
-                      <AvatarImage 
-                        src={
-                          profile?.gender === 'male' 
-                            ? '/male-avatar.jpg' 
-                            : profile?.gender === 'female' 
-                            ? '/female-avatar.jpg' 
-                            : '/male-avatar.jpg' // default to male if gender not set
-                        } 
-                        className="object-contain" 
-                      />
-                      <AvatarFallback className="text-4xl sm:text-5xl bg-gradient-to-br from-primary via-primary to-secondary text-primary-foreground font-bold">
-                        {userInitials}
-                      </AvatarFallback>
-                    </Avatar>
-                  <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center cursor-pointer backdrop-blur-sm">
-                    <div className="bg-white/20 backdrop-blur-md rounded-full p-3">
-                      <Camera className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
-                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div 
+                        className={cn(
+                          "relative group",
+                          isPremium && "cursor-pointer",
+                          !isPremium && "cursor-not-allowed"
+                        )}
+                        onClick={isPremium ? handleAvatarClick : undefined}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-full blur-xl opacity-30 group-hover:opacity-50 transition-opacity" />
+                        <Avatar className="relative h-32 w-32 sm:h-40 sm:w-40 border-4 border-primary/30 shadow-2xl ring-4 ring-primary/10 transition-all">
+                          <AvatarImage 
+                            src={
+                              profile?.avatar_url ||
+                              (profile?.gender === 'male' 
+                                ? '/male-avatar.jpg' 
+                                : profile?.gender === 'female' 
+                                ? '/female-avatar.jpg' 
+                                : '/male-avatar.jpg') // default to male if gender not set
+                            } 
+                            className="object-cover" 
+                          />
+                          <AvatarFallback className="text-4xl sm:text-5xl bg-gradient-to-br from-primary via-primary to-secondary text-primary-foreground font-bold">
+                            {userInitials}
+                          </AvatarFallback>
+                        </Avatar>
+                        {uploadingAvatar ? (
+                          <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center backdrop-blur-sm">
+                            <div className="animate-spin rounded-full h-8 w-8 border-2 border-white border-t-transparent" />
+                          </div>
+                        ) : (
+                          <div className={cn(
+                            "absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-sm",
+                            isPremium ? "cursor-pointer" : "cursor-not-allowed"
+                          )}>
+                            <div className="bg-white/20 backdrop-blur-md rounded-full p-3">
+                              <Camera className="h-6 w-6 text-white" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{isPremium ? t("profile.uploadphoto") : t("profile.premiumrequired")}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png, image/jpeg, image/jpg, image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file && isPremium) {
+                      handleAvatarUpload(file);
+                    }
+                    // Reset input
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = '';
+                    }
+                  }}
+                />
                 <div className="text-center sm:text-left flex-1 space-y-3">
                   <div>
                     <h3 className="font-bold text-2xl mb-1">{profile?.full_name || t("profile.yourname")}</h3>

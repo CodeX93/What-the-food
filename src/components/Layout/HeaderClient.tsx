@@ -41,9 +41,32 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
   const [open, setOpen] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(initialUser);
   const [loading, setLoading] = useState(!initialUser);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
+
+    const fetchProfileAvatar = async (userId: string) => {
+      try {
+        const { data: profile } = await (supabase as any)
+          .from("profiles")
+          .select("avatar_url")
+          .eq("id", userId)
+          .maybeSingle();
+
+        if (!isMounted) return;
+        if (profile?.avatar_url) {
+          setProfileAvatarUrl(profile.avatar_url);
+        } else {
+          setProfileAvatarUrl(null);
+        }
+      } catch (error) {
+        console.error("HeaderClient: failed to fetch profile avatar", error);
+        if (isMounted) {
+          setProfileAvatarUrl(null);
+        }
+      }
+    };
 
     if (!initialUser) {
       supabase.auth
@@ -51,22 +74,34 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
         .then(({ data: { session } }) => {
           if (!isMounted) return;
           setUser(session?.user ?? null);
+          if (session?.user?.id) {
+            void fetchProfileAvatar(session.user.id);
+          }
           setLoading(false);
         })
         .catch((error) => {
           console.error("HeaderClient: failed to load session", error);
           if (!isMounted) return;
           setUser(null);
+          setProfileAvatarUrl(null);
           setLoading(false);
         });
     } else {
       setUser(initialUser);
+      if (initialUser?.id) {
+        void fetchProfileAvatar(initialUser.id);
+      }
       setLoading(false);
     }
 
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isMounted) return;
       setUser(session?.user ?? null);
+      if (session?.user?.id) {
+        void fetchProfileAvatar(session.user.id);
+      } else {
+        setProfileAvatarUrl(null);
+      }
       setLoading(false);
     });
 
@@ -145,8 +180,14 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage src={user.user_metadata?.avatar_url} alt={user.email ?? ""} />
-                  <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                  <AvatarImage
+                    src={profileAvatarUrl || (user?.user_metadata as any)?.avatar_url || undefined}
+                    alt={user?.email ?? ""}
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="bg-gradient-to-br from-primary via-primary to-secondary text-primary-foreground">
+                    {getUserInitials()}
+                  </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
