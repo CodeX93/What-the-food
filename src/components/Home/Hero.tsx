@@ -261,28 +261,6 @@ export default function Hero() {
             </Button>
           </div>
 
-          {/* Social proof row for mobile - below CTAs */}
-          <div className="flex items-center justify-center gap-3">
-            <div className="flex -space-x-2">
-              <div className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-yellow-400 to-red-500 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
-                <div className="h-full w-full bg-gradient-to-br from-yellow-400 to-red-500" />
-              </div>
-              <div className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
-                <div className="h-full w-full bg-gradient-to-br from-slate-600 to-slate-800" />
-              </div>
-              <div className="h-10 w-10 rounded-full border-2 border-background bg-blue-500 flex items-center justify-center text-white font-semibold text-sm">
-                ?
-              </div>
-              <div className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
-                <div className="h-full w-full bg-gradient-to-br from-slate-400 to-slate-600" />
-              </div>
-              <div className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
-                <div className="h-full w-full bg-gradient-to-br from-slate-700 to-slate-900" />
-              </div>
-            </div>
-            <p className="text-sm text-muted-foreground">{t("hero.lovedby")}</p>
-          </div>
-
           {/* Free scans text */}
           <p className="text-xs sm:text-sm text-muted-foreground text-center">
             {user ? (
@@ -303,6 +281,38 @@ export default function Hero() {
               `${remainingScans} ${t("hero.nosignup")}`
             )}
           </p>
+
+          {/* Social proof row for mobile - below free scans text */}
+          <div className="flex items-center justify-center gap-3">
+            <div className="flex -space-x-2">
+              <img 
+                src="https://i.pravatar.cc/150?img=12" 
+                alt="User" 
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+              <img 
+                src="https://i.pravatar.cc/150?img=33" 
+                alt="User" 
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+              <img 
+                src="https://i.pravatar.cc/150?img=47" 
+                alt="User" 
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+              <img 
+                src="https://i.pravatar.cc/150?img=68" 
+                alt="User" 
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+              <img 
+                src="https://i.pravatar.cc/150?img=70" 
+                alt="User" 
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">{t("hero.lovedby")}</p>
+          </div>
 
           {/* Upload Card */}
           <div className="w-full">
@@ -430,29 +440,7 @@ export default function Hero() {
                 </Button>
               </div>
 
-              {/* Social proof row for desktop - below CTAs */}
-              <div className="flex items-center gap-3 mt-6 sm:mt-7 lg:mt-8">
-                <div className="flex -space-x-2">
-                  <div className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-yellow-400 to-red-500 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
-                    <div className="h-full w-full bg-gradient-to-br from-yellow-400 to-red-500" />
-                  </div>
-                  <div className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
-                    <div className="h-full w-full bg-gradient-to-br from-slate-600 to-slate-800" />
-                  </div>
-                  <div className="h-10 w-10 rounded-full border-2 border-background bg-blue-500 flex items-center justify-center text-white font-semibold text-sm">
-                    ?
-                  </div>
-                  <div className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
-                    <div className="h-full w-full bg-gradient-to-br from-slate-400 to-slate-600" />
-                  </div>
-                  <div className="h-10 w-10 rounded-full border-2 border-background bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white font-semibold text-sm overflow-hidden">
-                    <div className="h-full w-full bg-gradient-to-br from-slate-700 to-slate-900" />
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground">{t("hero.lovedby")}</p>
-              </div>
-
-              {/* Free scans text for desktop - after feature boxes */}
+              {/* Free scans text for desktop - after CTAs */}
               <p className="text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6">
                 {user ? (
                   isPremium === null ? (
@@ -472,6 +460,38 @@ export default function Hero() {
                   `${remainingScans} ${t("hero.nosignup")}`
                 )}
               </p>
+
+              {/* Social proof row for desktop - below free scans text */}
+              <div className="flex items-center gap-3 mt-4">
+                <div className="flex -space-x-2">
+                  <img 
+                    src="https://i.pravatar.cc/150?img=12" 
+                    alt="User" 
+                    className="h-10 w-10 rounded-full border-2 border-background object-cover"
+                  />
+                  <img 
+                    src="https://i.pravatar.cc/150?img=33" 
+                    alt="User" 
+                    className="h-10 w-10 rounded-full border-2 border-background object-cover"
+                  />
+                  <img 
+                    src="https://i.pravatar.cc/150?img=47" 
+                    alt="User" 
+                    className="h-10 w-10 rounded-full border-2 border-background object-cover"
+                  />
+                  <img 
+                    src="https://i.pravatar.cc/150?img=68" 
+                    alt="User" 
+                    className="h-10 w-10 rounded-full border-2 border-background object-cover"
+                  />
+                  <img 
+                    src="https://i.pravatar.cc/150?img=70" 
+                    alt="User" 
+                    className="h-10 w-10 rounded-full border-2 border-background object-cover"
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">{t("hero.lovedby")}</p>
+              </div>
             </div>
 
             {/* Right Section - Upload Placeholder (aligned with profile) */}
