@@ -22,6 +22,29 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+// Helper function to parse features from JSON string to array
+function parseFeatures(features: any): string[] {
+  if (!features) return [];
+  if (Array.isArray(features)) return features;
+  if (typeof features === 'string') {
+    try {
+      // Try parsing as JSON string
+      const parsed = JSON.parse(features);
+      if (Array.isArray(parsed)) return parsed;
+      // If it's still a string, try parsing again (double-encoded case)
+      if (typeof parsed === 'string') {
+        const doubleParsed = JSON.parse(parsed);
+        if (Array.isArray(doubleParsed)) return doubleParsed;
+      }
+      return [];
+    } catch (e) {
+      console.error("Error parsing features:", e);
+      return [];
+    }
+  }
+  return [];
+}
+
 interface Plan {
   id: string;
   name: string;
@@ -58,7 +81,12 @@ export function PlansClient({
 
   useEffect(() => {
     if (initialPlans.length > 0) {
-      setPlans(initialPlans);
+      // Parse features from JSON string to array for each plan
+      const parsedPlans = initialPlans.map((plan: any) => ({
+        ...plan,
+        features: parseFeatures(plan.features),
+      }));
+      setPlans(parsedPlans);
     }
   }, [initialPlans]);
 
@@ -90,7 +118,12 @@ export function PlansClient({
             .order("price_cents", { ascending: true });
 
           if (!cancelled) {
-            setPlans(plansData || []);
+            // Parse features from JSON string to array for each plan
+            const parsedPlans = (plansData || []).map((plan: any) => ({
+              ...plan,
+              features: parseFeatures(plan.features),
+            }));
+            setPlans(parsedPlans);
           }
         }
 
@@ -133,37 +166,69 @@ export function PlansClient({
   };
 
   const translateFeature = (feature: string): string => {
+    if (!feature) return feature;
+    
+    // If the feature is already a translation key (starts with "plans.feature."), translate it directly
+    if (feature.startsWith("plans.feature.")) {
+      const translated = t(feature);
+      // If translation returns the key itself (not found), return original
+      return translated !== feature ? translated : feature;
+    }
+    
     // Map English feature strings to translation keys
     const featureMap: Record<string, string> = {
-      "Unlimited scans": t("plans.feature.unlimitedscans"),
-      "Advanced nutritional analysis": t("plans.feature.advancednutritional"),
-      "Macro tracking": t("plans.feature.macrotracking"),
-      "Meal planning": t("plans.feature.mealplanning"),
-      "Export reports": t("plans.feature.exportreports"),
-      "Priority support": t("plans.feature.prioritysupport"),
-      "3 scans per day": t("plans.feature.scansperday"),
-      "10 scans per day": t("plans.feature.scansperday"),
-      "Basic nutritional information": t("plans.feature.basicnutritional"),
-      "Scan history": t("plans.feature.scanhistory"),
-      "Email support": t("plans.feature.emailsupport"),
+      "Unlimited scans": "plans.feature.unlimitedscans",
+      "Advanced nutritional analysis": "plans.feature.advancednutritional",
+      "Macro tracking": "plans.feature.macrotracking",
+      "Meal planning": "plans.feature.mealplanning",
+      "Export reports": "plans.feature.exportreports",
+      "Priority support": "plans.feature.prioritysupport",
+      "3 scans per day": "plans.feature.scansperday",
+      "10 scans per day": "plans.feature.scansperday",
+      "Basic nutritional information": "plans.feature.basicnutritional",
+      "Scan history": "plans.feature.scanhistory",
+      "Email support": "plans.feature.emailsupport",
     };
     
-    // Return translated feature if found, otherwise return original
-    return featureMap[feature] || feature;
+    // Check if we have a translation key for this feature
+    const translationKey = featureMap[feature];
+    if (translationKey) {
+      const translated = t(translationKey);
+      // If translation returns the key itself (not found), return original feature
+      return translated !== translationKey ? translated : feature;
+    }
+    
+    // If no mapping found, return the original feature (might already be in user's language)
+    return feature;
   };
 
   const translateDescription = (description: string | undefined, billingCycle: string): string => {
     if (!description) return "";
     
+    // If the description is already a translation key (starts with "plans.description."), translate it directly
+    if (description.startsWith("plans.description.")) {
+      const translated = t(description);
+      // If translation returns the key itself (not found), return original
+      return translated !== description ? translated : description;
+    }
+    
     // Map English descriptions to translation keys
     const descriptionMap: Record<string, string> = {
-      "Perfect for trying out our service": t("plans.description.free"),
-      "Unlimited access to all features": t("plans.description.premium.monthly"),
-      "Best value - Save with yearly billing": t("plans.description.premium.yearly"),
+      "Perfect for trying out our service": "plans.description.free",
+      "Unlimited access to all features": "plans.description.premium.monthly",
+      "Best value - Save with yearly billing": "plans.description.premium.yearly",
     };
     
-    // Return translated description if found, otherwise return original
-    return descriptionMap[description] || description;
+    // Check if we have a translation key for this description
+    const translationKey = descriptionMap[description];
+    if (translationKey) {
+      const translated = t(translationKey);
+      // If translation returns the key itself (not found), return original description
+      return translated !== translationKey ? translated : description;
+    }
+    
+    // If no mapping found, return the original description (might already be in user's language)
+    return description;
   };
 
   const isCurrentPlan = (plan: Plan) => {
