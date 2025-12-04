@@ -42,15 +42,16 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
   const [user, setUser] = useState<SupabaseUser | null>(initialUser);
   const [loading, setLoading] = useState(!initialUser);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const [profileFullName, setProfileFullName] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    const fetchProfileAvatar = async (userId: string) => {
+    const fetchProfileData = async (userId: string) => {
       try {
         const { data: profile } = await (supabase as any)
           .from("profiles")
-          .select("avatar_url")
+          .select("avatar_url, full_name")
           .eq("id", userId)
           .maybeSingle();
 
@@ -60,10 +61,16 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
         } else {
           setProfileAvatarUrl(null);
         }
+        if (profile?.full_name) {
+          setProfileFullName(profile.full_name);
+        } else {
+          setProfileFullName(null);
+        }
       } catch (error) {
-        console.error("HeaderClient: failed to fetch profile avatar", error);
+        console.error("HeaderClient: failed to fetch profile data", error);
         if (isMounted) {
           setProfileAvatarUrl(null);
+          setProfileFullName(null);
         }
       }
     };
@@ -75,7 +82,7 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
           if (!isMounted) return;
           setUser(session?.user ?? null);
           if (session?.user?.id) {
-            void fetchProfileAvatar(session.user.id);
+            void fetchProfileData(session.user.id);
           }
           setLoading(false);
         })
@@ -84,12 +91,13 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
           if (!isMounted) return;
           setUser(null);
           setProfileAvatarUrl(null);
+          setProfileFullName(null);
           setLoading(false);
         });
     } else {
       setUser(initialUser);
       if (initialUser?.id) {
-        void fetchProfileAvatar(initialUser.id);
+        void fetchProfileData(initialUser.id);
       }
       setLoading(false);
     }
@@ -98,9 +106,10 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
       if (!isMounted) return;
       setUser(session?.user ?? null);
       if (session?.user?.id) {
-        void fetchProfileAvatar(session.user.id);
+        void fetchProfileData(session.user.id);
       } else {
         setProfileAvatarUrl(null);
+        setProfileFullName(null);
       }
       setLoading(false);
     });
@@ -164,6 +173,17 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
 
   const getUserInitials = () => {
     if (!user) return "U";
+    
+    // Try to get initials from full_name first
+    if (profileFullName && profileFullName.trim()) {
+      const names = profileFullName.trim().split(/\s+/);
+      if (names.length >= 2) {
+        return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+      }
+      return names[0][0].toUpperCase();
+    }
+    
+    // Fallback to email
     const email = user.email || "";
     return email.charAt(0).toUpperCase();
   };
@@ -180,11 +200,13 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                 <Avatar className="h-10 w-10">
-                  <AvatarImage
-                    src={profileAvatarUrl || (user?.user_metadata as any)?.avatar_url || undefined}
-                    alt={user?.email ?? ""}
-                    className="object-cover"
-                  />
+                  {profileAvatarUrl && (
+                    <AvatarImage
+                      src={profileAvatarUrl}
+                      alt={user?.email ?? ""}
+                      className="object-cover"
+                    />
+                  )}
                   <AvatarFallback className="bg-gradient-to-br from-primary via-primary to-secondary text-primary-foreground">
                     {getUserInitials()}
                   </AvatarFallback>

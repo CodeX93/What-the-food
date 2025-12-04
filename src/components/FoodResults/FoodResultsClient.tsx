@@ -1,5 +1,4 @@
 'use client';
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,7 +62,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
-
 export function FoodResultsClient() {
   const searchParams = useSearchParams();
   const id = searchParams?.get("id") ?? null;
@@ -71,31 +69,24 @@ export function FoodResultsClient() {
   const { toast } = useToast();
   const { language: userLanguage } = useLanguage();
   const t = useTranslation();
-
   const [loading, setLoading] = useState(true);
   const [servings, setServings] = useState(1);
   const [servingsInput, setServingsInput] = useState("1");
   const [isVideoAvailable, setIsVideoAvailable] = useState<boolean | null>(null);
   const MIN_SERVINGS = 0.001;
-
   const applyServings = (next: number) => {
     const clamped = Number(next.toFixed(3));
     setServings(clamped);
     setServingsInput(clamped.toString());
   };
-
   const persistInsights = async (newInsights: string) => {
     setInsightsText(newInsights);
-
     if (!analysis) {
       return;
     }
-
     const updatedAnalysis = { ...analysis, insights: newInsights };
     setAnalysis(updatedAnalysis);
-
     if (!id) return;
-
     try {
       await (supabase as any)
         .from("food_scans")
@@ -105,7 +96,6 @@ export function FoodResultsClient() {
       console.error("Failed to save insights", error);
     }
   };
-
   const [savedServings, setSavedServings] = useState(1);
   const [imageUrl, setImageUrl] = useState<string>("");
   const [imagePath, setImagePath] = useState<string>("");
@@ -132,7 +122,6 @@ export function FoodResultsClient() {
   const [analysisRefreshing, setAnalysisRefreshing] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const reportRef = useRef<HTMLDivElement | null>(null);
-
   const fetchImageAsDataUrl = async (url: string) => {
     try {
       const response = await fetch(url, { mode: "cors" });
@@ -148,10 +137,8 @@ export function FoodResultsClient() {
       return null;
     }
   };
-
   const buildPdfHtml = (imageSrc?: string | null) => {
     if (!analysis) return "";
-
     const nutrientStats = [
       { label: "Calories", value: scaled?.calories ?? analysis.nutrients?.calories, suffix: " kcal", className: "stat-card calories" },
       { label: "Protein", value: scaled?.protein_g ?? analysis.nutrients?.protein_g, suffix: " g", className: "stat-card protein" },
@@ -160,7 +147,6 @@ export function FoodResultsClient() {
       { label: "Fiber", value: scaled?.fiber_g ?? analysis.nutrients?.fiber_g, suffix: " g", className: "stat-card fiber" },
       { label: "Sugar", value: scaled?.sugar_g ?? analysis.nutrients?.sugar_g, suffix: " g", className: "stat-card sugar" },
     ];
-
     const nutrientHtml = nutrientStats
       .map(
         (stat) => `
@@ -171,7 +157,6 @@ export function FoodResultsClient() {
       `
       )
       .join("");
-
     const tagPalette = ["mint", "sky", "rose", "amber", "teal", "indigo"];
     const tagsHtml =
       (analysis.tags && analysis.tags.length > 0
@@ -179,12 +164,10 @@ export function FoodResultsClient() {
             .map((tag, index) => `<span class="tag ${tagPalette[index % tagPalette.length]}">${escapeHtml(tag)}</span>`)
             .join("")
         : `<span class="tag muted">No tags</span>`);
-
     const ingredientsHtml =
       analysis.ingredients && analysis.ingredients.length > 0
         ? analysis.ingredients.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
         : `<li class="muted">Ingredients not detected.</li>`;
-
     const instructionsList = analysis.instructions ?? [];
     const instructionsHtml =
       instructionsList.length > 0
@@ -203,15 +186,12 @@ export function FoodResultsClient() {
             })
             .join("")
         : `<li class="muted">How to prepare instructions were not generated for this scan.</li>`;
-
     const additionalInfoHtml = analysis.additionalInfo
       ? formatTextBlock(analysis.additionalInfo)
       : "Additional information was not generated for this scan.";
-
     const servingGuidance = analysis.servingGuidance
       ? formatTextBlock(analysis.servingGuidance)
       : "Use the serving slider to adjust nutrition values for your portion.";
-
     const insightsHtml = (() => {
       if (parsedInsights) {
         const substitutions =
@@ -229,21 +209,17 @@ export function FoodResultsClient() {
                   .join("")}
               </div>`
             : "";
-
         return `
           ${parsedInsights.demographics ? `<div class="badge-row">${escapeHtml(parsedInsights.demographics)}</div>` : ""}
           ${parsedInsights.healthContext ? `<p class="insight-text">${formatTextBlock(parsedInsights.healthContext)}</p>` : ""}
           ${substitutions}
         `;
       }
-
       if (insightsText) {
         return `<p class="insight-text">${formatTextBlock(insightsText)}</p>`;
       }
-
       return `<p class="muted">Personalized insights were not generated for this scan.</p>`;
     })();
-
     const profileHeaderHtml =
       profileAvatarUrl && profile?.full_name
         ? `
@@ -256,7 +232,6 @@ export function FoodResultsClient() {
         </div>
       </div>`
         : "";
-
     const pdfStyles = `
       :root {
         --mint: #10b981;
@@ -279,49 +254,42 @@ export function FoodResultsClient() {
       * { box-sizing: border-box; }
       body {
         font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-        background: linear-gradient(180deg, #f5f7ff 0%, #f9fbff 40%, #ffffff 100%);
-        padding: 32px;
+        background: #ffffff;
+        padding: 24px;
         margin: 0;
         color: var(--slate-900);
+        line-height: 1.5;
       }
       .report {
-        max-width: 960px;
+        max-width: 1024px;
         margin: 0 auto;
         display: flex;
         flex-direction: column;
-        gap: 24px;
+        gap: 20px;
       }
       .card {
         background: #ffffff;
-        border-radius: 32px;
-        padding: 32px 40px;
+        border-radius: 16px;
+        padding: 24px 32px;
         border: 1px solid var(--border);
         box-shadow: 0 25px 60px rgba(15, 23, 42, 0.08);
         position: relative;
         overflow: hidden;
       }
-      .card::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        border-radius: 32px;
-        border: 1px solid rgba(255,255,255,0.6);
-        pointer-events: none;
-      }
       .header-card {
         display: flex;
-        gap: 24px;
+        gap: 20px;
         align-items: flex-start;
       }
       .profile-header {
         display: flex;
         align-items: center;
-        gap: 12px;
-        margin-bottom: 12px;
+        gap: 10px;
+        margin-bottom: 8px;
       }
       .profile-avatar {
-        width: 56px;
-        height: 56px;
+        width: 48px;
+        height: 48px;
         border-radius: 999px;
         overflow: hidden;
         border: 2px solid #22c55e33;
@@ -341,13 +309,13 @@ export function FoodResultsClient() {
         gap: 2px;
       }
       .profile-name {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         color: #111827;
       }
       .hero-img {
-        width: 320px;
-        height: 320px;
+        width: 280px;
+        height: 280px;
         border-radius: 24px;
         object-fit: cover;
         border: 1px solid #e2e8f0;
@@ -357,16 +325,16 @@ export function FoodResultsClient() {
         flex: 1;
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 12px;
       }
       .title {
         margin: 0;
-        font-size: 34px;
+        font-size: 28px;
         font-weight: 800;
         color: var(--slate-900);
       }
       .subtitle {
-        font-size: 15px;
+        font-size: 14px;
         color: var(--slate-500);
         margin: 0;
         line-height: 1.6;
@@ -374,39 +342,39 @@ export function FoodResultsClient() {
       .meta-row {
         display: flex;
         flex-wrap: wrap;
-        gap: 16px;
+        gap: 12px;
         align-items: center;
         margin-bottom: 6px;
       }
       .pill {
-        padding: 8px 22px;
+        padding: 6px 18px;
         border-radius: 999px;
         border: 1px solid rgba(15,23,42,0.12);
         background: #f8fafc;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         color: var(--slate-900);
         text-align: center;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-width: 150px;
+        min-width: 140px;
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.9);
       }
       .tags {
         display: flex;
         flex-wrap: wrap;
-        gap: 16px;
-        margin-top: 8px;
-        margin-bottom: 8px;
+        gap: 8px;
+        margin-top: 4px;
+        margin-bottom: 4px;
       }
       .tag {
-        min-width: 120px;
-        min-height: 36px;
-        padding: 0 20px;
+        min-width: 100px;
+        min-height: 32px;
+        padding: 0 16px;
         border-radius: 999px;
         border: 1px solid transparent;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         text-transform: capitalize;
         text-align: center;
@@ -430,28 +398,28 @@ export function FoodResultsClient() {
         border-radius: 20px;
         border: 1px solid #bbf7d0;
         background: linear-gradient(135deg, #ecfdf3 0%, #d1fae5 100%);
-        padding: 18px 22px;
+        padding: 16px 20px;
         color: #166534;
-        font-size: 13px;
+        font-size: 12px;
         line-height: 1.5;
-        margin-top: 12px;
+        margin-top: 8px;
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
       }
       .section-title {
-        margin: 0 0 16px;
-        font-size: 20px;
+        margin: 0 0 12px;
+        font-size: 18px;
         font-weight: 700;
         color: #0f172a;
       }
       .nutrients-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        gap: 12px;
+        gap: 8px;
       }
       .stat-card {
         border-radius: 20px;
         border: 2px solid transparent;
-        padding: 18px 20px;
+        padding: 16px 18px;
         color: var(--slate-900);
         background: #ffffff;
       }
@@ -462,21 +430,21 @@ export function FoodResultsClient() {
       .stat-card.fiber { border-color: #84cc16; }
       .stat-card.sugar { border-color: #fda4af; }
       .stat-label {
-        font-size: 12px;
+        font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.08em;
         color: #475467;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
       }
       .stat-value {
-        font-size: 26px;
+        font-size: 24px;
         font-weight: 700;
         color: #0f172a;
       }
       .two-column {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 20px;
+        gap: 16px;
       }
       .list {
         list-style: none;
@@ -484,15 +452,15 @@ export function FoodResultsClient() {
         margin: 0;
         display: flex;
         flex-direction: column;
-        gap: 14px;
+        gap: 8px;
         margin: 0;
         padding: 0;
       }
       .list li {
-        font-size: 14px;
+        font-size: 13px;
         color: #1f2937;
-        border-bottom: 1px solid #eef2f6;
-        padding-bottom: 10px;
+        border-bottom: none;
+        padding-bottom: 0;
       }
       .list li:last-child {
         border-bottom: none;
@@ -500,12 +468,12 @@ export function FoodResultsClient() {
       }
       .instruction {
         display: flex;
-        gap: 14px;
+        gap: 12px;
         align-items: flex-start;
       }
       .step-index {
-        width: 30px;
-        height: 30px;
+        width: 24px;
+        height: 24px;
         border-radius: 50%;
         background: #eef2ff;
         color: #4338ca;
@@ -514,75 +482,74 @@ export function FoodResultsClient() {
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
+        font-size: 12px;
       }
       .instruction-title {
-        margin: 0 0 6px;
+        margin: 0 0 4px;
         font-weight: 600;
         color: #111827;
+        font-size: 14px;
       }
       .instruction-text {
         margin: 0;
         color: #374151;
         line-height: 1.5;
+        font-size: 13px;
       }
       .insight-text {
-        font-size: 14px;
+        font-size: 13px;
         line-height: 1.6;
         color: #111827;
       }
       .badge-row {
         display: inline-flex;
-        padding: 8px 20px;
+        padding: 6px 16px;
         border-radius: 999px;
         background: #e0f2fe;
         color: #0369a1;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 600;
-        margin-bottom: 16px;
+        margin-bottom: 12px;
         border: 1px solid #7dd3fc;
       }
       .substitution-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 12px;
-        margin-top: 16px;
+        gap: 8px;
+        margin-top: 12px;
       }
       .sub-card {
-        border-radius: 18px;
+        border-radius: 16px;
         border: 1px solid #e4e7ec;
-        padding: 14px 16px;
+        padding: 12px 14px;
         background: #fff;
       }
       .sub-title {
-        margin: 0 0 6px;
-        font-size: 14px;
+        margin: 0 0 4px;
+        font-size: 13px;
         font-weight: 600;
         color: #0f172a;
       }
       .sub-text {
         margin: 0;
-        font-size: 13px;
+        font-size: 12px;
         color: #475467;
         line-height: 1.5;
       }
       .muted {
         color: #94a3b8;
-        font-size: 14px;
+        font-size: 13px;
       }
     `;
-
     const imageHtml = imageSrc
       ? `<img src="${imageSrc}" class="hero-img" />`
       : `<div class="hero-img" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;font-weight:600;">No image</div>`;
-
     const servingLabel = servingApproximation
       ? `Approx. ${servingApproximation.grams}g`
       : analysis.servingSize || "1 serving";
-
     const confidence = typeof analysis.confidence === "number"
       ? `${Math.round((analysis.confidence || 0) * 100)}%`
       : "—";
-
     return `
       <!DOCTYPE html>
       <html>
@@ -621,19 +588,16 @@ export function FoodResultsClient() {
                 </div>
               </div>
             </div>
-
             <div class="card">
               <p class="section-title">Nutrition Overview</p>
               <div class="nutrients-grid">
                 ${nutrientHtml}
               </div>
             </div>
-
             <div class="card">
               <p class="section-title">Additional Information</p>
               <p class="insight-text">${additionalInfoHtml}</p>
             </div>
-
             <div class="card">
               <div class="two-column">
                 <div>
@@ -648,7 +612,6 @@ export function FoodResultsClient() {
                 </div>
               </div>
             </div>
-
             <div class="card">
               <p class="section-title">Personalized Health Context</p>
               ${insightsHtml}
@@ -658,7 +621,6 @@ export function FoodResultsClient() {
       </html>
     `;
   };
-
   const escapeHtml = (value?: string | null) => {
     if (!value) return "";
     return value
@@ -668,18 +630,15 @@ export function FoodResultsClient() {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
   };
-
   const formatTextBlock = (value?: string | null) => {
     if (!value) return "";
     return escapeHtml(value).replace(/\n/g, "<br />");
   };
-
   const formatNumber = (value?: number | null, decimals: number = 1) => {
     if (typeof value !== "number" || Number.isNaN(value)) return "-";
     const fixed = value % 1 === 0 ? value.toString() : value.toFixed(decimals);
     return fixed.replace(/\.0+$/, "");
   };
-
   const parseInstruction = (step: string) => {
     const boldMatch = step.match(/^\*\*(.+?)\*\*[:\s]*(.+)$/);
     if (boldMatch) {
@@ -693,7 +652,6 @@ export function FoodResultsClient() {
       description: formatTextBlock(step),
     };
   };
-
   const servingApproximation = useMemo(() => {
     // First, check if servingWeightGrams is available from Gemini
     if (analysis?.servingWeightGrams && analysis.servingWeightGrams > 0) {
@@ -702,7 +660,7 @@ export function FoodResultsClient() {
         label: analysis.servingSize || "1 serving"
       };
     }
-    
+   
     // Fallback to approximation if servingWeightGrams is not available
     if (!analysis?.servingSize) return null;
     const size = analysis.servingSize.toLowerCase();
@@ -712,7 +670,6 @@ export function FoodResultsClient() {
       { keywords: ["portion", "serving"], label: "1 portion", grams: 200 },
       { keywords: ["piece"], label: "1 piece", grams: 50 },
     ];
-
     for (const approx of approximations) {
       if (approx.keywords.some((keyword) => size.includes(keyword))) {
         return approx;
@@ -720,14 +677,12 @@ export function FoodResultsClient() {
     }
     return null;
   }, [analysis?.servingSize, analysis?.servingWeightGrams]);
-
   const handleOpenIngredientEditor = () => {
     if (analysis) {
       setIngredientInput((analysis.ingredients ?? []).join("\n"));
     }
     setIngredientEditorOpen(true);
   };
-
   const handleIngredientUpdate = async () => {
     if (!analysis) {
       toast({
@@ -737,12 +692,10 @@ export function FoodResultsClient() {
       });
       return;
     }
-
     const cleaned = ingredientInput
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean);
-
     if (!cleaned.length) {
       toast({
         title: "Add at least one ingredient",
@@ -751,7 +704,6 @@ export function FoodResultsClient() {
       });
       return;
     }
-
     // Check if ingredients match the original - if so, restore original analysis
     if (originalAnalysis && originalAnalysis.ingredients) {
       const originalIngredients = originalAnalysis.ingredients
@@ -762,7 +714,7 @@ export function FoodResultsClient() {
       const currentIngredients = cleaned
         .sort()
         .join("\n");
-      
+     
       if (originalIngredients === currentIngredients) {
         // Ingredients match original - restore original analysis
         setAnalysis(JSON.parse(JSON.stringify(originalAnalysis)));
@@ -771,7 +723,7 @@ export function FoodResultsClient() {
         setIngredientEditorOpen(false);
         setInsightsText(originalAnalysis.insights || "");
         setUpgradeRequired(false);
-        
+       
         if (id) {
           try {
             await (supabase as any)
@@ -782,7 +734,7 @@ export function FoodResultsClient() {
             console.error("Failed to persist restored analysis", err);
           }
         }
-        
+       
         toast({
           title: "Ingredients restored",
           description: "Original nutrition values have been restored.",
@@ -790,7 +742,6 @@ export function FoodResultsClient() {
         return;
       }
     }
-
     setUpdatingIngredients(true);
     setAnalysisRefreshing(true);
     try {
@@ -801,21 +752,19 @@ export function FoodResultsClient() {
         cleaned,
         servings
       );
-
       // Log the updated analysis for debugging
       console.log("Updated analysis after ingredient change:", {
         nutrients: updatedAnalysis.nutrients,
         servingWeightGrams: updatedAnalysis.servingWeightGrams,
         ingredients: updatedAnalysis.ingredients,
       });
-      
+     
       setAnalysis(updatedAnalysis);
       applyServings(servings);
       setIngredientInput((updatedAnalysis.ingredients ?? []).join("\n"));
       setIngredientEditorOpen(false);
       setInsightsText("");
       setUpgradeRequired(false);
-
       if (id) {
         try {
           await (supabase as any)
@@ -826,7 +775,6 @@ export function FoodResultsClient() {
           console.error("Failed to persist updated analysis", err);
         }
       }
-
       toast({
         title: "Ingredients updated",
         description: "Nutrition values were recalculated using your adjustments.",
@@ -843,7 +791,6 @@ export function FoodResultsClient() {
       setAnalysisRefreshing(false);
     }
   };
-
   const handleShare = async () => {
     try {
       const shareUrl = `${window.location.origin}/shared/${id}`;
@@ -855,7 +802,6 @@ export function FoodResultsClient() {
         text: `Check out this food analysis: ${dishDisplay}`,
         url: shareUrl,
       };
-
       // Try Web Share API first (mobile-friendly)
       if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
         await navigator.share(shareData);
@@ -893,7 +839,6 @@ export function FoodResultsClient() {
       }
     }
   };
-
   const handleExportPdf = async () => {
     if (!hasPremiumAccess) {
       toast({
@@ -902,7 +847,6 @@ export function FoodResultsClient() {
       });
       return;
     }
-
     if (!analysis || !reportRef.current) {
       toast({
         title: "Nothing to export",
@@ -911,11 +855,8 @@ export function FoodResultsClient() {
       });
       return;
     }
-
     setExportingPdf(true);
-
     let iframe: HTMLIFrameElement | null = null;
-
     try {
       const imageDataUrl = imageUrl ? await fetchImageAsDataUrl(imageUrl) : null;
       const pdfHtml = buildPdfHtml(imageDataUrl || imageUrl || undefined);
@@ -929,17 +870,13 @@ export function FoodResultsClient() {
       workingIframe.style.opacity = "0";
       workingIframe.style.pointerEvents = "none";
       document.body.appendChild(workingIframe);
-
       const iframeLoadPromise = new Promise<void>((resolve) => {
         workingIframe.onload = () => resolve();
       });
-
       workingIframe.srcdoc = pdfHtml;
       await iframeLoadPromise;
-
       const iframeDoc = workingIframe.contentDocument!;
       const captureTarget = iframeDoc.body;
-
       if (iframeDoc.fonts && iframeDoc.fonts.ready) {
         try {
           await iframeDoc.fonts.ready;
@@ -947,7 +884,6 @@ export function FoodResultsClient() {
           // ignore font errors
         }
       }
-
       const images = Array.from(captureTarget.querySelectorAll("img"));
       await Promise.all(
         images.map((img) => {
@@ -959,13 +895,11 @@ export function FoodResultsClient() {
           });
         })
       );
-
       await new Promise((resolve) => {
         requestAnimationFrame(() => {
           requestAnimationFrame(() => resolve(null));
         });
       });
-
       const canvas = await html2canvas(captureTarget, {
         scale: 2,
         useCORS: true,
@@ -979,19 +913,16 @@ export function FoodResultsClient() {
         windowWidth: captureTarget.scrollWidth || captureTarget.offsetWidth,
         windowHeight: captureTarget.scrollHeight || captureTarget.offsetHeight,
       });
-
       const imgData = canvas.toDataURL("image/png", 1.0);
       const pdfWidth = canvas.width;
       const pdfHeight = canvas.height;
-
       const pdf = new jsPDF({
         unit: "px",
         format: [pdfWidth, pdfHeight],
         compress: true,
       });
-      
+     
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight, undefined, "FAST");
-
       const dishForFilename = analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")
         ? `Manual Input: ${analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || ""}`
         : analysis.dish || "food-result";
@@ -1001,7 +932,6 @@ export function FoodResultsClient() {
         title: t("foodresults.pdf.ready"),
         description: t("foodresults.pdf.ready.description"),
       });
-
       if (workingIframe && document.body.contains(workingIframe)) {
         document.body.removeChild(workingIframe);
       }
@@ -1019,7 +949,6 @@ export function FoodResultsClient() {
       setExportingPdf(false);
     }
   };
-
   useEffect(() => {
     const load = async () => {
       try {
@@ -1027,7 +956,6 @@ export function FoodResultsClient() {
           router.push("/dashboard");
           return;
         }
-
         const {
           data: { session },
         } = await supabase.auth.getSession();
@@ -1038,14 +966,14 @@ export function FoodResultsClient() {
             setCheckingPremium(true);
             const premium = await hasActivePremiumSubscription(user.id);
             setHasPremiumAccess(premium);
-            
+           
             // Fetch profile to check completion and avatar
             const { data: profileData } = await (supabase as any)
               .from("profiles")
               .select("full_name, gender, age, weight_kg, height_cm, goal, activity_level, avatar_url")
               .eq("id", user.id)
               .maybeSingle();
-            
+           
             if (profileData) {
               setProfile(profileData);
               setProfileAvatarUrl(profileData.avatar_url || null);
@@ -1055,7 +983,7 @@ export function FoodResultsClient() {
               setProfileGoal(profileData.goal || null);
               setProfileActivityLevel(profileData.activity_level || null);
               // Check if profile is complete
-              const isComplete = 
+              const isComplete =
                 profileData.full_name &&
                 profileData.gender &&
                 profileData.age !== null &&
@@ -1079,18 +1007,15 @@ export function FoodResultsClient() {
           setCheckingPremium(false);
           setProfileComplete(true); // Don't show notice for non-authenticated users
         }
-
         const { data, error } = await supabase
           .from("food_scans")
           .select("image_url, image_path, serving, result_json, language")
           .eq("id", id)
           .maybeSingle();
-
         if (error || !data) {
           router.push("/dashboard");
           return;
         }
-
         const scanRecord = data as {
           serving?: number | null;
           result_json?: unknown;
@@ -1098,15 +1023,14 @@ export function FoodResultsClient() {
           image_url?: string | null;
           language?: string;
         };
-
         applyServings(scanRecord.serving || 1);
         setSavedServings(scanRecord.serving || 1);
         let loadedAnalysis = (scanRecord.result_json as FoodAnalysis) || null;
-        
+       
         // Check if translation is needed
         const currentLanguage = scanRecord.language || 'en';
         let targetLanguage = userLanguage || 'en';
-        
+       
         // Get user's default language from profile if authenticated
         if (user) {
           const { data: profileData } = await (supabase as any)
@@ -1116,7 +1040,6 @@ export function FoodResultsClient() {
             .maybeSingle();
           targetLanguage = profileData?.default_language || userLanguage || 'en';
         }
-
         // Translate if needed
         if (loadedAnalysis && currentLanguage !== targetLanguage && user) {
           try {
@@ -1128,10 +1051,9 @@ export function FoodResultsClient() {
                 contentType: 'food_scan',
               },
             });
-
             if (!translateError && translateData?.ok && translateData.translatedContent) {
               loadedAnalysis = translateData.translatedContent as FoodAnalysis;
-              
+             
               // Update database with translated content
               await (supabase as any)
                 .from("food_scans")
@@ -1146,7 +1068,6 @@ export function FoodResultsClient() {
             // Continue with original analysis on error
           }
         }
-
         setAnalysis(loadedAnalysis);
         // Store the original analysis to restore if user reverts changes
         if (loadedAnalysis) {
@@ -1155,13 +1076,13 @@ export function FoodResultsClient() {
         if (loadedAnalysis?.insights) {
           setInsightsText(loadedAnalysis.insights);
         }
-        
+       
         // Check if this is a manual entry
         const isManualEntry = loadedAnalysis?.isManualEntry || loadedAnalysis?.dish?.startsWith("Manual") || loadedAnalysis?.dish?.startsWith("Manual Input");
         const isManualEntryPath = scanRecord.image_path?.toLowerCase().startsWith("manual-entry");
-        
+       
         setImagePath(scanRecord.image_path || "");
-        
+       
         // Only try to get image URL if it's not a manual entry
         if (!isManualEntry && !isManualEntryPath && scanRecord.image_path) {
           try {
@@ -1179,16 +1100,13 @@ export function FoodResultsClient() {
         setLoading(false);
       }
     };
-
     load();
   }, [id, router, userLanguage]);
-
   useEffect(() => {
     if (analysis) {
       setIngredientInput((analysis.ingredients ?? []).join("\n"));
     }
   }, [analysis]);
-
   // Check if YouTube video is available
   useEffect(() => {
     const checkVideoAvailability = async () => {
@@ -1196,7 +1114,6 @@ export function FoodResultsClient() {
         setIsVideoAvailable(false);
         return;
       }
-
       try {
         // Extract video ID from URL
         let videoId = "";
@@ -1208,26 +1125,24 @@ export function FoodResultsClient() {
         } else if (url.includes("youtube.com/embed/")) {
           videoId = url.split("embed/")[1]?.split("?")[0] || "";
         }
-
         if (!videoId) {
           setIsVideoAvailable(false);
           return;
         }
-
         // Check video availability using YouTube oEmbed API
         // Use AbortController for timeout and better error handling
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-        
+       
         try {
           const oEmbedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
           const response = await fetch(oEmbedUrl, {
             signal: controller.signal,
             mode: 'cors',
           });
-          
+         
           clearTimeout(timeoutId);
-          
+         
           if (response.ok) {
             setIsVideoAvailable(true);
           } else {
@@ -1247,27 +1162,21 @@ export function FoodResultsClient() {
         setIsVideoAvailable(false);
       }
     };
-
     checkVideoAvailability();
   }, [analysis?.youtubeVideoUrl]);
-
   // DISABLED: Auto-generate insights - too slow, users can generate manually
   // Insights will only be generated when user clicks "Generate Insights" button
-
   const scaled = useMemo(
     () => (analysis ? scaleNutrients(analysis.nutrients, servings) : null),
     [analysis, servings]
   );
-
   const parsedInsights = useMemo(() => {
     if (!insightsText) return null;
-
     const sections = {
       healthContext: "",
       substitutions: [] as Array<{ title: string; description: string }>,
       demographics: "",
     };
-
     const contextWithDemoMatch = insightsText.match(
       /Personalized Health Context\s*\(([^)]+)\)[:\s]*(.*?)(?=Smart Substitution Suggestions|$)/is
     );
@@ -1293,7 +1202,6 @@ export function FoodResultsClient() {
         sections.healthContext = contextText;
       }
     }
-
     sections.healthContext = sections.healthContext
       .replace(/^\d+\)\s*/, "")
       .replace(/^\d+\.\s*/, "")
@@ -1301,18 +1209,15 @@ export function FoodResultsClient() {
       .replace(/\s+\d+\.\s*$/, "")
       .replace(/^\s*[^a-zA-Z]*\s*/, "")
       .trim();
-
     if (sections.demographics) {
       sections.demographics = sections.demographics.replace(/\)\s*$/, "").trim();
     }
-
     const subsMatch = insightsText.match(/Smart Substitution Suggestions:?\s*(.*?)$/is);
     if (subsMatch) {
       const subsText = subsMatch[1].trim();
       let items: string[] = [];
       const splitPattern = /(?=[*-]\s*\*\*)/;
       const splitItems = subsText.split(splitPattern).filter((item) => item.trim());
-
       if (splitItems.length > 1) {
         items = splitItems;
       } else {
@@ -1321,7 +1226,6 @@ export function FoodResultsClient() {
           items = subsText.split(/(?=[*-]\s*\*\*)/).filter((item) => item.trim());
         }
       }
-
       sections.substitutions = items
         .map((item) => {
           const markdownMatch = item.match(/[*-]\s*\*\*([^*]+)\*\*[:\s]*(.*?)(?=\s*[*-]\s*\*\*|$)/s);
@@ -1331,7 +1235,6 @@ export function FoodResultsClient() {
               description: markdownMatch[2].trim().replace(/\.\s*$/, ""),
             };
           }
-
           const numberedBoldMatch = item.match(/\d+\.\s*\*\*([^*]+)\*\*[:\s]*(.*?)(?=\s*\d+\.\s*\*\*|$)/s);
           if (numberedBoldMatch) {
             return {
@@ -1339,7 +1242,6 @@ export function FoodResultsClient() {
               description: numberedBoldMatch[2].trim().replace(/\.\s*$/, ""),
             };
           }
-
           const numberedPlainMatch = item.match(/\d+\.\s*([^:]+):\s*(.*?)(?=\s*\d+\.|$)/s);
           if (numberedPlainMatch) {
             return {
@@ -1347,7 +1249,6 @@ export function FoodResultsClient() {
               description: numberedPlainMatch[2].trim().replace(/\.\s*$/, ""),
             };
           }
-
           const plainBulletMatch = item.match(/[*-]\s*([^:]+):\s*(.*?)(?=\s*[*-]|$)/s);
           if (plainBulletMatch) {
             return {
@@ -1355,16 +1256,13 @@ export function FoodResultsClient() {
               description: plainBulletMatch[2].trim().replace(/\.\s*$/, ""),
             };
           }
-
           const cleaned = item.replace(/^[*-]\s*|\d+\.\s*/, "").replace(/\*\*/g, "").trim();
           return { title: "", description: cleaned };
         })
         .filter((item) => item.description && item.description.length > 0);
     }
-
     return sections;
   }, [insightsText]);
-
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-background to-muted/20">
@@ -1378,10 +1276,9 @@ export function FoodResultsClient() {
       </div>
     );
   }
-
   if (!analysis) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-background to muted/20">
+      <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-background to-muted/20">
         <Card className="max-w-md">
           <CardContent className="pt-6 text-center">
             <Salad className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
@@ -1394,7 +1291,6 @@ export function FoodResultsClient() {
       </div>
     );
   }
-
   return (
     <>
       <main className="flex-1">
@@ -1447,7 +1343,6 @@ export function FoodResultsClient() {
             </div>
           </div>
         </div>
-
         {isAuthenticated && !profileComplete && (
           <Alert className="mb-4 sm:mb-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
             <User className="h-4 w-4 text-primary flex-shrink-0" />
@@ -1464,7 +1359,6 @@ export function FoodResultsClient() {
             </AlertDescription>
           </Alert>
         )}
-
         <div className="grid lg:grid-cols-12 gap-4 sm:gap-6">
           {!(analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")) && (
             <div className="lg:col-span-4">
@@ -1511,7 +1405,6 @@ export function FoodResultsClient() {
               </Card>
             </div>
           )}
-
           <div className={`${analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input") ? "lg:col-span-12" : "lg:col-span-8"} space-y-4 sm:space-y-6 lg:space-y-7`}>
             <Card className="pb-[40px]">
               <CardHeader className="pb-3 pt-4 sm:pt-5">
@@ -1534,23 +1427,20 @@ export function FoodResultsClient() {
                         value={servingsInput}
                         onChange={(e) => {
                           const raw = e.target.value;
-                          
+                         
                           if (raw === "") {
                             setServingsInput("");
                             return;
                           }
-
                           const sanitized = raw.replace(/[^0-9.]/g, "");
                           const dots = (sanitized.match(/\./g) ?? []).length;
                           if (dots > 1) {
                             return;
                           }
-
                           setServingsInput(sanitized);
-
                           const parsed = parseFloat(sanitized);
                           const hasCompleteNumber = sanitized !== "" && !sanitized.endsWith(".");
-                          
+                         
                           if (
                             hasCompleteNumber &&
                             !Number.isNaN(parsed) &&
@@ -1582,7 +1472,6 @@ export function FoodResultsClient() {
                                 .from("food_scans")
                                 .update({ serving: Number(servings) })
                                 .eq("id", id);
-
                               if (error) {
                                 console.error("Failed to update serving in database:", error);
                               toast({
@@ -1592,7 +1481,6 @@ export function FoodResultsClient() {
                               });
                                 return;
                               }
-
                               setSavedServings(servings);
                               toast({
                                 title: t("foodresults.servings.saved.title"),
@@ -1634,7 +1522,7 @@ export function FoodResultsClient() {
                         return (
                           <span
                             key={`${tag}-${index}`}
-                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize tracking-tight  ${colors}`}
+                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize tracking-tight ${colors}`}
                           >
                             {tag}
                           </span>
@@ -1688,7 +1576,6 @@ export function FoodResultsClient() {
                 </div>
               )}
             </Card>
-
             <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
               <Card className={analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input") ? "md:col-span-2" : ""}>
                 <CardHeader className="pb-3">
@@ -1715,7 +1602,6 @@ export function FoodResultsClient() {
                   </ul>
                 </CardContent>
               </Card>
-
               {!(analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")) && (
                 <Card>
                   <CardHeader className="pb-3">
@@ -1734,7 +1620,7 @@ export function FoodResultsClient() {
                         const hasBoldTitle = boldMatch !== null;
                         const title = hasBoldTitle ? boldMatch[1] : null;
                         const description = hasBoldTitle ? boldMatch[2] : step;
-                        
+                       
                         return (
                           <li key={i} className="flex gap-2 sm:gap-3">
                             <span className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs sm:text-sm font-medium mt-0.5">
@@ -1744,7 +1630,7 @@ export function FoodResultsClient() {
                               {title && (
                                 <p className="text-xs sm:text-sm font-semibold text-foreground mb-1 sm:mb-1.5">
                                   {title}
-                              </p>
+                                </p>
                             )}
                             <p className="text-xs sm:text-sm leading-relaxed text-foreground/90">
                               {description}
@@ -1794,7 +1680,6 @@ export function FoodResultsClient() {
               </Card>
               )}
             </div>
-
             {analysis.additionalInfo && (
               <Alert className="border-amber-200 bg-amber-50 text-amber-900">
                 <div className="flex items-start gap-2 sm:gap-3">
@@ -1808,7 +1693,6 @@ export function FoodResultsClient() {
                 </div>
               </Alert>
             )}
-
             <Card className="border-primary/20">
               <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
@@ -1919,7 +1803,7 @@ export function FoodResultsClient() {
                     {hasPremiumAccess && !insightsLoading && !insightsText && (
                       <div className="text-center py-6">
                         <p className="text-sm text-muted-foreground mb-4">
-                          {profileComplete 
+                          {profileComplete
                             ? t("foodresults.insights.complete")
                             : t("foodresults.insights.incomplete")}
                         </p>
@@ -1950,12 +1834,12 @@ export function FoodResultsClient() {
                                 setInsightsLoading(true);
                                 setUpgradeRequired(false);
                                 console.log("Starting insights generation...");
-                                
+                               
                                 // Add timeout wrapper (20 seconds max)
                                 const timeoutPromise = new Promise((_, reject) => {
                                   setTimeout(() => reject(new Error("Insights generation timed out after 20 seconds. Please try again.")), 20000);
                                 });
-                                
+                               
                                 const insightsPromise = getPersonalizedInsights({
                                   scanId: id,
                                   age: profileAge || undefined,
@@ -1966,11 +1850,11 @@ export function FoodResultsClient() {
                                   weight_kg: profile?.weight_kg || undefined,
                                   height_cm: profile?.height_cm || undefined,
                                 });
-                                
+                               
                                 console.log("Waiting for insights...");
                                 const res = await Promise.race([insightsPromise, timeoutPromise]) as Awaited<ReturnType<typeof getPersonalizedInsights>>;
                                 console.log("Insights received:", res);
-                                
+                               
                                 if (res.upgrade) {
                                   setUpgradeRequired(true);
                                   setInsightsText("");
@@ -1997,19 +1881,19 @@ export function FoodResultsClient() {
                             }}
                           >
                             {insightsLoading ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              </>
                             ) : (
                               <Sparkles className="h-4 w-4 mr-2" />
                             )}
                             Generate Insights
                           </Button>
-
                           <Button variant="outline" onClick={() => router.push("/meal-planner")}>Generate Meal Plan</Button>
-                        
+                       
                         </div>
                       </div>
                     )}
-
                     {upgradeRequired && (
                       <div className="mt-6 p-4 rounded-lg border border-primary/20 bg-primary/5">
                         <div className="flex items-start gap-3">
@@ -2026,7 +1910,6 @@ export function FoodResultsClient() {
                         </div>
                       </div>
                     )}
-
                     {parsedInsights && (
                       <div
                         className="space-y-6"
@@ -2037,12 +1920,12 @@ export function FoodResultsClient() {
                             {/* Profile Badges */}
                             <div className="flex flex-wrap items-center gap-2">
                               {parsedInsights.demographics && (
-                                <Badge variant="outline" className="text-xs px-3  bg-background/80 border-primary/30">
+                                <Badge variant="outline" className="text-xs px-3 bg-background/80 border-primary/30">
                                   {parsedInsights.demographics}
                                 </Badge>
                               )}
                               {profile?.goal && (
-                                <Badge variant="outline" className="text-xs px-3  bg-primary/10 border-primary/30 text-primary">
+                                <Badge variant="outline" className="text-xs px-3 bg-primary/10 border-primary/30 text-primary">
                                   <Target className="h-3 w-3 mr-1.5" />
                                   {profile.goal.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
                                 </Badge>
@@ -2058,8 +1941,8 @@ export function FoodResultsClient() {
                                 const bmiCategory = getBMICategory(bmi);
                                 if (bmi) {
                                   return (
-                                    <Badge 
-                                      variant="outline" 
+                                    <Badge
+                                      variant="outline"
                                       className={`text-xs px-3 py-1.5 border-2 ${
                                         bmiCategory.color === "green" ? "bg-green-50 border-green-500 text-green-700" :
                                         bmiCategory.color === "blue" ? "bg-blue-50 border-blue-500 text-blue-700" :
@@ -2075,7 +1958,6 @@ export function FoodResultsClient() {
                                 return null;
                               })()}
                             </div>
-
                             {/* Enhanced Insights Display */}
                             <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
                               {/* Key Recommendations & Tips Card */}
@@ -2095,7 +1977,7 @@ export function FoodResultsClient() {
                                       const text = parsedInsights.healthContext;
                                       const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
                                       const keyPoints = sentences.slice(0, 4).map(s => s.trim());
-                                      
+                                     
                                       return keyPoints.map((point, idx) => (
                                         <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-background/60 border border-primary/10">
                                           <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
@@ -2108,7 +1990,6 @@ export function FoodResultsClient() {
                                   </div>
                                 </CardContent>
                               </Card>
-
                               {/* Smart Substitution Suggestions Card */}
                               {parsedInsights.substitutions.length > 0 && (
                                 <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
@@ -2143,8 +2024,6 @@ export function FoodResultsClient() {
                             </div>
                           </div>
                         )}
-
-
                         {!parsedInsights.healthContext &&
                           !parsedInsights.substitutions.length &&
                           insightsText && (

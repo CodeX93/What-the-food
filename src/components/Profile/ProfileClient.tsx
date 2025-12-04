@@ -277,8 +277,23 @@ export function ProfileClient({
   const [saving, setSaving] = useState(false);
   const [planName, setPlanName] = useState<string | null>(initialPlanName);
   const [email, setEmail] = useState(initialUser?.email || "");
+  // Helper function to get initials from full_name or email
+  const getInitials = (fullName: string | null | undefined, email: string | null | undefined): string => {
+    if (fullName && fullName.trim()) {
+      const names = fullName.trim().split(/\s+/);
+      if (names.length >= 2) {
+        return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+      }
+      return names[0][0].toUpperCase();
+    }
+    if (email) {
+      return email.split("@")[0].substring(0, 2).toUpperCase();
+    }
+    return "U";
+  };
+
   const [userInitials, setUserInitials] = useState(
-    initialUser?.email ? initialUser.email.split("@")[0].substring(0, 2).toUpperCase() : "U"
+    getInitials(initialProfile?.full_name, initialUser?.email || null)
   );
   const [gender, setGender] = useState<string>(initialProfile?.gender || "");
   const [age, setAge] = useState<string>(initialProfile?.age?.toString() || "");
@@ -296,12 +311,10 @@ export function ProfileClient({
     if (initialUser) {
       setUser(initialUser);
       setEmail(initialUser.email || "");
-      setUserInitials(
-        initialUser.email ? initialUser.email.split("@")[0].substring(0, 2).toUpperCase() : "U"
-      );
+      setUserInitials(getInitials(initialProfile?.full_name, initialUser.email || null));
       setLoading(false);
     }
-  }, [initialUser]);
+  }, [initialUser, initialProfile]);
 
   useEffect(() => {
     setProfile(initialProfile);
@@ -313,8 +326,10 @@ export function ProfileClient({
       setHeight(initialProfile.height_cm?.toString() || "");
       setGoal(initialProfile.goal || "");
       setActivityLevel(initialProfile.activity_level || "");
+      // Update initials when profile changes
+      setUserInitials(getInitials(initialProfile.full_name, user?.email || null));
     }
-  }, [initialProfile]);
+  }, [initialProfile, user]);
 
   useEffect(() => {
     setSubscription(initialSubscription);
@@ -352,10 +367,7 @@ export function ProfileClient({
 
         setUser(session.user);
         setEmail(session.user.email || "");
-        setUserInitials(
-          session.user.email ? session.user.email.split("@")[0].substring(0, 2).toUpperCase() : "U"
-        );
-console.log("hello world");
+        
         const { data: profileData } = await (supabase as any)
           .from("profiles")
           .select("*")
@@ -370,6 +382,11 @@ console.log("hello world");
           setHeight(profileData.height_cm?.toString() || "");
           setGoal(profileData.goal || "");
           setActivityLevel(profileData.activity_level || "");
+          // Update initials with full_name from profile
+          setUserInitials(getInitials(profileData.full_name, session.user.email || null));
+        } else {
+          // Fallback to email if no profile
+          setUserInitials(getInitials(null, session.user.email || null));
         }
 
         const sub = await getPlatformSubscription(session.user.id);
@@ -509,7 +526,7 @@ console.log("hello world");
     if (!isPremium) {
       toast({
         title: "Premium Required",
-        description: t("profile.premiumrequired"),
+        description: "Customizations are available for premium users. Upgrade now for a more personalized experience.",
         variant: "default",
       });
       return;
@@ -786,24 +803,18 @@ console.log("hello world");
                       <div 
                         className={cn(
                           "relative group",
-                          isPremium && "cursor-pointer",
-                          !isPremium && "cursor-not-allowed"
+                          "cursor-pointer"
                         )}
-                        onClick={isPremium ? handleAvatarClick : undefined}
+                        onClick={handleAvatarClick}
                       >
                         <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-full blur-xl opacity-30 group-hover:opacity-50 transition-opacity" />
                         <Avatar className="relative h-32 w-32 sm:h-40 sm:w-40 border-4 border-primary/30 shadow-2xl ring-4 ring-primary/10 transition-all">
-                          <AvatarImage 
-                            src={
-                              profile?.avatar_url ||
-                              (profile?.gender === 'male' 
-                                ? '/male-avatar.jpg' 
-                                : profile?.gender === 'female' 
-                                ? '/female-avatar.jpg' 
-                                : '/male-avatar.jpg') // default to male if gender not set
-                            } 
-                            className="object-cover" 
-                          />
+                          {profile?.avatar_url && isPremium ? (
+                            <AvatarImage 
+                              src={profile.avatar_url} 
+                              className="object-cover" 
+                            />
+                          ) : null}
                           <AvatarFallback className="text-4xl sm:text-5xl bg-gradient-to-br from-primary via-primary to-secondary text-primary-foreground font-bold">
                             {userInitials}
                           </AvatarFallback>
@@ -813,10 +824,7 @@ console.log("hello world");
                             <div className="animate-spin rounded-full h-8 w-8 border-2 border-white border-t-transparent" />
                           </div>
                         ) : (
-                          <div className={cn(
-                            "absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-sm",
-                            isPremium ? "cursor-pointer" : "cursor-not-allowed"
-                          )}>
+                          <div className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center backdrop-blur-sm">
                             <div className="bg-white/20 backdrop-blur-md rounded-full p-3">
                               <Camera className="h-6 w-6 text-white" />
                             </div>
@@ -825,7 +833,7 @@ console.log("hello world");
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{isPremium ? t("profile.uploadphoto") : t("profile.premiumrequired")}</p>
+                      <p>{isPremium ? t("profile.uploadphoto") : "Customizations are available for premium users. Upgrade now for a more personalized experience."}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>

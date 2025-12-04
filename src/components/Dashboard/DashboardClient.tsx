@@ -339,8 +339,11 @@ export function DashboardClient({
           setIframeHeight(newHeight);
         }
         // Handle any message with a height property
+        // Cap at maximum height for 9 cards (8 sponsors + 1 ad)
         if (event.data.height) {
-          const newHeight = Math.max(Number(event.data.height) || 480, 480);
+          const requestedHeight = Number(event.data.height) || 480;
+          const maxHeight = window.innerWidth < 768 ? 1000 : 600; // Mobile: 1000px, Desktop: 600px
+          const newHeight = Math.min(Math.max(requestedHeight, 480), maxHeight);
           iframe.style.height = `${newHeight}px`;
           setIframeHeight(newHeight);
         }
@@ -351,8 +354,11 @@ export function DashboardClient({
         try {
           const data = JSON.parse(event.data);
           if (data.height || data.type === 'resize') {
-            const newHeight = Math.max(Number(data.height) || 480, 480);
+            const requestedHeight = Number(data.height) || 480;
+            const maxHeight = window.innerWidth < 768 ? 1000 : 600; // Mobile: 1000px, Desktop: 600px
+            const newHeight = Math.min(Math.max(requestedHeight, 480), maxHeight);
             iframe.style.height = `${newHeight}px`;
+            setIframeHeight(newHeight);
           }
         } catch (e) {
           // Not JSON, ignore
@@ -365,18 +371,21 @@ export function DashboardClient({
     }
 
     // Function to check and update iframe height
+    // Cap at maximum height for 9 cards (8 sponsors + 1 ad)
     const checkHeight = () => {
       try {
         const iframeDocument = iframe.contentDocument || iframe.contentWindow?.document;
         if (iframeDocument) {
-          const height = Math.max(
+          const requestedHeight = Math.max(
             iframeDocument.body?.scrollHeight || 0,
             iframeDocument.body?.offsetHeight || 0,
             iframeDocument.documentElement?.scrollHeight || 0,
             iframeDocument.documentElement?.offsetHeight || 0,
             iframeDocument.documentElement?.clientHeight || 0
           );
-          if (height > 0) {
+          if (requestedHeight > 0) {
+            const maxHeight = window.innerWidth < 768 ? 1000 : 600; // Mobile: 1000px, Desktop: 600px
+            const height = Math.min(requestedHeight, maxHeight);
             const currentHeight = parseInt(iframe.style.height || '0');
             // Update if height changed significantly (more than 10px difference)
             if (Math.abs(height - currentHeight) > 10) {
@@ -893,23 +902,23 @@ export function DashboardClient({
             </CardHeader>
             <CardContent className="p-0 flex flex-col">
               <div className="flex flex-col w-full">
-                <div className="w-full" id="sponsor-iframe-container" style={{ minHeight: '480px' }}>
+                <div className="w-full overflow-hidden" id="sponsor-iframe-container" style={{ height: `${iframeHeight}px`, maxHeight: `${iframeHeight}px` }}>
                   <iframe
                     ref={iframeRef}
                     width="100%"
                     frameBorder="0"
                     className="ta-widget w-full"
-                    data-min-height="480"
                     id="widget68ee566289b6c5ef70269ca8"
-                    src="https://app.tinyadz.com/widgets/68ee566289b6c5ef70269ca8?previewMode=false&showInPopup=false&theme=light&layout=grid"
+                    src="https://app.tinyadz.com/widgets/68ee566289b6c5ef70269ca8?previewMode=false&showInPopup=false&theme=light&layout=grid&maxItems=8"
                     style={{ 
                       border: 'none', 
                       display: 'block', 
                       width: '100%', 
-                      minHeight: '480px', 
                       height: `${iframeHeight}px`, 
+                      maxHeight: `${iframeHeight}px`,
                       margin: 0, 
-                      padding: 0 
+                      padding: 0,
+                      overflow: 'hidden'
                     }}
                     title="Advertisements"
                     scrolling="no"
