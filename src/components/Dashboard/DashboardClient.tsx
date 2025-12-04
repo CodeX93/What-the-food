@@ -61,7 +61,7 @@ export function DashboardClient({
   ]);
   const [manualLoading, setManualLoading] = useState(false);
   // Default iframe height; tinyAds will dynamically resize this up/down based on content
-  const [iframeHeight, setIframeHeight] = useState(1200);
+  const [iframeHeight, setIframeHeight] = useState(900);
   const isPremium = subscription?.subscription_type === "premium";
 
   const manualPlaceholders = ["2 boiled eggs", "Greek yogurt (1 cup)", "1 banana", "Protein shake with almond milk"];
@@ -291,14 +291,14 @@ export function DashboardClient({
     const updateIframeHeight = () => {
       const width = window.innerWidth;
       if (width < 640) {
-        // Extra small screens - increase for more cards
-        setIframeHeight(1400);
+        // Extra small screens - add a bit more room (approx. one extra row)
+        setIframeHeight(1150);
       } else if (width < 768) {
-        // Small screens (mobile) - increase for more cards
-        setIframeHeight(1300);
+        // Small screens (mobile)
+        setIframeHeight(1050);
       } else {
-        // Desktop - increase for more cards
-        setIframeHeight(1200);
+        // Desktop
+        setIframeHeight(900);
       }
     };
 
@@ -323,27 +323,27 @@ export function DashboardClient({
       if (event.data && typeof event.data === 'object') {
         // Handle resize messages from tinyAds
         if (event.data.type === 'resize' && event.data.height) {
-          const newHeight = Math.max(event.data.height, 600);
+          const newHeight = Math.max(event.data.height, 400);
           iframe.style.height = `${newHeight}px`;
           setIframeHeight(newHeight);
         }
         // Handle height updates in various formats
         if (event.data.height && typeof event.data.height === 'number') {
-          const newHeight = Math.max(event.data.height, 600);
+          const newHeight = Math.max(event.data.height, 400);
           iframe.style.height = `${newHeight}px`;
           setIframeHeight(newHeight);
         }
         // Handle iframe-resize events
         if (event.data.type === 'iframe-resize' && event.data.height) {
-          const newHeight = Math.max(event.data.height, 600);
+          const newHeight = Math.max(event.data.height, 400);
           iframe.style.height = `${newHeight}px`;
           setIframeHeight(newHeight);
         }
         // Handle any message with a height property
         // TinyAds may send different shapes of messages; normalize to a safe height
         if (event.data.height) {
-          const requestedHeight = Number(event.data.height) || 600;
-          const newHeight = Math.max(requestedHeight, 600);
+          const requestedHeight = Number(event.data.height) || 400;
+          const newHeight = Math.max(requestedHeight, 400);
           iframe.style.height = `${newHeight}px`;
           setIframeHeight(newHeight);
         }
@@ -354,8 +354,8 @@ export function DashboardClient({
         try {
           const data = JSON.parse(event.data);
           if (data.height || data.type === "resize") {
-            const requestedHeight = Number(data.height) || 600;
-            const newHeight = Math.max(requestedHeight, 600);
+            const requestedHeight = Number(data.height) || 400;
+            const newHeight = Math.max(requestedHeight, 400);
             iframe.style.height = `${newHeight}px`;
             setIframeHeight(newHeight);
           }
@@ -383,7 +383,7 @@ export function DashboardClient({
           );
           if (requestedHeight > 0) {
             // Ensure at least a minimal height so the widget isn't cut off
-            const height = Math.max(requestedHeight, 600);
+            const height = Math.max(requestedHeight, 400);
             const currentHeight = parseInt(iframe.style.height || '0');
             // Update if height changed significantly (more than 10px difference)
             if (Math.abs(height - currentHeight) > 10) {
