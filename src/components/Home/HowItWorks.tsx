@@ -64,7 +64,7 @@ const HowItWorks = () => {
                 <Card className="relative overflow-hidden border-2 border-input bg-card/50 backdrop-blur-sm h-full flex flex-col">
                   {/* Step Number as watermark */}
                   <div className="absolute top-4 sm:top-6 left-4 sm:left-6 z-0 pointer-events-none select-none">
-                    <span className="text-4xl sm:text-5xl md:text-6xl font-bold text-primary dark:text-white">
+                    <span className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary dark:text-white">
                       {index + 1}
                     </span>
                   </div>

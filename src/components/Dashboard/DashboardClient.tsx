@@ -60,7 +60,8 @@ export function DashboardClient({
     { id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`, value: "" },
   ]);
   const [manualLoading, setManualLoading] = useState(false);
-  const [iframeHeight, setIframeHeight] = useState(1100);
+  // Default iframe height; tinyAds will dynamically resize this up/down based on content
+  const [iframeHeight, setIframeHeight] = useState(1200);
   const isPremium = subscription?.subscription_type === "premium";
 
   const manualPlaceholders = ["2 boiled eggs", "Greek yogurt (1 cup)", "1 banana", "Protein shake with almond milk"];
@@ -283,29 +284,29 @@ export function DashboardClient({
   // Handle iframe resizing for tinyAds widget - dynamic height based on content
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Set responsive initial height based on screen size
+  // Set an initial height large enough for multiple cards; real height is driven dynamically when possible
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
+    if (typeof window === "undefined") return;
+
     const updateIframeHeight = () => {
       const width = window.innerWidth;
       if (width < 640) {
-        // Extra small screens - need more height for stacked cards
-        setIframeHeight(1800);
+        // Extra small screens - increase for more cards
+        setIframeHeight(1400);
       } else if (width < 768) {
-        // Small screens (mobile)
-        setIframeHeight(1600);
+        // Small screens (mobile) - increase for more cards
+        setIframeHeight(1300);
       } else {
-        // Desktop
-        setIframeHeight(1100);
+        // Desktop - increase for more cards
+        setIframeHeight(1200);
       }
     };
-    
+
     updateIframeHeight();
-    window.addEventListener('resize', updateIframeHeight);
-    
+    window.addEventListener("resize", updateIframeHeight);
+
     return () => {
-      window.removeEventListener('resize', updateIframeHeight);
+      window.removeEventListener("resize", updateIframeHeight);
     };
   }, []);
 
@@ -322,41 +323,39 @@ export function DashboardClient({
       if (event.data && typeof event.data === 'object') {
         // Handle resize messages from tinyAds
         if (event.data.type === 'resize' && event.data.height) {
-          const newHeight = Math.max(event.data.height, 480);
+          const newHeight = Math.max(event.data.height, 600);
           iframe.style.height = `${newHeight}px`;
           setIframeHeight(newHeight);
         }
         // Handle height updates in various formats
         if (event.data.height && typeof event.data.height === 'number') {
-          const newHeight = Math.max(event.data.height, 480);
+          const newHeight = Math.max(event.data.height, 600);
           iframe.style.height = `${newHeight}px`;
           setIframeHeight(newHeight);
         }
         // Handle iframe-resize events
         if (event.data.type === 'iframe-resize' && event.data.height) {
-          const newHeight = Math.max(event.data.height, 480);
+          const newHeight = Math.max(event.data.height, 600);
           iframe.style.height = `${newHeight}px`;
           setIframeHeight(newHeight);
         }
         // Handle any message with a height property
-        // Cap at maximum height for 9 cards (8 sponsors + 1 ad)
+        // TinyAds may send different shapes of messages; normalize to a safe height
         if (event.data.height) {
-          const requestedHeight = Number(event.data.height) || 480;
-          const maxHeight = window.innerWidth < 768 ? 1000 : 600; // Mobile: 1000px, Desktop: 600px
-          const newHeight = Math.min(Math.max(requestedHeight, 480), maxHeight);
+          const requestedHeight = Number(event.data.height) || 600;
+          const newHeight = Math.max(requestedHeight, 600);
           iframe.style.height = `${newHeight}px`;
           setIframeHeight(newHeight);
         }
       }
-      
+
       // Also check for string messages
       if (typeof event.data === 'string') {
         try {
           const data = JSON.parse(event.data);
-          if (data.height || data.type === 'resize') {
-            const requestedHeight = Number(data.height) || 480;
-            const maxHeight = window.innerWidth < 768 ? 1000 : 600; // Mobile: 1000px, Desktop: 600px
-            const newHeight = Math.min(Math.max(requestedHeight, 480), maxHeight);
+          if (data.height || data.type === "resize") {
+            const requestedHeight = Number(data.height) || 600;
+            const newHeight = Math.max(requestedHeight, 600);
             iframe.style.height = `${newHeight}px`;
             setIframeHeight(newHeight);
           }
@@ -371,7 +370,6 @@ export function DashboardClient({
     }
 
     // Function to check and update iframe height
-    // Cap at maximum height for 9 cards (8 sponsors + 1 ad)
     const checkHeight = () => {
       try {
         const iframeDocument = iframe.contentDocument || iframe.contentWindow?.document;
@@ -384,8 +382,8 @@ export function DashboardClient({
             iframeDocument.documentElement?.clientHeight || 0
           );
           if (requestedHeight > 0) {
-            const maxHeight = window.innerWidth < 768 ? 1000 : 600; // Mobile: 1000px, Desktop: 600px
-            const height = Math.min(requestedHeight, maxHeight);
+            // Ensure at least a minimal height so the widget isn't cut off
+            const height = Math.max(requestedHeight, 600);
             const currentHeight = parseInt(iframe.style.height || '0');
             // Update if height changed significantly (more than 10px difference)
             if (Math.abs(height - currentHeight) > 10) {
@@ -902,7 +900,11 @@ export function DashboardClient({
             </CardHeader>
             <CardContent className="p-0 flex flex-col">
               <div className="flex flex-col w-full">
-                <div className="w-full overflow-hidden" id="sponsor-iframe-container" style={{ height: `${iframeHeight}px`, maxHeight: `${iframeHeight}px` }}>
+                <div
+                  className="w-full"
+                  id="sponsor-iframe-container"
+                  style={{ height: `${iframeHeight}px`, minHeight: `${iframeHeight}px` }}
+                >
                   <iframe
                     ref={iframeRef}
                     width="100%"
@@ -910,15 +912,15 @@ export function DashboardClient({
                     className="ta-widget w-full"
                     id="widget68ee566289b6c5ef70269ca8"
                     src="https://app.tinyadz.com/widgets/68ee566289b6c5ef70269ca8?previewMode=false&showInPopup=false&theme=light&layout=grid&maxItems=8"
-                    style={{ 
-                      border: 'none', 
-                      display: 'block', 
-                      width: '100%', 
-                      height: `${iframeHeight}px`, 
-                      maxHeight: `${iframeHeight}px`,
-                      margin: 0, 
+                    style={{
+                      border: "none",
+                      display: "block",
+                      width: "100%",
+                      height: `${iframeHeight}px`,
+                      minHeight: `${iframeHeight}px`,
+                      margin: 0,
                       padding: 0,
-                      overflow: 'hidden'
+                      overflow: "visible",
                     }}
                     title="Advertisements"
                     scrolling="no"
