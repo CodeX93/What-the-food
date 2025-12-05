@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Upload, Camera, Loader2 } from "lucide-react";
+import { Upload, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { getUrl } from "@/utils/url";
 
 export function WidgetEmbedClient() {
   const searchParams = useSearchParams();
@@ -119,67 +119,132 @@ export function WidgetEmbedClient() {
     return <div className="p-4 text-center text-muted-foreground">Widget not found or invalid widget ID</div>;
   }
 
+  const baseUrl = getUrl();
+  const widgetEmbedUrl = `${baseUrl}/widget/embed?id=${widgetId}`;
+
   return (
-    <div className="min-h-screen p-4" style={{ backgroundColor: "transparent" }}>
-      <Card
-        className="max-w-md mx-auto"
-        style={{ borderColor: styles.primaryColor, borderRadius: styles.borderRadius }}
+    <div className="w-full min-h-screen p-4 sm:p-6" style={{ backgroundColor: "transparent" }}>
+      <div 
+        className="max-w-md mx-auto bg-card rounded-lg border-2 border-border shadow-sm"
+        style={{ 
+          borderRadius: styles.borderRadius,
+          borderColor: styles.primaryColor + "30"
+        }}
       >
-        <CardContent className="p-6">
+        <div className="p-6 sm:p-8">
           {styles.customText && (
-            <h3 className="text-lg font-semibold mb-4" style={{ color: styles.primaryColor }}>
+            <h3 className="text-lg font-semibold mb-4 text-center" style={{ color: styles.primaryColor }}>
               {styles.customText}
             </h3>
           )}
 
           {!result ? (
             <div className="space-y-4">
-              <div className="relative">
-                <label
-                  htmlFor="widget-upload"
-                  className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted transition-colors"
-                  style={{ borderColor: styles.primaryColor, borderRadius: styles.borderRadius }}
+              {!imagePreview ? (
+                <div
+                  className="border-2 border-dashed rounded-lg p-10 cursor-pointer bg-muted/30 text-center hover:border-opacity-50 transition-colors flex-1 flex flex-col items-center justify-center min-h-[280px]"
+                  style={{ 
+                    borderColor: styles.primaryColor + "30",
+                    borderRadius: styles.borderRadius
+                  }}
+                  onClick={() => {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.accept = "image/png, image/jpeg, image/jpg, image/heic, image/heif";
+                    input.onchange = (e) => {
+                      const file = (e.target as HTMLInputElement).files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        setImagePreview(reader.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    };
+                    input.click();
+                  }}
                 >
-                  {imagePreview ? (
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="w-full h-full object-cover rounded-lg"
-                      style={{ borderRadius: styles.borderRadius }}
-                    />
-                  ) : (
-                    <>
-                      <Camera className="h-12 w-12 mb-2" style={{ color: styles.primaryColor }} />
-                      <p className="text-sm text-muted-foreground">Click to upload food image</p>
-                    </>
-                  )}
-                </label>
-                <input
-                  id="widget-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </div>
-
-              {imagePreview && (
-                <Button
-                  onClick={handleScan}
-                  disabled={scanning}
-                  className="w-full"
-                  style={{ backgroundColor: styles.primaryColor, borderRadius: styles.borderRadius }}
-                >
-                  {scanning ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" /> Scan Food
-                    </>
-                  )}
-                </Button>
+          <Upload 
+            className="h-14 w-14 mx-auto mb-4" 
+            style={{ color: styles.primaryColor }} 
+          />
+          <p className="text-lg font-medium mb-2" style={{ color: styles.primaryColor }}>
+            {widgetSettings?.widget_name || "Upload Your Food Photo"}
+          </p>
+          <p className="text-sm text-muted-foreground mb-4">
+            {widgetSettings?.widget_description || "Drop an image here or click to browse"}
+          </p>
+                  <Button 
+                    style={{ 
+                      backgroundColor: styles.primaryColor,
+                      borderRadius: styles.borderRadius
+                    }}
+                  >
+                    Choose File
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="relative rounded-lg overflow-hidden border-2 border-border bg-muted/30">
+                    <div className="aspect-video relative">
+                      <img 
+                        src={imagePreview} 
+                        alt="Uploaded food" 
+                        className="w-full h-full object-cover" 
+                      />
+                      <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            const input = document.createElement("input");
+                            input.type = "file";
+                            input.accept = "image/png, image/jpeg, image/jpg, image/heic, image/heif";
+                            input.onchange = (e) => {
+                              const file = (e.target as HTMLInputElement).files?.[0];
+                              if (!file) return;
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setImagePreview(reader.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            };
+                            input.click();
+                          }}
+                        >
+                          Change Image
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center gap-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setImagePreview(null);
+                      }}
+                    >
+                      Remove
+                    </Button>
+                    <Button
+                      onClick={handleScan}
+                      disabled={scanning}
+                      className="flex-1"
+                      style={{ 
+                        backgroundColor: styles.primaryColor,
+                        borderRadius: styles.borderRadius
+                      }}
+                    >
+                      {scanning ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Analyzing...
+                        </>
+                      ) : (
+                        "Analyze Food"
+                      )}
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           ) : (
@@ -222,20 +287,21 @@ export function WidgetEmbedClient() {
           )}
 
           {styles.brandingVisible && (
-            <div className="mt-4 pt-4 border-t text-center text-xs text-muted-foreground">
+            <div className="mt-6 pt-4 border-t text-center text-xs text-muted-foreground">
               Powered by{" "}
               <a
                 href="https://whatthefood.io"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ color: styles.primaryColor }}
+                className="hover:underline"
               >
                 WhatTheFood
               </a>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
