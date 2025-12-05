@@ -20,6 +20,7 @@ type WidgetFormState = {
   description: string;
   primaryColor: string;
   borderRadius: string;
+  backgroundColor: string;
   customText: string;
   brandingVisible: boolean;
 };
@@ -29,6 +30,7 @@ const defaultFormState: WidgetFormState = {
   description: "Drop an image here or click to browse",
   primaryColor: "#10b981",
   borderRadius: "8px",
+  backgroundColor: "",
   customText: "",
   brandingVisible: true,
 };
@@ -61,10 +63,11 @@ type WidgetDashboardClientProps = {
 function WidgetPreview({ form }: { form: WidgetFormState }) {
   return (
     <div 
-      className="w-full bg-card rounded-lg border-2 border-border shadow-sm"
+      className="w-full rounded-lg border-2 border-border shadow-sm"
       style={{ 
         borderRadius: form.borderRadius,
-        borderColor: form.primaryColor + "30"
+        borderColor: form.primaryColor + "30",
+        backgroundColor: form.backgroundColor || "transparent"
       }}
     >
       <div className="p-6 sm:p-8">
@@ -162,6 +165,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         description: widget.widget_description || "",
         primaryColor: widget.primary_color || "#10b981",
         borderRadius: widget.border_radius || "8px",
+        backgroundColor: widget.background_color || "",
         customText: widget.custom_text || "",
         brandingVisible: isFree ? true : widgetBrandingVisible,
       });
@@ -294,7 +298,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           const { data: widgets, error: widgetsError } = await supabaseClient
             .from("widget_settings")
             .select(
-              "id, widget_id, widget_name, widget_description, primary_color, border_radius, is_default, created_at, custom_text, branding_visible"
+              "id, widget_id, widget_name, widget_description, primary_color, border_radius, background_color, is_default, created_at, custom_text, branding_visible"
             )
             .eq("user_id", currentSession.user.id)
             .order("created_at", { ascending: false })
@@ -344,7 +348,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
               const { data: retryWidgets, error: retryError } = await supabaseClient
                 .from("widget_settings")
                 .select(
-                  "id, widget_id, widget_name, widget_description, primary_color, border_radius, is_default, created_at, custom_text, branding_visible"
+                  "id, widget_id, widget_name, widget_description, primary_color, border_radius, background_color, is_default, created_at, custom_text, branding_visible"
                 )
                 .eq("user_id", refreshedSession.user.id)
                 .order("created_at", { ascending: false })
@@ -719,6 +723,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         widget_description: formState.description || null,
         primary_color: formState.primaryColor,
         border_radius: formState.borderRadius,
+        background_color: formState.backgroundColor || null,
         custom_text: formState.customText || null,
         branding_visible: finalBrandingVisible,
       };
@@ -769,6 +774,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           description: newWidget.widget_description || "",
           primaryColor: newWidget.primary_color || "#10b981",
           borderRadius: newWidget.border_radius || "8px",
+          backgroundColor: newWidget.background_color || "",
           customText: newWidget.custom_text || "",
           brandingVisible: isFree ? true : widgetBrandingVisible,
         });
@@ -809,6 +815,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           description: updatedWidget.widget_description || "",
           primaryColor: updatedWidget.primary_color || "#10b981",
           borderRadius: updatedWidget.border_radius || "8px",
+          backgroundColor: updatedWidget.background_color || "",
           customText: updatedWidget.custom_text || "",
           brandingVisible: isFree ? true : widgetBrandingVisible,
         });
@@ -1026,7 +1033,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
     width="100%" 
     height="600" 
     frameborder="0" 
-    scrolling="no"
+    scrolling="yes"
     style="border-radius: ${borderRadiusValue}; border: none; display: block; min-height: 400px;"
     allow="autoplay; encrypted-media"
     title="Food Scanner Widget"
@@ -1160,6 +1167,29 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
               onChange={(event) => updateForm("borderRadius", event.target.value)}
               placeholder={t("widgetdashboard.form.border.placeholder")}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={`background-color-${mode}`}>Background Color</Label>
+            <div className="flex items-center gap-4">
+              <Input
+                id={`background-color-${mode}`}
+                type="color"
+                value={form.backgroundColor || "#ffffff"}
+                onChange={(event) => updateForm("backgroundColor", event.target.value)}
+                className="w-20 h-10"
+              />
+              <Input
+                type="text"
+                value={form.backgroundColor}
+                onChange={(event) => updateForm("backgroundColor", event.target.value)}
+                className="flex-1"
+                placeholder="#ffffff or leave empty for transparent"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Set the background color of the widget. Leave empty for transparent background.
+            </p>
           </div>
 
           <div className="space-y-2">

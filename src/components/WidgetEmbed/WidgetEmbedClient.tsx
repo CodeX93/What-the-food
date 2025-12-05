@@ -1901,6 +1901,7 @@ export function WidgetEmbedClient() {
   const styles = {
     primaryColor: widgetSettings?.primary_color || "#10b981",
     borderRadius: widgetSettings?.border_radius || "8px",
+    backgroundColor: widgetSettings?.background_color || "transparent",
     customText: widgetSettings?.custom_text || null,
     brandingVisible: widgetSettings?.branding_visible !== false,
   };
@@ -1924,15 +1925,16 @@ export function WidgetEmbedClient() {
   // CRITICAL: This check happens BEFORE rendering the normal widget
   if (isLimitReached) {
     console.log("🚫 Rendering Limit Exceeded widget - isLimitReached:", isLimitReached, "apiCallCount:", apiCallCount);
-    return (
-      <div className="w-full min-h-screen p-4 sm:p-6 flex items-center justify-center" style={{ backgroundColor: "transparent" }}>
-        <div 
-          className="max-w-md mx-auto bg-card rounded-lg border-2 border-border shadow-sm p-8 text-center"
-          style={{ 
-            borderRadius: styles.borderRadius,
-            borderColor: styles.primaryColor + "30"
-          }}
-        >
+  return (
+    <div className="w-full min-h-screen p-4 sm:p-6 flex items-center justify-center" style={{ backgroundColor: styles.backgroundColor || "transparent" }}>
+      <div 
+        className="max-w-md mx-auto rounded-lg border-2 border-border shadow-sm p-8 text-center"
+        style={{ 
+          borderRadius: styles.borderRadius,
+          borderColor: styles.primaryColor + "30",
+          backgroundColor: styles.backgroundColor || "transparent"
+        }}
+      >
           <div className="space-y-4">
             <div className="text-4xl mb-4">🚫</div>
             <h3 className="text-xl font-bold" style={{ color: styles.primaryColor }}>
@@ -1970,12 +1972,13 @@ export function WidgetEmbedClient() {
   console.log("✅ Rendering normal widget - isLimitReached:", isLimitReached, "apiCallCount:", apiCallCount);
 
   return (
-    <div className="w-full min-h-screen p-4 sm:p-6" style={{ backgroundColor: "transparent" }}>
+    <div className="w-full min-h-screen p-4 sm:p-6" style={{ backgroundColor: styles.backgroundColor || "transparent" }}>
       <div 
-        className="max-w-md mx-auto bg-card rounded-lg border-2 border-border shadow-sm"
+        className="max-w-md mx-auto rounded-lg border-2 border-border shadow-sm"
         style={{ 
           borderRadius: styles.borderRadius,
-          borderColor: styles.primaryColor + "30"
+          borderColor: styles.primaryColor + "30",
+          backgroundColor: styles.backgroundColor || "transparent"
         }}
       >
         <div className="p-6 sm:p-8">
