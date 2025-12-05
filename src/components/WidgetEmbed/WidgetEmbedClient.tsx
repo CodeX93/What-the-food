@@ -142,41 +142,72 @@ export function WidgetEmbedClient() {
   // No need to disable/restore widget - we just check the limit and show different UI
 
   // Check if free user has reached API call limit (3 calls)
+  // Uses a database function to bypass RLS and get accurate counts
   const checkApiCallLimit = useCallback(async (userId: string) => {
     try {
-      console.log("🔍 Checking API call limit for user:", userId);
+      console.log("🔍 Checking API call limit for user:", userId, "widget:", widgetId);
       
-      // First, check if user is on free plan
-      const { data: subscriptionData, error: subError } = await (supabase as any)
-        .from("widget_subscriptions")
-        .select("subscription_type")
-        .eq("user_id", userId)
-        .single();
-
-      if (subError && subError.code !== "PGRST116") {
-        console.error("Error fetching subscription:", subError);
+      if (!widgetId) {
+        console.error("No widgetId available for limit check");
+        return false;
       }
 
-      const subscriptionType = (subscriptionData as { subscription_type?: string } | null)?.subscription_type || "free";
-      console.log("📊 User subscription type:", subscriptionType);
+      // Use the database function to get user_id, subscription_type, and API call count
+      // This bypasses RLS and works in unauthenticated contexts
+      const { data: limitData, error: limitError } = await (supabase as any)
+        .rpc('get_widget_user_api_count', { p_widget_id: widgetId });
+
+      if (limitError) {
+        console.error("❌ Error calling get_widget_user_api_count:", limitError);
+        // Fallback: try direct query (may fail due to RLS, but worth trying)
+        try {
+          const { data: subscriptionData } = await (supabase as any)
+            .from("widget_subscriptions")
+            .select("subscription_type")
+            .eq("user_id", userId)
+            .single();
+          
+          const subscriptionType = (subscriptionData as { subscription_type?: string } | null)?.subscription_type || "free";
+          
+          if (subscriptionType === "free") {
+            const { count } = await (supabase as any)
+              .from("widget_api_calls")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", userId);
+            
+            const totalCalls = count || 0;
+            setApiCallCount(totalCalls);
+            if (totalCalls >= 3) {
+              console.log("🚫 FREE USER LIMIT REACHED (fallback):", totalCalls, "calls");
+              setIsLimitReached(true);
+              return true;
+            }
+          }
+        } catch (fallbackError) {
+          console.error("Fallback limit check also failed:", fallbackError);
+        }
+        return false; // On error, allow (fail open)
+      }
+
+      if (!limitData || limitData.length === 0) {
+        console.error("No data returned from get_widget_user_api_count");
+        return false;
+      }
+
+      const result = limitData[0];
+      const subscriptionType = result.subscription_type || "free";
+      const totalCalls = parseInt(result.api_call_count) || 0;
+      
+      console.log("📊 Limit check result:", {
+        subscriptionType,
+        totalCalls,
+        userId: result.user_id
+      });
+      
+      setApiCallCount(totalCalls);
       
       // Only check limit for free users
       if (subscriptionType === "free") {
-        // Get total API call count for this user
-        const { count, error: countError } = await (supabase as any)
-          .from("widget_api_calls")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", userId);
-
-        if (countError) {
-          console.error("Error fetching API call count:", countError);
-          return false; // On error, allow (fail open)
-        }
-
-        const totalCalls = count || 0;
-        console.log("📊 Total API calls for free user:", totalCalls);
-        setApiCallCount(totalCalls);
-        
         // If user has reached 3 API calls, show limit message
         if (totalCalls >= 3) {
           console.log("🚫 FREE USER LIMIT REACHED: 3 API calls used - showing limit message");
@@ -195,7 +226,7 @@ export function WidgetEmbedClient() {
       // On error, allow the call (fail open) but log it
       return false;
     }
-  }, []);
+  }, [widgetId]);
 
   const trackApiCall = useCallback(
     async (callType: string, status: string = "success") => {
