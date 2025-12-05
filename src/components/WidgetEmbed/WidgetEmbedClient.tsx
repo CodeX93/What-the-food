@@ -45,20 +45,36 @@ export function WidgetEmbedClient() {
       }
 
       try {
+        console.log("Loading widget settings for widget_id:", widgetId);
         const { data, error } = await (supabase as any)
           .from("widget_settings")
           .select("*")
           .eq("widget_id", widgetId)
           .single();
 
-        if (error && error.code !== "PGRST116") {
+        if (error) {
           console.error("Error loading widget settings:", error);
-        } else if (data) {
+          console.error("Error code:", error.code, "Error message:", error.message);
+          // PGRST116 is "not found" - widget doesn't exist
+          // PGRST301 is "JWT expired" or auth error
+          if (error.code === "PGRST116") {
+            console.error("Widget not found in database. Widget ID:", widgetId);
+          } else if (error.code === "PGRST301" || error.message?.includes("JWT")) {
+            console.error("Authentication error - widget may require public access");
+          }
+          setLoading(false);
+          return;
+        }
+
+        if (data) {
+          console.log("Widget settings loaded successfully:", data);
           setWidgetSettings(data);
           await trackApiCall("preview");
+        } else {
+          console.error("No data returned for widget_id:", widgetId);
         }
       } catch (err) {
-        console.error("Error loading widget:", err);
+        console.error("Exception loading widget:", err);
       } finally {
         setLoading(false);
       }
