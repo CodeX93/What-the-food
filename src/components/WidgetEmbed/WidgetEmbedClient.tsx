@@ -1,11 +1,31 @@
 'use client';
 
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useState, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Upload, Loader2 } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { 
+  Upload, 
+  Loader2, 
+  Flame, 
+  Beef, 
+  Wheat, 
+  Droplet, 
+  Apple, 
+  Candy, 
+  Shield, 
+  Info, 
+  CheckCircle2, 
+  Zap,
+  AlertCircle,
+  ExternalLink
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getUrl } from "@/utils/url";
+import { analyzeFood, scaleNutrients, type FoodAnalysis } from "@/utils/foodScan";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Helper function to check if tracking should be disabled globally
 // This is a fail-safe to prevent any unwanted tracking
@@ -112,6 +132,350 @@ const markPreviewTracked = (widgetId: string): void => {
   }
 };
 
+// Free User Results View Component
+function FreeUserResultsView({ 
+  result, 
+  styles, 
+  onScanAnother 
+}: { 
+  result: FoodAnalysis; 
+  styles: any; 
+  onScanAnother: () => void;
+}) {
+  const scaled = useMemo(() => scaleNutrients(result.nutrients, 1), [result.nutrients]);
+  
+  return (
+    <div className="space-y-4">
+      <div className="text-center">
+        <h4 className="text-xl font-bold mb-2">{result.dish}</h4>
+        {result.description && (
+          <p className="text-sm text-muted-foreground mb-4">{result.description}</p>
+        )}
+      </div>
+
+      {/* Accuracy Scale */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base">Accuracy</CardTitle>
+            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">Confidence level of the analysis</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-muted-foreground">Confidence</span>
+            <span className="font-semibold">{Math.round((result.confidence || 0) * 100)}%</span>
+          </div>
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full transition-all"
+              style={{ 
+                width: `${Math.round((result.confidence || 0) * 100)}%`,
+                backgroundColor: styles.primaryColor
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Nutrition Summary */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Nutrition Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {[
+              { icon: Flame, label: "Calories", value: scaled?.calories ?? "-", suffix: "", style: "bg-orange-100/90 border-orange-200 text-orange-900" },
+              { icon: Beef, label: "Protein", value: scaled?.protein_g ?? "-", suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
+              { icon: Wheat, label: "Carbs", value: scaled?.carbohydrates_g ?? "-", suffix: "g", style: "bg-yellow-100/90 border-yellow-200 text-yellow-900" },
+              { icon: Droplet, label: "Fat", value: scaled?.fat_g ?? "-", suffix: "g", style: "bg-sky-100/90 border-sky-200 text-sky-900" },
+              { icon: Apple, label: "Fiber", value: scaled?.fiber_g ?? "-", suffix: "g", style: "bg-emerald-100/90 border-emerald-200 text-emerald-900" },
+              { icon: Candy, label: "Sugar", value: scaled?.sugar_g ?? "-", suffix: "g", style: "bg-pink-100/90 border-pink-200 text-pink-900" },
+            ].map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={index}
+                  className={`border rounded-lg px-3 py-2.5 flex items-center gap-2 shadow-sm ${item.style}`}
+                >
+                  <Icon className="h-4 w-4 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-muted-foreground mb-0.5">{item.label}</div>
+                    <div className="text-base font-semibold">
+                      {item.value}
+                      {item.value !== "-" ? item.suffix : ""}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button
+        onClick={onScanAnother}
+        variant="outline"
+        className="w-full"
+        style={{ borderRadius: styles.borderRadius }}
+      >
+        Scan Another
+      </Button>
+    </div>
+  );
+}
+
+// Premium User Results View Component
+function PremiumUserResultsView({ 
+  result, 
+  servings,
+  styles, 
+  baseUrl,
+  onScanAnother 
+}: { 
+  result: FoodAnalysis; 
+  servings: number;
+  styles: any; 
+  baseUrl: string;
+  onScanAnother: () => void;
+}) {
+  const scaled = useMemo(() => scaleNutrients(result.nutrients, servings), [result.nutrients, servings]);
+  
+  return (
+    <div className="space-y-4">
+      <div className="text-center">
+        <h4 className="text-xl font-bold mb-2">{result.dish}</h4>
+        {result.description && (
+          <p className="text-sm text-muted-foreground mb-4">{result.description}</p>
+        )}
+        {result.tags && result.tags.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-2 mb-4">
+            {result.tags.map((tag, index) => {
+              const palette = [
+                "bg-emerald-50 text-emerald-700 border border-emerald-200",
+                "bg-sky-50 text-sky-700 border border-sky-200",
+                "bg-rose-50 text-rose-700 border border-rose-200",
+                "bg-amber-50 text-amber-700 border border-amber-200",
+              ];
+              const colors = palette[index % palette.length];
+              return (
+                <Badge key={index} variant="outline" className={`${colors} text-xs`}>
+                  {tag}
+                </Badge>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Accuracy Scale */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base">Accuracy</CardTitle>
+            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="text-xs">Confidence level of the analysis</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-muted-foreground">Confidence</span>
+            <span className="font-semibold">{Math.round((result.confidence || 0) * 100)}%</span>
+          </div>
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full transition-all"
+              style={{ 
+                width: `${Math.round((result.confidence || 0) * 100)}%`,
+                backgroundColor: styles.primaryColor
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Nutrition Summary */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Nutrition Summary</CardTitle>
+          {result.servingGuidance && (
+            <CardDescription className="text-xs mt-2">
+              {result.servingGuidance}
+            </CardDescription>
+          )}
+        </CardHeader>
+        <CardContent>
+          {result.servingGuidance && (
+            <div className="mb-4 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary">
+              {result.servingGuidance}
+            </div>
+          )}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {[
+              { icon: Flame, label: "Calories", value: scaled?.calories ?? "-", suffix: "", style: "bg-orange-100/90 border-orange-200 text-orange-900" },
+              { icon: Beef, label: "Protein", value: scaled?.protein_g ?? "-", suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
+              { icon: Wheat, label: "Carbs", value: scaled?.carbohydrates_g ?? "-", suffix: "g", style: "bg-yellow-100/90 border-yellow-200 text-yellow-900" },
+              { icon: Droplet, label: "Fat", value: scaled?.fat_g ?? "-", suffix: "g", style: "bg-sky-100/90 border-sky-200 text-sky-900" },
+              { icon: Apple, label: "Fiber", value: scaled?.fiber_g ?? "-", suffix: "g", style: "bg-emerald-100/90 border-emerald-200 text-emerald-900" },
+              { icon: Candy, label: "Sugar", value: scaled?.sugar_g ?? "-", suffix: "g", style: "bg-pink-100/90 border-pink-200 text-pink-900" },
+            ].map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={index}
+                  className={`border rounded-lg px-3 py-2.5 flex items-center gap-2 shadow-sm ${item.style}`}
+                >
+                  <Icon className="h-4 w-4 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-muted-foreground mb-0.5">{item.label}</div>
+                    <div className="text-base font-semibold">
+                      {item.value}
+                      {item.value !== "-" ? item.suffix : ""}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Ingredients */}
+      {result.ingredients && result.ingredients.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Apple className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base">Ingredients</CardTitle>
+            </div>
+            <CardDescription className="text-xs">Detected/estimated ingredients</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {result.ingredients.map((ing, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <CheckCircle2 className="h-3 w-3 text-primary mt-0.5 flex-shrink-0" />
+                  <span className="text-xs leading-relaxed">{ing}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* How to Prepare */}
+      {result.instructions && result.instructions.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-primary" />
+              <CardTitle className="text-base">How to Prepare</CardTitle>
+            </div>
+            <CardDescription className="text-xs">Step-by-step instructions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ol className="space-y-3">
+              {result.instructions.map((step, i) => {
+                const boldMatch = step.match(/^\*\*(.+?)\*\*[:\s]*(.+)$/);
+                const hasBoldTitle = boldMatch !== null;
+                const title = hasBoldTitle ? boldMatch[1] : null;
+                const description = hasBoldTitle ? boldMatch[2] : step;
+                
+                return (
+                  <li key={i} className="flex gap-2">
+                    <span 
+                      className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium mt-0.5"
+                      style={{ backgroundColor: styles.primaryColor + "20", color: styles.primaryColor }}
+                    >
+                      {i + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      {title && (
+                        <p className="text-xs font-semibold mb-1">
+                          {title}
+                        </p>
+                      )}
+                      <p className="text-xs leading-relaxed">
+                        {description}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Additional Info */}
+      {result.additionalInfo && (
+        <Alert className="border-amber-200 bg-amber-50 text-amber-900">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle className="text-sm">Additional Information</AlertTitle>
+          <AlertDescription className="text-xs leading-relaxed mt-1">
+            {result.additionalInfo}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Personalized Context Message */}
+      <Alert className="border-primary/20 bg-primary/5">
+        <Shield className="h-4 w-4 text-primary" />
+        <AlertTitle className="text-sm">Personalized Health Context</AlertTitle>
+        <AlertDescription className="text-xs leading-relaxed mt-1">
+          Get personalized health insights, smart substitutions, and tailored recommendations based on your profile.{" "}
+          <a
+            href={`${baseUrl}/food-results?id=scan`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 font-semibold underline"
+            style={{ color: styles.primaryColor }}
+          >
+            View on our website <ExternalLink className="h-3 w-3" />
+          </a>
+        </AlertDescription>
+      </Alert>
+
+      <Button
+        onClick={onScanAnother}
+        variant="outline"
+        className="w-full"
+        style={{ borderRadius: styles.borderRadius }}
+      >
+        Scan Another
+      </Button>
+    </div>
+  );
+}
+
 export function WidgetEmbedClient() {
   const searchParams = useSearchParams();
   const widgetId = searchParams?.get("id") ?? null;
@@ -119,9 +483,11 @@ export function WidgetEmbedClient() {
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<FoodAnalysis | null>(null);
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [apiCallCount, setApiCallCount] = useState(0);
+  const [subscriptionType, setSubscriptionType] = useState<string>("free");
+  const [servings, setServings] = useState(1);
   const previewTrackedRef = useRef(false);
   const isTrackingRef = useRef(false);
   const isLoadingRef = useRef<string | null>(null);
@@ -267,6 +633,7 @@ export function WidgetEmbedClient() {
       });
       
       setApiCallCount(totalCalls);
+      setSubscriptionType(subscriptionType); // Store subscription type for result display
       
       // Only check limit for free users
       if (subscriptionType === "free") {
@@ -1465,32 +1832,36 @@ export function WidgetEmbedClient() {
       // Only process scan if ALL limit checks pass AND tracking succeeded
       console.log("✅ All limit checks passed and tracking succeeded - processing scan");
       
-      // Simulate scan processing
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      
-      // Final check before setting result
-      const finalLimitCheck = await checkApiCallLimit(widgetSettings.user_id);
-      if (finalLimitCheck) {
-        console.log("🚫 Limit reached during processing - NOT setting result");
-        setIsLimitReached(true);
-        setScanning(false);
-        return;
+      // Actually call analyzeFood to get real results
+      // Note: analyzeFood expects imageUrl (string), but we have base64 data URL
+      // The backend should handle data URLs, but if not, we may need to upload first
+      try {
+        // Convert base64 data URL to a format the backend can handle
+        // If the backend doesn't support data URLs, we'll need to upload the image first
+        const analysisResult = await analyzeFood(imagePreview, servings);
+        console.log("✅ Analysis complete:", analysisResult);
+        
+        // Final check before setting result
+        const finalLimitCheck = await checkApiCallLimit(widgetSettings.user_id);
+        if (finalLimitCheck) {
+          console.log("🚫 Limit reached during processing - NOT setting result");
+          setIsLimitReached(true);
+          setScanning(false);
+          return;
+        }
+        
+        // Only set result if ALL checks pass
+        console.log("✅ Setting result - all checks passed");
+        setResult(analysisResult.analysis);
+      } catch (analysisError: any) {
+        console.error("❌ Error analyzing food:", analysisError);
+        throw analysisError; // Re-throw to be caught by outer catch
       }
-      
-      // Only set result if ALL checks pass
-      console.log("✅ Setting result - all checks passed");
-      setResult({
-        dish_name: "Sample Dish",
-        calories: 350,
-        protein: 25,
-        carbs: 45,
-        fat: 10,
-      });
     } catch (error) {
       console.error("Error scanning:", error);
       // Don't track error if limit is reached
       if (!isLimitReached) {
-        await trackApiCall("scan", "error");
+      await trackApiCall("scan", "error");
       }
     } finally {
       setScanning(false);
@@ -1696,44 +2067,31 @@ export function WidgetEmbedClient() {
                 </div>
               )}
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="text-center">
-                <h4 className="text-xl font-bold mb-2">{result.dish_name}</h4>
-                <div className="grid grid-cols-3 gap-4 mt-4">
-                  <div>
-                    <div className="text-2xl font-bold" style={{ color: styles.primaryColor }}>
-                      {result.calories}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Calories</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold" style={{ color: styles.primaryColor }}>
-                      {result.protein}g
-                    </div>
-                    <div className="text-xs text-muted-foreground">Protein</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold" style={{ color: styles.primaryColor }}>
-                      {result.carbs}g
-                    </div>
-                    <div className="text-xs text-muted-foreground">Carbs</div>
-                  </div>
-                </div>
-              </div>
-              <Button
-                onClick={() => {
+          ) : result ? (
+            subscriptionType === "free" ? (
+              // FREE USER VIEW: Nutrition + Accuracy Scale
+              <FreeUserResultsView 
+                result={result} 
+                styles={styles}
+                onScanAnother={() => {
                   setResult(null);
                   setImagePreview(null);
                 }}
-                variant="outline"
-                className="w-full"
-                style={{ borderRadius: styles.borderRadius }}
-              >
-                Scan Another
-              </Button>
-            </div>
-          )}
+              />
+            ) : (
+              // PREMIUM USER VIEW: Full Detailed Results
+              <PremiumUserResultsView 
+                result={result}
+                servings={servings}
+                styles={styles}
+                baseUrl={baseUrl}
+                onScanAnother={() => {
+                  setResult(null);
+                  setImagePreview(null);
+                }}
+              />
+            )
+          ) : null}
 
           {styles.brandingVisible && (
             <div className="mt-6 pt-4 border-t text-center text-xs text-muted-foreground">
