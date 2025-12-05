@@ -135,10 +135,12 @@ const markPreviewTracked = (widgetId: string): void => {
 // Free User Results View Component
 function FreeUserResultsView({ 
   result, 
+  imageUrl,
   styles, 
   onScanAnother 
 }: { 
   result: FoodAnalysis; 
+  imageUrl: string | null;
   styles: any; 
   onScanAnother: () => void;
 }) {
@@ -146,6 +148,19 @@ function FreeUserResultsView({
   
   return (
     <div className="space-y-4">
+      {/* Display the scanned image */}
+      {imageUrl && (
+        <Card className="overflow-hidden">
+          <div className="relative overflow-hidden" style={{ aspectRatio: '1 / 0.94' }}>
+            <img 
+              src={imageUrl} 
+              alt={result.dish || "Food"} 
+              className="w-full h-full object-cover" 
+            />
+          </div>
+        </Card>
+      )}
+      
       <div className="text-center">
         <h4 className="text-xl font-bold mb-2">{result.dish}</h4>
         {result.description && (
@@ -243,12 +258,14 @@ function FreeUserResultsView({
 // Premium User Results View Component
 function PremiumUserResultsView({ 
   result, 
+  imageUrl,
   servings,
   styles, 
   baseUrl,
   onScanAnother 
 }: { 
   result: FoodAnalysis; 
+  imageUrl: string | null;
   servings: number;
   styles: any; 
   baseUrl: string;
@@ -258,6 +275,19 @@ function PremiumUserResultsView({
   
   return (
     <div className="space-y-4">
+      {/* Display the scanned image */}
+      {imageUrl && !result.isManualEntry && (
+        <Card className="overflow-hidden">
+          <div className="relative overflow-hidden" style={{ aspectRatio: '1 / 0.94' }}>
+            <img 
+              src={imageUrl} 
+              alt={result.dish || "Food"} 
+              className="w-full h-full object-cover" 
+            />
+          </div>
+        </Card>
+      )}
+      
       <div className="text-center">
         <h4 className="text-xl font-bold mb-2">{result.dish}</h4>
         {result.description && (
@@ -2071,7 +2101,8 @@ export function WidgetEmbedClient() {
             subscriptionType === "free" ? (
               // FREE USER VIEW: Nutrition + Accuracy Scale
               <FreeUserResultsView 
-                result={result} 
+                result={result}
+                imageUrl={imagePreview}
                 styles={styles}
                 onScanAnother={() => {
                   setResult(null);
@@ -2082,6 +2113,7 @@ export function WidgetEmbedClient() {
               // PREMIUM USER VIEW: Full Detailed Results
               <PremiumUserResultsView 
                 result={result}
+                imageUrl={imagePreview}
                 servings={servings}
                 styles={styles}
                 baseUrl={baseUrl}
