@@ -39,9 +39,29 @@ const isTrackingDisabled = (): boolean => {
       return true;
     }
     
-    // Always disable if no referrer (direct access)
-    if (!referrer || referrer === '') {
+    // Check if we're in a cross-origin iframe (external embed)
+    // If in iframe and can't access parent, it's likely an external embed
+    let isCrossOriginIframe = false;
+    if (typeof window !== 'undefined') {
+      const isInIframe = window.self !== window.top;
+      if (isInIframe) {
+        try {
+          window.parent.location;
+          isCrossOriginIframe = false;
+        } catch (e) {
+          isCrossOriginIframe = true; // Can't access parent = cross-origin = external embed
+        }
+      }
+    }
+    
+    // Always disable if no referrer AND not in cross-origin iframe (direct access)
+    if ((!referrer || referrer === '') && !isCrossOriginIframe) {
       return true;
+    }
+    
+    // If in cross-origin iframe, don't disable tracking (it's an external embed)
+    if (isCrossOriginIframe) {
+      return false; // Don't disable - this is an external embed
     }
     
     // Always disable if referrer is from same origin
@@ -341,10 +361,34 @@ export function WidgetEmbedClient() {
             return true;
           }
           
-          // If no referrer, it's direct access (not an embed) - skip
-          if (!referrer || referrer === '') {
-            console.log("No referrer (direct access) - skipping tracking");
+          // Check if we're in an iframe (cross-origin embed)
+          // If in iframe and can't access parent, it's likely an external embed
+          const isInIframe = window.self !== window.top;
+          let isCrossOriginIframe = false;
+          
+          if (isInIframe) {
+            try {
+              // Try to access parent - if it throws, it's cross-origin (external embed)
+              window.parent.location;
+              // If we can access parent location, it's same-origin (internal)
+              isCrossOriginIframe = false;
+            } catch (e) {
+              // Can't access parent - it's cross-origin (external embed) ✅
+              isCrossOriginIframe = true;
+              console.log("✅ Cross-origin iframe detected (external embed)", e);
+            }
+          }
+          
+          // If no referrer BUT we're in a cross-origin iframe, it's still an external embed
+          if ((!referrer || referrer === '') && !isCrossOriginIframe) {
+            console.log("No referrer and not in cross-origin iframe (direct access) - skipping tracking");
             return true;
+          }
+          
+          // If we're in a cross-origin iframe, allow tracking even without referrer
+          if (isCrossOriginIframe) {
+            console.log("✅ Cross-origin iframe detected - will allow tracking (external embed)");
+            return false; // Don't skip - this is an external embed
           }
           
           // Check if referrer is same origin (same domain) - skip tracking
@@ -496,10 +540,30 @@ export function WidgetEmbedClient() {
                 const referrer = document.referrer || '';
                 const currentOrigin = window.location.origin || '';
                 
-                // Must have a referrer
-                if (!referrer || referrer === '') {
-                  console.log("No referrer - not tracking (safety check)");
+                // Check if we're in a cross-origin iframe (external embed)
+                const isInIframe = window.self !== window.top;
+                let isCrossOriginIframe = false;
+                
+                if (isInIframe) {
+                  try {
+                    window.parent.location;
+                    isCrossOriginIframe = false;
+                  } catch (e) {
+                    isCrossOriginIframe = true;
+                    console.log("✅ Cross-origin iframe detected in safety check (external embed)");
+                  }
+                }
+                
+                // Must have a referrer OR be in a cross-origin iframe
+                if ((!referrer || referrer === '') && !isCrossOriginIframe) {
+                  console.log("No referrer and not in cross-origin iframe - not tracking (safety check)");
                   return false;
+                }
+                
+                // If in cross-origin iframe, allow tracking even without referrer
+                if (isCrossOriginIframe) {
+                  console.log("✅ Cross-origin iframe - will track (external embed)");
+                  return true;
                 }
                 
                 // Must be able to parse referrer
@@ -572,10 +636,30 @@ export function WidgetEmbedClient() {
                   currentOrigin
                 });
                 
-                // Must have referrer
-                if (!referrer || referrer === '') {
-                  console.log("❌ Final check: No referrer - NOT tracking");
+                // Check if we're in a cross-origin iframe (external embed)
+                const isInIframe = window.self !== window.top;
+                let isCrossOriginIframe = false;
+                
+                if (isInIframe) {
+                  try {
+                    window.parent.location;
+                    isCrossOriginIframe = false;
+                  } catch (e) {
+                    isCrossOriginIframe = true;
+                    console.log("✅ Cross-origin iframe detected in final check (external embed)");
+                  }
+                }
+                
+                // Must have referrer OR be in a cross-origin iframe
+                if ((!referrer || referrer === '') && !isCrossOriginIframe) {
+                  console.log("❌ Final check: No referrer and not in cross-origin iframe - NOT tracking");
                   return false;
+                }
+                
+                // If in cross-origin iframe, allow tracking even without referrer
+                if (isCrossOriginIframe) {
+                  console.log("✅ Final check: Cross-origin iframe - WILL TRACK (external embed)");
+                  return true;
                 }
                 
                 // Must not be localhost
@@ -699,10 +783,30 @@ export function WidgetEmbedClient() {
                   return false;
                 }
                 
-                // Must have referrer
-                if (!ref || ref === '') {
-                  console.log("🚫 PRE-INSERT: No referrer");
+                // Check if we're in a cross-origin iframe (external embed)
+                const isInIframe = window.self !== window.top;
+                let isCrossOriginIframe = false;
+                
+                if (isInIframe) {
+                  try {
+                    window.parent.location;
+                    isCrossOriginIframe = false;
+                  } catch (e) {
+                    isCrossOriginIframe = true;
+                    console.log("✅ PRE-INSERT: Cross-origin iframe detected (external embed)");
+                  }
+                }
+                
+                // Must have referrer OR be in a cross-origin iframe
+                if ((!ref || ref === '') && !isCrossOriginIframe) {
+                  console.log("🚫 PRE-INSERT: No referrer and not in cross-origin iframe");
                   return false;
+                }
+                
+                // If in cross-origin iframe, allow tracking even without referrer
+                if (isCrossOriginIframe) {
+                  console.log("✅ PRE-INSERT: Cross-origin iframe - WILL INSERT (external embed)");
+                  return true;
                 }
                 
                 // Must not be localhost
@@ -820,10 +924,30 @@ export function WidgetEmbedClient() {
               const host = window.location.hostname || '';
               const origin = window.location.origin || '';
               
-              // Must have referrer
-              if (!ref) {
-                console.log("🚫 ABSOLUTE FINAL: No referrer");
+              // Check if we're in a cross-origin iframe (external embed)
+              const isInIframe = window.self !== window.top;
+              let isCrossOriginIframe = false;
+              
+              if (isInIframe) {
+                try {
+                  window.parent.location;
+                  isCrossOriginIframe = false;
+                } catch (e) {
+                  isCrossOriginIframe = true;
+                  console.log("✅ ABSOLUTE FINAL: Cross-origin iframe detected (external embed)");
+                }
+              }
+              
+              // Must have referrer OR be in a cross-origin iframe
+              if ((!ref || ref === '') && !isCrossOriginIframe) {
+                console.log("🚫 ABSOLUTE FINAL: No referrer and not in cross-origin iframe");
                 return false;
+              }
+              
+              // If in cross-origin iframe, allow tracking even without referrer
+              if (isCrossOriginIframe) {
+                console.log("✅ ABSOLUTE FINAL: Cross-origin iframe - WILL INSERT (external embed)");
+                return true;
               }
               
               // Must not be localhost
@@ -896,10 +1020,34 @@ export function WidgetEmbedClient() {
                 // sessionStorage error - continue anyway
               }
               
+              // Determine site_url: prefer referrer, but if in cross-origin iframe without referrer, use a marker
+              let siteUrl: string | null = null;
+              if (typeof document !== 'undefined') {
+                if (document.referrer && document.referrer !== '') {
+                  siteUrl = document.referrer;
+                } else {
+                  // Check if we're in a cross-origin iframe (external embed)
+                  const isInIframe = window.self !== window.top;
+                  if (isInIframe) {
+                    try {
+                      window.parent.location;
+                      // Can access parent = same origin = use current URL
+                      siteUrl = window.location.href;
+                    } catch (e) {
+                      // Can't access parent = cross-origin = external embed
+                      // Use a marker indicating it's an external cross-origin embed
+                      siteUrl = '[external-cross-origin-embed]';
+                    }
+                  } else {
+                    siteUrl = window.location.href;
+                  }
+                }
+              }
+              
               await (supabase as any).from("widget_api_calls").insert({
                 widget_id: widgetId,
                 user_id: data.user_id,
-                site_url: typeof document !== 'undefined' ? (document.referrer || window.location.href) : null,
+                site_url: siteUrl,
                 call_type: "preview",
                 status: "success",
                 ip_address: null,

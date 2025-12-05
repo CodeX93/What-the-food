@@ -30,3 +30,13 @@ export async function HeaderServer() {
     </header>
   );
 }
+
+
+// Actually the adding of website is not yet properly implemented, the structure is based on one website but its fully functionality is under development
+// The API calls issue is nearly fixed, just going to be final soon
+
+// To Edit the saved widget, you tap on the edit button and scroll down to see the edit section, this seems awful user experience will design it to make proper UI
+
+// Okay I remove the hide button for powered by wTF
+
+// Yea, I just did the integration of widgets not fully functional just need to 
