@@ -1897,7 +1897,7 @@ export function WidgetEmbedClient() {
             servings: servings,
             subscriptionType: subscriptionType
           }));
-          const newTabUrl = `${baseUrl}/food-results?widgetResultId=${resultId}`;
+          const newTabUrl = `${baseUrl}/widget-results?widgetResultId=${resultId}`;
           window.open(newTabUrl, "_blank", "noopener,noreferrer");
           // Reset form for next scan
           setResult(null);

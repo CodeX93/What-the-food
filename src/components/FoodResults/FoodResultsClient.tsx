@@ -959,7 +959,7 @@ export function FoodResultsClient() {
             const storedData = sessionStorage.getItem(widgetResultId);
             if (!storedData) {
               console.error("Widget result data not found in sessionStorage");
-              router.push("/dashboard");
+              router.push("/");
               return;
             }
             
