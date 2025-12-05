@@ -143,6 +143,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
   const [newSiteName, setNewSiteName] = useState("");
   const [siteLimitExceeded, setSiteLimitExceeded] = useState(false);
   const [embedSearchQuery, setEmbedSearchQuery] = useState("");
+  const [savedWidgetsSearchQuery, setSavedWidgetsSearchQuery] = useState("");
   const supabaseClient = supabase as any;
   const initialLoadRef = useRef(true);
   const currentWidgetRef = useRef<any>(null);
@@ -1401,8 +1402,46 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                     <p className="text-muted-foreground">Loading widgets...</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {savedWidgets.map((widget) => (
+                  <>
+                    {/* Search Widget Input */}
+                    <div className="mb-6">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="text"
+                          placeholder="Search widgets by name or description..."
+                          value={savedWidgetsSearchQuery}
+                          onChange={(e) => setSavedWidgetsSearchQuery(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Filtered Widgets */}
+                    {(() => {
+                      const filteredWidgets = savedWidgets.filter((widget) => {
+                        if (!savedWidgetsSearchQuery.trim()) return true;
+                        const query = savedWidgetsSearchQuery.toLowerCase();
+                        return (
+                          widget.widget_name?.toLowerCase().includes(query) ||
+                          widget.widget_description?.toLowerCase().includes(query) ||
+                          widget.widget_id?.toLowerCase().includes(query)
+                        );
+                      });
+
+                      if (filteredWidgets.length === 0 && savedWidgetsSearchQuery.trim()) {
+                        return (
+                          <div className="text-center py-12">
+                            <p className="text-muted-foreground">
+                              No widgets found matching &quot;{savedWidgetsSearchQuery}&quot;
+                            </p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {filteredWidgets.map((widget) => (
                       <Card
                         key={widget.id}
                         className={currentWidget?.id === widget.id ? "border-primary" : undefined}
@@ -1444,24 +1483,27 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                           </div>
                         </CardContent>
                       </Card>
-                    ))}
-                  </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </>
                 )}
               </CardContent>
             </Card>
 
             {!isCreating && currentWidget && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
                 <div className="space-y-4">
                   {renderWidgetForm("edit")}
                 </div>
                 <div className="hidden lg:block">
-                  <Card className="sticky top-4">
+                  <Card className="h-full flex flex-col">
                     <CardHeader>
                       <CardTitle>{t("widgetdashboard.form.preview")}</CardTitle>
                       <CardDescription>See how your widget will look in real-time</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="flex-1 flex items-center justify-center">
                       <div className="w-full max-w-md mx-auto">
                         <WidgetPreview form={editForm} />
                       </div>
@@ -1473,17 +1515,17 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           </TabsContent>
 
           <TabsContent value="create" className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
               <div className="space-y-4">
                 {renderWidgetForm("create")}
               </div>
               <div className="hidden lg:block">
-                <Card className="sticky top-4">
+                <Card className="h-full flex flex-col">
                   <CardHeader>
                     <CardTitle>{t("widgetdashboard.form.preview")}</CardTitle>
                     <CardDescription>See how your widget will look in real-time</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex-1 flex items-center justify-center">
                     <div className="w-full max-w-md mx-auto">
                       <WidgetPreview form={createForm} />
                     </div>
@@ -1542,7 +1584,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                       <Card>
                         <CardContent className="text-center py-8">
                           <p className="text-muted-foreground">
-                            No widgets found matching "{embedSearchQuery}"
+                            No widgets found matching &quot;{embedSearchQuery}&quot;
                           </p>
                         </CardContent>
                       </Card>

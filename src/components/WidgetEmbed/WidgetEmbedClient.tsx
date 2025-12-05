@@ -119,7 +119,7 @@ export function WidgetEmbedClient() {
     return <div className="p-4 text-center text-muted-foreground">Widget not found or invalid widget ID</div>;
   }
 
-  const baseUrl = getUrl();
+  const baseUrl = getUrl("");
   const widgetEmbedUrl = `${baseUrl}/widget/embed?id=${widgetId}`;
 
   return (

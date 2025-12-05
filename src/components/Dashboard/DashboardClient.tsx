@@ -287,7 +287,7 @@ export function DashboardClient({
   // Set an initial height large enough for multiple cards; real height is driven dynamically when possible
   useEffect(() => {
     if (typeof window === "undefined") return;
-
+    
     const updateIframeHeight = () => {
       const width = window.innerWidth;
       if (width < 640) {
@@ -301,10 +301,10 @@ export function DashboardClient({
         setIframeHeight(900);
       }
     };
-
+    
     updateIframeHeight();
     window.addEventListener("resize", updateIframeHeight);
-
+    
     return () => {
       window.removeEventListener("resize", updateIframeHeight);
     };
@@ -348,7 +348,7 @@ export function DashboardClient({
           setIframeHeight(newHeight);
         }
       }
-
+      
       // Also check for string messages
       if (typeof event.data === 'string') {
         try {
@@ -912,13 +912,13 @@ export function DashboardClient({
                     className="ta-widget w-full"
                     id="widget68ee566289b6c5ef70269ca8"
                     src="https://app.tinyadz.com/widgets/68ee566289b6c5ef70269ca8?previewMode=false&showInPopup=false&theme=light&layout=grid&maxItems=8"
-                    style={{
+                    style={{ 
                       border: "none",
                       display: "block",
                       width: "100%",
-                      height: `${iframeHeight}px`,
+                      height: `${iframeHeight}px`, 
                       minHeight: `${iframeHeight}px`,
-                      margin: 0,
+                      margin: 0, 
                       padding: 0,
                       overflow: "visible",
                     }}
