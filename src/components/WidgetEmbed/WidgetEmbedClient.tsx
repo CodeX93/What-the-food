@@ -9,21 +9,54 @@ import { getUrl } from "@/utils/url";
 
 // Helper function to check if tracking should be disabled globally
 // This is a fail-safe to prevent any unwanted tracking
+// DEFAULT: DISABLE tracking unless we can PROVE it's external
 const isTrackingDisabled = (): boolean => {
   if (typeof window === 'undefined') return true; // Server-side, disable tracking
   try {
     const hostname = window.location.hostname || '';
     const pathname = window.location.pathname || '';
+    const referrer = document.referrer || '';
+    const origin = window.location.origin || '';
     
-    return (
+    // Always disable if localhost
+    if (
       hostname === 'localhost' ||
       hostname === '127.0.0.1' ||
       hostname.startsWith('192.168.') ||
       hostname.startsWith('10.') ||
-      hostname.endsWith('.local') ||
-      pathname.includes('/dashboard') ||
-      pathname.includes('/widget/dashboard')
-    );
+      hostname.endsWith('.local')
+    ) {
+      return true;
+    }
+    
+    // Always disable if dashboard path
+    if (pathname.includes('/dashboard') || pathname.includes('/widget/dashboard')) {
+      return true;
+    }
+    
+    // Always disable if referrer contains dashboard
+    if (referrer.includes('/dashboard') || referrer.includes('/widget/dashboard')) {
+      return true;
+    }
+    
+    // Always disable if no referrer (direct access)
+    if (!referrer || referrer === '') {
+      return true;
+    }
+    
+    // Always disable if referrer is from same origin
+    try {
+      const referrerOrigin = new URL(referrer).origin;
+      if (referrerOrigin === origin) {
+        return true;
+      }
+    } catch (e) {
+      // If we can't parse referrer, disable tracking to be safe
+      return true;
+    }
+    
+    // If we get here, it might be external - but we'll do more checks later
+    return false;
   } catch (e) {
     // On error, disable tracking to be safe
     return true;
@@ -88,7 +121,27 @@ export function WidgetEmbedClient() {
     async (callType: string, status: string = "success") => {
       if (!widgetId || !widgetSettings?.user_id) return;
 
+      // SAFETY CHECK: Don't track scan calls if we're in internal context
+      if (typeof window !== 'undefined') {
+        const host = window.location.hostname || '';
+        const path = window.location.pathname || '';
+        const ref = document.referrer || '';
+        
+        if (
+          host === 'localhost' ||
+          host === '127.0.0.1' ||
+          host.startsWith('192.168.') ||
+          host.startsWith('10.') ||
+          path.includes('/dashboard') ||
+          ref.includes('/dashboard')
+        ) {
+          console.log("🚫 trackApiCall: Internal context detected - NOT tracking", { callType, host, path });
+          return;
+        }
+      }
+
       try {
+        console.log("📊 trackApiCall: Tracking API call", { callType, status, widgetId });
         await (supabase as any).from("widget_api_calls").insert({
           widget_id: widgetId,
           user_id: widgetSettings.user_id,
@@ -98,8 +151,9 @@ export function WidgetEmbedClient() {
           ip_address: null,
           user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
         });
+        console.log("✅ trackApiCall: Successfully tracked", { callType });
       } catch (error) {
-        console.error("Error tracking API call:", error);
+        console.error("❌ trackApiCall: Error tracking API call:", error);
       }
     },
     [widgetId, widgetSettings]
@@ -187,10 +241,26 @@ export function WidgetEmbedClient() {
         const referrer = document.referrer || '';
         const hostname = window.location.hostname || '';
         
-        console.log("🔍 Checking context:", { currentPath, currentUrl, referrer, hostname });
+        // Check if page was loaded from cache (back/forward cache or regular cache)
+        // This prevents tracking from cached widget embed pages
+        let isFromCache = false;
+        try {
+          const perfEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+          if (perfEntries.length > 0) {
+            const navEntry = perfEntries[0];
+            // If page was loaded from cache (back/forward or regular cache), don't track
+            isFromCache = navEntry.type === 'back_forward' || 
+                         (navEntry.transferSize === 0 && navEntry.decodedBodySize > 0);
+          }
+        } catch (e) {
+          // Performance API not available or error - assume not from cache
+        }
+        
+        console.log("🔍 Checking context:", { currentPath, currentUrl, referrer, hostname, isFromCache });
         
         // If ANY of these are true, completely skip ALL tracking logic
         if (
+          isFromCache || // Page loaded from cache - don't track
           currentPath.includes('/dashboard') ||
           currentPath.includes('/widget/dashboard') ||
           referrer.includes('/dashboard') ||
@@ -202,7 +272,8 @@ export function WidgetEmbedClient() {
           hostname.startsWith('192.168.') ||
           hostname.startsWith('10.')
         ) {
-          console.log("🚫 DASHBOARD/LOCALHOST CONTEXT DETECTED - Completely disabling tracking", {
+          console.log("🚫 DASHBOARD/LOCALHOST/CACHE CONTEXT DETECTED - Completely disabling tracking", {
+            isFromCache,
             currentPath,
             referrer,
             currentUrl,
@@ -316,8 +387,7 @@ export function WidgetEmbedClient() {
             return true;
           }
           
-          // Additional safety: Check current path
-          const currentPath = window.location.pathname || '';
+          // Additional safety: Check current path (currentPath already defined above)
           if (currentPath.includes('/dashboard')) {
             console.log("Current path contains dashboard - skipping tracking");
             return true;
@@ -608,12 +678,207 @@ export function WidgetEmbedClient() {
               return;
             }
 
+            // FINAL PRE-INSERT CHECK: One last verification right before inserting
+            // This is the absolute last line of defense
+            const preInsertCheck = (() => {
+              if (typeof window === 'undefined') {
+                console.log("🚫 PRE-INSERT: Server-side - NOT inserting");
+                return false;
+              }
+              
+              try {
+                const path = window.location.pathname || '';
+                const url = window.location.href || '';
+                const ref = document.referrer || '';
+                const host = window.location.hostname || '';
+                const origin = window.location.origin || '';
+                
+                // Check if tracking is globally disabled
+                if (isTrackingDisabled()) {
+                  console.log("🚫 PRE-INSERT: Tracking globally disabled");
+                  return false;
+                }
+                
+                // Must have referrer
+                if (!ref || ref === '') {
+                  console.log("🚫 PRE-INSERT: No referrer");
+                  return false;
+                }
+                
+                // Must not be localhost
+                if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.startsWith('10.') || host.endsWith('.local')) {
+                  console.log("🚫 PRE-INSERT: Localhost detected", { host });
+                  return false;
+                }
+                
+                // Must not contain dashboard
+                if (path.includes('dashboard') || url.includes('dashboard') || ref.includes('dashboard')) {
+                  console.log("🚫 PRE-INSERT: Dashboard detected");
+                  return false;
+                }
+                
+                // Parse referrer and verify it's external
+                try {
+                  const refUrl = new URL(ref);
+                  const refOrigin = refUrl.origin;
+                  const refHost = refUrl.hostname;
+                  
+                  // Must be different origin
+                  if (refOrigin === origin) {
+                    console.log("🚫 PRE-INSERT: Same origin", { refOrigin, origin });
+                    return false;
+                  }
+                  
+                  // Must be different hostname
+                  if (refHost === host) {
+                    console.log("🚫 PRE-INSERT: Same hostname", { refHost, host });
+                    return false;
+                  }
+                  
+                  // Extract top-level domains for comparison
+                  const getTopLevelDomain = (hostname: string): string => {
+                    const parts = hostname.split('.');
+                    if (parts.length >= 2) {
+                      return parts.slice(-2).join('.');
+                    }
+                    return hostname;
+                  };
+                  
+                  const refTLD = getTopLevelDomain(refHost);
+                  const currentTLD = getTopLevelDomain(host);
+                  
+                  // Must be different top-level domain (e.g., example.com vs whatthefood.io)
+                  if (refTLD === currentTLD) {
+                    console.log("🚫 PRE-INSERT: Same top-level domain", { refTLD, currentTLD, refHost, host });
+                    return false;
+                  }
+                  
+                  // All checks passed
+                  console.log("✅ PRE-INSERT: All checks passed - WILL INSERT", {
+                    refOrigin,
+                    refHost,
+                    refTLD,
+                    origin,
+                    host,
+                    currentTLD
+                  });
+                  return true;
+                } catch (e) {
+                  console.log("🚫 PRE-INSERT: Cannot parse referrer", e);
+                  return false;
+                }
+              } catch (e) {
+                console.log("🚫 PRE-INSERT: Error in check", e);
+                return false;
+              }
+            })();
+
+            if (!preInsertCheck) {
+              console.log("🚫 PRE-INSERT CHECK FAILED - NOT inserting API call");
+              previewTrackedRef.current = true;
+              return;
+            }
+
             previewTrackedRef.current = true;
             isTrackingRef.current = true;
             
             // Mark as tracked immediately to prevent duplicate calls
             markPreviewTracked(widgetId);
             
+            // ABSOLUTE FINAL CHECK: One more verification right before the actual insert
+            // This is the last line of defense - if ANY check fails, don't insert
+            const absoluteFinalVerification = (() => {
+              if (typeof window === 'undefined') return false;
+              
+              // Check if tracking is globally disabled
+              if (isTrackingDisabled()) {
+                console.log("🚫 ABSOLUTE FINAL: Tracking globally disabled");
+                return false;
+              }
+              
+              // Check if page was loaded from cache
+              let isFromCache = false;
+              try {
+                const perfEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+                if (perfEntries.length > 0) {
+                  const navEntry = perfEntries[0];
+                  isFromCache = navEntry.type === 'back_forward' || 
+                               (navEntry.transferSize === 0 && navEntry.decodedBodySize > 0);
+                }
+              } catch (e) {
+                // Performance API not available
+              }
+              
+              if (isFromCache) {
+                console.log("🚫 ABSOLUTE FINAL: Page loaded from cache");
+                return false;
+              }
+              
+              const path = window.location.pathname || '';
+              const url = window.location.href || '';
+              const ref = document.referrer || '';
+              const host = window.location.hostname || '';
+              const origin = window.location.origin || '';
+              
+              // Must have referrer
+              if (!ref) {
+                console.log("🚫 ABSOLUTE FINAL: No referrer");
+                return false;
+              }
+              
+              // Must not be localhost
+              if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.startsWith('10.')) {
+                console.log("🚫 ABSOLUTE FINAL: Localhost");
+                return false;
+              }
+              
+              // Must not contain dashboard
+              if (path.includes('dashboard') || url.includes('dashboard') || ref.includes('dashboard')) {
+                console.log("🚫 ABSOLUTE FINAL: Dashboard detected");
+                return false;
+              }
+              
+              // Must be different origin and hostname
+              try {
+                const refUrl = new URL(ref);
+                if (refUrl.origin === origin || refUrl.hostname === host) {
+                  console.log("🚫 ABSOLUTE FINAL: Same origin/hostname");
+                  return false;
+                }
+                
+                console.log("✅ ABSOLUTE FINAL: All checks passed - WILL INSERT");
+                return true;
+              } catch (e) {
+                console.log("🚫 ABSOLUTE FINAL: Cannot parse referrer");
+                return false;
+              }
+            })();
+
+            if (!absoluteFinalVerification) {
+              console.log("🚫 ABSOLUTE FINAL VERIFICATION FAILED - NOT inserting");
+              previewTrackedRef.current = true;
+              return;
+            }
+            
+            // FINAL DEDUPLICATION: Check if we've tracked this exact combination very recently
+            // This prevents duplicate inserts from cached pages or multiple tabs
+            const dedupKey = `widget_track_${widgetId}_${document.referrer || window.location.href}`;
+            try {
+              const lastTracked = sessionStorage.getItem(dedupKey);
+              if (lastTracked) {
+                const lastTrackedTime = parseInt(lastTracked, 10);
+                const now = Date.now();
+                // If tracked within last 30 seconds, skip (prevents rapid duplicates)
+                if (now - lastTrackedTime < 30000) {
+                  console.log("🚫 DEDUPLICATION: Already tracked within last 30 seconds - NOT inserting");
+                  previewTrackedRef.current = true;
+                  return;
+                }
+              }
+            } catch (e) {
+              // sessionStorage error - continue anyway
+            }
+
             try {
               console.log("🚀 TRACKING API CALL - External embed confirmed after ALL checks", {
                 widgetId,
@@ -622,6 +887,15 @@ export function WidgetEmbedClient() {
                 currentPath: window.location.pathname,
                 hostname: window.location.hostname
               });
+              
+              // Mark as tracked in sessionStorage BEFORE insert (prevents race conditions)
+              const dedupKey = `widget_track_${widgetId}_${document.referrer || window.location.href}`;
+              try {
+                sessionStorage.setItem(dedupKey, Date.now().toString());
+              } catch (e) {
+                // sessionStorage error - continue anyway
+              }
+              
               await (supabase as any).from("widget_api_calls").insert({
                 widget_id: widgetId,
                 user_id: data.user_id,
