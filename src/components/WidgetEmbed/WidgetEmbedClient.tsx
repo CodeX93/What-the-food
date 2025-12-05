@@ -196,13 +196,56 @@ export function WidgetEmbedClient() {
 
   const trackApiCall = useCallback(
     async (callType: string, status: string = "success") => {
-      if (!widgetId || !widgetSettings?.user_id) return;
+      if (!widgetId || !widgetSettings?.user_id) {
+        console.log("🚫 trackApiCall: Missing widgetId or user_id");
+        return false;
+      }
 
       // CRITICAL: Check API call limit for free users BEFORE tracking
+      // This check happens BEFORE the insert, so we can prevent exceeding the limit
       const limitReached = await checkApiCallLimit(widgetSettings.user_id);
       if (limitReached) {
         console.log("🚫 trackApiCall: Free user has reached 3 API call limit - NOT tracking", { callType });
-        return;
+        setIsLimitReached(true);
+        return false; // Return false to indicate tracking was blocked
+      }
+      
+      // ADDITIONAL AGGRESSIVE CHECK: Get current count RIGHT BEFORE insert
+      // This is a double-check to prevent race conditions and ensure we never exceed 3
+      const { count: currentCount, error: countCheckError } = await (supabase as any)
+        .from("widget_api_calls")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", widgetSettings.user_id);
+      
+      if (countCheckError) {
+        console.error("Error checking count before insert:", countCheckError);
+        // On error, block to be safe
+        return false;
+      }
+      
+      const currentTotal = currentCount || 0;
+      console.log("📊 Current API call count before insert:", currentTotal);
+      
+      // Check subscription again to make sure we're still on free plan
+      const { data: subData, error: subCheckError } = await (supabase as any)
+        .from("widget_subscriptions")
+        .select("subscription_type")
+        .eq("user_id", widgetSettings.user_id)
+        .single();
+      
+      if (subCheckError && subCheckError.code !== "PGRST116") {
+        console.error("Error checking subscription:", subCheckError);
+      }
+      
+      const subType = (subData as { subscription_type?: string } | null)?.subscription_type || "free";
+      
+      // CRITICAL: If free user and already at or above 3 calls, BLOCK the insert
+      // This prevents the 4th, 5th, etc. call from being inserted
+      if (subType === "free" && currentTotal >= 3) {
+        console.log("🚫 BLOCKING INSERT: Free user already has", currentTotal, "calls (limit is 3) - NOT inserting");
+        setIsLimitReached(true);
+        setApiCallCount(currentTotal);
+        return false; // Block the insert - this is the critical check
       }
 
       // SAFETY CHECK: Don't track scan calls if we're in internal context
@@ -226,7 +269,9 @@ export function WidgetEmbedClient() {
 
       try {
         console.log("📊 trackApiCall: Tracking API call", { callType, status, widgetId });
-        await (supabase as any).from("widget_api_calls").insert({
+        
+        // Insert the API call
+        const { error: insertError } = await (supabase as any).from("widget_api_calls").insert({
           widget_id: widgetId,
           user_id: widgetSettings.user_id,
           site_url: typeof document !== 'undefined' ? (document.referrer || window.location.href) : null,
@@ -235,32 +280,48 @@ export function WidgetEmbedClient() {
           ip_address: null,
           user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
         });
+        
+        if (insertError) {
+          console.error("❌ trackApiCall: Error inserting API call:", insertError);
+          return false;
+        }
+        
         console.log("✅ trackApiCall: Successfully tracked", { callType });
         
         // Update API call count after successful tracking
         if (widgetSettings?.user_id) {
-          const { count } = await (supabase as any)
+          const { count, error: countError } = await (supabase as any)
             .from("widget_api_calls")
             .select("id", { count: "exact", head: true })
             .eq("user_id", widgetSettings.user_id);
           
-          const newCount = count || 0;
-          setApiCallCount(newCount);
-          
-          // Check if limit is reached after this call
-          const { data: subscriptionData } = await (supabase as any)
-            .from("widget_subscriptions")
-            .select("subscription_type")
-            .eq("user_id", widgetSettings.user_id)
-            .single();
-          
-          const subscriptionType = (subscriptionData as { subscription_type?: string } | null)?.subscription_type || "free";
-          if (subscriptionType === "free" && newCount >= 3) {
-            setIsLimitReached(true);
+          if (countError) {
+            console.error("Error fetching updated count:", countError);
+          } else {
+            const newCount = count || 0;
+            setApiCallCount(newCount);
+            console.log("📊 Updated API call count:", newCount);
+            
+            // Check if limit is reached after this call
+            const { data: subscriptionData } = await (supabase as any)
+              .from("widget_subscriptions")
+              .select("subscription_type")
+              .eq("user_id", widgetSettings.user_id)
+              .single();
+            
+            const subscriptionType = (subscriptionData as { subscription_type?: string } | null)?.subscription_type || "free";
+            if (subscriptionType === "free" && newCount >= 3) {
+              console.log("🚫 Limit reached after tracking - setting isLimitReached to true");
+              setIsLimitReached(true);
+              return false; // Return false to indicate limit was reached
+            }
           }
         }
+        
+        return true; // Return true to indicate successful tracking
       } catch (error) {
         console.error("❌ trackApiCall: Error tracking API call:", error);
+        return false;
       }
     },
     [widgetId, widgetSettings, checkApiCallLimit]
@@ -1251,22 +1312,57 @@ export function WidgetEmbedClient() {
       return;
     }
 
-    // Check limit one more time right before tracking (final safety check)
     setScanning(true);
     try {
-      // Simulate scan processing
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      
-      // FINAL CHECK: Verify limit hasn't been reached during processing
-      const finalLimitCheck = await checkApiCallLimit(widgetSettings.user_id);
-      if (finalLimitCheck) {
-        console.log("🚫 Limit reached during scan - aborting result");
+      // CRITICAL: Track the API call FIRST, before any processing
+      // This ensures we check the limit and insert the call BEFORE showing results
+      console.log("🔍 Pre-tracking limit check...");
+      const preTrackLimitCheck = await checkApiCallLimit(widgetSettings.user_id);
+      if (preTrackLimitCheck) {
+        console.log("🚫 Limit reached before tracking - aborting scan");
         setIsLimitReached(true);
         setScanning(false);
         return;
       }
       
-      // Only set result if limit check passes
+      // Track the API call BEFORE processing (this will also check limit internally)
+      console.log("📊 Tracking API call before processing...");
+      const trackResult = await trackApiCall("scan", "success");
+      
+      // If trackApiCall returns false, limit was reached - don't process
+      if (!trackResult) {
+        console.log("🚫 trackApiCall returned false - limit reached - NOT processing scan");
+        setIsLimitReached(true);
+        setScanning(false);
+        return; // Exit early - don't process, don't set result
+      }
+      
+      // Double-check limit after tracking (in case it was reached during the insert)
+      const postTrackLimitCheck = await checkApiCallLimit(widgetSettings.user_id);
+      if (postTrackLimitCheck) {
+        console.log("🚫 Limit reached after tracking - NOT processing scan");
+        setIsLimitReached(true);
+        setScanning(false);
+        return; // Exit early - don't process, don't set result
+      }
+      
+      // Only process scan if ALL limit checks pass AND tracking succeeded
+      console.log("✅ All limit checks passed and tracking succeeded - processing scan");
+      
+      // Simulate scan processing
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      // Final check before setting result
+      const finalLimitCheck = await checkApiCallLimit(widgetSettings.user_id);
+      if (finalLimitCheck) {
+        console.log("🚫 Limit reached during processing - NOT setting result");
+        setIsLimitReached(true);
+        setScanning(false);
+        return;
+      }
+      
+      // Only set result if ALL checks pass
+      console.log("✅ Setting result - all checks passed");
       setResult({
         dish_name: "Sample Dish",
         calories: 350,
@@ -1274,12 +1370,12 @@ export function WidgetEmbedClient() {
         carbs: 45,
         fat: 10,
       });
-      
-      // Track the API call (this will also check limit internally)
-      await trackApiCall("scan", "success");
     } catch (error) {
       console.error("Error scanning:", error);
-      await trackApiCall("scan", "error");
+      // Don't track error if limit is reached
+      if (!isLimitReached) {
+        await trackApiCall("scan", "error");
+      }
     } finally {
       setScanning(false);
     }
