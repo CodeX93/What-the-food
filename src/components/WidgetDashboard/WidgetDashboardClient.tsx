@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Code, Link as LinkIcon, Copy, Check, Trash2, Plus, BarChart3, Zap, Edit, Save, Bookmark, AlertTriangle, ArrowRight, ShieldCheck, Upload, Search } from "lucide-react";
+import { Code, Copy, Check, Trash2, Plus, BarChart3, Zap, Edit, Save, Bookmark, AlertTriangle, ArrowRight, ShieldCheck, Upload, Search } from "lucide-react";
 import { getUrl } from "@/utils/url";
 import { useTranslation } from "@/hooks/use-translation";
 
@@ -128,7 +129,6 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
   const [user, setUser] = useState<any>(null);
   const [platformSubscription, setPlatformSubscription] = useState<any>(initialSubscription);
   const [savedWidgets, setSavedWidgets] = useState<any[]>([]);
-  const [widgetSites, setWidgetSites] = useState<any[]>([]);
   const [apiStats, setApiStats] = useState<any>({ total: 0, today: 0, thisMonth: 0, successful: 0 });
   const [statsLoading, setStatsLoading] = useState(false);
   const [copiedWidgetId, setCopiedWidgetId] = useState<string | null>(null);
@@ -138,10 +138,6 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
 
   const [createForm, setCreateForm] = useState<WidgetFormState>(defaultFormState);
   const [editForm, setEditForm] = useState<WidgetFormState>(defaultFormState);
-
-  const [newSiteUrl, setNewSiteUrl] = useState("");
-  const [newSiteName, setNewSiteName] = useState("");
-  const [siteLimitExceeded, setSiteLimitExceeded] = useState(false);
   const [embedSearchQuery, setEmbedSearchQuery] = useState("");
   const [savedWidgetsSearchQuery, setSavedWidgetsSearchQuery] = useState("");
   const supabaseClient = supabase as any;
@@ -151,34 +147,6 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
   const widgetsLoadingRef = useRef(false); // Prevent concurrent widget loads
   const hasLoadedRef = useRef(false); // Track if we've already loaded once
   const subscriptionType = platformSubscription?.subscription_type;
-
-  const evaluateSiteLimit = useCallback((currentSiteCount: number) => {
-    const limitFromSubscription = platformSubscription?.site_limit;
-
-    if (limitFromSubscription === null) {
-      setSiteLimitExceeded(false);
-      return;
-    }
-
-    const fallbackLimit =
-      platformSubscription?.subscription_type === "plan2"
-        ? 3
-        : platformSubscription?.subscription_type === "plan1" || platformSubscription?.subscription_type === "free"
-        ? 1
-        : platformSubscription?.subscription_type === "plan3"
-        ? null
-        : 1;
-
-    const effectiveLimit =
-      typeof limitFromSubscription === "number" ? limitFromSubscription : fallbackLimit ?? undefined;
-
-    if (effectiveLimit === undefined || effectiveLimit === null) {
-      setSiteLimitExceeded(false);
-      return;
-    }
-
-    setSiteLimitExceeded(currentSiteCount >= effectiveLimit);
-  }, [platformSubscription]);
 
   const loadWidgetForEditing = useCallback(
     async (widget: any) => {
@@ -198,30 +166,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         brandingVisible: isFree ? true : widgetBrandingVisible,
       });
 
-      // Use existing user state instead of calling getUser again
-      const currentUser = user;
-      if (widget.widget_id && currentUser) {
-        supabaseClient
-          .from("widget_sites")
-          .select("id, site_url, site_name, created_at")
-          .eq("widget_id", widget.widget_id)
-          .order("created_at", { ascending: false })
-          .then(({ data: sites }) => {
-            const userSites = sites || [];
-            setWidgetSites(userSites);
-            evaluateSiteLimit(userSites.length);
-          })
-          .catch((error) => {
-            console.error("Error loading widget sites:", error);
-            setWidgetSites([]);
-            evaluateSiteLimit(0);
-          });
-      } else {
-        setWidgetSites([]);
-        evaluateSiteLimit(0);
-      }
     },
-    [evaluateSiteLimit, subscriptionType, supabaseClient, user]
+    [subscriptionType]
   );
 
   const resetCreateForm = useCallback(() => {
@@ -256,9 +202,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
     setCurrentWidget(null);
     currentWidgetRef.current = null;
     setIsCreating(false);
-    setWidgetSites([]);
-    evaluateSiteLimit(0);
-  }, [subscriptionType, evaluateSiteLimit]);
+  }, [subscriptionType]);
 
   useEffect(() => {
     // Prevent multiple loads - only load once on mount or when initialSubscription changes
@@ -593,6 +537,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           // Double-check user is still authenticated
           supabaseClient.auth.getSession().then(({ data: { session: currentSession } }) => {
             if (cancelled || !currentSession?.user || currentSession.user.id !== userId) {
+              console.log("API stats: User not authenticated or cancelled");
               return;
             }
             
@@ -603,8 +548,10 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
             startOfToday.setHours(0, 0, 0, 0);
             const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
-            // Add timeout to each query (3 seconds max per query)
-            const queryWithTimeout = (query: Promise<any>, timeoutMs = 3000) => {
+            console.log("Loading API stats for user:", userId);
+
+            // Add timeout to each query (5 seconds max per query - increased from 3)
+            const queryWithTimeout = (query: Promise<any>, timeoutMs = 5000) => {
               return Promise.race([
                 query,
                 new Promise((_, reject) => 
@@ -619,38 +566,55 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                   .from("widget_api_calls")
                   .select("id", { count: "exact", head: true })
                   .eq("user_id", userId)
-              ).catch(() => ({ count: 0 })),
+              ).catch((err) => {
+                console.error("Error loading total API stats:", err);
+                return { count: 0 };
+              }),
               queryWithTimeout(
                 supabaseClient
                   .from("widget_api_calls")
                   .select("id", { count: "exact", head: true })
                   .eq("user_id", userId)
                   .gte("created_at", startOfToday.toISOString())
-              ).catch(() => ({ count: 0 })),
+              ).catch((err) => {
+                console.error("Error loading today API stats:", err);
+                return { count: 0 };
+              }),
               queryWithTimeout(
                 supabaseClient
                   .from("widget_api_calls")
                   .select("id", { count: "exact", head: true })
                   .eq("user_id", userId)
                   .gte("created_at", startOfMonth.toISOString())
-              ).catch(() => ({ count: 0 })),
+              ).catch((err) => {
+                console.error("Error loading month API stats:", err);
+                return { count: 0 };
+              }),
               queryWithTimeout(
                 supabaseClient
                   .from("widget_api_calls")
                   .select("id", { count: "exact", head: true })
                   .eq("user_id", userId)
                   .eq("status", "success")
-              ).catch(() => ({ count: 0 })),
+              ).catch((err) => {
+                console.error("Error loading successful API stats:", err);
+                return { count: 0 };
+              }),
             ])
             .then(([totalRes, todayRes, monthRes, successRes]) => {
               if (cancelled) return;
               // Verify user is still authenticated before updating state
               supabaseClient.auth.getSession().then(({ data: { session: verifySession } }) => {
-                if (cancelled || !verifySession?.user) return;
+                if (cancelled || !verifySession?.user) {
+                  console.log("API stats: Session expired or cancelled during load");
+                  return;
+                }
                 const totalCount = (totalRes?.count as number) || 0;
                 const todayCount = (todayRes?.count as number) || 0;
                 const monthCount = (monthRes?.count as number) || 0;
                 const successCount = (successRes?.count as number) || 0;
+
+                console.log("API stats loaded:", { totalCount, todayCount, monthCount, successCount });
 
                 setApiStats({
                   total: totalCount,
@@ -662,24 +626,21 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
             })
             .catch((error) => {
               if (cancelled) return;
-              // Only log non-network errors
-              const errorMessage = error?.message || String(error);
-              const isNetworkError = 
-                errorMessage.includes("Load failed") ||
-                errorMessage.includes("Failed to fetch") ||
-                errorMessage.includes("NetworkError") ||
-                errorMessage.includes("TypeError") ||
-                errorMessage.includes("access control");
-              
-              if (!isNetworkError) {
-                console.error("Error loading API stats:", error);
-              }
-              // Keep stats at 0 on error
+              console.error("Error loading API stats (general):", error);
+              // Keep stats at 0 on error, but log it for debugging
             });
+          }).catch((error) => {
+            if (cancelled) return;
+            console.error("Error getting session for API stats:", error);
           });
         };
 
         // Load stats for all users (free and premium can see their API call counts)
+        // Also try loading immediately in case visibility observer doesn't trigger
+        if (user) {
+          console.log("Loading API stats immediately for user:", user.id);
+          loadApiStats(user.id);
+        }
         loadStatsWhenVisible();
       } catch (error: any) {
         if (cancelled) return;
@@ -730,11 +691,22 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
       return;
     }
 
+    // Check if free user is trying to create a new widget when they already have one
+    const isFree = subscriptionType === "free";
+    const isCreatingNew = mode === "create" || saveAsNew || !currentWidget;
+    
+    if (isFree && isCreatingNew && savedWidgets.length >= 1) {
+      toast({
+        title: t("widgetdashboard.toast.error"),
+        description: "Free plan users can only create one widget. Please upgrade to create more widgets.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
-      const isCreatingNew = mode === "create" || saveAsNew || !currentWidget;
       const widgetId = isCreatingNew ? `widget_${user.id}_${Date.now()}` : currentWidget.widget_id;
-      const isFree = subscriptionType === "free";
       const finalBrandingVisible = isFree ? true : formState.brandingVisible;
 
       const widgetData: any = {
@@ -798,22 +770,6 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           brandingVisible: isFree ? true : widgetBrandingVisible,
         });
         
-        // Load sites in background (non-blocking)
-        if (newWidget.widget_id && user) {
-          supabaseClient
-            .from("widget_sites")
-            .select("id, site_url, site_name, created_at")
-            .eq("widget_id", newWidget.widget_id)
-            .order("created_at", { ascending: false })
-            .then(({ data: sites }) => {
-              setWidgetSites(sites || []);
-              evaluateSiteLimit((sites || []).length);
-            })
-            .catch((error) => {
-              console.error("Error loading widget sites:", error);
-            });
-        }
-        
         setCreateForm(() => ({
           ...defaultFormState,
           brandingVisible: subscriptionType === "free" ? true : defaultFormState.brandingVisible,
@@ -854,22 +810,6 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           brandingVisible: isFree ? true : widgetBrandingVisible,
         });
         
-        // Load sites in background (non-blocking)
-        if (updatedWidget.widget_id && user) {
-          supabaseClient
-            .from("widget_sites")
-            .select("id, site_url, site_name, created_at")
-            .eq("widget_id", updatedWidget.widget_id)
-            .order("created_at", { ascending: false })
-            .then(({ data: sites }) => {
-              setWidgetSites(sites || []);
-              evaluateSiteLimit((sites || []).length);
-            })
-            .catch((error) => {
-              console.error("Error loading widget sites:", error);
-            });
-        }
-        
         toast({
           title: t("widgetdashboard.toast.success"),
           description: t("widgetdashboard.toast.updated"),
@@ -888,6 +828,51 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
   };
 
   const handleDeleteWidget = async (widgetId: string) => {
+    // CRITICAL: Always check subscription status from the database to prevent UI manipulation
+    // This ensures deletion is blocked even if someone modifies the UI via inspect element
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        toast({
+          title: t("widgetdashboard.toast.error"),
+          description: "You must be logged in to delete widgets.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Fetch current subscription from database (not from state) to prevent tampering
+      const { data: subscriptionData } = await supabase
+        .from("widget_subscriptions")
+        .select("subscription_type")
+        .eq("user_id", session.user.id)
+        .single();
+
+      // If no subscription found, treat as free plan
+      const currentSubscriptionType = (subscriptionData as { subscription_type?: string } | null)?.subscription_type || "free";
+      const isCurrentlyFree = currentSubscriptionType === "free";
+
+      // Prevent free users from deleting widgets - this check cannot be bypassed via UI manipulation
+      if (isCurrentlyFree) {
+        toast({
+          title: t("widgetdashboard.toast.error"),
+          description: "To delete widgets, please upgrade to a premium plan.",
+          variant: "destructive",
+        });
+        router.push("/plans");
+        return;
+      }
+    } catch (error) {
+      // If we can't verify subscription, block deletion for safety
+      console.error("Error verifying subscription for deletion:", error);
+      toast({
+        title: t("widgetdashboard.toast.error"),
+        description: "Unable to verify subscription. Deletion blocked for security.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!confirm(t("widgetdashboard.toast.delete.confirm"))) return;
 
     try {
@@ -907,10 +892,109 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         }
       }
 
+      // Show success toast immediately
       toast({
         title: t("widgetdashboard.toast.success"),
         description: t("widgetdashboard.toast.deleted"),
       });
+
+      // Reload API stats after deletion to ensure they persist (API calls are tracked by user_id, not widget_id)
+      // This ensures the stats don't appear as zero after widget deletion
+      // Do this in background and don't let it affect the success toast
+      if (user) {
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+        // Use the same query structure and timeout handling as loadApiStats for consistency
+        const queryWithTimeout = (query: Promise<any>, timeoutMs = 5000) => {
+          return Promise.race([
+            query,
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Query timeout')), timeoutMs)
+            )
+          ]);
+        };
+
+        Promise.all([
+          queryWithTimeout(
+            supabaseClient
+              .from("widget_api_calls")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", user.id)
+          ).catch((err) => {
+            console.error("Error loading total API stats after deletion:", err);
+            return { count: 0, error: err };
+          }),
+          queryWithTimeout(
+            supabaseClient
+              .from("widget_api_calls")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", user.id)
+              .gte("created_at", startOfToday.toISOString())
+          ).catch((err) => {
+            console.error("Error loading today API stats after deletion:", err);
+            return { count: 0, error: err };
+          }),
+          queryWithTimeout(
+            supabaseClient
+              .from("widget_api_calls")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", user.id)
+              .gte("created_at", startOfMonth.toISOString())
+          ).catch((err) => {
+            console.error("Error loading month API stats after deletion:", err);
+            return { count: 0, error: err };
+          }),
+          queryWithTimeout(
+            supabaseClient
+              .from("widget_api_calls")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", user.id)
+              .eq("status", "success")
+          ).catch((err) => {
+            console.error("Error loading successful API stats after deletion:", err);
+            return { count: 0, error: err };
+          }),
+        ]).then(([totalRes, todayRes, monthRes, successRes]) => {
+          // Check for Supabase errors in response
+          if (totalRes?.error) {
+            console.error("Total API stats query error:", totalRes.error);
+          }
+          if (todayRes?.error) {
+            console.error("Today API stats query error:", todayRes.error);
+          }
+          if (monthRes?.error) {
+            console.error("Month API stats query error:", monthRes.error);
+          }
+          if (successRes?.error) {
+            console.error("Success API stats query error:", successRes.error);
+          }
+
+          const totalCount = (totalRes?.count as number) ?? 0;
+          const todayCount = (todayRes?.count as number) ?? 0;
+          const monthCount = (monthRes?.count as number) ?? 0;
+          const successCount = (successRes?.count as number) ?? 0;
+
+          console.log("API stats reloaded after deletion:", { 
+            totalCount, 
+            todayCount, 
+            monthCount, 
+            successCount,
+            rawResponses: { totalRes, todayRes, monthRes, successRes }
+          });
+
+          setApiStats({
+            total: totalCount,
+            today: todayCount,
+            thisMonth: monthCount,
+            successful: successCount,
+          });
+        }).catch((err) => {
+          // Silently fail - stats will remain as they were, don't show error
+          console.error("Error reloading API stats after deletion:", err);
+        });
+      }
     } catch (error: any) {
       console.error("Error deleting widget:", error);
       toast({
@@ -960,65 +1044,6 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
     });
   };
 
-  const handleAddSite = async () => {
-    if (!newSiteUrl || !currentWidget || !user) return;
-
-    try {
-      const { data, error } = await supabaseClient
-        .from("widget_sites")
-        .insert({
-          user_id: user.id,
-          site_url: newSiteUrl,
-          site_name: newSiteName || newSiteUrl,
-          widget_id: currentWidget.widget_id,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const nextSites = [...widgetSites, data];
-      setWidgetSites(nextSites);
-      setNewSiteUrl("");
-      setNewSiteName("");
-      evaluateSiteLimit(nextSites.length);
-      toast({
-        title: t("widgetdashboard.toast.success"),
-        description: t("widgetdashboard.toast.site.added"),
-      });
-    } catch (error: any) {
-      console.error("Error adding site:", error);
-      evaluateSiteLimit(widgetSites.length);
-      toast({
-        title: t("widgetdashboard.toast.error"),
-        description: error?.message || t("widgetdashboard.toast.site.add.failed"),
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeleteSite = async (siteId: string) => {
-    try {
-      const { error } = await supabaseClient.from("widget_sites").delete().eq("id", siteId);
-      if (error) throw error;
-
-      const nextSites = widgetSites.filter((site) => site.id !== siteId);
-      setWidgetSites(nextSites);
-      evaluateSiteLimit(nextSites.length);
-      toast({
-        title: t("widgetdashboard.toast.success"),
-        description: t("widgetdashboard.toast.site.removed"),
-      });
-    } catch (error: any) {
-      console.error("Error deleting site:", error);
-      toast({
-        title: t("widgetdashboard.toast.error"),
-        description: t("widgetdashboard.toast.site.remove.failed"),
-        variant: "destructive",
-      });
-    }
-  };
-
   const isFreePlan = subscriptionType === "free";
   const canRemoveBranding = subscriptionType !== "free" && subscriptionType !== undefined;
 
@@ -1061,7 +1086,12 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
             <Button variant="outline" className="flex-1" onClick={() => handleTabChange("saved-widgets")}>
               {t("widgetdashboard.form.view")}
             </Button>
-            <Button className="flex-1" onClick={() => handleTabChange("create")}>
+            <Button 
+              className="flex-1" 
+              onClick={() => handleTabChange("create")}
+              disabled={isFreePlan && savedWidgets.length >= 1}
+              title={isFreePlan && savedWidgets.length >= 1 ? "Free plan users can only create one widget. Upgrade to create more." : ""}
+            >
               <Plus className="h-4 w-4 mr-2" /> {t("widgetdashboard.form.create")}
             </Button>
           </CardContent>
@@ -1168,14 +1198,16 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
               <Button
                 variant="outline"
                 onClick={() => handleSaveWidget("edit", true)}
-                disabled={saving || !editForm.name.trim()}
+                disabled={saving || !editForm.name.trim() || (isFreePlan && savedWidgets.length >= 1)}
+                title={isFreePlan && savedWidgets.length >= 1 ? "Free plan users can only create one widget. Upgrade to create more." : ""}
               >
                 <Plus className="h-4 w-4 mr-2" /> {t("widgetdashboard.form.saveasnew")}
               </Button>
             )}
             <Button
               onClick={() => handleSaveWidget(isCreateMode ? "create" : "edit")}
-              disabled={saving || !form.name.trim()}
+              disabled={saving || !form.name.trim() || (isCreateMode && isFreePlan && savedWidgets.length >= 1)}
+              title={isCreateMode && isFreePlan && savedWidgets.length >= 1 ? "Free plan users can only create one widget. Upgrade to create more." : ""}
             >
               {saving ? (
                 isCreateMode ? t("widgetdashboard.form.create.creating") : t("widgetdashboard.form.save.saving")
@@ -1246,62 +1278,44 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           ))}
         </div>
 
-        {!isPremium && savedWidgets.length === 0 ? (
+        {/* Show premium banner for free users, but always show tabs so they can create their first widget */}
+        {!isPremium && savedWidgets.length === 0 && (
           <Card className="mb-8 border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
-            <CardContent className="py-8 px-6">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <CardContent className="py-6 px-6">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="flex-1 text-center md:text-left">
-                  <h2 className="text-2xl md:text-3xl font-bold mb-2">{t("widgetdashboard.premium.title")}</h2>
-                  <p className="text-muted-foreground text-lg mb-4">
-                    {t("widgetdashboard.premium.description")}
+                  <h3 className="text-lg font-bold mb-1">{t("widgetdashboard.premium.title")}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Free plan allows 1 widget. Upgrade to create unlimited widgets and access premium features.
                   </p>
-                  <div className="flex flex-wrap gap-4 justify-center md:justify-start">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Check className="h-5 w-5 text-primary" />
-                      <span>{t("widgetdashboard.premium.feature1")}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Check className="h-5 w-5 text-primary" />
-                      <span>{t("widgetdashboard.premium.feature2")}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Check className="h-5 w-5 text-primary" />
-                      <span>{t("widgetdashboard.premium.feature3")}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Check className="h-5 w-5 text-primary" />
-                      <span>{t("widgetdashboard.premium.feature4")}</span>
-                    </div>
-                  </div>
                 </div>
-                <div className="flex-shrink-0">
-                  <Button size="lg" onClick={() => router.push("/plans")} className="text-base px-8 py-6">
-                    {t("widgetdashboard.premium.upgrade")} <ArrowRight className="h-5 w-5 ml-2" />
-                  </Button>
-                </div>
+                <Button onClick={() => router.push("/plans")} className="text-sm px-6">
+                  {t("widgetdashboard.premium.upgrade")} <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
               </div>
             </CardContent>
           </Card>
-        ) : (
-          <>
-            {!isPremium && savedWidgets.length > 0 && (
-              <Card className="mb-8 border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
-                <CardContent className="py-6 px-6">
-                  <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div className="flex-1 text-center md:text-left">
-                      <h3 className="text-lg font-bold mb-1">{t("widgetdashboard.premium.title")}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {t("widgetdashboard.premium.description")}
-                      </p>
-                    </div>
-                    <Button onClick={() => router.push("/plans")} className="text-sm px-6">
-                      {t("widgetdashboard.premium.upgrade")} <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+        )}
+        
+        {!isPremium && savedWidgets.length > 0 && (
+          <Card className="mb-8 border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
+            <CardContent className="py-6 px-6">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex-1 text-center md:text-left">
+                  <h3 className="text-lg font-bold mb-1">{t("widgetdashboard.premium.title")}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t("widgetdashboard.premium.description")}
+                  </p>
+                </div>
+                <Button onClick={() => router.push("/plans")} className="text-sm px-6">
+                  {t("widgetdashboard.premium.upgrade")} <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
           <TabsList>
             <TabsTrigger value="saved-widgets">
               <Bookmark className="h-4 w-4 mr-2" /> {t("widgetdashboard.tabs.saved")} ({savedWidgets.length})
@@ -1311,9 +1325,6 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
             </TabsTrigger>
             <TabsTrigger value="embed">
               <Code className="h-4 w-4 mr-2" /> {t("widgetdashboard.tabs.embed")}
-            </TabsTrigger>
-            <TabsTrigger value="sites">
-              <LinkIcon className="h-4 w-4 mr-2" /> {t("widgetdashboard.tabs.sites")} ({widgetSites.length})
             </TabsTrigger>
             <TabsTrigger value="analytics">
               <BarChart3 className="h-4 w-4 mr-2" /> {t("widgetdashboard.tabs.analytics")}
@@ -1328,7 +1339,11 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                     <CardTitle>{t("widgetdashboard.saved.title")}</CardTitle>
                     <CardDescription>{t("widgetdashboard.saved.description")}</CardDescription>
                   </div>
-                  <Button onClick={() => handleTabChange("create")}>
+                  <Button 
+                    onClick={() => handleTabChange("create")}
+                    disabled={isFreePlan && savedWidgets.length >= 1}
+                    title={isFreePlan && savedWidgets.length >= 1 ? "Free plan users can only create one widget. Upgrade to create more." : ""}
+                  >
                     <Plus className="h-4 w-4 mr-2" /> {t("widgetdashboard.saved.create")}
                   </Button>
                 </div>
@@ -1338,7 +1353,11 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                   <div className="text-center py-12">
                     <p className="text-muted-foreground mb-4">{t("widgetdashboard.saved.none")}</p>
                     <div className="flex gap-2 justify-center">
-                      <Button onClick={() => handleTabChange("create")}>
+                      <Button 
+                        onClick={() => handleTabChange("create")}
+                        disabled={isFreePlan && savedWidgets.length >= 1}
+                        title={isFreePlan && savedWidgets.length >= 1 ? "Free plan users can only create one widget. Upgrade to create more." : ""}
+                      >
                         <Plus className="h-4 w-4 mr-2" /> {t("widgetdashboard.form.create")}
                       </Button>
                       <Button 
@@ -1457,9 +1476,28 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                             <Button size="sm" variant="outline" onClick={() => copyEmbedCode(widget)}>
                               <Copy className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleDeleteWidget(widget.id)}>
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span>
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost" 
+                                      onClick={() => handleDeleteWidget(widget.id)}
+                                      disabled={isFreePlan}
+                                      className={isFreePlan ? "cursor-not-allowed opacity-50" : ""}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </span>
+                                </TooltipTrigger>
+                                {isFreePlan && (
+                                  <TooltipContent>
+                                    <p>You need to upgrade to a premium plan to delete the widget</p>
+                                  </TooltipContent>
+                                )}
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </CardContent>
                       </Card>
@@ -1495,24 +1533,43 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           </TabsContent>
 
           <TabsContent value="create" className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-              <div className="space-y-4">
-                {renderWidgetForm("create")}
+            {isFreePlan && savedWidgets.length >= 1 ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Widget Limit Reached</CardTitle>
+                  <CardDescription>
+                    Free plan users can only create one widget. Upgrade to create unlimited widgets.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">
+                    You&apos;ve reached the free plan limit of 1 widget. Upgrade to create more widgets and access premium features.
+                  </p>
+                  <Button onClick={() => router.push("/plans")} size="lg">
+                    Upgrade to Premium <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+                <div className="space-y-4">
+                  {renderWidgetForm("create")}
+                </div>
+                <div className="hidden lg:block">
+                  <Card className="h-full flex flex-col">
+                    <CardHeader>
+                      <CardTitle>{t("widgetdashboard.form.preview")}</CardTitle>
+                      <CardDescription>See how your widget will look in real-time</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1 flex items-center justify-center">
+                      <div className="w-full max-w-md mx-auto">
+                        <WidgetPreview form={createForm} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
-              <div className="hidden lg:block">
-                <Card className="h-full flex flex-col">
-                  <CardHeader>
-                    <CardTitle>{t("widgetdashboard.form.preview")}</CardTitle>
-                    <CardDescription>See how your widget will look in real-time</CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex-1 flex items-center justify-center">
-                    <div className="w-full max-w-md mx-auto">
-                      <WidgetPreview form={createForm} />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
+            )}
           </TabsContent>
 
           <TabsContent value="embed" className="space-y-6">
@@ -1616,62 +1673,6 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
             )}
           </TabsContent>
 
-          <TabsContent value="sites" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("widgetdashboard.sites.title")}</CardTitle>
-                <CardDescription>{t("widgetdashboard.sites.description")}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col gap-3">
-                  {siteLimitExceeded && (
-                    <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-primary">
-                      <AlertTriangle className="h-4 w-4" />
-                      <span>{t("widgetdashboard.sites.limit")}</span>
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder={t("widgetdashboard.sites.url.placeholder")}
-                      value={newSiteUrl}
-                      onChange={(event) => setNewSiteUrl(event.target.value)}
-                      className="flex-1"
-                    />
-                    <Input
-                      placeholder={t("widgetdashboard.sites.name.placeholder")}
-                      value={newSiteName}
-                      onChange={(event) => setNewSiteName(event.target.value)}
-                      className="flex-1"
-                    />
-                    <Button onClick={handleAddSite} disabled={!currentWidget || siteLimitExceeded}>
-                      <Plus className="h-4 w-4 mr-2" /> {t("widgetdashboard.sites.add")}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  {widgetSites.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">
-                      {t("widgetdashboard.sites.none")}
-                    </p>
-                  ) : (
-                    widgetSites.map((site) => (
-                      <div key={site.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <p className="font-medium">{site.site_name || site.site_url}</p>
-                          <p className="text-sm text-muted-foreground">{site.site_url}</p>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteSite(site.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           <TabsContent value="analytics" className="space-y-4">
             <Card>
               <CardHeader>
@@ -1701,8 +1702,6 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
             </Card>
           </TabsContent>
           </Tabs>
-          </>
-        )}
       </div>
     </main>
   );

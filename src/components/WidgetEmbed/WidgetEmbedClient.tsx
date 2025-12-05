@@ -120,6 +120,8 @@ export function WidgetEmbedClient() {
   const [scanning, setScanning] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
+  const [isLimitReached, setIsLimitReached] = useState(false);
+  const [apiCallCount, setApiCallCount] = useState(0);
   const previewTrackedRef = useRef(false);
   const isTrackingRef = useRef(false);
   const isLoadingRef = useRef<string | null>(null);
@@ -137,9 +139,55 @@ export function WidgetEmbedClient() {
     }
   }, [widgetId]);
 
+  // Check if free user has reached API call limit (3 calls)
+  const checkApiCallLimit = useCallback(async (userId: string) => {
+    try {
+      // First, check if user is on free plan
+      const { data: subscriptionData } = await (supabase as any)
+        .from("widget_subscriptions")
+        .select("subscription_type")
+        .eq("user_id", userId)
+        .single();
+
+      const subscriptionType = (subscriptionData as { subscription_type?: string } | null)?.subscription_type || "free";
+      
+      // Only check limit for free users
+      if (subscriptionType === "free") {
+        // Get total API call count for this user
+        const { count } = await (supabase as any)
+          .from("widget_api_calls")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId);
+
+        const totalCalls = count || 0;
+        setApiCallCount(totalCalls);
+        
+        // If user has reached 3 API calls, block widget usage
+        if (totalCalls >= 3) {
+          setIsLimitReached(true);
+          return true;
+        }
+      }
+      
+      setIsLimitReached(false);
+      return false;
+    } catch (error) {
+      console.error("Error checking API call limit:", error);
+      // On error, allow the call (fail open) but log it
+      return false;
+    }
+  }, []);
+
   const trackApiCall = useCallback(
     async (callType: string, status: string = "success") => {
       if (!widgetId || !widgetSettings?.user_id) return;
+
+      // CRITICAL: Check API call limit for free users BEFORE tracking
+      const limitReached = await checkApiCallLimit(widgetSettings.user_id);
+      if (limitReached) {
+        console.log("🚫 trackApiCall: Free user has reached 3 API call limit - NOT tracking", { callType });
+        return;
+      }
 
       // SAFETY CHECK: Don't track scan calls if we're in internal context
       if (typeof window !== 'undefined') {
@@ -172,11 +220,34 @@ export function WidgetEmbedClient() {
           user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
         });
         console.log("✅ trackApiCall: Successfully tracked", { callType });
+        
+        // Update API call count after successful tracking
+        if (widgetSettings?.user_id) {
+          const { count } = await (supabase as any)
+            .from("widget_api_calls")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", widgetSettings.user_id);
+          
+          const newCount = count || 0;
+          setApiCallCount(newCount);
+          
+          // Check if limit is reached after this call
+          const { data: subscriptionData } = await (supabase as any)
+            .from("widget_subscriptions")
+            .select("subscription_type")
+            .eq("user_id", widgetSettings.user_id)
+            .single();
+          
+          const subscriptionType = (subscriptionData as { subscription_type?: string } | null)?.subscription_type || "free";
+          if (subscriptionType === "free" && newCount >= 3) {
+            setIsLimitReached(true);
+          }
+        }
       } catch (error) {
         console.error("❌ trackApiCall: Error tracking API call:", error);
       }
     },
-    [widgetId, widgetSettings]
+    [widgetId, widgetSettings, checkApiCallLimit]
   );
 
   useEffect(() => {
@@ -527,6 +598,14 @@ export function WidgetEmbedClient() {
         if (data) {
           console.log("Widget settings loaded successfully:", data);
           setWidgetSettings(data);
+          
+          // Check API call limit for free users when widget loads
+          if (data.user_id) {
+            const limitReached = await checkApiCallLimit(data.user_id);
+            if (limitReached) {
+              console.log("🚫 Free user has reached 3 API call limit - widget disabled");
+            }
+          }
           
           // Track preview only once per widget per session
           // ONLY track if we're 100% certain it's an external embed
@@ -1104,6 +1183,19 @@ export function WidgetEmbedClient() {
 
   const handleScan = async () => {
     if (!imagePreview || !widgetId) return;
+    
+    // Check limit before scanning
+    if (isLimitReached || !widgetSettings?.user_id) {
+      console.log("🚫 Cannot scan - API call limit reached or widget settings missing");
+      return;
+    }
+    
+    // Double-check limit before proceeding
+    const limitReached = await checkApiCallLimit(widgetSettings.user_id);
+    if (limitReached) {
+      setIsLimitReached(true);
+      return;
+    }
 
     setScanning(true);
     try {
@@ -1146,6 +1238,51 @@ export function WidgetEmbedClient() {
   const baseUrl = getUrl("");
   const widgetEmbedUrl = `${baseUrl}/widget/embed?id=${widgetId}`;
 
+  // Show limit reached message for free users
+  if (isLimitReached) {
+    return (
+      <div className="w-full min-h-screen p-4 sm:p-6 flex items-center justify-center" style={{ backgroundColor: "transparent" }}>
+        <div 
+          className="max-w-md mx-auto bg-card rounded-lg border-2 border-border shadow-sm p-8 text-center"
+          style={{ 
+            borderRadius: styles.borderRadius,
+            borderColor: styles.primaryColor + "30"
+          }}
+        >
+          <div className="space-y-4">
+            <div className="text-4xl mb-4">🚫</div>
+            <h3 className="text-xl font-bold" style={{ color: styles.primaryColor }}>
+              API Call Limit Reached
+            </h3>
+            <p className="text-muted-foreground">
+              You&apos;ve reached the free plan limit of 3 API calls. Upgrade to a premium plan to continue using the widget.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Current API calls: {apiCallCount} / 3
+            </p>
+            <div className="pt-4">
+              <a
+                href={`${baseUrl}/plans`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block"
+              >
+                <Button
+                  style={{ 
+                    backgroundColor: styles.primaryColor,
+                    borderRadius: styles.borderRadius
+                  }}
+                >
+                  Upgrade to Premium
+                </Button>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full min-h-screen p-4 sm:p-6" style={{ backgroundColor: "transparent" }}>
       <div 
@@ -1166,12 +1303,15 @@ export function WidgetEmbedClient() {
             <div className="space-y-4">
               {!imagePreview ? (
                 <div
-                  className="border-2 border-dashed rounded-lg p-10 cursor-pointer bg-muted/30 text-center hover:border-opacity-50 transition-colors flex-1 flex flex-col items-center justify-center min-h-[280px]"
+                  className={`border-2 border-dashed rounded-lg p-10 bg-muted/30 text-center transition-colors flex-1 flex flex-col items-center justify-center min-h-[280px] ${
+                    isLimitReached ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-opacity-50"
+                  }`}
                   style={{ 
                     borderColor: styles.primaryColor + "30",
                     borderRadius: styles.borderRadius
                   }}
                   onClick={() => {
+                    if (isLimitReached) return;
                     const input = document.createElement("input");
                     input.type = "file";
                     input.accept = "image/png, image/jpeg, image/jpg, image/heic, image/heif";
