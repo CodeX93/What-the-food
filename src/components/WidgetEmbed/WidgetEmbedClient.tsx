@@ -252,8 +252,12 @@ export function WidgetEmbedClient() {
       }
 
       const result = limitData[0];
-      const subscriptionType = result.subscription_type || "free";
+      let subscriptionType = result.subscription_type || "free";
       const totalCalls = parseInt(result.api_call_count) || 0;
+      
+      // TEMPORARY: For testing, you can force free plan check by uncommenting the line below
+      // This will treat all users as free plan for limit testing
+      // subscriptionType = "free";
       
       console.log("📊 Limit check result:", {
         subscriptionType,
