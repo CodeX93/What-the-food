@@ -1,11 +1,40 @@
 'use client';
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Upload, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getUrl } from "@/utils/url";
+
+// Helper function to check if preview was already tracked in this session
+const hasTrackedPreview = (widgetId: string): boolean => {
+  if (typeof window === 'undefined') return false;
+  try {
+    const key = `widget_preview_tracked_${widgetId}`;
+    const tracked = sessionStorage.getItem(key);
+    if (tracked) {
+      const timestamp = parseInt(tracked, 10);
+      const now = Date.now();
+      // If tracked within last 10 minutes, consider it already tracked
+      return (now - timestamp) < 10 * 60 * 1000;
+    }
+    return false;
+  } catch (e) {
+    return false;
+  }
+};
+
+// Helper function to mark preview as tracked
+const markPreviewTracked = (widgetId: string): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    const key = `widget_preview_tracked_${widgetId}`;
+    sessionStorage.setItem(key, Date.now().toString());
+  } catch (e) {
+    // Ignore sessionStorage errors (e.g., in private browsing)
+  }
+};
 
 export function WidgetEmbedClient() {
   const searchParams = useSearchParams();
@@ -15,6 +44,8 @@ export function WidgetEmbedClient() {
   const [scanning, setScanning] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
+  const previewTrackedRef = useRef(false);
+  const isTrackingRef = useRef(false);
 
   const trackApiCall = useCallback(
     async (callType: string, status: string = "success") => {
@@ -24,11 +55,11 @@ export function WidgetEmbedClient() {
         await (supabase as any).from("widget_api_calls").insert({
           widget_id: widgetId,
           user_id: widgetSettings.user_id,
-          site_url: document.referrer || window.location.href,
+          site_url: typeof document !== 'undefined' ? (document.referrer || window.location.href) : null,
           call_type: callType,
           status,
           ip_address: null,
-          user_agent: navigator.userAgent,
+          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
         });
       } catch (error) {
         console.error("Error tracking API call:", error);
@@ -41,6 +72,37 @@ export function WidgetEmbedClient() {
     const loadWidgetSettings = async () => {
       if (!widgetId) {
         setLoading(false);
+        return;
+      }
+
+      // Reset tracking refs when widgetId changes
+      previewTrackedRef.current = false;
+      isTrackingRef.current = false;
+
+      // Check if we've already tracked this widget in this session
+      if (hasTrackedPreview(widgetId)) {
+        console.log("Preview already tracked for this widget in this session, skipping");
+        // Still load settings but don't track
+        try {
+          const { data, error } = await (supabase as any)
+            .from("widget_settings")
+            .select("*")
+            .eq("widget_id", widgetId)
+            .single();
+
+          if (!error && data) {
+            setWidgetSettings(data);
+          }
+        } catch (err) {
+          console.error("Exception loading widget:", err);
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
+
+      // Prevent concurrent tracking calls
+      if (isTrackingRef.current) {
         return;
       }
 
@@ -69,19 +131,53 @@ export function WidgetEmbedClient() {
         if (data) {
           console.log("Widget settings loaded successfully:", data);
           setWidgetSettings(data);
-          await trackApiCall("preview");
+          
+          // Track preview only once per widget per session
+          if (!previewTrackedRef.current && data.user_id && !isTrackingRef.current) {
+            previewTrackedRef.current = true;
+            isTrackingRef.current = true;
+            
+            // Mark as tracked immediately to prevent duplicate calls
+            markPreviewTracked(widgetId);
+            
+            try {
+              await (supabase as any).from("widget_api_calls").insert({
+                widget_id: widgetId,
+                user_id: data.user_id,
+                site_url: typeof document !== 'undefined' ? (document.referrer || window.location.href) : null,
+                call_type: "preview",
+                status: "success",
+                ip_address: null,
+                user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+              });
+              console.log("Preview API call tracked successfully");
+            } catch (trackError) {
+              console.error("Error tracking preview API call:", trackError);
+              // Remove from sessionStorage if tracking failed so it can retry
+              if (typeof window !== 'undefined') {
+                try {
+                  sessionStorage.removeItem(`widget_preview_tracked_${widgetId}`);
+                } catch (e) {
+                  // Ignore
+                }
+              }
+            } finally {
+              isTrackingRef.current = false;
+            }
+          }
         } else {
           console.error("No data returned for widget_id:", widgetId);
         }
       } catch (err) {
         console.error("Exception loading widget:", err);
+        isTrackingRef.current = false;
       } finally {
         setLoading(false);
       }
     };
 
     void loadWidgetSettings();
-  }, [widgetId, trackApiCall]);
+  }, [widgetId]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
