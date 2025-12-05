@@ -486,7 +486,7 @@ function PremiumUserResultsView({
         <AlertDescription className="text-xs leading-relaxed mt-1">
           Get personalized health insights, smart substitutions, and tailored recommendations based on your profile.{" "}
           <a
-            href={`${baseUrl}/food-results`}
+            href={`${baseUrl}/`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 font-semibold underline"
@@ -2028,7 +2028,9 @@ export function WidgetEmbedClient() {
                   style={{ 
                     borderColor: styles.primaryColor + "30",
                     borderRadius: styles.borderRadius,
-                    backgroundColor: styles.uploadAreaBackgroundColor || "rgba(0, 0, 0, 0.02)"
+                    backgroundColor: (styles.uploadAreaBackgroundColor && styles.uploadAreaBackgroundColor.trim() !== "") 
+                      ? styles.uploadAreaBackgroundColor 
+                      : "rgba(0, 0, 0, 0.02)"
                   }}
                   onClick={() => {
                     if (isLimitReached) return;
@@ -2193,7 +2195,7 @@ export function WidgetEmbedClient() {
                         }}
                       />
                     )}
-                  </div>
+            </div>
                 </ScrollArea>
               </DialogContent>
             </Dialog>

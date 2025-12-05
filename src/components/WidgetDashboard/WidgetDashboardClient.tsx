@@ -103,10 +103,13 @@ function WidgetPreview({ form }: { form: WidgetFormState }) {
         )}
 
         <div
-          className="border-2 border-dashed rounded-lg p-10 cursor-pointer bg-muted/30 text-center hover:border-opacity-50 transition-colors flex-1 flex flex-col items-center justify-center min-h-[280px]"
+          className="border-2 border-dashed rounded-lg p-10 cursor-pointer text-center hover:border-opacity-50 transition-colors flex-1 flex flex-col items-center justify-center min-h-[280px]"
           style={{ 
             borderColor: form.primaryColor + "30",
-            borderRadius: form.borderRadius
+            borderRadius: form.borderRadius,
+            backgroundColor: (form.uploadAreaBackgroundColor && form.uploadAreaBackgroundColor.trim() !== "") 
+              ? form.uploadAreaBackgroundColor 
+              : "rgba(0, 0, 0, 0.02)"
           }}
         >
           <Upload 

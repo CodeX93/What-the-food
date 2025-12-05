@@ -65,6 +65,7 @@ import jsPDF from "jspdf";
 export function FoodResultsClient() {
   const searchParams = useSearchParams();
   const id = searchParams?.get("id") ?? null;
+  const widgetResultId = searchParams?.get("widgetResultId") ?? null;
   const router = useRouter();
   const { toast } = useToast();
   const { language: userLanguage } = useLanguage();
@@ -952,6 +953,101 @@ export function FoodResultsClient() {
   useEffect(() => {
     const load = async () => {
       try {
+        // Handle widget result from sessionStorage
+        if (widgetResultId) {
+          try {
+            const storedData = sessionStorage.getItem(widgetResultId);
+            if (!storedData) {
+              console.error("Widget result data not found in sessionStorage");
+              router.push("/dashboard");
+              return;
+            }
+            
+            const parsedData = JSON.parse(storedData);
+            const { analysis: widgetAnalysis, image: widgetImage, servings: widgetServings, subscriptionType: widgetSubscriptionType } = parsedData;
+            
+            if (!widgetAnalysis) {
+              console.error("Invalid widget result data");
+              router.push("/dashboard");
+              return;
+            }
+            
+            // Set the analysis and image
+            setAnalysis(widgetAnalysis as FoodAnalysis);
+            setOriginalAnalysis(JSON.parse(JSON.stringify(widgetAnalysis)));
+            if (widgetImage) {
+              setImageUrl(widgetImage);
+            }
+            if (widgetServings) {
+              applyServings(widgetServings);
+              setSavedServings(widgetServings);
+            }
+            if (widgetAnalysis.insights) {
+              setInsightsText(widgetAnalysis.insights);
+            }
+            
+            // Check authentication and premium status
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
+            const user = session?.user;
+            setIsAuthenticated(!!user);
+            
+            if (user) {
+              try {
+                setCheckingPremium(true);
+                const premium = await hasActivePremiumSubscription(user.id);
+                setHasPremiumAccess(premium);
+                
+                // Fetch profile
+                const { data: profileData } = await (supabase as any)
+                  .from("profiles")
+                  .select("full_name, gender, age, weight_kg, height_cm, goal, activity_level, avatar_url")
+                  .eq("id", user.id)
+                  .maybeSingle();
+                
+                if (profileData) {
+                  setProfile(profileData);
+                  setProfileAvatarUrl(profileData.avatar_url || null);
+                  setProfileAge(profileData.age || null);
+                  setProfileGender(profileData.gender || null);
+                  setProfileGoal(profileData.goal || null);
+                  setProfileActivityLevel(profileData.activity_level || null);
+                  const isComplete =
+                    profileData.full_name &&
+                    profileData.gender &&
+                    profileData.age !== null &&
+                    profileData.weight_kg !== null &&
+                    profileData.height_cm !== null &&
+                    profileData.goal &&
+                    profileData.activity_level;
+                  setProfileComplete(isComplete);
+                } else {
+                  setProfileComplete(false);
+                }
+              } catch (error) {
+                console.error("Failed to determine premium status or fetch profile", error);
+                setHasPremiumAccess(false);
+                setProfileComplete(false);
+              } finally {
+                setCheckingPremium(false);
+              }
+            } else {
+              setHasPremiumAccess(false);
+              setCheckingPremium(false);
+              setProfileComplete(true);
+            }
+            
+            setLoading(false);
+            return;
+          } catch (error) {
+            console.error("Error loading widget result from sessionStorage:", error);
+            router.push("/dashboard");
+            return;
+          }
+        }
+        
+        // Original logic for database-based results
         if (!id) {
           router.push("/dashboard");
           return;
@@ -1101,7 +1197,7 @@ export function FoodResultsClient() {
       }
     };
     load();
-  }, [id, router, userLanguage]);
+  }, [id, widgetResultId, router, userLanguage]);
   useEffect(() => {
     if (analysis) {
       setIngredientInput((analysis.ingredients ?? []).join("\n"));
