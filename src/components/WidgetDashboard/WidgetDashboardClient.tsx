@@ -257,33 +257,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           isPremiumUser = platformSubscription?.subscription_type === "premium";
         }
 
-        // If user is premium, check for and restore any disabled widgets
-        if (isPremiumUser && session?.user) {
-          try {
-            const { data: disabledWidgets } = await supabaseClient
-              .from("widget_settings")
-              .select("id, widget_id, user_id")
-              .eq("user_id", session.user.id)
-              .like("widget_id", "DISABLED_%");
-            
-            if (disabledWidgets && disabledWidgets.length > 0) {
-              console.log("Found disabled widgets for premium user, restoring...", disabledWidgets.length);
-              // Restore all disabled widgets
-              for (const widget of disabledWidgets) {
-                const originalWidgetId = widget.widget_id.replace("DISABLED_", "");
-                await supabaseClient
-                  .from("widget_settings")
-                  .update({ widget_id: originalWidgetId })
-                  .eq("id", widget.id)
-                  .eq("user_id", session.user.id);
-                console.log("Restored widget:", originalWidgetId);
-              }
-            }
-          } catch (restoreError) {
-            console.error("Error restoring disabled widgets:", restoreError);
-            // Don't block the flow if restore fails
-          }
-        }
+        // No need to restore widgets - we don't change widget_id anymore
+        // The limit check happens at widget load time and shows different UI
 
         // Load widgets for all users (they may have created widgets before)
         // Prevent concurrent widget loads

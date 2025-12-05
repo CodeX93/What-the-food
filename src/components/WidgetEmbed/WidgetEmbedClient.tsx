@@ -139,87 +139,9 @@ export function WidgetEmbedClient() {
     }
   }, [widgetId]);
 
-  // Disable widget by changing widget_id (breaks iframe embed)
-  const disableWidget = useCallback(async (currentWidgetId: string, userId: string) => {
-    try {
-      console.log("🚫 Disabling widget by changing widget_id:", currentWidgetId);
-      
-      // Check if widget is already disabled
-      if (currentWidgetId.startsWith("DISABLED_")) {
-        console.log("Widget already disabled");
-        return;
-      }
-      
-      // Change widget_id to disabled format: DISABLED_{original_widget_id}
-      const disabledWidgetId = `DISABLED_${currentWidgetId}`;
-      
-      // Update widget_settings with disabled widget_id
-      const { error: updateError } = await (supabase as any)
-        .from("widget_settings")
-        .update({ widget_id: disabledWidgetId })
-        .eq("widget_id", currentWidgetId)
-        .eq("user_id", userId);
-      
-      if (updateError) {
-        console.error("Error disabling widget:", updateError);
-      } else {
-        console.log("✅ Widget disabled - widget_id changed to:", disabledWidgetId);
-        // Update local state if this is the current widget
-        if (widgetSettings?.widget_id === currentWidgetId) {
-          setWidgetSettings((prev: any) => ({
-            ...prev,
-            widget_id: disabledWidgetId
-          }));
-        }
-      }
-    } catch (error) {
-      console.error("Error disabling widget:", error);
-    }
-  }, [widgetSettings]);
+  // No need to disable/restore widget - we just check the limit and show different UI
 
-  // Restore widget by restoring original widget_id (when user upgrades)
-  const restoreWidget = useCallback(async (disabledWidgetId: string, userId: string) => {
-    try {
-      console.log("✅ Restoring widget:", disabledWidgetId);
-      
-      // Extract original widget_id from disabled format
-      if (!disabledWidgetId.startsWith("DISABLED_")) {
-        console.log("Widget is not disabled");
-        return;
-      }
-      
-      const originalWidgetId = disabledWidgetId.replace("DISABLED_", "");
-      console.log("Restoring original widget_id:", originalWidgetId);
-      
-      // Update widget_settings to restore original widget_id
-      const { error: updateError } = await (supabase as any)
-        .from("widget_settings")
-        .update({ widget_id: originalWidgetId })
-        .eq("widget_id", disabledWidgetId)
-        .eq("user_id", userId);
-      
-      if (updateError) {
-        console.error("Error restoring widget:", updateError);
-      } else {
-        console.log("✅ Widget restored - widget_id changed back to:", originalWidgetId);
-        // Reload widget settings
-        if (widgetId) {
-          const { data } = await (supabase as any)
-            .from("widget_settings")
-            .select("*")
-            .eq("widget_id", originalWidgetId)
-            .single();
-          if (data) {
-            setWidgetSettings(data);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error restoring widget:", error);
-    }
-  }, [widgetId]);
-
-  // Check if free user has reached API call limit (3 calls) and disable widget if needed
+  // Check if free user has reached API call limit (3 calls)
   const checkApiCallLimit = useCallback(async (userId: string) => {
     try {
       console.log("🔍 Checking API call limit for user:", userId);
@@ -238,14 +160,6 @@ export function WidgetEmbedClient() {
       const subscriptionType = (subscriptionData as { subscription_type?: string } | null)?.subscription_type || "free";
       console.log("📊 User subscription type:", subscriptionType);
       
-      // If user is premium, check if widget is disabled and restore it
-      if (subscriptionType !== "free" && widgetSettings?.widget_id?.startsWith("DISABLED_")) {
-        console.log("✅ Premium user with disabled widget - restoring...");
-        await restoreWidget(widgetSettings.widget_id, userId);
-        setIsLimitReached(false);
-        return false;
-      }
-      
       // Only check limit for free users
       if (subscriptionType === "free") {
         // Get total API call count for this user
@@ -263,20 +177,15 @@ export function WidgetEmbedClient() {
         console.log("📊 Total API calls for free user:", totalCalls);
         setApiCallCount(totalCalls);
         
-        // If user has reached 3 API calls, disable widget and block usage
+        // If user has reached 3 API calls, show limit message
         if (totalCalls >= 3) {
-          console.log("🚫 FREE USER LIMIT REACHED: 3 API calls used - disabling widget");
+          console.log("🚫 FREE USER LIMIT REACHED: 3 API calls used - showing limit message");
           setIsLimitReached(true);
-          
-          // Disable widget by changing widget_id (breaks iframe)
-          if (widgetSettings?.widget_id && !widgetSettings.widget_id.startsWith("DISABLED_")) {
-            await disableWidget(widgetSettings.widget_id, userId);
-          }
-          
           return true;
         }
       } else {
         console.log("✅ Premium user - no limit check needed");
+        setIsLimitReached(false);
       }
       
       setIsLimitReached(false);
@@ -286,7 +195,7 @@ export function WidgetEmbedClient() {
       // On error, allow the call (fail open) but log it
       return false;
     }
-  }, [widgetSettings, disableWidget, restoreWidget]);
+  }, []);
 
   const trackApiCall = useCallback(
     async (callType: string, status: string = "success") => {
@@ -333,18 +242,12 @@ export function WidgetEmbedClient() {
       
       const subType = (subData as { subscription_type?: string } | null)?.subscription_type || "free";
       
-      // CRITICAL: If free user and already at or above 3 calls, BLOCK the insert and disable widget
+      // CRITICAL: If free user and already at or above 3 calls, BLOCK the insert
       // This prevents the 4th, 5th, etc. call from being inserted
       if (subType === "free" && currentTotal >= 3) {
         console.log("🚫 BLOCKING INSERT: Free user already has", currentTotal, "calls (limit is 3) - NOT inserting");
         setIsLimitReached(true);
         setApiCallCount(currentTotal);
-        
-        // Disable widget by changing widget_id (breaks iframe)
-        if (widgetSettings?.widget_id && !widgetSettings.widget_id.startsWith("DISABLED_")) {
-          await disableWidget(widgetSettings.widget_id, widgetSettings.user_id);
-        }
-        
         return false; // Block the insert - this is the critical check
       }
 
@@ -411,14 +314,8 @@ export function WidgetEmbedClient() {
             
             const subscriptionType = (subscriptionData as { subscription_type?: string } | null)?.subscription_type || "free";
             if (subscriptionType === "free" && newCount >= 3) {
-              console.log("🚫 Limit reached after tracking - disabling widget");
+              console.log("🚫 Limit reached after tracking - showing limit message");
               setIsLimitReached(true);
-              
-              // Disable widget by changing widget_id (breaks iframe)
-              if (widgetSettings?.widget_id && !widgetSettings.widget_id.startsWith("DISABLED_")) {
-                await disableWidget(widgetSettings.widget_id, widgetSettings.user_id);
-              }
-              
               return false; // Return false to indicate limit was reached
             }
           }
@@ -430,7 +327,7 @@ export function WidgetEmbedClient() {
         return false;
       }
     },
-    [widgetId, widgetSettings, checkApiCallLimit, disableWidget]
+    [widgetId, widgetSettings, checkApiCallLimit]
   );
 
   useEffect(() => {
@@ -787,68 +684,13 @@ export function WidgetEmbedClient() {
       try {
         console.log("Loading widget settings for widget_id:", widgetId);
         
-        // Check if widget_id is disabled format - if so, try to load by disabled ID first
-        let queryWidgetId = widgetId;
-        let isDisabledFormat = widgetId.startsWith("DISABLED_");
-        
         const { data, error } = await (supabase as any)
           .from("widget_settings")
           .select("*")
-          .eq("widget_id", queryWidgetId)
+          .eq("widget_id", widgetId)
           .single();
 
         if (error) {
-          // If widget not found and it's not a disabled format, try checking if it was disabled
-          if (error.code === "PGRST116" && !isDisabledFormat) {
-            // Try loading with disabled format
-            const disabledId = `DISABLED_${widgetId}`;
-            const { data: disabledData, error: disabledError } = await (supabase as any)
-              .from("widget_settings")
-              .select("*")
-              .eq("widget_id", disabledId)
-              .single();
-            
-            if (!disabledError && disabledData) {
-              // Widget is disabled - check subscription
-              console.log("🚫 Widget found in disabled state");
-              const { data: subData } = await (supabase as any)
-                .from("widget_subscriptions")
-                .select("subscription_type")
-                .eq("user_id", disabledData.user_id)
-                .single();
-              
-              const subType = (subData as { subscription_type?: string } | null)?.subscription_type || "free";
-              
-              if (subType === "free") {
-                // Free user with disabled widget - show limit message
-                setWidgetSettings(disabledData);
-                setIsLimitReached(true);
-                const { count } = await (supabase as any)
-                  .from("widget_api_calls")
-                  .select("id", { count: "exact", head: true })
-                  .eq("user_id", disabledData.user_id);
-                setApiCallCount(count || 0);
-                setLoading(false);
-                return;
-              } else {
-                // Premium user - restore widget
-                await restoreWidget(disabledData.widget_id, disabledData.user_id);
-                // Reload with original widget_id
-                const { data: restoredData } = await (supabase as any)
-                  .from("widget_settings")
-                  .select("*")
-                  .eq("widget_id", widgetId)
-                  .single();
-                if (restoredData) {
-                  setWidgetSettings(restoredData);
-                  setIsLimitReached(false);
-                  setLoading(false);
-                  return;
-                }
-              }
-            }
-          }
-          
           console.error("Error loading widget settings:", error);
           console.error("Error code:", error.code, "Error message:", error.message);
           // PGRST116 is "not found" - widget doesn't exist
@@ -864,56 +706,17 @@ export function WidgetEmbedClient() {
 
         if (data) {
           console.log("Widget settings loaded successfully:", data);
+          setWidgetSettings(data);
           
-          // Check if widget is disabled (widget_id starts with DISABLED_)
-          if (data.widget_id?.startsWith("DISABLED_")) {
-            console.log("🚫 Widget is disabled - checking subscription status");
-            const { data: subData } = await (supabase as any)
-              .from("widget_subscriptions")
-              .select("subscription_type")
-              .eq("user_id", data.user_id)
-              .single();
-            
-            const subType = (subData as { subscription_type?: string } | null)?.subscription_type || "free";
-            
-            if (subType === "free") {
-              // Free user with disabled widget - show limit message
-              console.log("🚫 Free user with disabled widget - showing limit message");
-              setWidgetSettings(data);
+          // CRITICAL: Check API call limit for free users BEFORE allowing widget to be used
+          // This determines if we show the normal widget or the "Limit Exceeded" widget
+          if (data.user_id) {
+            const limitReached = await checkApiCallLimit(data.user_id);
+            if (limitReached) {
+              console.log("🚫 Free user has reached 3 API call limit - showing limit exceeded widget");
               setIsLimitReached(true);
-              // Get API call count
-              const { count } = await (supabase as any)
-                .from("widget_api_calls")
-                .select("id", { count: "exact", head: true })
-                .eq("user_id", data.user_id);
-              setApiCallCount(count || 0);
             } else {
-              // Premium user - restore widget
-              console.log("✅ Premium user - restoring disabled widget");
-              await restoreWidget(data.widget_id, data.user_id);
-              // Reload widget settings after restoration
-              const { data: restoredData } = await (supabase as any)
-                .from("widget_settings")
-                .select("*")
-                .eq("user_id", data.user_id)
-                .single();
-              if (restoredData) {
-                setWidgetSettings(restoredData);
-                setIsLimitReached(false);
-              }
-            }
-          } else {
-            setWidgetSettings(data);
-            
-            // CRITICAL: Check API call limit for free users BEFORE allowing widget to be used
-            if (data.user_id) {
-              const limitReached = await checkApiCallLimit(data.user_id);
-              if (limitReached) {
-                console.log("🚫 Free user has reached 3 API call limit - widget disabled");
-                setIsLimitReached(true);
-              } else {
-                setIsLimitReached(false);
-              }
+              setIsLimitReached(false);
             }
           }
           
