@@ -596,11 +596,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
               return;
             }
             
-            // Check if user is premium before loading stats
-            const currentIsPremium = platformSubscription?.subscription_type === "premium";
-            if (!currentIsPremium) {
-              return; // Don't load stats for free users
-            }
+            // Load stats for all users (free and premium)
+            // Tracking works for all users, so stats should be visible to all
             
             const startOfToday = new Date();
             startOfToday.setHours(0, 0, 0, 0);
@@ -682,10 +679,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           });
         };
 
-        // Only start loading stats if user is premium
-        if (isPremiumUser) {
-          loadStatsWhenVisible();
-        }
+        // Load stats for all users (free and premium can see their API call counts)
+        loadStatsWhenVisible();
       } catch (error: any) {
         if (cancelled) return;
         console.error("Error loading data:", error);
