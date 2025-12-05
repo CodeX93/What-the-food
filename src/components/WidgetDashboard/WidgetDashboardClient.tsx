@@ -23,6 +23,8 @@ type WidgetFormState = {
   backgroundColor: string;
   customText: string;
   brandingVisible: boolean;
+  iframeWidth: string;
+  iframeHeight: string;
 };
 
 const defaultFormState: WidgetFormState = {
@@ -33,6 +35,8 @@ const defaultFormState: WidgetFormState = {
   backgroundColor: "",
   customText: "",
   brandingVisible: true,
+  iframeWidth: "100%",
+  iframeHeight: "600",
 };
 
 const REQUEST_TIMEOUT_MS = 30000; // Increased to 30 seconds
@@ -168,6 +172,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         backgroundColor: widget.background_color || "",
         customText: widget.custom_text || "",
         brandingVisible: isFree ? true : widgetBrandingVisible,
+        iframeWidth: widget.iframe_width || "100%",
+        iframeHeight: widget.iframe_height || "600",
       });
 
     },
@@ -298,7 +304,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           const { data: widgets, error: widgetsError } = await supabaseClient
             .from("widget_settings")
             .select(
-              "id, widget_id, widget_name, widget_description, primary_color, border_radius, background_color, is_default, created_at, custom_text, branding_visible"
+              "id, widget_id, widget_name, widget_description, primary_color, border_radius, background_color, is_default, created_at, custom_text, branding_visible, iframe_width, iframe_height"
             )
             .eq("user_id", currentSession.user.id)
             .order("created_at", { ascending: false })
@@ -348,7 +354,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
               const { data: retryWidgets, error: retryError } = await supabaseClient
                 .from("widget_settings")
                 .select(
-                  "id, widget_id, widget_name, widget_description, primary_color, border_radius, background_color, is_default, created_at, custom_text, branding_visible"
+                  "id, widget_id, widget_name, widget_description, primary_color, border_radius, background_color, is_default, created_at, custom_text, branding_visible, iframe_width, iframe_height"
                 )
                 .eq("user_id", refreshedSession.user.id)
                 .order("created_at", { ascending: false })
@@ -726,6 +732,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         background_color: formState.backgroundColor || null,
         custom_text: formState.customText || null,
         branding_visible: finalBrandingVisible,
+        iframe_width: formState.iframeWidth || "100%",
+        iframe_height: formState.iframeHeight || "600",
       };
 
       if (isCreatingNew) {
@@ -777,6 +785,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           backgroundColor: newWidget.background_color || "",
           customText: newWidget.custom_text || "",
           brandingVisible: isFree ? true : widgetBrandingVisible,
+          iframeWidth: newWidget.iframe_width || "100%",
+          iframeHeight: newWidget.iframe_height || "600",
         });
         
         setCreateForm(() => ({
@@ -818,6 +828,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           backgroundColor: updatedWidget.background_color || "",
           customText: updatedWidget.custom_text || "",
           brandingVisible: isFree ? true : widgetBrandingVisible,
+          iframeWidth: updatedWidget.iframe_width || "100%",
+          iframeHeight: updatedWidget.iframe_height || "600",
         });
         
         toast({
@@ -1026,12 +1038,16 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
     const borderRadiusValue =
       widget?.border_radius ?? (currentWidget ? editForm.borderRadius : createForm.borderRadius);
     
+    // Get iframe dimensions from widget or form state
+    const iframeWidth = widget?.iframe_width ?? (currentWidget ? editForm.iframeWidth : createForm.iframeWidth) ?? "100%";
+    const iframeHeight = widget?.iframe_height ?? (currentWidget ? editForm.iframeHeight : createForm.iframeHeight) ?? "600";
+    
     // Generate responsive iframe code that works on all screen sizes
-    return `<div style="width: 100%; max-width: 500px; margin: 0 auto;">
+    return `<div style="width: 100%; max-width: ${iframeWidth === "100%" ? "500px" : iframeWidth}; margin: 0 auto;">
   <iframe 
     src="${widgetUrl}" 
-    width="100%" 
-    height="600" 
+    width="${iframeWidth}" 
+    height="${iframeHeight}" 
     frameborder="0" 
     scrolling="yes"
     style="border-radius: ${borderRadiusValue}; border: none; display: block; min-height: 400px;"
@@ -1190,6 +1206,36 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
             <p className="text-xs text-muted-foreground">
               Set the background color of the widget. Leave empty for transparent background.
             </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor={`iframe-width-${mode}`}>Iframe Width</Label>
+              <Input
+                id={`iframe-width-${mode}`}
+                type="text"
+                value={form.iframeWidth}
+                onChange={(event) => updateForm("iframeWidth", event.target.value)}
+                placeholder="100% or 500px"
+              />
+              <p className="text-xs text-muted-foreground">
+                Width of the iframe (e.g., "100%", "500px", "800px")
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor={`iframe-height-${mode}`}>Iframe Height</Label>
+              <Input
+                id={`iframe-height-${mode}`}
+                type="text"
+                value={form.iframeHeight}
+                onChange={(event) => updateForm("iframeHeight", event.target.value)}
+                placeholder="600 or 600px"
+              />
+              <p className="text-xs text-muted-foreground">
+                Height of the iframe (e.g., "600", "600px", "800px")
+              </p>
+            </div>
           </div>
 
           <div className="space-y-2">
