@@ -32,6 +32,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.language": "Language",
     "nav.howitworks": "How It Works",
     "nav.widget": "Widget",
+    "nav.analytics": "Analytics",
     "nav.user": "User",
     
     // Common
@@ -1046,6 +1047,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.language": "Idioma",
     "nav.howitworks": "Cómo Funciona",
     "nav.widget": "Widget",
+    "nav.analytics": "Analíticas",
     "nav.user": "Usuario",
     
     // Common
@@ -3058,6 +3060,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.language": "Sprache",
     "nav.howitworks": "Wie es funktioniert",
     "nav.widget": "Widget",
+    "nav.analytics": "Analysen",
     "nav.user": "Benutzer",
     
     // Common
@@ -4028,6 +4031,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.language": "Lingua",
     "nav.howitworks": "Come Funziona",
     "nav.widget": "Widget",
+    "nav.analytics": "Analisi",
     "nav.user": "Utente",
     
     // Common
@@ -4998,6 +5002,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.language": "Idioma",
     "nav.howitworks": "Como Funciona",
     "nav.widget": "Widget",
+    "nav.analytics": "Análises",
     "nav.user": "Usuário",
     
     // Common
@@ -6938,6 +6943,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.language": "言語",
     "nav.howitworks": "使い方",
     "nav.widget": "ウィジェット",
+    "nav.analytics": "分析",
     "nav.user": "ユーザー",
     
     // Common
@@ -7908,6 +7914,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.language": "اللغة",
     "nav.howitworks": "كيف يعمل",
     "nav.widget": "الودجت",
+    "nav.analytics": "التحليلات",
     "nav.user": "المستخدم",
     
     // Common

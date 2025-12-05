@@ -923,7 +923,7 @@ export function DashboardClient({
                       overflow: "visible",
                     }}
                     title="Advertisements"
-                    scrolling="no"
+                    scrolling="yes"
                     allow="autoplay; encrypted-media"
                   />
                 </div>
