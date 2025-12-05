@@ -929,12 +929,16 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
   const getEmbedCode = (widget?: any) => {
     const widgetId = widget?.widget_id || currentWidget?.widget_id;
     if (!widgetId) return "";
-    try {
-      const widgetUrl = `${getUrl("/widget/embed")}?id=${widgetId}`;
-      const borderRadiusValue =
-        widget?.border_radius ?? (currentWidget ? editForm.borderRadius : createForm.borderRadius);
-      // Generate responsive iframe code that works on all screen sizes
-      return `<div style="width: 100%; max-width: 500px; margin: 0 auto;">
+    
+    // Use window.location.origin to get the exact current website URL
+    // This ensures the iframe uses the actual production URL, not a preview/staging URL
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const widgetUrl = baseUrl ? `${baseUrl}/widget/embed?id=${widgetId}` : `/widget/embed?id=${widgetId}`;
+    const borderRadiusValue =
+      widget?.border_radius ?? (currentWidget ? editForm.borderRadius : createForm.borderRadius);
+    
+    // Generate responsive iframe code that works on all screen sizes
+    return `<div style="width: 100%; max-width: 500px; margin: 0 auto;">
   <iframe 
     src="${widgetUrl}" 
     width="100%" 
@@ -946,25 +950,6 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
     title="Food Scanner Widget"
   ></iframe>
 </div>`;
-    } catch (error) {
-      console.error("Error generating embed code:", error);
-      // Fallback to a basic embed code
-      const widgetUrl = typeof window !== 'undefined' ? `${window.location.origin}/widget/embed?id=${widgetId}` : `/widget/embed?id=${widgetId}`;
-      const borderRadiusValue =
-        widget?.border_radius ?? (currentWidget ? editForm.borderRadius : createForm.borderRadius);
-      return `<div style="width: 100%; max-width: 500px; margin: 0 auto;">
-  <iframe 
-    src="${widgetUrl}" 
-    width="100%" 
-    height="600" 
-    frameborder="0" 
-    scrolling="no"
-    style="border-radius: ${borderRadiusValue}; border: none; display: block; min-height: 400px;"
-    allow="autoplay; encrypted-media"
-    title="Food Scanner Widget"
-  ></iframe>
-</div>`;
-    }
   };
 
   const copyEmbedCode = (widget?: any) => {
