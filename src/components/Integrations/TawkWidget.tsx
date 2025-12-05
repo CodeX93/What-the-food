@@ -102,33 +102,51 @@ const setupTawkPositioning = () => {
 };
 
 const injectTawkPositioningCSS = () => {
-  // Check if style already exists
-  if (document.getElementById("tawk-positioning-style")) {
-    return;
+  // Remove existing style if it exists to refresh it
+  const existingStyle = document.getElementById("tawk-positioning-style");
+  if (existingStyle) {
+    existingStyle.remove();
   }
 
   const style = document.createElement("style");
   style.id = "tawk-positioning-style";
   style.textContent = `
-    /* Position Tawk.to widget on left bottom - comprehensive override */
+    /* Position Tawk.to widget on left bottom - comprehensive override with maximum specificity */
     #tawkchat-container,
+    #tawkchat-container *,
     iframe[id^="tawkchat"],
+    iframe[id*="tawkchat"],
     div[id^="tawkchat"],
+    div[id*="tawkchat"],
     [id*="tawkchat"],
-    .tawk-chat-container {
+    [id*="Tawk"],
+    .tawk-chat-container,
+    .tawk-chat-container * {
       left: 20px !important;
       right: auto !important;
       position: fixed !important;
       bottom: 20px !important;
     }
     
-    /* Target all possible Tawk.to elements */
+    /* Target all possible Tawk.to elements with maximum specificity */
     body > div[id^="tawk"],
-    body > iframe[id^="tawk"] {
+    body > div[id*="tawk"],
+    body > iframe[id^="tawk"],
+    body > iframe[id*="tawk"],
+    html body #tawkchat-container,
+    html body iframe[id^="tawkchat"] {
       left: 20px !important;
       right: auto !important;
       position: fixed !important;
       bottom: 20px !important;
+      top: auto !important;
+    }
+    
+    /* Override any inline styles that might be set */
+    #tawkchat-container[style*="right"],
+    iframe[id^="tawkchat"][style*="right"] {
+      left: 20px !important;
+      right: auto !important;
     }
   `;
   document.head.appendChild(style);
@@ -176,13 +194,30 @@ const TawkWidget = () => {
       if (tawkContainer || tawkIframe || allTawkElements.length > 0) {
         injectTawkPositioningCSS();
         
-        // Force apply positioning to all found elements
+        // Force apply positioning to all found elements with maximum specificity
         if (tawkContainer) {
-          (tawkContainer as HTMLElement).style.cssText = "left: 20px !important; right: auto !important; bottom: 20px !important; position: fixed !important;";
+          const container = tawkContainer as HTMLElement;
+          container.style.setProperty('left', '20px', 'important');
+          container.style.setProperty('right', 'auto', 'important');
+          container.style.setProperty('bottom', '20px', 'important');
+          container.style.setProperty('top', 'auto', 'important');
+          container.style.setProperty('position', 'fixed', 'important');
+          // Also try removing right property completely
+          if (container.style.right) {
+            container.style.removeProperty('right');
+          }
         }
         
         if (tawkIframe) {
-          (tawkIframe as HTMLElement).style.cssText = "left: 20px !important; right: auto !important; bottom: 20px !important; position: fixed !important;";
+          const iframe = tawkIframe as HTMLElement;
+          iframe.style.setProperty('left', '20px', 'important');
+          iframe.style.setProperty('right', 'auto', 'important');
+          iframe.style.setProperty('bottom', '20px', 'important');
+          iframe.style.setProperty('top', 'auto', 'important');
+          iframe.style.setProperty('position', 'fixed', 'important');
+          if (iframe.style.right) {
+            iframe.style.removeProperty('right');
+          }
         }
         
         // Apply to all Tawk elements
@@ -192,7 +227,11 @@ const TawkWidget = () => {
             htmlEl.style.setProperty('left', '20px', 'important');
             htmlEl.style.setProperty('right', 'auto', 'important');
             htmlEl.style.setProperty('bottom', '20px', 'important');
+            htmlEl.style.setProperty('top', 'auto', 'important');
             htmlEl.style.setProperty('position', 'fixed', 'important');
+            if (htmlEl.style.right) {
+              htmlEl.style.removeProperty('right');
+            }
           }
         });
       }
@@ -247,9 +286,31 @@ const TawkWidget = () => {
             setTimeout(applyPositioning, 2000);
             setTimeout(applyPositioning, 3000);
             setTimeout(applyPositioning, 5000);
+            
+            // Set up continuous interval to keep applying positioning (in case Tawk.to tries to override)
+            const positioningInterval = setInterval(() => {
+              if (isMounted) {
+                applyPositioning();
+              } else {
+                clearInterval(positioningInterval);
+              }
+            }, 2000); // Check every 2 seconds
+            
+            // Store interval ID for cleanup
+            (window as any).__tawkPositioningInterval = positioningInterval;
           } else {
             // Widget already loaded, apply positioning
             applyPositioning();
+            
+            // Also set up continuous interval
+            const positioningInterval = setInterval(() => {
+              if (isMounted) {
+                applyPositioning();
+              } else {
+                clearInterval(positioningInterval);
+              }
+            }, 2000);
+            (window as any).__tawkPositioningInterval = positioningInterval;
           }
         } else {
           cleanupTitleGuardRef.current();
@@ -278,6 +339,11 @@ const TawkWidget = () => {
       if (observerRef.current) {
         observerRef.current.disconnect();
         observerRef.current = null;
+      }
+      // Clear positioning interval if it exists
+      if ((window as any).__tawkPositioningInterval) {
+        clearInterval((window as any).__tawkPositioningInterval);
+        delete (window as any).__tawkPositioningInterval;
       }
       removeExistingWidget();
     };
