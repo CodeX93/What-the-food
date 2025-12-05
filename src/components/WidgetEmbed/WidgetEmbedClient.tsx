@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Upload, 
   Loader2, 
@@ -20,7 +22,8 @@ import {
   CheckCircle2, 
   Zap,
   AlertCircle,
-  ExternalLink
+  ExternalLink,
+  X
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getUrl } from "@/utils/url";
@@ -483,7 +486,7 @@ function PremiumUserResultsView({
         <AlertDescription className="text-xs leading-relaxed mt-1">
           Get personalized health insights, smart substitutions, and tailored recommendations based on your profile.{" "}
           <a
-            href={`${baseUrl}/food-results?id=scan`}
+            href={`${baseUrl}/food-results`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 font-semibold underline"
@@ -518,6 +521,7 @@ export function WidgetEmbedClient() {
   const [apiCallCount, setApiCallCount] = useState(0);
   const [subscriptionType, setSubscriptionType] = useState<string>("free");
   const [servings, setServings] = useState(1);
+  const [modalOpen, setModalOpen] = useState(false);
   const previewTrackedRef = useRef(false);
   const isTrackingRef = useRef(false);
   const isLoadingRef = useRef<string | null>(null);
@@ -1792,7 +1796,7 @@ export function WidgetEmbedClient() {
         isLoadingRef.current = null;
       }
     };
-  }, [widgetId]);
+  }, [widgetId, checkApiCallLimit]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -1882,7 +1886,30 @@ export function WidgetEmbedClient() {
         
         // Only set result if ALL checks pass
         console.log("✅ Setting result - all checks passed");
-        setResult(analysisResult.analysis);
+        
+        // Handle different display modes
+        if (resultDisplayMode === "new_tab") {
+          // Store result data in sessionStorage and open new tab
+          const resultId = `widget_result_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          sessionStorage.setItem(resultId, JSON.stringify({
+            analysis: analysisResult.analysis,
+            image: imagePreview,
+            servings: servings,
+            subscriptionType: subscriptionType
+          }));
+          const newTabUrl = `${baseUrl}/food-results?widgetResultId=${resultId}`;
+          window.open(newTabUrl, "_blank", "noopener,noreferrer");
+          // Reset form for next scan
+          setResult(null);
+          setImagePreview(null);
+        } else if (resultDisplayMode === "modal") {
+          // Show results in modal
+          setResult(analysisResult.analysis);
+          setModalOpen(true);
+        } else {
+          // Default: same page
+          setResult(analysisResult.analysis);
+        }
       } catch (analysisError: any) {
         console.error("❌ Error analyzing food:", analysisError);
         throw analysisError; // Re-throw to be caught by outer catch
@@ -1904,7 +1931,10 @@ export function WidgetEmbedClient() {
     backgroundColor: widgetSettings?.background_color || "transparent",
     customText: widgetSettings?.custom_text || null,
     brandingVisible: widgetSettings?.branding_visible !== false,
+    uploadAreaBackgroundColor: widgetSettings?.upload_area_background_color || null,
   };
+
+  const resultDisplayMode = (widgetSettings?.result_display_mode as "same_page" | "new_tab" | "modal") || "same_page";
 
   if (loading) {
     return (
@@ -1992,12 +2022,13 @@ export function WidgetEmbedClient() {
             <div className="space-y-4">
               {!imagePreview ? (
                 <div
-                  className={`border-2 border-dashed rounded-lg p-10 bg-muted/30 text-center transition-colors flex-1 flex flex-col items-center justify-center min-h-[280px] ${
+                  className={`border-2 border-dashed rounded-lg p-10 text-center transition-colors flex-1 flex flex-col items-center justify-center min-h-[280px] ${
                     isLimitReached ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-opacity-50"
                   }`}
                   style={{ 
                     borderColor: styles.primaryColor + "30",
-                    borderRadius: styles.borderRadius
+                    borderRadius: styles.borderRadius,
+                    backgroundColor: styles.uploadAreaBackgroundColor || "rgba(0, 0, 0, 0.02)"
                   }}
                   onClick={() => {
                     if (isLimitReached) return;
@@ -2100,7 +2131,7 @@ export function WidgetEmbedClient() {
                 </div>
               )}
             </div>
-          ) : result ? (
+          ) : result && resultDisplayMode !== "modal" ? (
             subscriptionType === "free" ? (
               // FREE USER VIEW: Nutrition + Accuracy Scale
               <FreeUserResultsView 
@@ -2127,6 +2158,46 @@ export function WidgetEmbedClient() {
               />
             )
           ) : null}
+
+          {/* Modal for results display */}
+          {resultDisplayMode === "modal" && (
+            <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+              <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+                <DialogHeader className="px-6 pt-6 pb-4 border-b">
+                  <DialogTitle className="text-xl font-bold">Food Analysis Results</DialogTitle>
+                </DialogHeader>
+                <ScrollArea className="max-h-[calc(90vh-120px)] px-6">
+                  <div className="py-4">
+                    {subscriptionType === "free" ? (
+                      <FreeUserResultsView 
+                        result={result!}
+                        imageUrl={imagePreview}
+                        styles={styles}
+                        onScanAnother={() => {
+                          setResult(null);
+                          setImagePreview(null);
+                          setModalOpen(false);
+                        }}
+                      />
+                    ) : (
+                      <PremiumUserResultsView 
+                        result={result!}
+                        imageUrl={imagePreview}
+                        servings={servings}
+                        styles={styles}
+                        baseUrl={baseUrl}
+                        onScanAnother={() => {
+                          setResult(null);
+                          setImagePreview(null);
+                          setModalOpen(false);
+                        }}
+                      />
+                    )}
+                  </div>
+                </ScrollArea>
+              </DialogContent>
+            </Dialog>
+          )}
 
           {styles.brandingVisible && (
             <div className="mt-6 pt-4 border-t text-center text-xs text-muted-foreground">

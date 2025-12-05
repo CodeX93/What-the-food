@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Code, Copy, Check, Trash2, Plus, BarChart3, Zap, Edit, Save, Bookmark, AlertTriangle, ArrowRight, ShieldCheck, Upload, Search } from "lucide-react";
@@ -25,6 +26,16 @@ type WidgetFormState = {
   brandingVisible: boolean;
   iframeWidth: string;
   iframeHeight: string;
+  resultDisplayMode: "same_page" | "new_tab" | "modal";
+  iframePaddingTop: string;
+  iframePaddingBottom: string;
+  iframePaddingLeft: string;
+  iframePaddingRight: string;
+  iframeMarginTop: string;
+  iframeMarginBottom: string;
+  iframeMarginLeft: string;
+  iframeMarginRight: string;
+  uploadAreaBackgroundColor: string;
 };
 
 const defaultFormState: WidgetFormState = {
@@ -37,6 +48,16 @@ const defaultFormState: WidgetFormState = {
   brandingVisible: true,
   iframeWidth: "100%",
   iframeHeight: "600",
+  resultDisplayMode: "same_page",
+  iframePaddingTop: "",
+  iframePaddingBottom: "",
+  iframePaddingLeft: "",
+  iframePaddingRight: "",
+  iframeMarginTop: "",
+  iframeMarginBottom: "",
+  iframeMarginLeft: "",
+  iframeMarginRight: "",
+  uploadAreaBackgroundColor: "",
 };
 
 const REQUEST_TIMEOUT_MS = 30000; // Increased to 30 seconds
@@ -174,6 +195,16 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         brandingVisible: isFree ? true : widgetBrandingVisible,
         iframeWidth: widget.iframe_width || "100%",
         iframeHeight: widget.iframe_height || "600",
+        resultDisplayMode: (widget.result_display_mode as "same_page" | "new_tab" | "modal") || "same_page",
+        iframePaddingTop: widget.iframe_padding_top || "",
+        iframePaddingBottom: widget.iframe_padding_bottom || "",
+        iframePaddingLeft: widget.iframe_padding_left || "",
+        iframePaddingRight: widget.iframe_padding_right || "",
+        iframeMarginTop: widget.iframe_margin_top || "",
+        iframeMarginBottom: widget.iframe_margin_bottom || "",
+        iframeMarginLeft: widget.iframe_margin_left || "",
+        iframeMarginRight: widget.iframe_margin_right || "",
+        uploadAreaBackgroundColor: widget.upload_area_background_color || "",
       });
 
     },
@@ -304,7 +335,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           const { data: widgets, error: widgetsError } = await supabaseClient
             .from("widget_settings")
             .select(
-              "id, widget_id, widget_name, widget_description, primary_color, border_radius, background_color, is_default, created_at, custom_text, branding_visible, iframe_width, iframe_height"
+              "id, widget_id, widget_name, widget_description, primary_color, border_radius, background_color, is_default, created_at, custom_text, branding_visible, iframe_width, iframe_height, result_display_mode, iframe_padding_top, iframe_padding_bottom, iframe_padding_left, iframe_padding_right, iframe_margin_top, iframe_margin_bottom, iframe_margin_left, iframe_margin_right, upload_area_background_color"
             )
             .eq("user_id", currentSession.user.id)
             .order("created_at", { ascending: false })
@@ -354,7 +385,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
               const { data: retryWidgets, error: retryError } = await supabaseClient
                 .from("widget_settings")
                 .select(
-                  "id, widget_id, widget_name, widget_description, primary_color, border_radius, background_color, is_default, created_at, custom_text, branding_visible, iframe_width, iframe_height"
+                  "id, widget_id, widget_name, widget_description, primary_color, border_radius, background_color, is_default, created_at, custom_text, branding_visible, iframe_width, iframe_height, result_display_mode, iframe_padding_top, iframe_padding_bottom, iframe_padding_left, iframe_padding_right, iframe_margin_top, iframe_margin_bottom, iframe_margin_left, iframe_margin_right, upload_area_background_color"
                 )
                 .eq("user_id", refreshedSession.user.id)
                 .order("created_at", { ascending: false })
@@ -734,6 +765,16 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         branding_visible: finalBrandingVisible,
         iframe_width: formState.iframeWidth || "100%",
         iframe_height: formState.iframeHeight || "600",
+        result_display_mode: formState.resultDisplayMode || "same_page",
+        iframe_padding_top: formState.iframePaddingTop || null,
+        iframe_padding_bottom: formState.iframePaddingBottom || null,
+        iframe_padding_left: formState.iframePaddingLeft || null,
+        iframe_padding_right: formState.iframePaddingRight || null,
+        iframe_margin_top: formState.iframeMarginTop || null,
+        iframe_margin_bottom: formState.iframeMarginBottom || null,
+        iframe_margin_left: formState.iframeMarginLeft || null,
+        iframe_margin_right: formState.iframeMarginRight || null,
+        upload_area_background_color: formState.uploadAreaBackgroundColor || null,
       };
 
       if (isCreatingNew) {
@@ -787,6 +828,16 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           brandingVisible: isFree ? true : widgetBrandingVisible,
           iframeWidth: newWidget.iframe_width || "100%",
           iframeHeight: newWidget.iframe_height || "600",
+          resultDisplayMode: (newWidget.result_display_mode as "same_page" | "new_tab" | "modal") || "same_page",
+          iframePaddingTop: newWidget.iframe_padding_top || "",
+          iframePaddingBottom: newWidget.iframe_padding_bottom || "",
+          iframePaddingLeft: newWidget.iframe_padding_left || "",
+          iframePaddingRight: newWidget.iframe_padding_right || "",
+          iframeMarginTop: newWidget.iframe_margin_top || "",
+          iframeMarginBottom: newWidget.iframe_margin_bottom || "",
+          iframeMarginLeft: newWidget.iframe_margin_left || "",
+          iframeMarginRight: newWidget.iframe_margin_right || "",
+          uploadAreaBackgroundColor: newWidget.upload_area_background_color || "",
         });
         
         setCreateForm(() => ({
@@ -830,6 +881,16 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           brandingVisible: isFree ? true : widgetBrandingVisible,
           iframeWidth: updatedWidget.iframe_width || "100%",
           iframeHeight: updatedWidget.iframe_height || "600",
+          resultDisplayMode: (updatedWidget.result_display_mode as "same_page" | "new_tab" | "modal") || "same_page",
+          iframePaddingTop: updatedWidget.iframe_padding_top || "",
+          iframePaddingBottom: updatedWidget.iframe_padding_bottom || "",
+          iframePaddingLeft: updatedWidget.iframe_padding_left || "",
+          iframePaddingRight: updatedWidget.iframe_padding_right || "",
+          iframeMarginTop: updatedWidget.iframe_margin_top || "",
+          iframeMarginBottom: updatedWidget.iframe_margin_bottom || "",
+          iframeMarginLeft: updatedWidget.iframe_margin_left || "",
+          iframeMarginRight: updatedWidget.iframe_margin_right || "",
+          uploadAreaBackgroundColor: updatedWidget.upload_area_background_color || "",
         });
         
         toast({
@@ -1042,8 +1103,30 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
     const iframeWidth = widget?.iframe_width ?? (currentWidget ? editForm.iframeWidth : createForm.iframeWidth) ?? "100%";
     const iframeHeight = widget?.iframe_height ?? (currentWidget ? editForm.iframeHeight : createForm.iframeHeight) ?? "600";
     
+    // Get padding and margin values
+    const form = currentWidget ? editForm : createForm;
+    const paddingTop = widget?.iframe_padding_top ?? form.iframePaddingTop ?? "";
+    const paddingBottom = widget?.iframe_padding_bottom ?? form.iframePaddingBottom ?? "";
+    const paddingLeft = widget?.iframe_padding_left ?? form.iframePaddingLeft ?? "";
+    const paddingRight = widget?.iframe_padding_right ?? form.iframePaddingRight ?? "";
+    const marginTop = widget?.iframe_margin_top ?? form.iframeMarginTop ?? "";
+    const marginBottom = widget?.iframe_margin_bottom ?? form.iframeMarginBottom ?? "";
+    const marginLeft = widget?.iframe_margin_left ?? form.iframeMarginLeft ?? "";
+    const marginRight = widget?.iframe_margin_right ?? form.iframeMarginRight ?? "";
+    
+    // Build style string for wrapper div
+    const wrapperStyles: string[] = ["width: 100%", `max-width: ${iframeWidth === "100%" ? "500px" : iframeWidth}`, "margin: 0 auto"];
+    if (paddingTop) wrapperStyles.push(`padding-top: ${paddingTop}`);
+    if (paddingBottom) wrapperStyles.push(`padding-bottom: ${paddingBottom}`);
+    if (paddingLeft) wrapperStyles.push(`padding-left: ${paddingLeft}`);
+    if (paddingRight) wrapperStyles.push(`padding-right: ${paddingRight}`);
+    if (marginTop) wrapperStyles.push(`margin-top: ${marginTop}`);
+    if (marginBottom) wrapperStyles.push(`margin-bottom: ${marginBottom}`);
+    if (marginLeft) wrapperStyles.push(`margin-left: ${marginLeft}`);
+    if (marginRight) wrapperStyles.push(`margin-right: ${marginRight}`);
+    
     // Generate responsive iframe code that works on all screen sizes
-    return `<div style="width: 100%; max-width: ${iframeWidth === "100%" ? "500px" : iframeWidth}; margin: 0 auto;">
+    return `<div style="${wrapperStyles.join("; ")}">
   <iframe 
     src="${widgetUrl}" 
     width="${iframeWidth}" 
@@ -1219,7 +1302,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                 placeholder="100% or 500px"
               />
               <p className="text-xs text-muted-foreground">
-                Width of the iframe (e.g., "100%", "500px", "800px")
+                Width of the iframe (e.g., &quot;100%&quot;, &quot;500px&quot;, &quot;800px&quot;)
               </p>
             </div>
 
@@ -1233,9 +1316,146 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                 placeholder="600 or 600px"
               />
               <p className="text-xs text-muted-foreground">
-                Height of the iframe (e.g., "600", "600px", "800px")
+                Height of the iframe (e.g., &quot;600&quot;, &quot;600px&quot;, &quot;800px&quot;)
               </p>
             </div>
+          </div>
+
+          <div className="space-y-4 border-t pt-4">
+            <div>
+              <Label className="text-base font-semibold mb-3 block">Iframe Padding</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor={`iframe-padding-top-${mode}`} className="text-xs">Top</Label>
+                  <Input
+                    id={`iframe-padding-top-${mode}`}
+                    type="text"
+                    value={form.iframePaddingTop}
+                    onChange={(event) => updateForm("iframePaddingTop", event.target.value)}
+                    placeholder="10px"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`iframe-padding-bottom-${mode}`} className="text-xs">Bottom</Label>
+                  <Input
+                    id={`iframe-padding-bottom-${mode}`}
+                    type="text"
+                    value={form.iframePaddingBottom}
+                    onChange={(event) => updateForm("iframePaddingBottom", event.target.value)}
+                    placeholder="10px"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`iframe-padding-left-${mode}`} className="text-xs">Left</Label>
+                  <Input
+                    id={`iframe-padding-left-${mode}`}
+                    type="text"
+                    value={form.iframePaddingLeft}
+                    onChange={(event) => updateForm("iframePaddingLeft", event.target.value)}
+                    placeholder="10px"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`iframe-padding-right-${mode}`} className="text-xs">Right</Label>
+                  <Input
+                    id={`iframe-padding-right-${mode}`}
+                    type="text"
+                    value={form.iframePaddingRight}
+                    onChange={(event) => updateForm("iframePaddingRight", event.target.value)}
+                    placeholder="10px"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-base font-semibold mb-3 block">Iframe Margin</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor={`iframe-margin-top-${mode}`} className="text-xs">Top</Label>
+                  <Input
+                    id={`iframe-margin-top-${mode}`}
+                    type="text"
+                    value={form.iframeMarginTop}
+                    onChange={(event) => updateForm("iframeMarginTop", event.target.value)}
+                    placeholder="10px"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`iframe-margin-bottom-${mode}`} className="text-xs">Bottom</Label>
+                  <Input
+                    id={`iframe-margin-bottom-${mode}`}
+                    type="text"
+                    value={form.iframeMarginBottom}
+                    onChange={(event) => updateForm("iframeMarginBottom", event.target.value)}
+                    placeholder="10px"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`iframe-margin-left-${mode}`} className="text-xs">Left</Label>
+                  <Input
+                    id={`iframe-margin-left-${mode}`}
+                    type="text"
+                    value={form.iframeMarginLeft}
+                    onChange={(event) => updateForm("iframeMarginLeft", event.target.value)}
+                    placeholder="10px"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor={`iframe-margin-right-${mode}`} className="text-xs">Right</Label>
+                  <Input
+                    id={`iframe-margin-right-${mode}`}
+                    type="text"
+                    value={form.iframeMarginRight}
+                    onChange={(event) => updateForm("iframeMarginRight", event.target.value)}
+                    placeholder="10px"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={`upload-area-bg-${mode}`}>Upload Area Background Color</Label>
+            <div className="flex items-center gap-4">
+              <Input
+                id={`upload-area-bg-${mode}`}
+                type="color"
+                value={form.uploadAreaBackgroundColor || "#ffffff"}
+                onChange={(event) => updateForm("uploadAreaBackgroundColor", event.target.value)}
+                className="w-20 h-10"
+              />
+              <Input
+                type="text"
+                value={form.uploadAreaBackgroundColor}
+                onChange={(event) => updateForm("uploadAreaBackgroundColor", event.target.value)}
+                className="flex-1"
+                placeholder="#ffffff or leave empty for default"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Background color for the upload area container (where &quot;Upload Your Food Photo&quot; text and button are displayed)
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={`result-display-mode-${mode}`}>Result Display Mode</Label>
+            <Select
+              value={form.resultDisplayMode}
+              onValueChange={(value: "same_page" | "new_tab" | "modal") => updateForm("resultDisplayMode", value)}
+            >
+              <SelectTrigger id={`result-display-mode-${mode}`}>
+                <SelectValue placeholder="Select display mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="same_page">Same Page (Current behavior)</SelectItem>
+                <SelectItem value="new_tab">Open in New Tab</SelectItem>
+                <SelectItem value="modal">Show in Modal Popup</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Choose how scan results are displayed to users
+            </p>
           </div>
 
           <div className="space-y-2">
