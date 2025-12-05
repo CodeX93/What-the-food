@@ -142,37 +142,53 @@ export function WidgetEmbedClient() {
   // Check if free user has reached API call limit (3 calls)
   const checkApiCallLimit = useCallback(async (userId: string) => {
     try {
+      console.log("🔍 Checking API call limit for user:", userId);
+      
       // First, check if user is on free plan
-      const { data: subscriptionData } = await (supabase as any)
+      const { data: subscriptionData, error: subError } = await (supabase as any)
         .from("widget_subscriptions")
         .select("subscription_type")
         .eq("user_id", userId)
         .single();
 
+      if (subError && subError.code !== "PGRST116") {
+        console.error("Error fetching subscription:", subError);
+      }
+
       const subscriptionType = (subscriptionData as { subscription_type?: string } | null)?.subscription_type || "free";
+      console.log("📊 User subscription type:", subscriptionType);
       
       // Only check limit for free users
       if (subscriptionType === "free") {
         // Get total API call count for this user
-        const { count } = await (supabase as any)
+        const { count, error: countError } = await (supabase as any)
           .from("widget_api_calls")
           .select("id", { count: "exact", head: true })
           .eq("user_id", userId);
 
+        if (countError) {
+          console.error("Error fetching API call count:", countError);
+          return false; // On error, allow (fail open)
+        }
+
         const totalCalls = count || 0;
+        console.log("📊 Total API calls for free user:", totalCalls);
         setApiCallCount(totalCalls);
         
         // If user has reached 3 API calls, block widget usage
         if (totalCalls >= 3) {
+          console.log("🚫 FREE USER LIMIT REACHED: 3 API calls used - blocking widget");
           setIsLimitReached(true);
           return true;
         }
+      } else {
+        console.log("✅ Premium user - no limit check needed");
       }
       
       setIsLimitReached(false);
       return false;
     } catch (error) {
-      console.error("Error checking API call limit:", error);
+      console.error("❌ Error checking API call limit:", error);
       // On error, allow the call (fail open) but log it
       return false;
     }
@@ -273,6 +289,13 @@ export function WidgetEmbedClient() {
             .single();
           if (!error && data) {
             setWidgetSettings(data);
+            // Check API call limit for free users
+            if (data.user_id) {
+              const limitReached = await checkApiCallLimit(data.user_id);
+              if (limitReached) {
+                setIsLimitReached(true);
+              }
+            }
           }
         } catch (err) {
           console.error("Exception loading widget:", err);
@@ -307,6 +330,13 @@ export function WidgetEmbedClient() {
                     .single();
                   if (!error && data) {
                     setWidgetSettings(data);
+                    // Check API call limit for free users
+                    if (data.user_id) {
+                      const limitReached = await checkApiCallLimit(data.user_id);
+                      if (limitReached) {
+                        setIsLimitReached(true);
+                      }
+                    }
                   }
                 } catch (err) {
                   console.error("Exception loading widget:", err);
@@ -380,6 +410,13 @@ export function WidgetEmbedClient() {
               .single();
             if (!error && data) {
               setWidgetSettings(data);
+              // Check API call limit for free users
+              if (data.user_id) {
+                const limitReached = await checkApiCallLimit(data.user_id);
+                if (limitReached) {
+                  setIsLimitReached(true);
+                }
+              }
             }
           } catch (err) {
             console.error("Exception loading widget:", err);
@@ -557,6 +594,13 @@ export function WidgetEmbedClient() {
 
           if (!error && data) {
             setWidgetSettings(data);
+            // Check API call limit for free users
+            if (data.user_id) {
+              const limitReached = await checkApiCallLimit(data.user_id);
+              if (limitReached) {
+                setIsLimitReached(true);
+              }
+            }
           }
         } catch (err) {
           console.error("Exception loading widget:", err);
@@ -599,13 +643,19 @@ export function WidgetEmbedClient() {
           console.log("Widget settings loaded successfully:", data);
           setWidgetSettings(data);
           
-          // Check API call limit for free users when widget loads
+          // CRITICAL: Check API call limit for free users BEFORE allowing widget to be used
           if (data.user_id) {
             const limitReached = await checkApiCallLimit(data.user_id);
             if (limitReached) {
               console.log("🚫 Free user has reached 3 API call limit - widget disabled");
+              setIsLimitReached(true);
+            } else {
+              setIsLimitReached(false);
             }
           }
+          
+          // Only set loading to false AFTER limit check is complete
+          setLoading(false);
           
           // Track preview only once per widget per session
           // ONLY track if we're 100% certain it's an external embed
@@ -1182,24 +1232,41 @@ export function WidgetEmbedClient() {
   };
 
   const handleScan = async () => {
-    if (!imagePreview || !widgetId) return;
-    
-    // Check limit before scanning
-    if (isLimitReached || !widgetSettings?.user_id) {
-      console.log("🚫 Cannot scan - API call limit reached or widget settings missing");
+    if (!imagePreview || !widgetId || !widgetSettings?.user_id) {
+      console.log("🚫 Cannot scan - missing required data");
       return;
     }
     
-    // Double-check limit before proceeding
+    // CRITICAL: Check limit BEFORE any processing
+    if (isLimitReached) {
+      console.log("🚫 Cannot scan - API call limit already reached");
+      return;
+    }
+    
+    // Double-check limit from database before proceeding (prevents race conditions)
     const limitReached = await checkApiCallLimit(widgetSettings.user_id);
     if (limitReached) {
+      console.log("🚫 Cannot scan - API call limit reached (verified from database)");
       setIsLimitReached(true);
       return;
     }
 
+    // Check limit one more time right before tracking (final safety check)
     setScanning(true);
     try {
+      // Simulate scan processing
       await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      // FINAL CHECK: Verify limit hasn't been reached during processing
+      const finalLimitCheck = await checkApiCallLimit(widgetSettings.user_id);
+      if (finalLimitCheck) {
+        console.log("🚫 Limit reached during scan - aborting result");
+        setIsLimitReached(true);
+        setScanning(false);
+        return;
+      }
+      
+      // Only set result if limit check passes
       setResult({
         dish_name: "Sample Dish",
         calories: 350,
@@ -1207,6 +1274,8 @@ export function WidgetEmbedClient() {
         carbs: 45,
         fat: 10,
       });
+      
+      // Track the API call (this will also check limit internally)
       await trackApiCall("scan", "success");
     } catch (error) {
       console.error("Error scanning:", error);
@@ -1392,7 +1461,7 @@ export function WidgetEmbedClient() {
                     </Button>
                     <Button
                       onClick={handleScan}
-                      disabled={scanning}
+                      disabled={scanning || isLimitReached}
                       className="flex-1"
                       style={{ 
                         backgroundColor: styles.primaryColor,
