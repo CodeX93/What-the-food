@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Script from "next/script";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -1499,8 +1500,14 @@ export function FoodResultsClient() {
                   </div>
                 </CardContent>
               </Card>
+              <div className="mt-4 space-y-4">
+                <div ta-ad-container=""></div>
+                <div ta-ad-container=""></div>
+              </div>
             </div>
           )}
+          
+
           <div className={`${analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input") ? "lg:col-span-12" : "lg:col-span-8"} space-y-4 sm:space-y-6 lg:space-y-7`}>
             <Card className="pb-[40px]">
               <CardHeader className="pb-3 pt-4 sm:pt-5">
@@ -2173,6 +2180,12 @@ export function FoodResultsClient() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Script
+        src="https://cdn.apitiny.net/scripts/v2.0/main.js"
+        data-site-id="68ec4452809989948ad4d6cc"
+        data-test-mode="false"
+        strategy="afterInteractive"
+      />
     </>
   );
 }
