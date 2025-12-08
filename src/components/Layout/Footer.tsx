@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Utensils } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Logo } from "./Logo";
 
 const Footer = () => {
   const { t } = useLanguage();
@@ -11,9 +11,8 @@ const Footer = () => {
       <div className="container mx-auto px-4 py-10 md:py-14">
         <div className="flex flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-24 xl:gap-32">
           <div className="max-w-xs space-y-4">
-            <Link href="/" className="flex items-center space-x-2 hover:text-primary transition-colors">
-              <Utensils className="h-6 w-6 text-primary" />
-              <span className="text-lg font-semibold text-slate-900 dark:text-white">WhatTheFood</span>
+            <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
+              <Logo />
             </Link>
             <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
               {t("footer.description")}
