@@ -651,13 +651,13 @@ export function DashboardClient({
               Coming Soon
             </Badge>
             <CardHeader className="pr-16 sm:pr-20">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="p-2 sm:p-3 bg-primary/10 rounded-lg shrink-0">
-                  <UtensilsCrossed className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-primary/10 rounded-lg">
+                  <UtensilsCrossed className="h-6 w-6 text-primary" />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <CardTitle className="text-base sm:text-lg leading-tight">{t("dashboard.card.mealplanner.title")}</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm mt-1">
+                <div>
+                  <CardTitle className="text-lg whitespace-nowrap">{t("dashboard.card.mealplanner.title")}</CardTitle>
+                  <CardDescription>
                     {isPremium ? t("dashboard.card.mealplanner.description") : t("dashboard.card.mealplanner.premium")}
                   </CardDescription>
                 </div>

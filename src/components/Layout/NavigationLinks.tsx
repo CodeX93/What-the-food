@@ -66,13 +66,13 @@ export function NavigationLinks({ className }: NavigationLinksProps) {
           }
 
           return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="text-sm font-medium hover:text-primary transition-colors"
-            >
+          <Link
+            key={link.href}
+            href={link.href}
+            className="text-sm font-medium hover:text-primary transition-colors"
+          >
               {linkContent}
-            </Link>
+          </Link>
           );
         })}
       </div>

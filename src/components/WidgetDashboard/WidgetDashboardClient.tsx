@@ -10,11 +10,31 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Code, Copy, Check, Trash2, Plus, BarChart3, Zap, Edit, Save, Bookmark, AlertTriangle, ArrowRight, ShieldCheck, Upload, Search } from "lucide-react";
 import { getUrl } from "@/utils/url";
 import { useTranslation } from "@/hooks/use-translation";
+
+// Helper functions to parse and combine value + unit
+const parseValueUnit = (value: string): { value: string; unit: "px" | "%" } => {
+  if (!value) return { value: "", unit: "px" };
+  const trimmed = value.trim();
+  if (trimmed.endsWith("%")) {
+    return { value: trimmed.slice(0, -1), unit: "%" };
+  }
+  if (trimmed.endsWith("px")) {
+    return { value: trimmed.slice(0, -2), unit: "px" };
+  }
+  // Default to px if no unit specified
+  return { value: trimmed, unit: "px" };
+};
+
+const combineValueUnit = (value: string, unit: "px" | "%"): string => {
+  if (!value) return "";
+  return `${value}${unit}`;
+};
 
 type WidgetFormState = {
   name: string;
@@ -25,16 +45,26 @@ type WidgetFormState = {
   customText: string;
   brandingVisible: boolean;
   iframeWidth: string;
+  iframeWidthUnit: "px" | "%";
   iframeHeight: string;
+  iframeHeightUnit: "px" | "%";
   resultDisplayMode: "same_page" | "new_tab" | "modal";
   iframePaddingTop: string;
+  iframePaddingTopUnit: "px" | "%";
   iframePaddingBottom: string;
+  iframePaddingBottomUnit: "px" | "%";
   iframePaddingLeft: string;
+  iframePaddingLeftUnit: "px" | "%";
   iframePaddingRight: string;
+  iframePaddingRightUnit: "px" | "%";
   iframeMarginTop: string;
+  iframeMarginTopUnit: "px" | "%";
   iframeMarginBottom: string;
+  iframeMarginBottomUnit: "px" | "%";
   iframeMarginLeft: string;
+  iframeMarginLeftUnit: "px" | "%";
   iframeMarginRight: string;
+  iframeMarginRightUnit: "px" | "%";
   uploadAreaBackgroundColor: string;
 };
 
@@ -46,17 +76,27 @@ const defaultFormState: WidgetFormState = {
   backgroundColor: "",
   customText: "",
   brandingVisible: true,
-  iframeWidth: "100%",
+  iframeWidth: "100",
+  iframeWidthUnit: "%",
   iframeHeight: "600",
+  iframeHeightUnit: "px",
   resultDisplayMode: "same_page",
   iframePaddingTop: "",
+  iframePaddingTopUnit: "px",
   iframePaddingBottom: "",
+  iframePaddingBottomUnit: "px",
   iframePaddingLeft: "",
+  iframePaddingLeftUnit: "px",
   iframePaddingRight: "",
+  iframePaddingRightUnit: "px",
   iframeMarginTop: "",
+  iframeMarginTopUnit: "px",
   iframeMarginBottom: "",
+  iframeMarginBottomUnit: "px",
   iframeMarginLeft: "",
+  iframeMarginLeftUnit: "px",
   iframeMarginRight: "",
+  iframeMarginRightUnit: "px",
   uploadAreaBackgroundColor: "",
 };
 
@@ -171,6 +211,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
   const [editForm, setEditForm] = useState<WidgetFormState>(defaultFormState);
   const [embedSearchQuery, setEmbedSearchQuery] = useState("");
   const [savedWidgetsSearchQuery, setSavedWidgetsSearchQuery] = useState("");
+  const [selectedWidgetForEmbed, setSelectedWidgetForEmbed] = useState<string | null>(null);
   const supabaseClient = supabase as any;
   const initialLoadRef = useRef(true);
   const currentWidgetRef = useRef<any>(null);
@@ -188,6 +229,17 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
       const isFree = subscriptionType === "free";
       const widgetBrandingVisible = widget.branding_visible !== false;
 
+      const widthParsed = parseValueUnit(widget.iframe_width || "100%");
+      const heightParsed = parseValueUnit(widget.iframe_height || "600");
+      const paddingTopParsed = parseValueUnit(widget.iframe_padding_top || "");
+      const paddingBottomParsed = parseValueUnit(widget.iframe_padding_bottom || "");
+      const paddingLeftParsed = parseValueUnit(widget.iframe_padding_left || "");
+      const paddingRightParsed = parseValueUnit(widget.iframe_padding_right || "");
+      const marginTopParsed = parseValueUnit(widget.iframe_margin_top || "");
+      const marginBottomParsed = parseValueUnit(widget.iframe_margin_bottom || "");
+      const marginLeftParsed = parseValueUnit(widget.iframe_margin_left || "");
+      const marginRightParsed = parseValueUnit(widget.iframe_margin_right || "");
+
       setEditForm({
         name: widget.widget_name || "",
         description: widget.widget_description || "",
@@ -196,17 +248,27 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         backgroundColor: widget.background_color || "",
         customText: widget.custom_text || "",
         brandingVisible: isFree ? true : widgetBrandingVisible,
-        iframeWidth: widget.iframe_width || "100%",
-        iframeHeight: widget.iframe_height || "600",
+        iframeWidth: widthParsed.value,
+        iframeWidthUnit: widthParsed.unit,
+        iframeHeight: heightParsed.value,
+        iframeHeightUnit: heightParsed.unit,
         resultDisplayMode: (widget.result_display_mode as "same_page" | "new_tab" | "modal") || "same_page",
-        iframePaddingTop: widget.iframe_padding_top || "",
-        iframePaddingBottom: widget.iframe_padding_bottom || "",
-        iframePaddingLeft: widget.iframe_padding_left || "",
-        iframePaddingRight: widget.iframe_padding_right || "",
-        iframeMarginTop: widget.iframe_margin_top || "",
-        iframeMarginBottom: widget.iframe_margin_bottom || "",
-        iframeMarginLeft: widget.iframe_margin_left || "",
-        iframeMarginRight: widget.iframe_margin_right || "",
+        iframePaddingTop: paddingTopParsed.value,
+        iframePaddingTopUnit: paddingTopParsed.unit,
+        iframePaddingBottom: paddingBottomParsed.value,
+        iframePaddingBottomUnit: paddingBottomParsed.unit,
+        iframePaddingLeft: paddingLeftParsed.value,
+        iframePaddingLeftUnit: paddingLeftParsed.unit,
+        iframePaddingRight: paddingRightParsed.value,
+        iframePaddingRightUnit: paddingRightParsed.unit,
+        iframeMarginTop: marginTopParsed.value,
+        iframeMarginTopUnit: marginTopParsed.unit,
+        iframeMarginBottom: marginBottomParsed.value,
+        iframeMarginBottomUnit: marginBottomParsed.unit,
+        iframeMarginLeft: marginLeftParsed.value,
+        iframeMarginLeftUnit: marginLeftParsed.unit,
+        iframeMarginRight: marginRightParsed.value,
+        iframeMarginRightUnit: marginRightParsed.unit,
         uploadAreaBackgroundColor: widget.upload_area_background_color || "",
       });
 
@@ -457,6 +519,10 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           const widgetList = (widgets || []) as Array<{ is_default?: boolean }>;
           console.log("Successfully loaded widgets:", widgetList.length, widgetList);
           setSavedWidgets(widgetList);
+          
+          // Don't auto-select - let user choose from dropdown
+          // selectedWidgetForEmbed will remain null until user selects
+          
           hasLoadedRef.current = true; // Mark as loaded to prevent infinite loops
           
           // Clear loading flag and timeout
@@ -766,17 +832,17 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         background_color: formState.backgroundColor || null,
         custom_text: formState.customText || null,
         branding_visible: finalBrandingVisible,
-        iframe_width: formState.iframeWidth || "100%",
-        iframe_height: formState.iframeHeight || "600",
+        iframe_width: combineValueUnit(formState.iframeWidth, formState.iframeWidthUnit) || "100%",
+        iframe_height: combineValueUnit(formState.iframeHeight, formState.iframeHeightUnit) || "600",
         result_display_mode: formState.resultDisplayMode || "same_page",
-        iframe_padding_top: formState.iframePaddingTop || null,
-        iframe_padding_bottom: formState.iframePaddingBottom || null,
-        iframe_padding_left: formState.iframePaddingLeft || null,
-        iframe_padding_right: formState.iframePaddingRight || null,
-        iframe_margin_top: formState.iframeMarginTop || null,
-        iframe_margin_bottom: formState.iframeMarginBottom || null,
-        iframe_margin_left: formState.iframeMarginLeft || null,
-        iframe_margin_right: formState.iframeMarginRight || null,
+        iframe_padding_top: formState.iframePaddingTop ? combineValueUnit(formState.iframePaddingTop, formState.iframePaddingTopUnit) : null,
+        iframe_padding_bottom: formState.iframePaddingBottom ? combineValueUnit(formState.iframePaddingBottom, formState.iframePaddingBottomUnit) : null,
+        iframe_padding_left: formState.iframePaddingLeft ? combineValueUnit(formState.iframePaddingLeft, formState.iframePaddingLeftUnit) : null,
+        iframe_padding_right: formState.iframePaddingRight ? combineValueUnit(formState.iframePaddingRight, formState.iframePaddingRightUnit) : null,
+        iframe_margin_top: formState.iframeMarginTop ? combineValueUnit(formState.iframeMarginTop, formState.iframeMarginTopUnit) : null,
+        iframe_margin_bottom: formState.iframeMarginBottom ? combineValueUnit(formState.iframeMarginBottom, formState.iframeMarginBottomUnit) : null,
+        iframe_margin_left: formState.iframeMarginLeft ? combineValueUnit(formState.iframeMarginLeft, formState.iframeMarginLeftUnit) : null,
+        iframe_margin_right: formState.iframeMarginRight ? combineValueUnit(formState.iframeMarginRight, formState.iframeMarginRightUnit) : null,
         upload_area_background_color: formState.uploadAreaBackgroundColor || null,
       };
 
@@ -821,6 +887,17 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         setIsCreating(false);
         const isFree = subscriptionType === "free";
         const widgetBrandingVisible = newWidget.branding_visible !== false;
+        const newWidthParsed = parseValueUnit(newWidget.iframe_width || "100%");
+        const newHeightParsed = parseValueUnit(newWidget.iframe_height || "600");
+        const newPaddingTopParsed = parseValueUnit(newWidget.iframe_padding_top || "");
+        const newPaddingBottomParsed = parseValueUnit(newWidget.iframe_padding_bottom || "");
+        const newPaddingLeftParsed = parseValueUnit(newWidget.iframe_padding_left || "");
+        const newPaddingRightParsed = parseValueUnit(newWidget.iframe_padding_right || "");
+        const newMarginTopParsed = parseValueUnit(newWidget.iframe_margin_top || "");
+        const newMarginBottomParsed = parseValueUnit(newWidget.iframe_margin_bottom || "");
+        const newMarginLeftParsed = parseValueUnit(newWidget.iframe_margin_left || "");
+        const newMarginRightParsed = parseValueUnit(newWidget.iframe_margin_right || "");
+
         setEditForm({
           name: newWidget.widget_name || "",
           description: newWidget.widget_description || "",
@@ -829,17 +906,27 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           backgroundColor: newWidget.background_color || "",
           customText: newWidget.custom_text || "",
           brandingVisible: isFree ? true : widgetBrandingVisible,
-          iframeWidth: newWidget.iframe_width || "100%",
-          iframeHeight: newWidget.iframe_height || "600",
+          iframeWidth: newWidthParsed.value,
+          iframeWidthUnit: newWidthParsed.unit,
+          iframeHeight: newHeightParsed.value,
+          iframeHeightUnit: newHeightParsed.unit,
           resultDisplayMode: (newWidget.result_display_mode as "same_page" | "new_tab" | "modal") || "same_page",
-          iframePaddingTop: newWidget.iframe_padding_top || "",
-          iframePaddingBottom: newWidget.iframe_padding_bottom || "",
-          iframePaddingLeft: newWidget.iframe_padding_left || "",
-          iframePaddingRight: newWidget.iframe_padding_right || "",
-          iframeMarginTop: newWidget.iframe_margin_top || "",
-          iframeMarginBottom: newWidget.iframe_margin_bottom || "",
-          iframeMarginLeft: newWidget.iframe_margin_left || "",
-          iframeMarginRight: newWidget.iframe_margin_right || "",
+          iframePaddingTop: newPaddingTopParsed.value,
+          iframePaddingTopUnit: newPaddingTopParsed.unit,
+          iframePaddingBottom: newPaddingBottomParsed.value,
+          iframePaddingBottomUnit: newPaddingBottomParsed.unit,
+          iframePaddingLeft: newPaddingLeftParsed.value,
+          iframePaddingLeftUnit: newPaddingLeftParsed.unit,
+          iframePaddingRight: newPaddingRightParsed.value,
+          iframePaddingRightUnit: newPaddingRightParsed.unit,
+          iframeMarginTop: newMarginTopParsed.value,
+          iframeMarginTopUnit: newMarginTopParsed.unit,
+          iframeMarginBottom: newMarginBottomParsed.value,
+          iframeMarginBottomUnit: newMarginBottomParsed.unit,
+          iframeMarginLeft: newMarginLeftParsed.value,
+          iframeMarginLeftUnit: newMarginLeftParsed.unit,
+          iframeMarginRight: newMarginRightParsed.value,
+          iframeMarginRightUnit: newMarginRightParsed.unit,
           uploadAreaBackgroundColor: newWidget.upload_area_background_color || "",
         });
         
@@ -874,6 +961,17 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         currentWidgetRef.current = updatedWidget;
         const isFree = subscriptionType === "free";
         const widgetBrandingVisible = updatedWidget.branding_visible !== false;
+        const updatedWidthParsed = parseValueUnit(updatedWidget.iframe_width || "100%");
+        const updatedHeightParsed = parseValueUnit(updatedWidget.iframe_height || "600");
+        const updatedPaddingTopParsed = parseValueUnit(updatedWidget.iframe_padding_top || "");
+        const updatedPaddingBottomParsed = parseValueUnit(updatedWidget.iframe_padding_bottom || "");
+        const updatedPaddingLeftParsed = parseValueUnit(updatedWidget.iframe_padding_left || "");
+        const updatedPaddingRightParsed = parseValueUnit(updatedWidget.iframe_padding_right || "");
+        const updatedMarginTopParsed = parseValueUnit(updatedWidget.iframe_margin_top || "");
+        const updatedMarginBottomParsed = parseValueUnit(updatedWidget.iframe_margin_bottom || "");
+        const updatedMarginLeftParsed = parseValueUnit(updatedWidget.iframe_margin_left || "");
+        const updatedMarginRightParsed = parseValueUnit(updatedWidget.iframe_margin_right || "");
+
         setEditForm({
           name: updatedWidget.widget_name || "",
           description: updatedWidget.widget_description || "",
@@ -882,17 +980,27 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           backgroundColor: updatedWidget.background_color || "",
           customText: updatedWidget.custom_text || "",
           brandingVisible: isFree ? true : widgetBrandingVisible,
-          iframeWidth: updatedWidget.iframe_width || "100%",
-          iframeHeight: updatedWidget.iframe_height || "600",
+          iframeWidth: updatedWidthParsed.value,
+          iframeWidthUnit: updatedWidthParsed.unit,
+          iframeHeight: updatedHeightParsed.value,
+          iframeHeightUnit: updatedHeightParsed.unit,
           resultDisplayMode: (updatedWidget.result_display_mode as "same_page" | "new_tab" | "modal") || "same_page",
-          iframePaddingTop: updatedWidget.iframe_padding_top || "",
-          iframePaddingBottom: updatedWidget.iframe_padding_bottom || "",
-          iframePaddingLeft: updatedWidget.iframe_padding_left || "",
-          iframePaddingRight: updatedWidget.iframe_padding_right || "",
-          iframeMarginTop: updatedWidget.iframe_margin_top || "",
-          iframeMarginBottom: updatedWidget.iframe_margin_bottom || "",
-          iframeMarginLeft: updatedWidget.iframe_margin_left || "",
-          iframeMarginRight: updatedWidget.iframe_margin_right || "",
+          iframePaddingTop: updatedPaddingTopParsed.value,
+          iframePaddingTopUnit: updatedPaddingTopParsed.unit,
+          iframePaddingBottom: updatedPaddingBottomParsed.value,
+          iframePaddingBottomUnit: updatedPaddingBottomParsed.unit,
+          iframePaddingLeft: updatedPaddingLeftParsed.value,
+          iframePaddingLeftUnit: updatedPaddingLeftParsed.unit,
+          iframePaddingRight: updatedPaddingRightParsed.value,
+          iframePaddingRightUnit: updatedPaddingRightParsed.unit,
+          iframeMarginTop: updatedMarginTopParsed.value,
+          iframeMarginTopUnit: updatedMarginTopParsed.unit,
+          iframeMarginBottom: updatedMarginBottomParsed.value,
+          iframeMarginBottomUnit: updatedMarginBottomParsed.unit,
+          iframeMarginLeft: updatedMarginLeftParsed.value,
+          iframeMarginLeftUnit: updatedMarginLeftParsed.unit,
+          iframeMarginRight: updatedMarginRightParsed.value,
+          iframeMarginRightUnit: updatedMarginRightParsed.unit,
           uploadAreaBackgroundColor: updatedWidget.upload_area_background_color || "",
         });
         
@@ -1103,19 +1211,19 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
       widget?.border_radius ?? (currentWidget ? editForm.borderRadius : createForm.borderRadius);
     
     // Get iframe dimensions from widget or form state
-    const iframeWidth = widget?.iframe_width ?? (currentWidget ? editForm.iframeWidth : createForm.iframeWidth) ?? "100%";
-    const iframeHeight = widget?.iframe_height ?? (currentWidget ? editForm.iframeHeight : createForm.iframeHeight) ?? "600";
+    const form = currentWidget ? editForm : createForm;
+    const iframeWidth = widget?.iframe_width ?? combineValueUnit(form.iframeWidth, form.iframeWidthUnit) ?? "100%";
+    const iframeHeight = widget?.iframe_height ?? combineValueUnit(form.iframeHeight, form.iframeHeightUnit) ?? "600";
     
     // Get padding and margin values
-    const form = currentWidget ? editForm : createForm;
-    const paddingTop = widget?.iframe_padding_top ?? form.iframePaddingTop ?? "";
-    const paddingBottom = widget?.iframe_padding_bottom ?? form.iframePaddingBottom ?? "";
-    const paddingLeft = widget?.iframe_padding_left ?? form.iframePaddingLeft ?? "";
-    const paddingRight = widget?.iframe_padding_right ?? form.iframePaddingRight ?? "";
-    const marginTop = widget?.iframe_margin_top ?? form.iframeMarginTop ?? "";
-    const marginBottom = widget?.iframe_margin_bottom ?? form.iframeMarginBottom ?? "";
-    const marginLeft = widget?.iframe_margin_left ?? form.iframeMarginLeft ?? "";
-    const marginRight = widget?.iframe_margin_right ?? form.iframeMarginRight ?? "";
+    const paddingTop = widget?.iframe_padding_top ?? (form.iframePaddingTop ? combineValueUnit(form.iframePaddingTop, form.iframePaddingTopUnit) : "");
+    const paddingBottom = widget?.iframe_padding_bottom ?? (form.iframePaddingBottom ? combineValueUnit(form.iframePaddingBottom, form.iframePaddingBottomUnit) : "");
+    const paddingLeft = widget?.iframe_padding_left ?? (form.iframePaddingLeft ? combineValueUnit(form.iframePaddingLeft, form.iframePaddingLeftUnit) : "");
+    const paddingRight = widget?.iframe_padding_right ?? (form.iframePaddingRight ? combineValueUnit(form.iframePaddingRight, form.iframePaddingRightUnit) : "");
+    const marginTop = widget?.iframe_margin_top ?? (form.iframeMarginTop ? combineValueUnit(form.iframeMarginTop, form.iframeMarginTopUnit) : "");
+    const marginBottom = widget?.iframe_margin_bottom ?? (form.iframeMarginBottom ? combineValueUnit(form.iframeMarginBottom, form.iframeMarginBottomUnit) : "");
+    const marginLeft = widget?.iframe_margin_left ?? (form.iframeMarginLeft ? combineValueUnit(form.iframeMarginLeft, form.iframeMarginLeftUnit) : "");
+    const marginRight = widget?.iframe_margin_right ?? (form.iframeMarginRight ? combineValueUnit(form.iframeMarginRight, form.iframeMarginRightUnit) : "");
     
     // Build style string for wrapper div
     const wrapperStyles: string[] = ["width: 100%", `max-width: ${iframeWidth === "100%" ? "500px" : iframeWidth}`, "margin: 0 auto"];
@@ -1297,29 +1405,59 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor={`iframe-width-${mode}`}>Iframe Width</Label>
-              <Input
-                id={`iframe-width-${mode}`}
-                type="text"
-                value={form.iframeWidth}
-                onChange={(event) => updateForm("iframeWidth", event.target.value)}
-                placeholder="100% or 500px"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id={`iframe-width-${mode}`}
+                  type="text"
+                  value={form.iframeWidth}
+                  onChange={(event) => updateForm("iframeWidth", event.target.value)}
+                  placeholder="100"
+                  className="flex-1"
+                />
+                <Select
+                  value={form.iframeWidthUnit}
+                  onValueChange={(value: "px" | "%") => updateForm("iframeWidthUnit", value)}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="px">px</SelectItem>
+                    <SelectItem value="%">%</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Width of the iframe (e.g., &quot;100%&quot;, &quot;500px&quot;, &quot;800px&quot;)
+                Width of the iframe
               </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor={`iframe-height-${mode}`}>Iframe Height</Label>
-              <Input
-                id={`iframe-height-${mode}`}
-                type="text"
-                value={form.iframeHeight}
-                onChange={(event) => updateForm("iframeHeight", event.target.value)}
-                placeholder="600 or 600px"
-              />
+              <div className="flex gap-2">
+                <Input
+                  id={`iframe-height-${mode}`}
+                  type="text"
+                  value={form.iframeHeight}
+                  onChange={(event) => updateForm("iframeHeight", event.target.value)}
+                  placeholder="600"
+                  className="flex-1"
+                />
+                <Select
+                  value={form.iframeHeightUnit}
+                  onValueChange={(value: "px" | "%") => updateForm("iframeHeightUnit", value)}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="px">px</SelectItem>
+                    <SelectItem value="%">%</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Height of the iframe (e.g., &quot;600&quot;, &quot;600px&quot;, &quot;800px&quot;)
+                Height of the iframe
               </p>
             </div>
           </div>
@@ -1330,43 +1468,103 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor={`iframe-padding-top-${mode}`} className="text-xs">Top</Label>
-                  <Input
-                    id={`iframe-padding-top-${mode}`}
-                    type="text"
-                    value={form.iframePaddingTop}
-                    onChange={(event) => updateForm("iframePaddingTop", event.target.value)}
-                    placeholder="10px"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id={`iframe-padding-top-${mode}`}
+                      type="text"
+                      value={form.iframePaddingTop}
+                      onChange={(event) => updateForm("iframePaddingTop", event.target.value)}
+                      placeholder="10"
+                      className="flex-1"
+                    />
+                    <Select
+                      value={form.iframePaddingTopUnit}
+                      onValueChange={(value: "px" | "%") => updateForm("iframePaddingTopUnit", value)}
+                    >
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="px">px</SelectItem>
+                        <SelectItem value="%">%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor={`iframe-padding-bottom-${mode}`} className="text-xs">Bottom</Label>
-                  <Input
-                    id={`iframe-padding-bottom-${mode}`}
-                    type="text"
-                    value={form.iframePaddingBottom}
-                    onChange={(event) => updateForm("iframePaddingBottom", event.target.value)}
-                    placeholder="10px"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id={`iframe-padding-bottom-${mode}`}
+                      type="text"
+                      value={form.iframePaddingBottom}
+                      onChange={(event) => updateForm("iframePaddingBottom", event.target.value)}
+                      placeholder="10"
+                      className="flex-1"
+                    />
+                    <Select
+                      value={form.iframePaddingBottomUnit}
+                      onValueChange={(value: "px" | "%") => updateForm("iframePaddingBottomUnit", value)}
+                    >
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="px">px</SelectItem>
+                        <SelectItem value="%">%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor={`iframe-padding-left-${mode}`} className="text-xs">Left</Label>
-                  <Input
-                    id={`iframe-padding-left-${mode}`}
-                    type="text"
-                    value={form.iframePaddingLeft}
-                    onChange={(event) => updateForm("iframePaddingLeft", event.target.value)}
-                    placeholder="10px"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id={`iframe-padding-left-${mode}`}
+                      type="text"
+                      value={form.iframePaddingLeft}
+                      onChange={(event) => updateForm("iframePaddingLeft", event.target.value)}
+                      placeholder="10"
+                      className="flex-1"
+                    />
+                    <Select
+                      value={form.iframePaddingLeftUnit}
+                      onValueChange={(value: "px" | "%") => updateForm("iframePaddingLeftUnit", value)}
+                    >
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="px">px</SelectItem>
+                        <SelectItem value="%">%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor={`iframe-padding-right-${mode}`} className="text-xs">Right</Label>
-                  <Input
-                    id={`iframe-padding-right-${mode}`}
-                    type="text"
-                    value={form.iframePaddingRight}
-                    onChange={(event) => updateForm("iframePaddingRight", event.target.value)}
-                    placeholder="10px"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id={`iframe-padding-right-${mode}`}
+                      type="text"
+                      value={form.iframePaddingRight}
+                      onChange={(event) => updateForm("iframePaddingRight", event.target.value)}
+                      placeholder="10"
+                      className="flex-1"
+                    />
+                    <Select
+                      value={form.iframePaddingRightUnit}
+                      onValueChange={(value: "px" | "%") => updateForm("iframePaddingRightUnit", value)}
+                    >
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="px">px</SelectItem>
+                        <SelectItem value="%">%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1376,43 +1574,103 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor={`iframe-margin-top-${mode}`} className="text-xs">Top</Label>
-                  <Input
-                    id={`iframe-margin-top-${mode}`}
-                    type="text"
-                    value={form.iframeMarginTop}
-                    onChange={(event) => updateForm("iframeMarginTop", event.target.value)}
-                    placeholder="10px"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id={`iframe-margin-top-${mode}`}
+                      type="text"
+                      value={form.iframeMarginTop}
+                      onChange={(event) => updateForm("iframeMarginTop", event.target.value)}
+                      placeholder="10"
+                      className="flex-1"
+                    />
+                    <Select
+                      value={form.iframeMarginTopUnit}
+                      onValueChange={(value: "px" | "%") => updateForm("iframeMarginTopUnit", value)}
+                    >
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="px">px</SelectItem>
+                        <SelectItem value="%">%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor={`iframe-margin-bottom-${mode}`} className="text-xs">Bottom</Label>
-                  <Input
-                    id={`iframe-margin-bottom-${mode}`}
-                    type="text"
-                    value={form.iframeMarginBottom}
-                    onChange={(event) => updateForm("iframeMarginBottom", event.target.value)}
-                    placeholder="10px"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id={`iframe-margin-bottom-${mode}`}
+                      type="text"
+                      value={form.iframeMarginBottom}
+                      onChange={(event) => updateForm("iframeMarginBottom", event.target.value)}
+                      placeholder="10"
+                      className="flex-1"
+                    />
+                    <Select
+                      value={form.iframeMarginBottomUnit}
+                      onValueChange={(value: "px" | "%") => updateForm("iframeMarginBottomUnit", value)}
+                    >
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="px">px</SelectItem>
+                        <SelectItem value="%">%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor={`iframe-margin-left-${mode}`} className="text-xs">Left</Label>
-                  <Input
-                    id={`iframe-margin-left-${mode}`}
-                    type="text"
-                    value={form.iframeMarginLeft}
-                    onChange={(event) => updateForm("iframeMarginLeft", event.target.value)}
-                    placeholder="10px"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id={`iframe-margin-left-${mode}`}
+                      type="text"
+                      value={form.iframeMarginLeft}
+                      onChange={(event) => updateForm("iframeMarginLeft", event.target.value)}
+                      placeholder="10"
+                      className="flex-1"
+                    />
+                    <Select
+                      value={form.iframeMarginLeftUnit}
+                      onValueChange={(value: "px" | "%") => updateForm("iframeMarginLeftUnit", value)}
+                    >
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="px">px</SelectItem>
+                        <SelectItem value="%">%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor={`iframe-margin-right-${mode}`} className="text-xs">Right</Label>
-                  <Input
-                    id={`iframe-margin-right-${mode}`}
-                    type="text"
-                    value={form.iframeMarginRight}
-                    onChange={(event) => updateForm("iframeMarginRight", event.target.value)}
-                    placeholder="10px"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id={`iframe-margin-right-${mode}`}
+                      type="text"
+                      value={form.iframeMarginRight}
+                      onChange={(event) => updateForm("iframeMarginRight", event.target.value)}
+                      placeholder="10"
+                      className="flex-1"
+                    />
+                    <Select
+                      value={form.iframeMarginRightUnit}
+                      onValueChange={(value: "px" | "%") => updateForm("iframeMarginRightUnit", value)}
+                    >
+                      <SelectTrigger className="w-20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="px">px</SelectItem>
+                        <SelectItem value="%">%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1890,24 +2148,102 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
               </Card>
             ) : (
               <div className="space-y-6">
-                {/* Search Widget Input */}
+                {/* Widget Selector Card */}
                 <Card>
-                  <CardContent className="pt-6">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="text"
-                        placeholder="Search widgets by name or description..."
-                        value={embedSearchQuery}
-                        onChange={(e) => setEmbedSearchQuery(e.target.value)}
-                        className="pl-10"
-                      />
+                  <CardHeader>
+                    <CardTitle>Select Widget</CardTitle>
+                    <CardDescription>Choose a widget to view its embed code</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="widget-selector">Widget</Label>
+                        <Select
+                          value={selectedWidgetForEmbed || ""}
+                          onValueChange={(value) => {
+                            if (value && value !== "select-widget") {
+                              setSelectedWidgetForEmbed(value);
+                            }
+                          }}
+                        >
+                          <SelectTrigger id="widget-selector" className="w-full">
+                            <SelectValue placeholder="Select saved widget" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="select-widget" disabled>
+                              Select saved widget
+                            </SelectItem>
+                            {savedWidgets.map((widget) => (
+                              <SelectItem key={widget.id} value={widget.id}>
+                                {widget.widget_name || `Widget ${widget.id}`}
+                                {widget.is_default && (
+                                  <span className="ml-2 text-xs text-muted-foreground">(Default)</span>
+                                )}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {/* Search Widget Input (Optional) */}
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="text"
+                          placeholder="Search widgets by name or description..."
+                          value={embedSearchQuery}
+                          onChange={(e) => {
+                            setEmbedSearchQuery(e.target.value);
+                            // Auto-select first matching widget if search is active
+                            if (e.target.value.trim()) {
+                              const filtered = savedWidgets.filter((widget) => {
+                                const query = e.target.value.toLowerCase();
+                                return (
+                                  widget.widget_name?.toLowerCase().includes(query) ||
+                                  widget.widget_description?.toLowerCase().includes(query) ||
+                                  widget.widget_id?.toLowerCase().includes(query)
+                                );
+                              });
+                              if (filtered.length > 0) {
+                                setSelectedWidgetForEmbed(filtered[0].id);
+                              }
+                            }
+                          }}
+                          className="pl-10"
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Filtered Widgets */}
+                {/* CTA Card when no widget selected or Embed Code Card for Selected Widget */}
                 {(() => {
+                  if (!selectedWidgetForEmbed) {
+                    return (
+                      <Card className="border-2 border-dashed border-primary/30 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
+                        <CardContent className="py-12 px-6">
+                          <div className="text-center space-y-4">
+                            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                              <Code className="h-8 w-8 text-primary" />
+                            </div>
+                            <h3 className="text-2xl font-bold">Select a Widget to View Embed Code</h3>
+                            <p className="text-muted-foreground max-w-md mx-auto">
+                              Choose a widget from the dropdown above to view and copy its embed code. 
+                              You can then integrate it into your website.
+                            </p>
+                            <div className="pt-4">
+                              <p className="text-sm text-muted-foreground mb-2">
+                                {savedWidgets.length === 1 
+                                  ? "You have 1 saved widget" 
+                                  : `You have ${savedWidgets.length} saved widgets`}
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+
                   const filteredWidgets = savedWidgets.filter((widget) => {
                     if (!embedSearchQuery.trim()) return true;
                     const query = embedSearchQuery.toLowerCase();
@@ -1918,7 +2254,9 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                     );
                   });
 
-                  if (filteredWidgets.length === 0 && embedSearchQuery.trim()) {
+                  const widgetToShow = filteredWidgets.find((w) => w.id === selectedWidgetForEmbed);
+
+                  if (!widgetToShow) {
                     return (
                       <Card>
                         <CardContent className="text-center py-8">
@@ -1930,46 +2268,90 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                     );
                   }
 
-                  return filteredWidgets.map((widget) => {
-                    const code = getEmbedCode(widget);
-                    const widgetId = widget.id;
-                    return (
-                      <Card key={widgetId}>
-                        <CardHeader>
-                          <CardTitle>{widget.widget_name}</CardTitle>
-                          <CardDescription>
-                            {t("widgetdashboard.embed.step2")}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="relative">
-                            <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm">
-                              <code>{code}</code>
-                            </pre>
-                            <Button size="sm" className="absolute top-2 right-2" onClick={() => copyEmbedCode(widget)}>
-                              {copiedWidgetId === widgetId ? (
-                                <>
-                                  <Check className="h-4 w-4 mr-2" /> {t("widgetdashboard.embed.copied")}
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="h-4 w-4 mr-2" /> {t("widgetdashboard.embed.copy")}
-                                </>
+                  const code = getEmbedCode(widgetToShow);
+                  const widgetId = widgetToShow.id;
+
+                  return (
+                    <Card key={widgetId} className="border-2">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="flex items-center gap-2">
+                              {widgetToShow.widget_name}
+                              {widgetToShow.is_default && (
+                                <Badge variant="secondary" className="text-xs">Default</Badge>
                               )}
-                            </Button>
+                            </CardTitle>
+                            <CardDescription className="mt-1">
+                              Copy the embed code below to integrate this widget into your website
+                            </CardDescription>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            <p className="mb-2">{t("widgetdashboard.embed.steps")}</p>
-                            <ol className="list-decimal list-inside space-y-1 ml-2">
-                              <li>{t("widgetdashboard.embed.step1")}</li>
-                              <li>{t("widgetdashboard.embed.step2")}</li>
-                              <li>{t("widgetdashboard.embed.step3")}</li>
-                            </ol>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  });
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="relative">
+                          <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm border">
+                            <code className="text-xs">{code}</code>
+                          </pre>
+                          <Button 
+                            size="sm" 
+                            className="absolute top-3 right-3" 
+                            onClick={() => copyEmbedCode(widgetToShow)}
+                          >
+                            {copiedWidgetId === widgetId ? (
+                              <>
+                                <Check className="h-4 w-4 mr-2" /> Copied!
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-4 w-4 mr-2" /> Copy Code
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                        
+                        <Card className="bg-muted/50">
+                          <CardContent className="pt-6">
+                            <div className="text-sm space-y-3">
+                              <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold mt-0.5">
+                                  1
+                                </div>
+                                <div>
+                                  <p className="font-medium mb-1">Copy the embed code</p>
+                                  <p className="text-muted-foreground text-xs">
+                                    Click the &quot;Copy Code&quot; button above to copy the iframe code to your clipboard
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold mt-0.5">
+                                  2
+                                </div>
+                                <div>
+                                  <p className="font-medium mb-1">Paste into your website</p>
+                                  <p className="text-muted-foreground text-xs">
+                                    Paste the code into your HTML where you want the widget to appear
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold mt-0.5">
+                                  3
+                                </div>
+                                <div>
+                                  <p className="font-medium mb-1">Test your integration</p>
+                                  <p className="text-muted-foreground text-xs">
+                                    Visit your website to ensure the widget displays correctly
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </CardContent>
+                    </Card>
+                  );
                 })()}
               </div>
             )}
