@@ -657,7 +657,7 @@ export function DashboardClient({
                 </div>
                 <div>
                   <CardTitle className="text-lg whitespace-nowrap">{t("dashboard.card.mealplanner.title")}</CardTitle>
-                  <CardDescription>
+                  <CardDescription className="whitespace-nowrap">
                     {isPremium ? t("dashboard.card.mealplanner.description") : t("dashboard.card.mealplanner.premium")}
                   </CardDescription>
                 </div>
