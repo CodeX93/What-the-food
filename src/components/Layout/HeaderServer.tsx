@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Utensils } from "lucide-react";
 import { NavigationLinks } from "./NavigationLinks";
 import { HeaderClient } from "./HeaderClient";
+import { Logo } from "./Logo";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 
 export async function HeaderServer() {
@@ -14,11 +14,8 @@ export async function HeaderServer() {
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 py-4 flex items-center gap-6">
-        <Link href="/" className="flex items-center space-x-2">
-          <Utensils className="h-8 w-8 text-primary" />
-          <span className="text-2xl font-bold bg-gradient-hero bg-clip-text text-transparent">
-            WhatTheFood
-          </span>
+        <Link href="/" className="flex items-center">
+          <Logo />
         </Link>
         <div className="hidden md:flex flex-1">
           <NavigationLinks className="ml-6 flex items-center space-x-6" />
