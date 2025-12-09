@@ -80,6 +80,17 @@ export function AuthClient() {
       if (error) throw error;
 
       if (data.user) {
+        // Fire signup lifecycle email (non-blocking)
+        supabase.functions
+          .invoke("send-lifecycle-email", {
+            body: {
+              event_type: "signup",
+              email,
+              name: data.user.user_metadata?.full_name || null,
+            },
+          })
+          .catch((err) => console.warn("send-lifecycle-email signup failed", err?.message || err));
+
         setSignupEmail(email);
         setSignupUserId(data.user.id);
         setSignupSession(data.session);

@@ -1204,6 +1204,34 @@ export function FoodResultsClient() {
       setIngredientInput((analysis.ingredients ?? []).join("\n"));
     }
   }, [analysis]);
+
+  // Suppress TinyAdz errors to prevent breaking the page
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleError = (e: ErrorEvent) => {
+      if (e.message?.includes("widgets.map") || e.message?.includes("TinyAdz") || e.filename?.includes("apitiny.net")) {
+        e.preventDefault();
+        return true;
+      }
+    };
+
+    const handleRejection = (e: PromiseRejectionEvent) => {
+      const msg = e.reason?.message || e.reason?.toString() || "";
+      if (msg.includes("widgets.map") || msg.includes("TinyAdz")) {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener("error", handleError, true);
+    window.addEventListener("unhandledrejection", handleRejection);
+
+    return () => {
+      window.removeEventListener("error", handleError, true);
+      window.removeEventListener("unhandledrejection", handleRejection);
+    };
+  }, []);
+
   // Check if YouTube video is available
   useEffect(() => {
     const checkVideoAvailability = async () => {

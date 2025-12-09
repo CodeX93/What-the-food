@@ -7,6 +7,53 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+const MAILERSEND_API_KEY = Deno.env.get('MAILERSEND_API_KEY');
+const MAILERSEND_FROM_EMAIL = Deno.env.get('MAILERSEND_FROM_EMAIL') || 'hi@odehahwal.com';
+const MAILERSEND_FROM_NAME = Deno.env.get('MAILERSEND_FROM_NAME') || 'WhatTheFood';
+const TEMPLATE_SIGNUP = 'jy7zpl9dw9pg5vx6';
+
+async function sendSignupEmail(email: string, fullName?: string | null) {
+  try {
+    if (!MAILERSEND_API_KEY) {
+      console.warn('MAILERSEND_API_KEY not set; skipping signup email');
+      return;
+    }
+
+    const payload = {
+      from: {
+        email: MAILERSEND_FROM_EMAIL,
+        name: MAILERSEND_FROM_NAME,
+      },
+      to: [{ email }],
+      template_id: TEMPLATE_SIGNUP,
+      personalization: [
+        {
+          email,
+          data: {
+            name: fullName || 'there',
+          },
+        },
+      ],
+    };
+
+    const res = await fetch('https://api.mailersend.com/v1/email', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${MAILERSEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('Signup email send failed:', res.status, errText);
+    }
+  } catch (err) {
+    console.error('Signup email error:', err?.message || err);
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -46,6 +93,7 @@ serve(async (req) => {
 
     // Upsert via service role (bypass RLS)
     const admin = createClient(supabaseUrl, serviceRole);
+
     const { error: upsertError } = await admin
       .from('profiles')
       .upsert({ id: userId, email, full_name: full_name || null, bio: bio || null }, { onConflict: 'id' });
@@ -53,6 +101,9 @@ serve(async (req) => {
     if (upsertError) {
       return new Response(JSON.stringify({ error: 'Failed to save profile', details: upsertError.message }), { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
     }
+
+    // Send signup email
+    await sendSignupEmail(email, full_name || null);
 
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } });
   } catch (e) {

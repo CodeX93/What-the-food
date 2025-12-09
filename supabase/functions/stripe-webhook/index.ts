@@ -13,6 +13,64 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature',
 };
 
+const MAILERSEND_API_KEY = Deno.env.get('MAILERSEND_API_KEY');
+const MAILERSEND_FROM_EMAIL = Deno.env.get('MAILERSEND_FROM_EMAIL') || 'hi@odehahwal.com';
+const MAILERSEND_FROM_NAME = Deno.env.get('MAILERSEND_FROM_NAME') || 'WhatTheFood';
+const MAILERSEND_TEMPLATE_UPGRADE = 'v69oxl5dxyz4785k';
+const MAILERSEND_TEMPLATE_MONTHLY_TO_ANNUAL = 'zr6ke4n67emlon12';
+const MAILERSEND_TEMPLATE_DOWNGRADE = Deno.env.get('MAILERSEND_TEMPLATE_DOWNGRADE') || '';
+
+Deno.console.log('MailerSend configured:', {
+  hasApiKey: !!MAILERSEND_API_KEY,
+  fromEmail: MAILERSEND_FROM_EMAIL,
+  fromName: MAILERSEND_FROM_NAME,
+});
+
+async function sendMailerSendEmail(toEmail: string, templateId: string, data: Record<string, any> = {}) {
+  if (!MAILERSEND_API_KEY) {
+    console.warn('MAILERSEND_API_KEY not configured; skipping email send');
+    return;
+  }
+
+  if (!templateId) {
+    console.warn('No templateId provided; skipping email send');
+    return;
+  }
+
+  try {
+    const payload = {
+      from: {
+        email: MAILERSEND_FROM_EMAIL,
+        name: MAILERSEND_FROM_NAME,
+      },
+      to: [{ email: toEmail }],
+      template_id: templateId,
+      personalization: [
+        {
+          email: toEmail,
+          data,
+        },
+      ],
+    };
+
+    const res = await fetch('https://api.mailersend.com/v1/email', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${MAILERSEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error('MailerSend send failed:', res.status, errText);
+    }
+  } catch (err) {
+    console.error('MailerSend error:', err?.message || err);
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle OPTIONS preflight
   if (req.method === 'OPTIONS') {
@@ -316,6 +374,41 @@ async function updatePlatformSubscription(
 ) {
   console.log('Updating platform subscription:', { userId, priceId, subscriptionId, planId });
 
+  // Fetch existing subscription to detect upgrades/downgrades
+  const { data: existingSub } = await supabase
+    .from('platform_subscriptions')
+    .select('subscription_type,billing_cycle,platform_plan_id,stripe_price_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  // Fetch current user profile for email
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('email, full_name')
+    .eq('id', userId)
+    .maybeSingle();
+
+  const toEmail = profile?.email || null;
+  const fullName = profile?.full_name || null;
+
+  // Fetch previous plan data if available (for downgrade detection)
+  let previousPlan: any = null;
+  if (existingSub?.platform_plan_id) {
+    const { data: oldPlan } = await supabase
+      .from('platform_plans')
+      .select('*')
+      .eq('id', existingSub.platform_plan_id)
+      .maybeSingle();
+    previousPlan = oldPlan;
+  } else if (existingSub?.stripe_price_id) {
+    const { data: oldPlan } = await supabase
+      .from('platform_plans')
+      .select('*')
+      .eq('stripe_price_id', existingSub.stripe_price_id)
+      .maybeSingle();
+    previousPlan = oldPlan;
+  }
+
   // Step 1: Fetch plan details from platform_plans table
   let planData: any = null;
   let finalPlanId = planId;
@@ -433,6 +526,56 @@ async function updatePlatformSubscription(
       subscription_type: updateData.subscription_type,
       plan_id: finalPlanId,
     });
+  }
+
+  // Step 5: Send email notifications based on change
+  try {
+    let eventType: 'upgrade' | 'monthly_to_annual' | 'downgrade' | null = null;
+
+    if (subscriptionType === 'premium') {
+      if (!existingSub || existingSub.subscription_type !== 'premium') {
+        eventType = 'upgrade';
+      } else {
+        const prevCycle = (existingSub.billing_cycle || '').toLowerCase();
+        const newCycle = (billingCycle || '').toLowerCase();
+        const prevPrice = previousPlan?.price_cents || null;
+        const newPrice = planData?.price_cents || null;
+
+        const isMonthly = prevCycle.startsWith('month') || prevCycle === 'monthly';
+        const isAnnual = newCycle.startsWith('year') || newCycle === 'annual';
+
+        if (isMonthly && isAnnual) {
+          eventType = 'monthly_to_annual';
+        } else if (prevPrice && newPrice && newPrice < prevPrice) {
+          eventType = 'downgrade';
+        }
+      }
+    } else if (existingSub?.subscription_type === 'premium' && subscriptionType !== 'premium') {
+      // Cancel / move to free counts as downgrade
+      eventType = 'downgrade';
+    }
+
+    const templateId =
+      eventType === 'upgrade'
+        ? MAILERSEND_TEMPLATE_UPGRADE
+        : eventType === 'monthly_to_annual'
+        ? MAILERSEND_TEMPLATE_MONTHLY_TO_ANNUAL
+        : eventType === 'downgrade'
+        ? MAILERSEND_TEMPLATE_DOWNGRADE
+        : '';
+
+    if (templateId && toEmail) {
+      await sendMailerSendEmail(toEmail, templateId, {
+        name: fullName || 'there',
+        plan: planData?.name || 'Premium',
+        billing_cycle: billingCycle,
+        previous_plan: previousPlan?.name || null,
+      });
+    } else if (!templateId && eventType) {
+      console.warn(`No template configured for event ${eventType}, skipping email`);
+    }
+  } catch (emailErr: any) {
+    console.error('Failed to send subscription lifecycle email:', emailErr?.message || emailErr);
   }
 }
 

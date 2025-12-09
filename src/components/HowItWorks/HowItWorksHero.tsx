@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowUpRight } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { ArrowUpRight, Flame, Beef, Apple, Droplet, Wheat, Candy } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -83,59 +83,79 @@ export function HowItWorksHero() {
             </div>
           </div>
 
-          {/* Right Section - Preview Card */}
+          {/* Right Section - Nutrition Summary Preview */}
           <div className="w-full max-w-lg lg:max-w-[32rem] xl:max-w-[36rem] self-start lg:ml-auto lg:mt-1.5 xl:mt-2">
-            <Card className="shadow-strong">
-              <CardContent className="p-4 sm:p-6 md:p-8 space-y-6">
-                <div className="flex items-center justify-between">
+            <Card className="shadow-strong bg-white/80 dark:bg-background border">
+              <CardHeader className="flex flex-col gap-3 pb-4">
+                <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("howitworkshero.livescan")}</p>
-                    <h2 className="text-2xl font-semibold text-foreground">Mediterranean Bowl</h2>
+                    <p className="text-sm font-semibold text-muted-foreground">{t("howitworkshero.nutrition.summary")}</p>
+                    <p className="text-xs text-muted-foreground/80">{t("howitworkshero.nutrition.projectedWeight")}</p>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary-hover">
-                    {t("howitworkshero.reviewdetails")}
-                    <ArrowUpRight className="ml-1 h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                    <p className="text-xs uppercase tracking-wide text-primary/70">{t("howitworkshero.calories")}</p>
-                    <p className="text-2xl font-bold text-primary">540 kcal</p>
-                    <p className="text-xs text-muted-foreground mt-1">{t("howitworkshero.onpartarget")}</p>
-                  </div>
-                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-                    <p className="text-xs uppercase tracking-wide text-primary/70">{t("howitworkshero.protein")}</p>
-                    <p className="text-2xl font-bold text-primary">32 g</p>
-                    <p className="text-xs text-muted-foreground mt-1">{t("howitworkshero.greatbalance")}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">{t("howitworkshero.nutrition.servings")}</span>
+                    <input
+                      type="number"
+                      min={1}
+                      defaultValue={1}
+                      className="w-16 rounded-md border px-2 py-1 text-sm bg-background"
+                      readOnly
+                    />
                   </div>
                 </div>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-lg border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("howitworkshero.fiber")}</p>
-                    <p className="text-lg font-semibold text-foreground">11 g</p>
-                  </div>
-                  <div className="rounded-lg border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("howitworkshero.carbs")}</p>
-                    <p className="text-lg font-semibold text-foreground">58 g</p>
-                  </div>
-                  <div className="rounded-lg border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-white/5 p-3">
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("howitworkshero.fats")}</p>
-                    <p className="text-lg font-semibold text-foreground">18 g</p>
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {t("howitworkshero.nutrition.description")}
+                </p>
                 <div className="flex flex-wrap gap-2">
-                  <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                    Chickpeas
-                  </span>
-                  <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                    Quinoa
-                  </span>
-                  <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                    Olive Oil
-                  </span>
-                  <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                    Feta
-                  </span>
+                  {[
+                    { key: "pasta", color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+                    { key: "shrimp", color: "bg-sky-50 text-sky-700 border-sky-100" },
+                    { key: "tagliatelle", color: "bg-pink-50 text-pink-700 border-pink-100" },
+                    { key: "tomatoSauce", color: "bg-orange-50 text-orange-700 border-orange-100" },
+                    { key: "seafood", color: "bg-teal-50 text-teal-700 border-teal-100" },
+                    { key: "italian", color: "bg-blue-50 text-blue-700 border-blue-100" },
+                  ].map((tag) => (
+                    <span
+                      key={tag.key}
+                      className={`rounded-full ${tag.color} border px-3 py-1 text-xs font-semibold`}
+                    >
+                      {t(`howitworkshero.nutrition.tags.${tag.key}`)}
+                    </span>
+                  ))}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-0">
+                <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200 text-sm p-3 border border-emerald-100 dark:border-emerald-800">
+                  {t("howitworkshero.nutrition.servingCalculation")}
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {[
+                    { labelKey: "calories", value: "485", icon: Flame, color: "bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 border-amber-100 dark:border-amber-800" },
+                    { labelKey: "protein", value: "28g", icon: Beef, color: "bg-rose-50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-200 border-rose-100 dark:border-rose-800" },
+                    { labelKey: "carbs", value: "55g", icon: Wheat, color: "bg-yellow-50 dark:bg-yellow-950/30 text-yellow-800 dark:text-yellow-200 border-yellow-100 dark:border-yellow-800" },
+                    { labelKey: "fat", value: "18g", icon: Droplet, color: "bg-sky-50 dark:bg-sky-950/30 text-sky-800 dark:text-sky-200 border-sky-100 dark:border-sky-800" },
+                    { labelKey: "fiber", value: "4g", icon: Apple, color: "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200 border-emerald-100 dark:border-emerald-800" },
+                    { labelKey: "sugar", value: "8g", icon: Candy, color: "bg-pink-50 dark:bg-pink-950/30 text-pink-800 dark:text-pink-200 border-pink-100 dark:border-pink-800" },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    const label = item.labelKey === "fat" 
+                      ? t("howitworkshero.nutrition.fat")
+                      : item.labelKey === "sugar"
+                      ? t("howitworkshero.nutrition.sugar")
+                      : t(`howitworkshero.${item.labelKey}`);
+                    return (
+                      <div
+                        key={item.labelKey}
+                        className={`rounded-lg ${item.color} border p-4 flex flex-col gap-1 shadow-sm`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Icon className="h-4 w-4" />
+                          <span className="text-sm font-semibold">{label}</span>
+                        </div>
+                        <span className="text-xl font-bold">{item.value}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
