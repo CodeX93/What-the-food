@@ -754,7 +754,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           console.log("Loading API stats immediately for user:", user.id);
           loadApiStats(user.id);
         }
-        loadStatsWhenVisible();
+          loadStatsWhenVisible();
       } catch (error: any) {
         if (cancelled) return;
         console.error("Error loading data:", error);
@@ -1848,34 +1848,34 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                   <p className="text-sm text-muted-foreground">
                     Free plan allows 1 widget. Upgrade to create unlimited widgets and access premium features.
                   </p>
-                </div>
+                    </div>
                 <Button onClick={() => router.push("/plans")} className="text-sm px-6">
                   {t("widgetdashboard.premium.upgrade")} <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
+                  </Button>
               </div>
             </CardContent>
           </Card>
         )}
         
-        {!isPremium && savedWidgets.length > 0 && (
-          <Card className="mb-8 border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
-            <CardContent className="py-6 px-6">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="flex-1 text-center md:text-left">
-                  <h3 className="text-lg font-bold mb-1">{t("widgetdashboard.premium.title")}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {t("widgetdashboard.premium.description")}
-                  </p>
-                </div>
-                <Button onClick={() => router.push("/plans")} className="text-sm px-6">
-                  {t("widgetdashboard.premium.upgrade")} <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+            {!isPremium && savedWidgets.length > 0 && (
+              <Card className="mb-8 border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
+                <CardContent className="py-6 px-6">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div className="flex-1 text-center md:text-left">
+                      <h3 className="text-lg font-bold mb-1">{t("widgetdashboard.premium.title")}</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {t("widgetdashboard.premium.description")}
+                      </p>
+                    </div>
+                    <Button onClick={() => router.push("/plans")} className="text-sm px-6">
+                      {t("widgetdashboard.premium.upgrade")} <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
         
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
           <TabsList>
             <TabsTrigger value="saved-widgets">
               <Bookmark className="h-4 w-4 mr-2" /> {t("widgetdashboard.tabs.saved")} ({savedWidgets.length})
@@ -2047,8 +2047,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                                       disabled={isFreePlan}
                                       className={isFreePlan ? "cursor-not-allowed opacity-50" : ""}
                                     >
-                                      <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
                                   </span>
                                 </TooltipTrigger>
                                 {isFreePlan && (
@@ -2111,24 +2111,24 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-                <div className="space-y-4">
-                  {renderWidgetForm("create")}
-                </div>
-                <div className="hidden lg:block">
-                  <Card className="h-full flex flex-col">
-                    <CardHeader>
-                      <CardTitle>{t("widgetdashboard.form.preview")}</CardTitle>
-                      <CardDescription>See how your widget will look in real-time</CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-1 flex items-center justify-center">
-                      <div className="w-full max-w-md mx-auto">
-                        <WidgetPreview form={createForm} />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+              <div className="space-y-4">
+                {renderWidgetForm("create")}
               </div>
+              <div className="hidden lg:block">
+                <Card className="h-full flex flex-col">
+                  <CardHeader>
+                    <CardTitle>{t("widgetdashboard.form.preview")}</CardTitle>
+                    <CardDescription>See how your widget will look in real-time</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-1 flex items-center justify-center">
+                    <div className="w-full max-w-md mx-auto">
+                      <WidgetPreview form={createForm} />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
             )}
           </TabsContent>
 
@@ -2186,12 +2186,12 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                       </div>
                       
                       {/* Search Widget Input (Optional) */}
-                      <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          type="text"
-                          placeholder="Search widgets by name or description..."
-                          value={embedSearchQuery}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        placeholder="Search widgets by name or description..."
+                        value={embedSearchQuery}
                           onChange={(e) => {
                             setEmbedSearchQuery(e.target.value);
                             // Auto-select first matching widget if search is active
@@ -2209,8 +2209,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                               }
                             }
                           }}
-                          className="pl-10"
-                        />
+                        className="pl-10"
+                      />
                       </div>
                     </div>
                   </CardContent>
@@ -2271,9 +2271,9 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                   const code = getEmbedCode(widgetToShow);
                   const widgetId = widgetToShow.id;
 
-                  return (
+                    return (
                     <Card key={widgetId} className="border-2">
-                      <CardHeader>
+                        <CardHeader>
                         <div className="flex items-center justify-between">
                           <div>
                             <CardTitle className="flex items-center gap-2">
@@ -2284,31 +2284,31 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                             </CardTitle>
                             <CardDescription className="mt-1">
                               Copy the embed code below to integrate this widget into your website
-                            </CardDescription>
+                          </CardDescription>
                           </div>
                         </div>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="relative">
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="relative">
                           <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm border">
                             <code className="text-xs">{code}</code>
-                          </pre>
+                            </pre>
                           <Button 
                             size="sm" 
                             className="absolute top-3 right-3" 
                             onClick={() => copyEmbedCode(widgetToShow)}
                           >
-                            {copiedWidgetId === widgetId ? (
-                              <>
+                              {copiedWidgetId === widgetId ? (
+                                <>
                                 <Check className="h-4 w-4 mr-2" /> Copied!
-                              </>
-                            ) : (
-                              <>
+                                </>
+                              ) : (
+                                <>
                                 <Copy className="h-4 w-4 mr-2" /> Copy Code
-                              </>
-                            )}
-                          </Button>
-                        </div>
+                                </>
+                              )}
+                            </Button>
+                          </div>
                         
                         <Card className="bg-muted/50">
                           <CardContent className="pt-6">
@@ -2316,14 +2316,14 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                               <div className="flex items-start gap-3">
                                 <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold mt-0.5">
                                   1
-                                </div>
+                    </div>
                                 <div>
                                   <p className="font-medium mb-1">Copy the embed code</p>
                                   <p className="text-muted-foreground text-xs">
                                     Click the &quot;Copy Code&quot; button above to copy the iframe code to your clipboard
                                   </p>
-                                </div>
-                              </div>
+                  </div>
+                </div>
                               <div className="flex items-start gap-3">
                                 <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold mt-0.5">
                                   2
@@ -2339,16 +2339,16 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                                 <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold mt-0.5">
                                   3
                                 </div>
-                                <div>
+                        <div>
                                   <p className="font-medium mb-1">Test your integration</p>
                                   <p className="text-muted-foreground text-xs">
                                     Visit your website to ensure the widget displays correctly
                                   </p>
-                                </div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
+                        </div>
+                      </div>
+                </div>
+              </CardContent>
+            </Card>
                       </CardContent>
                     </Card>
                   );

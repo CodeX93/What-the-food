@@ -108,7 +108,7 @@ export function WidgetLanding() {
         <div className="container mx-auto px-4 py-16 sm:py-20 lg:py-24">
           <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
             <div className="space-y-4">
-              <p className="text-sm font-semibold uppercase tracking-wider text-primary">How it works</p>
+              <p className="text-sm font-semibold uppercase tracking-wider text-primary">{t("widget.rich.how.label")}</p>
               <h3 className="text-3xl sm:text-4xl font-bold leading-tight">{t("widget.rich.how.title")}</h3>
               <p className="text-base sm:text-lg text-muted-foreground">{t("widget.rich.how.subtitle")}</p>
               <div className="space-y-3">
@@ -171,7 +171,7 @@ export function WidgetLanding() {
         <div className="container mx-auto px-4 py-16 sm:py-20 lg:py-24">
           <div className="grid lg:grid-cols-2 gap-10 lg:gap-14">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wider text-primary">Use cases</p>
+              <p className="text-sm font-semibold uppercase tracking-wider text-primary">{t("widget.rich.usecases.label")}</p>
               <h3 className="text-3xl sm:text-4xl font-bold leading-tight mb-4">{t("widget.rich.usecases.title")}</h3>
               <p className="text-base sm:text-lg text-muted-foreground mb-6">{t("widget.rich.usecases.subtitle")}</p>
               <ul className="space-y-3 text-sm sm:text-base text-muted-foreground">
