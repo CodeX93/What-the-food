@@ -26,11 +26,11 @@ export function HowItWorksHero() {
   return (
     <section
       className="relative flex items-center justify-center overflow-hidden bg-white dark:bg-[#000000] transition-colors duration-300 min-h-screen"
-      style={headerHeight ? { minHeight: `calc(100vh - ${headerHeight}px)` } : undefined}
+      style={{ minHeight: "calc(100vh - 80px)" }}
     >
       <div className="absolute inset-0 bg-gradient-hero opacity-5 dark:opacity-10" />
       <div className="container mx-auto px-4 relative w-full z-10 py-[19px] sm:py-[35px] md:py-[43px] lg:py-[51px] flex items-center">
-        <div className="w-full flex flex-col lg:flex-row items-center lg:items-start justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
+        <div className="w-full flex flex-col lg:flex-row items-center lg:items-center justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
           {/* Left Section - Content */}
           <div className="w-full text-center lg:text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
@@ -84,12 +84,13 @@ export function HowItWorksHero() {
           </div>
 
           {/* Right Section - Nutrition Summary Preview */}
-          <div className="w-full max-w-lg lg:max-w-[32rem] xl:max-w-[36rem] self-start lg:ml-auto lg:mt-1.5 xl:mt-2">
+          <div className="w-full max-w-xl lg:max-w-[34rem] xl:max-w-[38rem] self-start lg:ml-auto lg:mt-1 xl:mt-1.5">
             <Card className="shadow-strong bg-white/80 dark:bg-background border">
-              <CardHeader className="flex flex-col gap-3 pb-4">
+              <CardHeader className="flex flex-col gap-1.5 pb-2">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-muted-foreground">{t("howitworkshero.nutrition.summary")}</p>
+                    <p className="text-lg font-semibold text-foreground">{t("howitworkshero.nutrition.foodTitle")}</p>
+                    <p className="text-sm font-semibold text-muted-foreground mt-1">{t("howitworkshero.nutrition.summary")}</p>
                     <p className="text-xs text-muted-foreground/80">{t("howitworkshero.nutrition.projectedWeight")}</p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -124,11 +125,11 @@ export function HowItWorksHero() {
                   ))}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4 pt-0">
-                <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200 text-sm p-3 border border-emerald-100 dark:border-emerald-800">
+              <CardContent className="space-y-2.5 pt-0 pb-3">
+                <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200 text-sm p-2.5 border border-emerald-100 dark:border-emerald-800">
                   {t("howitworkshero.nutrition.servingCalculation")}
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
                   {[
                     { labelKey: "calories", value: "485", icon: Flame, color: "bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 border-amber-100 dark:border-amber-800" },
                     { labelKey: "protein", value: "28g", icon: Beef, color: "bg-rose-50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-200 border-rose-100 dark:border-rose-800" },

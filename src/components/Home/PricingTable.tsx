@@ -4,7 +4,7 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getPlatformSubscription } from "@/utils/subscription";
 import { useToast } from "@/hooks/use-toast";
@@ -24,50 +24,155 @@ const PricingTable = () => {
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useLanguage();
-  
-  const plans = [
-    {
-      name: t("pricing.free.name"),
-      price: t("pricing.free.price"),
-      period: t("pricing.free.period"),
-      description: t("pricing.free.description"),
-      features: [
-        t("pricing.free.feature1"),
-        t("pricing.free.feature2"),
-        t("pricing.free.feature3"),
-        t("pricing.free.feature4"),
-        t("pricing.free.feature5"),
-        t("pricing.free.feature6"),
-        t("pricing.free.feature7"),
-      ],
-      cta: t("pricing.free.cta"),
-      popular: false,
-    },
-    {
-      name: t("pricing.premium.name"),
-      price: t("pricing.premium.price"),
-      period: t("pricing.premium.period"),
-      yearlyPrice: t("pricing.premium.yearly"),
-      description: t("pricing.premium.description"),
-      features: [
-        t("pricing.premium.feature1"),
-        t("pricing.premium.feature2"),
-        t("pricing.premium.feature3"),
-        t("pricing.premium.feature4"),
-        t("pricing.premium.feature5"),
-        t("pricing.premium.feature6"),
-        t("pricing.premium.feature7"),
-      ],
-      cta: t("pricing.premium.cta"),
-      popular: true,
-    },
-  ];
+  // Parse features from JSON stored in DB
+  const parseFeatures = (features: any): string[] => {
+    if (!features) return [];
+    if (Array.isArray(features)) return features;
+    if (typeof features === "string") {
+      try {
+        const parsed = JSON.parse(features);
+        if (Array.isArray(parsed)) return parsed;
+        if (typeof parsed === "string") {
+          const doubleParsed = JSON.parse(parsed);
+          if (Array.isArray(doubleParsed)) return doubleParsed;
+        }
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+
+  type PlatformPlan = {
+    id: string;
+    name: string;
+    description?: string;
+    price_cents: number;
+    billing_cycle?: "free" | "monthly" | "yearly";
+    interval?: string;
+    features?: any;
+  };
+
+  type DisplayPlan = {
+    type: "free" | "premium";
+    name: string;
+    price: string;
+    period: string;
+    yearlyPrice?: string;
+    description: string;
+    features: string[];
+    cta: string;
+    popular?: boolean;
+  };
+
+  const formatPrice = (priceCents?: number) => {
+    if (!priceCents || priceCents <= 0) return "$0";
+    return `$${(priceCents / 100).toFixed(2)}`;
+  };
+
+  const [fetchedPlans, setFetchedPlans] = useState<PlatformPlan[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [planToCancel, setPlanToCancel] = useState<string | null>(null);
+
+  // Load active plans from Supabase (same source as /plans)
+  useEffect(() => {
+    let cancelled = false;
+    const loadPlans = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("platform_plans")
+          .select("*")
+          .eq("is_active", true)
+          .order("price_cents", { ascending: true });
+
+        if (error) throw error;
+        if (!cancelled && data) {
+          setFetchedPlans(
+            data.map((plan: any) => ({
+              ...plan,
+              features: parseFeatures(plan.features),
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("Error fetching plans for pricing:", err);
+      }
+    };
+
+    void loadPlans();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Build the two display cards using DB data where available
+  const plans: DisplayPlan[] = useMemo(() => {
+    const freePlan = fetchedPlans.find(
+      (p) =>
+        p.billing_cycle === "free" ||
+        p.interval === "free" ||
+        (p.price_cents === 0 && !p.billing_cycle)
+    );
+    const premiumMonthly = fetchedPlans.find(
+      (p) => p.billing_cycle === "monthly" || p.interval === "month"
+    );
+    const premiumYearly = fetchedPlans.find(
+      (p) => p.billing_cycle === "yearly" || p.interval === "year"
+    );
+
+    const freeDisplay: DisplayPlan = {
+      type: "free",
+      name: freePlan?.name || t("pricing.free.name"),
+      price: freePlan ? formatPrice(freePlan.price_cents) : t("pricing.free.price"),
+      period: freePlan?.interval ? `/${freePlan.interval}` : t("pricing.free.period"),
+      description: freePlan?.description || t("pricing.free.description"),
+      features:
+        (freePlan?.features as string[] | undefined)?.length
+          ? (freePlan?.features as string[])
+          : [
+              t("pricing.free.feature1"),
+              t("pricing.free.feature2"),
+              t("pricing.free.feature3"),
+              t("pricing.free.feature4"),
+              t("pricing.free.feature5"),
+              t("pricing.free.feature6"),
+              t("pricing.free.feature7"),
+            ],
+      cta: t("pricing.free.cta"),
+      popular: false,
+    };
+
+    const premiumDisplay: DisplayPlan = {
+      type: "premium",
+      name: premiumMonthly?.name || t("pricing.premium.name"),
+      price: premiumMonthly ? formatPrice(premiumMonthly.price_cents) : t("pricing.premium.price"),
+      period: premiumMonthly?.interval ? `/${premiumMonthly.interval}` : t("pricing.premium.period"),
+      yearlyPrice: premiumYearly
+        ? `${formatPrice(premiumYearly.price_cents)}/year`
+        : t("pricing.premium.yearly"),
+      description: premiumMonthly?.description || t("pricing.premium.description"),
+      features:
+        (premiumMonthly?.features as string[] | undefined)?.length
+          ? (premiumMonthly?.features as string[])
+          : [
+              t("pricing.premium.feature1"),
+              t("pricing.premium.feature2"),
+              t("pricing.premium.feature3"),
+              t("pricing.premium.feature4"),
+              t("pricing.premium.feature5"),
+              t("pricing.premium.feature6"),
+              t("pricing.premium.feature7"),
+            ],
+      cta: t("pricing.premium.cta"),
+      popular: true,
+    };
+
+    return [freeDisplay, premiumDisplay];
+  }, [fetchedPlans, t]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -104,16 +209,16 @@ const PricingTable = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const getPlanCTA = (planName: string) => {
+  const getPlanCTA = (planType: "free" | "premium", planName: string) => {
     if (!isLoggedIn || !subscription) {
-      return planName === t("pricing.free.name") ? t("pricing.free.cta") : t("pricing.premium.cta");
+      return planType === "free" ? t("pricing.free.cta") : t("pricing.premium.cta");
     }
 
     const isPremium = subscription.subscription_type === "premium" && subscription.is_active;
     const isFree = subscription.subscription_type === "free";
     const billingCycle = subscription.billing_cycle;
 
-    if (planName === "Premium") {
+    if (planType === "premium") {
       // For premium plan - if user is on this plan, show billing cycle switch option
       if (isPremium) {
         if (billingCycle === "monthly") {
@@ -125,24 +230,23 @@ const PricingTable = () => {
         return "Change to another plan";
       }
       return "Upgrade Now";
-    } else {
-      // For free plan - if user is on free plan, show "Current Plan"
-      if (isFree) {
-        return t("pricing.current");
-      }
-      // If user is on premium, they can't cancel to free from here, just show "Get Started"
-      return "Get Started";
     }
+    // For free plan - if user is on free plan, show "Current Plan"
+    if (isFree) {
+      return t("pricing.current");
+    }
+    // If user is on premium, they can't cancel to free from here, just show "Get Started"
+    return "Get Started";
   };
 
-  const isCurrentPlan = (planName: string) => {
+  const isCurrentPlan = (planType: "free" | "premium", planName: string) => {
     if (!isLoggedIn || !subscription) return false;
     const isPremium = subscription.subscription_type === "premium" && subscription.is_active;
     const isFree = subscription.subscription_type === "free";
     
-    if (planName === "Premium") {
+    if (planType === "premium") {
       return isPremium;
-    } else if (planName === "Free") {
+    } else if (planType === "free") {
       return isFree;
     }
     return false;
@@ -203,14 +307,14 @@ const PricingTable = () => {
     }
   };
 
-  const handlePlanClick = (e: React.MouseEvent, planName: string) => {
+  const handlePlanClick = (e: React.MouseEvent, plan: DisplayPlan) => {
     e.preventDefault();
     if (!isLoggedIn) {
       router.push("/auth");
       return;
     }
 
-    const cta = getPlanCTA(planName);
+    const cta = getPlanCTA(plan.type, plan.name);
     
     // Don't do anything if it's the current plan (for Free plan)
     if (cta === t("pricing.current")) {
@@ -266,12 +370,12 @@ const PricingTable = () => {
               </CardContent>
               <CardFooter className="p-4 sm:p-6 pt-0">
                 <Button 
-                  className={`w-full text-sm sm:text-base ${plan.popular && !isCurrentPlan(plan.name) ? 'bg-primary hover:bg-primary-hover' : ''}`}
+                  className={`w-full text-sm sm:text-base ${plan.popular && !isCurrentPlan(plan.type, plan.name) ? 'bg-primary hover:bg-primary-hover' : ''}`}
                   variant={plan.popular ? 'default' : 'outline'}
-                  onClick={(e) => handlePlanClick(e, plan.name)}
-                  disabled={loading || cancelling || (isCurrentPlan(plan.name) && plan.name === t("pricing.free.name"))}
+                  onClick={(e) => handlePlanClick(e, plan)}
+                  disabled={loading || cancelling || (isCurrentPlan(plan.type, plan.name) && plan.type === "free")}
                 >
-                  {loading || cancelling ? t("common.loading") : getPlanCTA(plan.name)}
+                  {loading || cancelling ? t("common.loading") : getPlanCTA(plan.type, plan.name)}
                 </Button>
               </CardFooter>
             </Card>

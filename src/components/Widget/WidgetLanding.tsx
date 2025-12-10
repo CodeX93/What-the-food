@@ -187,7 +187,7 @@ export function WidgetLanding() {
               <p className="text-sm font-semibold uppercase tracking-wider text-primary mb-3">{t("widget.rich.embed.title")}</p>
               <pre className="text-xs sm:text-sm bg-black text-white rounded-xl p-4 overflow-x-auto">
 {`<div id="wtf-widget"></div>
-<script src="https://your-domain.com/widget.js" defer></script>
+<script src="https://whatthefood.io/widget.js" defer></script>
 <script>
   WTFWidget.init({
     target: "#wtf-widget",
