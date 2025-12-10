@@ -12,7 +12,9 @@ import {
   Plug,
   Workflow,
   Rocket,
+  Code,
 } from "lucide-react";
+import Image from "next/image";
 import { WidgetHero } from "./WidgetHero";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -163,6 +165,70 @@ export function WidgetLanding() {
                 </CardContent>
               </Card>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-background transition-colors duration-300">
+        <div className="container mx-auto px-4 py-16 sm:py-20 lg:py-24">
+          <div className="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 whitespace-nowrap">
+              <span className="text-green-600 dark:text-green-400">
+                {t("widget.rich.cms.title")}
+              </span>
+              {" "}
+              {t("widget.rich.cms.titleHighlight")}
+            </h2>
+            <p className="text-base sm:text-lg text-muted-foreground flex items-center justify-center gap-2">
+              <Code className="h-4 w-4" />
+              {t("widget.rich.cms.subtitle")}{" "}  {t("widget.rich.cms.subtitleHighlight")} {t("widget.rich.cms.subtitleEnd")}
+            </p>
+          </div>
+          <div className="flex flex-col items-center gap-6 sm:gap-8 max-w-6xl mx-auto">
+            {/* All 19 CMS logos */}
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-4 sm:gap-6 w-full">
+              {[
+                { name: "Blogger", image: "blogger.jpg", color: "bg-orange-200 dark:bg-orange-900/30" },
+                { name: "Shopify", image: "shopify.jpg", color: "bg-green-200 dark:bg-green-900/30" },
+                { name: "WordPress", image: "wordpress.jpg", color: "bg-blue-200 dark:bg-blue-900/30" },
+                { name: "WooCommerce", image: "woocomerce.jpg", color: "bg-purple-200 dark:bg-purple-900/30" },
+                { name: "Wix", image: "wix.jpg", color: "bg-orange-200 dark:bg-orange-900/30" },
+                { name: "Drupal", image: "drupal.jpg", color: "bg-pink-200 dark:bg-pink-900/30" },
+                { name: "Joomla", image: "joomla.jpg", color: "bg-blue-200 dark:bg-blue-900/30" },
+                { name: "Magento", image: "magento.jpg", color: "bg-orange-200 dark:bg-orange-900/30" },
+                { name: "Squarespace", image: "squarespace.jpg", color: "bg-gray-200 dark:bg-gray-700/30" },
+                { name: "Tumblr", image: "tumblr.jpg", color: "bg-gray-300 dark:bg-gray-600/30" },
+                { name: "Ghost", image: "ghost.jpg", color: "bg-gray-200 dark:bg-gray-700/30" },
+                { name: "Webflow", image: "webflow.jpg", color: "bg-purple-200 dark:bg-purple-900/30" },
+                { name: "10Web", image: "10web.jpg", color: "bg-blue-200 dark:bg-blue-900/30" },
+                { name: "Medium", image: "medium.jpg", color: "bg-pink-200 dark:bg-pink-900/30" },
+                { name: "Framer", image: "framer.jpg", color: "bg-green-200 dark:bg-green-900/30" },
+                { name: "BigCommerce", image: "bigcommerce.jpg", color: "bg-blue-200 dark:bg-blue-900/30" },
+                { name: "Jekyll", image: "jekyllrb.jpg", color: "bg-orange-200 dark:bg-orange-900/30" },
+                { name: "PrestaShop", image: "prestashop.jpg", color: "bg-purple-200 dark:bg-purple-900/30" },
+                { name: "Unicorn Platform", image: "unicornplatform.jpg", color: "bg-pink-200 dark:bg-pink-900/30" },
+                { name: "HubSpot", image: "hubspot.jpeg", color: "bg-pink-200 dark:bg-pink-900/30" },
+              ].map((cms, idx) => (
+                <div
+                  key={idx}
+                  className="relative w-full aspect-square flex items-center justify-center"
+                >
+                  <div className="relative w-full h-full rounded-[10px] border border-white overflow-hidden">
+                    <Image
+                      src={`/featured-cms-images/${cms.image}`}
+                      alt={cms.name}
+                      fill
+                      className="object-contain rounded-[10px]"
+                      sizes="(max-width: 640px) 20vw, (max-width: 768px) 15vw, 10vw"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* "and many more" text */}
+            <p className="text-base sm:text-lg text-muted-foreground font-medium text-primary font-semibold">
+              {t("widget.rich.cms.andMore")}
+            </p>
           </div>
         </div>
       </section>
