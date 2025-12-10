@@ -87,6 +87,7 @@ export function PlansClient({
   const [cancelling, setCancelling] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [planToCancel, setPlanToCancel] = useState<Plan | null>(null);
+  const [billingToggle, setBillingToggle] = useState<"monthly" | "yearly">("monthly");
 
   useEffect(() => {
     if (initialPlans.length > 0) {
@@ -641,7 +642,7 @@ export function PlansClient({
                                 </div>
                               ) : (
                                 <p className="text-sm text-muted-foreground">
-                                  {t("plans.notincluded.none", { defaultValue: "No exclusions listed" })}
+                                  {t("plans.notincluded.none") || "No exclusions listed"}
                                 </p>
                               )}
                             </TabsContent>

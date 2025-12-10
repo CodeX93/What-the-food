@@ -457,7 +457,7 @@ const PricingTable = () => {
                       </div>
                     ) : (
                       <p className="text-xs sm:text-sm text-muted-foreground">
-                        {t("plans.notincluded.none", { defaultValue: "No exclusions listed" })}
+                        {t("plans.notincluded.none") || "No exclusions listed"}
                       </p>
                     )}
                   </TabsContent>
