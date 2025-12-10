@@ -29,8 +29,8 @@ export function HowItWorksHero() {
       style={{ minHeight: "calc(100vh - 80px)" }}
     >
       <div className="absolute inset-0 bg-gradient-hero opacity-5 dark:opacity-10" />
-      <div className="container mx-auto px-4 relative w-full z-10 py-[19px] sm:py-[35px] md:py-[43px] lg:py-[51px] flex items-center">
-        <div className="w-full flex flex-col lg:flex-row items-center lg:items-center justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
+      <div className="container mx-auto px-4 relative w-full z-10 py-[19px] sm:py-[35px] md:py-[43px] lg:py-[51px] flex items-start">
+        <div className="w-full flex flex-col lg:flex-row items-start justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16 mt-11 lg:mt-15">
           {/* Left Section - Content */}
           <div className="w-full text-center lg:text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start">
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
@@ -93,17 +93,19 @@ export function HowItWorksHero() {
                     <p className="text-sm font-semibold text-muted-foreground mt-1">{t("howitworkshero.nutrition.summary")}</p>
                     <p className="text-xs text-muted-foreground/80">{t("howitworkshero.nutrition.projectedWeight")}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">{t("howitworkshero.nutrition.servings")}</span>
-                    <input
-                      type="number"
-                      min={1}
-                      defaultValue={1}
-                      className="w-16 rounded-md border px-2 py-1 text-sm bg-background"
-                      readOnly
-                    />
+                  
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">{t("howitworkshero.nutrition.servings")}</span>
+                      <input
+                        type="number"
+                        min={1}
+                        defaultValue={1}
+                        className="w-16 rounded-md border px-2 py-1 text-sm bg-background"
+                        readOnly
+                      />
+                    </div>
                   </div>
-                </div>
+                
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {t("howitworkshero.nutrition.description")}
                 </p>
@@ -121,7 +123,7 @@ export function HowItWorksHero() {
                       className={`rounded-full ${tag.color} border px-3 py-1 text-xs font-semibold`}
                     >
                       {t(`howitworkshero.nutrition.tags.${tag.key}`)}
-                    </span>
+                  </span>
                   ))}
                 </div>
               </CardHeader>
@@ -157,6 +159,21 @@ export function HowItWorksHero() {
                       </div>
                     );
                   })}
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    asChild
+                    size="sm"
+                    className="text-sm bg-primary text-primary-foreground hover:bg-primary-hover shadow-sm"
+                  >
+                    <Link
+                      href="/shared/c83d0752-df32-434a-9b0f-7ff46824076b"
+                      className="flex items-center gap-1.5"
+                    >
+                      Preview Details
+                      <ArrowUpRight className="h-4 w-4" />
+                    </Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>

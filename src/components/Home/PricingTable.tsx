@@ -134,14 +134,14 @@ const PricingTable = () => {
         (freePlan?.features as string[] | undefined)?.length
           ? (freePlan?.features as string[])
           : [
-              t("pricing.free.feature1"),
-              t("pricing.free.feature2"),
-              t("pricing.free.feature3"),
-              t("pricing.free.feature4"),
-              t("pricing.free.feature5"),
-              t("pricing.free.feature6"),
-              t("pricing.free.feature7"),
-            ],
+        t("pricing.free.feature1"),
+        t("pricing.free.feature2"),
+        t("pricing.free.feature3"),
+        t("pricing.free.feature4"),
+        t("pricing.free.feature5"),
+        t("pricing.free.feature6"),
+        t("pricing.free.feature7"),
+      ],
       cta: t("pricing.free.cta"),
       popular: false,
     };
@@ -159,14 +159,14 @@ const PricingTable = () => {
         (premiumMonthly?.features as string[] | undefined)?.length
           ? (premiumMonthly?.features as string[])
           : [
-              t("pricing.premium.feature1"),
-              t("pricing.premium.feature2"),
-              t("pricing.premium.feature3"),
-              t("pricing.premium.feature4"),
-              t("pricing.premium.feature5"),
-              t("pricing.premium.feature6"),
-              t("pricing.premium.feature7"),
-            ],
+        t("pricing.premium.feature1"),
+        t("pricing.premium.feature2"),
+        t("pricing.premium.feature3"),
+        t("pricing.premium.feature4"),
+        t("pricing.premium.feature5"),
+        t("pricing.premium.feature6"),
+        t("pricing.premium.feature7"),
+      ],
       cta: t("pricing.premium.cta"),
       popular: true,
     };
@@ -231,12 +231,12 @@ const PricingTable = () => {
       }
       return "Upgrade Now";
     }
-    // For free plan - if user is on free plan, show "Current Plan"
-    if (isFree) {
-      return t("pricing.current");
-    }
-    // If user is on premium, they can't cancel to free from here, just show "Get Started"
-    return "Get Started";
+      // For free plan - if user is on free plan, show "Current Plan"
+      if (isFree) {
+        return t("pricing.current");
+      }
+      // If user is on premium, they can't cancel to free from here, just show "Get Started"
+      return "Get Started";
   };
 
   const isCurrentPlan = (planType: "free" | "premium", planName: string) => {
