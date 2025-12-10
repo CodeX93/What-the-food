@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles, ArrowRight } from "lucide-react";
+import { Check, Sparkles, ArrowRight, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/hooks/use-translation";
@@ -45,14 +47,21 @@ function parseFeatures(features: any): string[] {
   return [];
 }
 
+// Helper function to parse not included items
+function parseNotIncluded(notIncluded: any): string[] {
+  return parseFeatures(notIncluded);
+}
+
 interface Plan {
   id: string;
   name: string;
   description?: string;
   price_cents: number;
+  previous_price_cents?: number | null;
   billing_cycle: "free" | "monthly" | "yearly";
   interval: string;
   features?: string[];
+  not_included?: string[];
   is_popular?: boolean;
   stripe_price_id?: string | null;
 }
@@ -85,6 +94,7 @@ export function PlansClient({
       const parsedPlans = initialPlans.map((plan: any) => ({
         ...plan,
         features: parseFeatures(plan.features),
+        not_included: parseNotIncluded((plan as any).not_included),
       }));
       setPlans(parsedPlans);
     }
@@ -122,6 +132,7 @@ export function PlansClient({
             const parsedPlans = (plansData || []).map((plan: any) => ({
               ...plan,
               features: parseFeatures(plan.features),
+              not_included: parseNotIncluded(plan.not_included),
             }));
             setPlans(parsedPlans);
           }
@@ -229,6 +240,13 @@ export function PlansClient({
     
     // If no mapping found, return the original description (might already be in user's language)
     return description;
+  };
+
+  const getNotIncluded = (plan: Plan): string[] => {
+    if (Array.isArray(plan.not_included)) {
+      return plan.not_included.filter(Boolean);
+    }
+    return [];
   };
 
   const isCurrentPlan = (plan: Plan) => {
@@ -474,13 +492,33 @@ export function PlansClient({
           </Button>
         </div>
 
+        <div className="flex items-center justify-center mb-6">
+          <div className="flex items-center gap-3 bg-muted/30 px-4 py-2 rounded-lg">
+            <span className="text-sm text-muted-foreground">Monthly</span>
+            <Switch
+              checked={billingToggle === "yearly"}
+              onCheckedChange={(val) => setBillingToggle(val ? "yearly" : "monthly")}
+              aria-label="Toggle yearly billing"
+            />
+            <span className="text-sm text-muted-foreground">Annually</span>
+          </div>
+        </div>
+
         <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
           {isFetchingPlans ? (
             <div className="col-span-3 text-center text-muted-foreground">{t("plans.loading")}</div>
           ) : plans.length === 0 ? (
             <div className="col-span-3 text-center text-muted-foreground">{t("plans.noplans")}</div>
           ) : (
-            plans.map((plan) => {
+            plans
+              .filter(
+                (plan) =>
+                  (plan.billing_cycle || "") === "free" ||
+                  (plan.billing_cycle || plan.interval) === billingToggle ||
+                  ((plan.interval === "month" || plan.interval === "monthly") && billingToggle === "monthly") ||
+                  ((plan.interval === "year" || plan.interval === "yearly") && billingToggle === "yearly")
+              )
+              .map((plan) => {
               const billingCycle = plan.billing_cycle ||
                 (plan.interval === "month" ? "monthly" : plan.interval === "year" ? "yearly" : plan.interval === "free" ? "free" : "monthly");
               const isLoading = loading === `${plan.name}-${billingCycle}`;
@@ -540,7 +578,7 @@ export function PlansClient({
               return (
                 <Card
                   key={plan.id}
-                  className={`relative ${plan.is_popular ? "border-primary border-2 shadow-lg md:scale-105" : "border-2"}`}
+                  className={`relative h-full ${plan.is_popular ? "border-primary border-2 shadow-lg md:scale-105" : "border-2"}`}
                 >
                   {plan.is_popular && (
                     <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
@@ -555,6 +593,11 @@ export function PlansClient({
                       {plan.billing_cycle === "free" && <Sparkles className="h-6 w-6 text-primary" />}
                     </div>
                     <div className="flex items-baseline gap-2">
+                      {plan.previous_price_cents ? (
+                        <span className="text-lg text-muted-foreground line-through">
+                          {formatPrice(plan.previous_price_cents, plan.interval)}
+                        </span>
+                      ) : null}
                       <span className="text-4xl font-bold">{formatPrice(plan.price_cents, plan.interval)}</span>
                       <span className="text-muted-foreground">
                         {plan.billing_cycle === "monthly" ? t("plans.period.month") : plan.billing_cycle === "yearly" ? t("plans.period.year") : t("plans.period.forever")}
@@ -562,15 +605,50 @@ export function PlansClient({
                     </div>
                     <CardDescription className="mt-2">{translateDescription(plan.description, billingCycle)}</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-3 mb-6">
-                      {(Array.isArray(plan.features) ? plan.features : []).map((feature, index) => (
-                        <li key={index} className="flex items-start gap-2">
-                          <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                          <span className="text-sm">{translateFeature(feature)}</span>
-                        </li>
-                      ))}
-                    </ul>
+                  <CardContent className="flex flex-col gap-4">
+                    {(() => {
+                      const features = Array.isArray(plan.features) ? plan.features : [];
+                      const notIncluded = getNotIncluded(plan);
+
+                      return (
+                        <div className="max-h-[440px] overflow-y-auto pr-1 space-y-4">
+                          <Tabs defaultValue="included" className="space-y-4">
+                            <TabsList className="flex justify-center w-full bg-transparent p-0 gap-2 shadow-none border-0">
+                              <TabsTrigger value="included">{t("plans.included")}</TabsTrigger>
+                              <TabsTrigger value="not-included">{t("plans.notincluded.title")}</TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="included">
+                              <ul className="space-y-3">
+                                {features.map((feature, index) => (
+                                  <li key={index} className="flex items-start gap-2">
+                                    <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                                    <span className="text-sm">{translateFeature(feature)}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </TabsContent>
+                            <TabsContent value="not-included">
+                              {notIncluded.length > 0 ? (
+                                <div className="rounded-lg border bg-muted/40 p-4">
+                                  <ul className="space-y-2">
+                                    {notIncluded.map((item, idx) => (
+                                      <li key={idx} className="flex items-start gap-2">
+                                        <XCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                                        <span className="text-sm text-muted-foreground">{translateFeature(item)}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">
+                                  {t("plans.notincluded.none", { defaultValue: "No exclusions listed" })}
+                                </p>
+                              )}
+                            </TabsContent>
+                          </Tabs>
+                        </div>
+                      );
+                    })()}
                     <Button
                       className={`w-full ${isCurrentPaidPlan ? "bg-destructive hover:bg-destructive/90" : ""}`}
                       variant={isCurrentPaidPlan ? "destructive" : isCurrent ? "outline" : plan.is_popular ? "default" : "outline"}

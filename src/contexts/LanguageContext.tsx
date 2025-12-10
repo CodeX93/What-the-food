@@ -748,6 +748,13 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.description.free": "Perfect for trying out our service",
     "plans.description.premium.monthly": "Unlimited access to all features",
     "plans.description.premium.yearly": "Best value - Save with yearly billing",
+    "plans.included": "Included",
+    "plans.notincluded.title": "What's not included",
+    "plans.notincluded.none": "No exclusions listed",
+    "plans.notincluded.free1": "Unlimited scans",
+    "plans.notincluded.free2": "Priority support",
+    "plans.notincluded.premium1": "Dedicated account manager",
+    "plans.notincluded.premium2": "Custom SLA",
     
     // Analytics Page Section
     "analytics.title": "My Food Analytics",
@@ -1812,6 +1819,13 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.description.free": "Perfecto para probar nuestro servicio",
     "plans.description.premium.monthly": "Acceso ilimitado a todas las funciones",
     "plans.description.premium.yearly": "Mejor valor - Ahorra con facturación anual",
+    "plans.included": "Incluido",
+    "plans.notincluded.title": "Qué no está incluido",
+    "plans.notincluded.none": "Sin exclusiones",
+    "plans.notincluded.free1": "Escaneos ilimitados",
+    "plans.notincluded.free2": "Soporte prioritario",
+    "plans.notincluded.premium1": "Gestor de cuenta dedicado",
+    "plans.notincluded.premium2": "SLA personalizado",
     
     // Analytics Page Section
     "analytics.title": "Mis Analíticas de Comida",
@@ -2873,6 +2887,13 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.description.free": "Parfait pour essayer notre service",
     "plans.description.premium.monthly": "Accès illimité à toutes les fonctionnalités",
     "plans.description.premium.yearly": "Meilleure valeur - Économisez avec la facturation annuelle",
+    "plans.included": "Inclus",
+    "plans.notincluded.title": "Ce qui n'est pas inclus",
+    "plans.notincluded.none": "Aucune exclusion",
+    "plans.notincluded.free1": "Scans illimités",
+    "plans.notincluded.free2": "Support prioritaire",
+    "plans.notincluded.premium1": "Gestionnaire de compte dédié",
+    "plans.notincluded.premium2": "SLA personnalisé",
     
     // Analytics Page Section
     "analytics.title": "Mes Analyses Alimentaires",
@@ -3935,6 +3956,13 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.description.free": "Perfekt zum Ausprobieren unseres Dienstes",
     "plans.description.premium.monthly": "Unbegrenzter Zugang zu allen Funktionen",
     "plans.description.premium.yearly": "Bester Wert - Sparen Sie mit jährlicher Abrechnung",
+    "plans.included": "Enthalten",
+    "plans.notincluded.title": "Was nicht enthalten ist",
+    "plans.notincluded.none": "Keine Ausschlüsse",
+    "plans.notincluded.free1": "Unbegrenzte Scans",
+    "plans.notincluded.free2": "Prioritätssupport",
+    "plans.notincluded.premium1": "Dedizierter Account-Manager",
+    "plans.notincluded.premium2": "Individuelle SLA",
     
     // Analytics Page Section
     "analytics.title": "Meine Lebensmittelanalysen",
@@ -4960,6 +4988,13 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.description.free": "Perfetto per provare il nostro servizio",
     "plans.description.premium.monthly": "Accesso illimitato a tutte le funzionalità",
     "plans.description.premium.yearly": "Miglior valore - Risparmia con la fatturazione annuale",
+    "plans.included": "Incluso",
+    "plans.notincluded.title": "Cosa non è incluso",
+    "plans.notincluded.none": "Nessuna esclusione",
+    "plans.notincluded.free1": "Scansioni illimitate",
+    "plans.notincluded.free2": "Supporto prioritario",
+    "plans.notincluded.premium1": "Account manager dedicato",
+    "plans.notincluded.premium2": "SLA personalizzato",
     
     // Analytics Page Section
     "analytics.title": "Le Mie Analisi Alimentari",
@@ -5986,6 +6021,13 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.description.free": "Perfeito para experimentar nosso serviço",
     "plans.description.premium.monthly": "Acesso ilimitado a todos os recursos",
     "plans.description.premium.yearly": "Melhor valor - Economize com cobrança anual",
+    "plans.included": "Incluído",
+    "plans.notincluded.title": "O que não está incluído",
+    "plans.notincluded.none": "Sem exclusões",
+    "plans.notincluded.free1": "Scans ilimitados",
+    "plans.notincluded.free2": "Suporte prioritário",
+    "plans.notincluded.premium1": "Gerente de conta dedicado",
+    "plans.notincluded.premium2": "SLA personalizado",
     
     // Analytics Page Section
     "analytics.title": "Minhas Análises de Alimentos",
@@ -7011,6 +7053,13 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.description.free": "非常适合试用我们的服务",
     "plans.description.premium.monthly": "无限访问所有功能",
     "plans.description.premium.yearly": "最佳价值 - 年度计费更省钱",
+    "plans.included": "包含",
+    "plans.notincluded.title": "未包含的内容",
+    "plans.notincluded.none": "未列出排除项",
+    "plans.notincluded.free1": "无限扫描",
+    "plans.notincluded.free2": "优先支持",
+    "plans.notincluded.premium1": "专属客户经理",
+    "plans.notincluded.premium2": "自定义 SLA",
     
     // Analytics Page Section
     "analytics.title": "我的食物分析",
@@ -8037,6 +8086,13 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.description.free": "サービスを試すのに最適",
     "plans.description.premium.monthly": "すべての機能への無制限アクセス",
     "plans.description.premium.yearly": "最高の価値 - 年間請求で節約",
+    "plans.included": "含まれるもの",
+    "plans.notincluded.title": "含まれないもの",
+    "plans.notincluded.none": "除外はありません",
+    "plans.notincluded.free1": "無制限スキャン",
+    "plans.notincluded.free2": "優先サポート",
+    "plans.notincluded.premium1": "専任アカウントマネージャー",
+    "plans.notincluded.premium2": "カスタムSLA",
     
     // Analytics Page Section
     "analytics.title": "私の食事分析",
@@ -9063,6 +9119,13 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.description.free": "مثالي لتجربة خدمتنا",
     "plans.description.premium.monthly": "وصول غير محدود لجميع الميزات",
     "plans.description.premium.yearly": "أفضل قيمة - وفر مع الفوترة السنوية",
+    "plans.included": "المتضمن",
+    "plans.notincluded.title": "ما هو غير متضمن",
+    "plans.notincluded.none": "لا توجد استثناءات",
+    "plans.notincluded.free1": "عمليات مسح غير محدودة",
+    "plans.notincluded.free2": "دعم ذو أولوية",
+    "plans.notincluded.premium1": "مدير حساب مخصص",
+    "plans.notincluded.premium2": "اتفاقية مستوى خدمة مخصصة",
     
     // Analytics Page Section
     "analytics.title": "تحليلات طعامي",

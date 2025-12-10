@@ -1,6 +1,6 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { getPlatformSubscription } from "@/utils/subscription";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,19 +50,23 @@ const PricingTable = () => {
     name: string;
     description?: string;
     price_cents: number;
+    previous_price_cents?: number | null;
     billing_cycle?: "free" | "monthly" | "yearly";
     interval?: string;
     features?: any;
+    not_included?: any;
   };
 
   type DisplayPlan = {
     type: "free" | "premium";
     name: string;
     price: string;
+    previousPrice?: string;
     period: string;
     yearlyPrice?: string;
     description: string;
     features: string[];
+    notIncluded: string[];
     cta: string;
     popular?: boolean;
   };
@@ -77,6 +83,7 @@ const PricingTable = () => {
   const [cancelling, setCancelling] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [planToCancel, setPlanToCancel] = useState<string | null>(null);
+  const [billingToggle, setBillingToggle] = useState<"monthly" | "yearly">("monthly");
 
   // Load active plans from Supabase (same source as /plans)
   useEffect(() => {
@@ -95,6 +102,7 @@ const PricingTable = () => {
             data.map((plan: any) => ({
               ...plan,
               features: parseFeatures(plan.features),
+              not_included: parseFeatures(plan.not_included),
             }))
           );
         }
@@ -124,55 +132,99 @@ const PricingTable = () => {
       (p) => p.billing_cycle === "yearly" || p.interval === "year"
     );
 
+    const freeNotIncluded =
+      (freePlan?.not_included as string[] | undefined)?.filter(Boolean) || [];
+
+    const premiumNotIncluded =
+      (premiumMonthly?.not_included as string[] | undefined)?.filter(Boolean) || [];
+
     const freeDisplay: DisplayPlan = {
       type: "free",
       name: freePlan?.name || t("pricing.free.name"),
       price: freePlan ? formatPrice(freePlan.price_cents) : t("pricing.free.price"),
+      previousPrice: freePlan?.previous_price_cents ? formatPrice(freePlan.previous_price_cents) : undefined,
       period: freePlan?.interval ? `/${freePlan.interval}` : t("pricing.free.period"),
       description: freePlan?.description || t("pricing.free.description"),
       features:
         (freePlan?.features as string[] | undefined)?.length
           ? (freePlan?.features as string[])
           : [
-        t("pricing.free.feature1"),
-        t("pricing.free.feature2"),
-        t("pricing.free.feature3"),
-        t("pricing.free.feature4"),
-        t("pricing.free.feature5"),
-        t("pricing.free.feature6"),
-        t("pricing.free.feature7"),
-      ],
+              t("pricing.free.feature1"),
+              t("pricing.free.feature2"),
+              t("pricing.free.feature3"),
+              t("pricing.free.feature4"),
+              t("pricing.free.feature5"),
+              t("pricing.free.feature6"),
+              t("pricing.free.feature7"),
+            ],
+      notIncluded: freeNotIncluded,
       cta: t("pricing.free.cta"),
       popular: false,
     };
 
     const premiumDisplay: DisplayPlan = {
       type: "premium",
-      name: premiumMonthly?.name || t("pricing.premium.name"),
-      price: premiumMonthly ? formatPrice(premiumMonthly.price_cents) : t("pricing.premium.price"),
-      period: premiumMonthly?.interval ? `/${premiumMonthly.interval}` : t("pricing.premium.period"),
-      yearlyPrice: premiumYearly
-        ? `${formatPrice(premiumYearly.price_cents)}/year`
-        : t("pricing.premium.yearly"),
-      description: premiumMonthly?.description || t("pricing.premium.description"),
+      name:
+        billingToggle === "yearly"
+          ? premiumYearly?.name || t("pricing.premium.name")
+          : premiumMonthly?.name || t("pricing.premium.name"),
+      price:
+        billingToggle === "yearly"
+          ? premiumYearly
+            ? formatPrice(premiumYearly.price_cents)
+            : t("pricing.premium.price")
+          : premiumMonthly
+          ? formatPrice(premiumMonthly.price_cents)
+          : t("pricing.premium.price"),
+      previousPrice:
+        billingToggle === "yearly"
+          ? premiumYearly?.previous_price_cents
+            ? formatPrice(premiumYearly.previous_price_cents)
+            : undefined
+          : premiumMonthly?.previous_price_cents
+          ? formatPrice(premiumMonthly.previous_price_cents)
+          : undefined,
+      period:
+        billingToggle === "yearly"
+          ? premiumYearly?.interval
+            ? `/${premiumYearly.interval}`
+            : t("pricing.premium.period")
+          : premiumMonthly?.interval
+          ? `/${premiumMonthly.interval}`
+          : t("pricing.premium.period"),
+      yearlyPrice:
+        billingToggle === "yearly"
+          ? undefined
+          : premiumYearly
+          ? `${formatPrice(premiumYearly.price_cents)}/year`
+          : t("pricing.premium.yearly"),
+      description:
+        billingToggle === "yearly"
+          ? premiumYearly?.description || t("pricing.premium.description")
+          : premiumMonthly?.description || t("pricing.premium.description"),
       features:
-        (premiumMonthly?.features as string[] | undefined)?.length
-          ? (premiumMonthly?.features as string[])
+        (billingToggle === "yearly"
+          ? (premiumYearly?.features as string[] | undefined)
+          : (premiumMonthly?.features as string[] | undefined))?.length
+          ? (billingToggle === "yearly"
+              ? (premiumYearly?.features as string[] | undefined)
+              : (premiumMonthly?.features as string[] | undefined))!
           : [
-        t("pricing.premium.feature1"),
-        t("pricing.premium.feature2"),
-        t("pricing.premium.feature3"),
-        t("pricing.premium.feature4"),
-        t("pricing.premium.feature5"),
-        t("pricing.premium.feature6"),
-        t("pricing.premium.feature7"),
-      ],
+              t("pricing.premium.feature1"),
+              t("pricing.premium.feature2"),
+              t("pricing.premium.feature3"),
+              t("pricing.premium.feature4"),
+              t("pricing.premium.feature5"),
+              t("pricing.premium.feature6"),
+              t("pricing.premium.feature7"),
+            ],
+      notIncluded: premiumNotIncluded,
       cta: t("pricing.premium.cta"),
       popular: true,
     };
 
     return [freeDisplay, premiumDisplay];
-  }, [fetchedPlans, t]);
+  }, [billingToggle, fetchedPlans, t]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -335,6 +387,18 @@ const PricingTable = () => {
           </p>
         </div>
 
+        <div className="flex items-center justify-center mb-6">
+          <div className="flex items-center gap-3 bg-muted/30 px-4 py-2 rounded-lg">
+            <span className="text-sm text-muted-foreground">Monthly</span>
+            <Switch
+              checked={billingToggle === "yearly"}
+              onCheckedChange={(val) => setBillingToggle(val ? "yearly" : "monthly")}
+              aria-label="Toggle yearly billing"
+            />
+            <span className="text-sm text-muted-foreground">Annually</span>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 w-full">
           {plans.map((plan, index) => (
             <Card key={index} 
@@ -349,7 +413,12 @@ const PricingTable = () => {
                 <CardTitle className="text-xl sm:text-2xl">{plan.name}</CardTitle>
                 <CardDescription className="text-sm sm:text-base">{plan.description}</CardDescription>
                 <div className="mt-3 sm:mt-4">
-                  <span className="text-3xl sm:text-4xl font-bold">{plan.price}</span>
+                  <div className="flex items-baseline gap-2">
+                    {plan.previousPrice ? (
+                      <span className="text-sm sm:text-base text-muted-foreground line-through">{plan.previousPrice}</span>
+                    ) : null}
+                    <span className="text-3xl sm:text-4xl font-bold">{plan.price}</span>
+                  </div>
                   <span className="text-muted-foreground text-sm sm:text-base">{plan.period}</span>
                   {plan.yearlyPrice && (
                     <div className="text-xs sm:text-sm text-muted-foreground mt-1">
@@ -359,14 +428,40 @@ const PricingTable = () => {
                 </div>
               </CardHeader>
               <CardContent className="p-4 sm:p-6 pt-0">
-                <ul className="space-y-2 sm:space-y-3">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-start">
-                      <Check className="h-4 w-4 sm:h-5 sm:w-5 text-primary mr-2 flex-shrink-0 mt-0.5" />
-                      <span className="text-xs sm:text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+                <Tabs defaultValue="included" className="space-y-4">
+                  <TabsList className="flex justify-center w-full bg-transparent p-0 gap-2 shadow-none border-0">
+                    <TabsTrigger value="included">{t("plans.included")}</TabsTrigger>
+                    <TabsTrigger value="not-included">{t("plans.notincluded.title")}</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="included">
+                    <ul className="space-y-2 sm:space-y-3">
+                      {plan.features.map((feature, i) => (
+                        <li key={i} className="flex items-start">
+                          <Check className="h-4 w-4 sm:h-5 sm:w-5 text-primary mr-2 flex-shrink-0 mt-0.5" />
+                          <span className="text-xs sm:text-sm">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </TabsContent>
+                  <TabsContent value="not-included">
+                    {plan.notIncluded && plan.notIncluded.length > 0 ? (
+                      <div className="rounded-lg border bg-muted/40 p-4">
+                        <ul className="space-y-2">
+                          {plan.notIncluded.map((item, i) => (
+                            <li key={i} className="flex items-start">
+                              <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-destructive mr-2 flex-shrink-0 mt-0.5" />
+                              <span className="text-xs sm:text-sm text-muted-foreground">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        {t("plans.notincluded.none", { defaultValue: "No exclusions listed" })}
+                      </p>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </CardContent>
               <CardFooter className="p-4 sm:p-6 pt-0">
                 <Button 
