@@ -422,16 +422,26 @@ const PricingTable = () => {
                   <span className="text-muted-foreground text-sm sm:text-base">{plan.period}</span>
                   {plan.yearlyPrice && (
                     <div className="text-xs sm:text-sm text-muted-foreground mt-1">
-                      or {plan.yearlyPrice}
+                      
                     </div>
                   )}
                 </div>
               </CardHeader>
               <CardContent className="p-4 sm:p-6 pt-0">
                 <Tabs defaultValue="included" className="space-y-4">
-                  <TabsList className="flex justify-center w-full bg-transparent p-0 gap-2 shadow-none border-0">
-                    <TabsTrigger value="included">{t("plans.included")}</TabsTrigger>
-                    <TabsTrigger value="not-included">{t("plans.notincluded.title")}</TabsTrigger>
+                  <TabsList className="flex justify-center w-full bg-muted/40 p-1 rounded-full shadow-none border border-border gap-2">
+                    <TabsTrigger
+                      value="included"
+                      className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                    >
+                      {t("plans.included")}
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="not-included"
+                      className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                    >
+                      {t("plans.notincluded.title")}
+                    </TabsTrigger>
                   </TabsList>
                   <TabsContent value="included">
                     <ul className="space-y-2 sm:space-y-3">

@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Check, Sparkles, ArrowRight, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,7 +86,6 @@ export function PlansClient({
   const [cancelling, setCancelling] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [planToCancel, setPlanToCancel] = useState<Plan | null>(null);
-  const [billingToggle, setBillingToggle] = useState<"monthly" | "yearly">("monthly");
 
   useEffect(() => {
     if (initialPlans.length > 0) {
@@ -493,33 +491,13 @@ export function PlansClient({
           </Button>
         </div>
 
-        <div className="flex items-center justify-center mb-6">
-          <div className="flex items-center gap-3 bg-muted/30 px-4 py-2 rounded-lg">
-            <span className="text-sm text-muted-foreground">Monthly</span>
-            <Switch
-              checked={billingToggle === "yearly"}
-              onCheckedChange={(val) => setBillingToggle(val ? "yearly" : "monthly")}
-              aria-label="Toggle yearly billing"
-            />
-            <span className="text-sm text-muted-foreground">Annually</span>
-          </div>
-        </div>
-
         <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-7xl mx-auto">
           {isFetchingPlans ? (
             <div className="col-span-3 text-center text-muted-foreground">{t("plans.loading")}</div>
           ) : plans.length === 0 ? (
             <div className="col-span-3 text-center text-muted-foreground">{t("plans.noplans")}</div>
           ) : (
-            plans
-              .filter(
-                (plan) =>
-                  (plan.billing_cycle || "") === "free" ||
-                  (plan.billing_cycle || plan.interval) === billingToggle ||
-                  ((plan.interval === "month" || plan.interval === "monthly") && billingToggle === "monthly") ||
-                  ((plan.interval === "year" || plan.interval === "yearly") && billingToggle === "yearly")
-              )
-              .map((plan) => {
+            plans.map((plan) => {
               const billingCycle = plan.billing_cycle ||
                 (plan.interval === "month" ? "monthly" : plan.interval === "year" ? "yearly" : plan.interval === "free" ? "free" : "monthly");
               const isLoading = loading === `${plan.name}-${billingCycle}`;
@@ -614,9 +592,19 @@ export function PlansClient({
                       return (
                         <div className="max-h-[440px] overflow-y-auto pr-1 space-y-4">
                           <Tabs defaultValue="included" className="space-y-4">
-                            <TabsList className="flex justify-center w-full bg-transparent p-0 gap-2 shadow-none border-0">
-                              <TabsTrigger value="included">{t("plans.included")}</TabsTrigger>
-                              <TabsTrigger value="not-included">{t("plans.notincluded.title")}</TabsTrigger>
+                          <TabsList className="flex justify-center w-full bg-muted/40 p-1 rounded-full shadow-none border border-border gap-2">
+                            <TabsTrigger
+                              value="included"
+                              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                            >
+                              {t("plans.included")}
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value="not-included"
+                              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                            >
+                              {t("plans.notincluded.title")}
+                            </TabsTrigger>
                             </TabsList>
                             <TabsContent value="included">
                               <ul className="space-y-3">
