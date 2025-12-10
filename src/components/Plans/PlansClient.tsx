@@ -592,16 +592,16 @@ export function PlansClient({
                       return (
                         <div className="max-h-[440px] overflow-y-auto pr-1 space-y-4">
                           <Tabs defaultValue="included" className="space-y-4">
-                          <TabsList className="flex justify-center w-full bg-muted/40 p-1 rounded-full shadow-none border border-border gap-2">
+                          <TabsList className="flex justify-start w-full bg-transparent p-0 shadow-none gap-2">
                             <TabsTrigger
                               value="included"
-                              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                              className="border border-green-500 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
                             >
                               {t("plans.included")}
                             </TabsTrigger>
                             <TabsTrigger
                               value="not-included"
-                              className="data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                              className="border border-green-500 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
                             >
                               {t("plans.notincluded.title")}
                             </TabsTrigger>
