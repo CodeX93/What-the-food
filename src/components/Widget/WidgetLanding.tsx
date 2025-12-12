@@ -137,33 +137,33 @@ export function WidgetLanding() {
                   {t("widget.rich.cards.embed.body")}
                 </CardContent>
               </Card>
-              <Card className="h-full">
+            <Card className="h-full">
                 <CardHeader className="p-5">
                   <Sparkles className="h-8 w-8 text-primary mb-3" />
                   <CardTitle className="text-lg">{t("widget.rich.cards.result.title")}</CardTitle>
-                </CardHeader>
+              </CardHeader>
                 <CardContent className="p-5 pt-0 text-muted-foreground text-sm sm:text-base">
                   {t("widget.rich.cards.result.body")}
-                </CardContent>
-              </Card>
-              <Card className="h-full">
+              </CardContent>
+            </Card>
+            <Card className="h-full">
                 <CardHeader className="p-5">
                   <Workflow className="h-8 w-8 text-primary mb-3" />
                   <CardTitle className="text-lg">{t("widget.rich.cards.usage.title")}</CardTitle>
-                </CardHeader>
+              </CardHeader>
                 <CardContent className="p-5 pt-0 text-muted-foreground text-sm sm:text-base">
                   {t("widget.rich.cards.usage.body")}
-                </CardContent>
-              </Card>
-              <Card className="h-full">
+              </CardContent>
+            </Card>
+            <Card className="h-full">
                 <CardHeader className="p-5">
                   <Rocket className="h-8 w-8 text-primary mb-3" />
                   <CardTitle className="text-lg">{t("widget.rich.cards.launch.title")}</CardTitle>
-                </CardHeader>
+              </CardHeader>
                 <CardContent className="p-5 pt-0 text-muted-foreground text-sm sm:text-base">
                   {t("widget.rich.cards.launch.body")}
-                </CardContent>
-              </Card>
+              </CardContent>
+            </Card>
             </div>
           </div>
         </div>

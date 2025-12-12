@@ -609,12 +609,12 @@ export function PlansClient({
                             <TabsContent value="included">
                               <ul className="space-y-3">
                                 {features.map((feature, index) => (
-                                  <li key={index} className="flex items-start gap-2">
-                                    <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                                    <span className="text-sm">{translateFeature(feature)}</span>
-                                  </li>
-                                ))}
-                              </ul>
+                        <li key={index} className="flex items-start gap-2">
+                          <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                          <span className="text-sm">{translateFeature(feature)}</span>
+                        </li>
+                      ))}
+                    </ul>
                             </TabsContent>
                             <TabsContent value="not-included">
                               {notIncluded.length > 0 ? (
