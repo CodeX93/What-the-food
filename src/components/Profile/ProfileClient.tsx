@@ -369,11 +369,12 @@ export function ProfileClient({
           setSubscription(latestSub);
           
           // Update plan name if premium
-          if (latestSub.subscription_type === "premium" && latestSub.platform_plan_id) {
+          const sub = latestSub as any; // Type assertion to match subscription state type
+          if (sub.subscription_type === "premium" && sub.platform_plan_id) {
             const { data: planRow } = await supabase
               .from("platform_plans")
               .select("name")
-              .eq("id", latestSub.platform_plan_id)
+              .eq("id", sub.platform_plan_id)
               .maybeSingle();
             
             if (planRow?.name) {
