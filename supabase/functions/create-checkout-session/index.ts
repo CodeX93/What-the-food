@@ -75,6 +75,7 @@ Deno.serve(async (req) => {
         },
       ],
       customer_email: user.email,
+      client_reference_id: user.id, // Add client_reference_id as backup for userId
       success_url: successUrl || `${Deno.env.get('SUPABASE_URL')?.replace('/rest/v1', '')}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl || `${Deno.env.get('SUPABASE_URL')?.replace('/rest/v1', '')}/plans`,
       metadata: {

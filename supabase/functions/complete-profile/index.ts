@@ -1,5 +1,4 @@
 // @ts-nocheck - Supabase Edge Functions (Deno)
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -54,7 +53,7 @@ async function sendSignupEmail(email: string, fullName?: string | null) {
   }
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
   }

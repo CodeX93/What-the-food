@@ -343,6 +343,55 @@ export function ProfileClient({
     setPlanName(initialPlanName ?? null);
   }, [initialPlanName]);
 
+  // Refresh subscription data on mount to ensure it's up-to-date after checkout
+  useEffect(() => {
+    const refreshSubscription = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        
+        if (!session?.user) return;
+
+        // Fetch latest subscription from platform_subscriptions
+        const { data: latestSub, error } = await supabase
+          .from("platform_subscriptions")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error refreshing subscription:", error);
+          return;
+        }
+
+        if (latestSub) {
+          setSubscription(latestSub);
+          
+          // Update plan name if premium
+          if (latestSub.subscription_type === "premium" && latestSub.platform_plan_id) {
+            const { data: planRow } = await supabase
+              .from("platform_plans")
+              .select("name")
+              .eq("id", latestSub.platform_plan_id)
+              .maybeSingle();
+            
+            if (planRow?.name) {
+              setPlanName(planRow.name);
+            }
+          } else {
+            setPlanName(null);
+          }
+        }
+      } catch (err) {
+        console.error("Error refreshing subscription:", err);
+      }
+    };
+
+    // Refresh subscription data on mount
+    refreshSubscription();
+  }, []);
+
   useEffect(() => {
     if (initialUser) {
       return;

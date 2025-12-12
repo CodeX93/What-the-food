@@ -1,8 +1,7 @@
 // @ts-nocheck
 // Standalone Edge Function to send lifecycle emails via MailerSend
 // Events: signup | upgrade_premium | monthly_to_annual | downgrade
-
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// For downgrade: can send HTML email directly (without template) by providing html_content in body
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,15 +24,662 @@ const templateByEvent: Record<string, string> = {
   downgrade: TEMPLATE_DOWNGRADE,
 };
 
-async function sendMailerSendEmail(toEmail: string, templateId: string, data: Record<string, any> = {}) {
+// Subject lines for each event type (can be overridden via env vars)
+const SUBJECT_SIGNUP = Deno.env.get("MAILERSEND_SUBJECT_SIGNUP") || "Welcome to What The Food!";
+const SUBJECT_UPGRADE_PREMIUM = Deno.env.get("MAILERSEND_SUBJECT_UPGRADE_PREMIUM") || "You're Premium, {{name}} 🎉";
+const SUBJECT_UPGRADE_PREMIUM_YEARLY = Deno.env.get("MAILERSEND_SUBJECT_UPGRADE_PREMIUM_YEARLY") || "You're Premium, {{name}} 🎉";
+const SUBJECT_MONTHLY_TO_ANNUAL = Deno.env.get("MAILERSEND_SUBJECT_MONTHLY_TO_ANNUAL") || "Smart Move, {{name}} 🎉";
+const SUBJECT_DOWNGRADE = Deno.env.get("MAILERSEND_SUBJECT_DOWNGRADE") || "Sorry to see you go, {{name}} 😞";
+
+const subjectByEvent: Record<string, string> = {
+  signup: SUBJECT_SIGNUP,
+  upgrade_premium: SUBJECT_UPGRADE_PREMIUM,
+  upgrade_premium_yearly: SUBJECT_UPGRADE_PREMIUM_YEARLY,
+  monthly_to_annual: SUBJECT_MONTHLY_TO_ANNUAL,
+  downgrade: SUBJECT_DOWNGRADE,
+};
+
+// Generate HTML email for monthly to yearly upgrade
+function generateMonthlyToYearlyEmailHTML(data: {
+  name: string;
+  nextRenewalDate: string;
+  manageSubscriptionUrl?: string;
+}): string {
+  const manageUrl = data.manageSubscriptionUrl || "https://what-the-food-theta.vercel.app/profile";
+  
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Move - Monthly to Yearly</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 20px 0;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+          
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
+                🎉 Smart Move!
+              </h1>
+            </td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 40px; background-color: #ffffff;">
+              <p style="margin: 0 0 20px; color: #333333; font-size: 18px; line-height: 1.6; font-weight: 600;">
+                We are delighted to confirm your successful switch from a monthly to a WhatTheFood Yearly Premium subscription.
+              </p>
+              
+              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                This is a brilliant decision that shows your commitment to long-term health and smart savings.
+              </p>
+              
+              <div style="background-color: #e7f3ff; border-left: 4px solid #2196F3; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                <p style="margin: 0; color: #0c5460; font-size: 16px; line-height: 1.6; font-weight: 600;">
+                  By choosing the annual plan, you have secured 12 months of uninterrupted Premium access while effectively receiving 2 months of service completely free!
+                </p>
+              </div>
+              
+              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                Your new billing cycle is now set to renew annually on <strong style="color: #333333;">${data.nextRenewalDate}</strong>.
+              </p>
+              
+              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                You don't need to do anything else—just continue enjoying all the powerful features you love: Unlimited scans, personalized analytics, the Meal Planner, and more.
+              </p>
+              
+              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                Thank you for your continued loyalty and commitment to WhatTheFood.
+              </p>
+              
+              <!-- Manage Subscription Button -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
+                <tr>
+                  <td align="center" style="padding: 20px 0;">
+                    <a href="${manageUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                      Manage My Subscription
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 30px 0 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                To your health,
+              </p>
+              
+              <p style="margin: 10px 0 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                The WhatTheFood Team
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Need Help Section -->
+          <tr>
+            <td style="padding: 30px 40px 20px; background-color: #f8f9fa; border-top: 1px solid #e9ecef;">
+              <div style="border-top: 1px solid #e0e0e0; padding-top: 30px;">
+                <h3 style="margin: 0 0 15px; color: #333333; font-size: 18px; font-weight: 600;">Need help?</h3>
+                <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                  If you have any questions, please contact us via the chat widget we have on the site.
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Disclaimer Section -->
+          <tr>
+            <td style="padding: 20px 40px 30px; background-color: #f8f9fa;">
+              <div style="border-top: 1px solid #e0e0e0; padding-top: 20px;">
+                <h3 style="margin: 0 0 15px; color: #333333; font-size: 16px; font-weight: 600;">Disclaimer</h3>
+                <p style="margin: 0 0 15px; color: #666666; font-size: 12px; line-height: 1.6;">
+                  The information provided by WhatTheFood, including any analysis or meal planning suggestions, is generated by artificial intelligence and is for informational purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition or dietary needs.
+                </p>
+                <p style="margin: 0; color: #666666; font-size: 12px; line-height: 1.6;">
+                  This email is intended only for the use of the individual or entity to which it is addressed and may contain information that is confidential and privileged. If you are not the intended recipient and have received this email in error, please notify the sender immediately and delete it from your system. Any unauthorized use, dissemination, or copying of this email is strictly prohibited.
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Copyright Footer -->
+          <tr>
+            <td style="padding: 20px 40px; text-align: center; background-color: #f8f9fa; border-radius: 0 0 8px 8px; border-top: 1px solid #e9ecef;">
+              <p style="margin: 0; color: #999999; font-size: 12px;">
+                © ${new Date().getFullYear()} WhatTheFood. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+// Generate HTML email for Free to Yearly Premium upgrade
+function generateYearlyPremiumUpgradeEmailHTML(data: {
+  name: string;
+  dashboardUrl?: string;
+}): string {
+  const dashboardUrl = data.dashboardUrl || "https://what-the-food-theta.vercel.app/dashboard";
+  
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're Premium - Yearly</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 20px 0;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+          
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
+                🎉 You're Premium!
+              </h1>
+            </td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 40px; background-color: #ffffff;">
+              <p style="margin: 0 0 20px; color: #333333; font-size: 18px; line-height: 1.6; font-weight: 600;">
+                Congratulations, ${data.name || "there"}! Your upgrade to WhatTheFood Premium is now complete, and your account has been fully activated.
+              </p>
+              
+              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                You are now officially free from the 3-scan daily limit and eligible for all of our site's features.
+              </p>
+              
+              <div style="background-color: #e7f3ff; border-left: 4px solid #2196F3; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                <p style="margin: 0; color: #0c5460; font-size: 16px; line-height: 1.6; font-weight: 600;">
+                  By choosing the annual plan, you have secured 12 months of uninterrupted Premium access while effectively receiving 2 months of service completely free!
+                </p>
+              </div>
+              
+              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                This is a brilliant decision that shows your commitment to long-term health and smart savings.
+              </p>
+              
+              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                We built WhatTheFood Premium to provide the most comprehensive, seamless, and personalized food analysis experience possible.
+              </p>
+              
+              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                Thank you for trusting us to be your partner in smarter nutrition. We are confident this investment in your health will pay dividends.
+              </p>
+              
+              <!-- Dashboard Button -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
+                <tr>
+                  <td align="center" style="padding: 20px 0;">
+                    <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                      Go to Dashboard
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 30px 0 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                To your health,
+              </p>
+              
+              <p style="margin: 10px 0 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                The WhatTheFood Team
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Need Help Section -->
+          <tr>
+            <td style="padding: 30px 40px 20px; background-color: #f8f9fa; border-top: 1px solid #e9ecef;">
+              <div style="border-top: 1px solid #e0e0e0; padding-top: 30px;">
+                <h3 style="margin: 0 0 15px; color: #333333; font-size: 18px; font-weight: 600;">Need help?</h3>
+                <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                  If you have any questions, please contact us via the chat widget we have on the site.
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Disclaimer Section -->
+          <tr>
+            <td style="padding: 20px 40px 30px; background-color: #f8f9fa;">
+              <div style="border-top: 1px solid #e0e0e0; padding-top: 20px;">
+                <h3 style="margin: 0 0 15px; color: #333333; font-size: 16px; font-weight: 600;">Disclaimer</h3>
+                <p style="margin: 0 0 15px; color: #666666; font-size: 12px; line-height: 1.6;">
+                  The information provided by WhatTheFood, including any analysis or meal planning suggestions, is generated by artificial intelligence and is for informational purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition or dietary needs.
+                </p>
+                <p style="margin: 0; color: #666666; font-size: 12px; line-height: 1.6;">
+                  This email is intended only for the use of the individual or entity to which it is addressed and may contain information that is confidential and privileged. If you are not the intended recipient and have received this email in error, please notify the sender immediately and delete it from your system. Any unauthorized use, dissemination, or copying of this email is strictly prohibited.
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Copyright Footer -->
+          <tr>
+            <td style="padding: 20px 40px; text-align: center; background-color: #f8f9fa; border-radius: 0 0 8px 8px; border-top: 1px solid #e9ecef;">
+              <p style="margin: 0; color: #999999; font-size: 12px;">
+                © ${new Date().getFullYear()} WhatTheFood. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+// Generate HTML email for premium upgrade (monthly)
+function generatePremiumUpgradeEmailHTML(data: {
+  name: string;
+  dashboardUrl?: string;
+}): string {
+  const dashboardUrl = data.dashboardUrl || "https://what-the-food-theta.vercel.app/dashboard";
+  
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're Premium!</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 20px 0;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+          
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
+                🎉 You're Premium!
+              </h1>
+            </td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 40px; background-color: #ffffff;">
+              <p style="margin: 0 0 20px; color: #333333; font-size: 18px; line-height: 1.6; font-weight: 600;">
+                Congratulations, ${data.name}!
+              </p>
+              
+              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                Your upgrade to WhatTheFood Premium is now complete and your account has been fully activated.
+              </p>
+              
+              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                You are now officially free from the 3-scan daily limit and eligible for all of our site's features.
+              </p>
+              
+              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                We built WhatTheFood Premium to provide the most comprehensive, seamless, and personalized food analysis experience possible.
+              </p>
+              
+              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                Thank you for trusting us to be your partner in smarter nutrition. We are confident this investment in your health will pay dividends.
+              </p>
+              
+              <!-- Dashboard Button -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
+                <tr>
+                  <td align="center" style="padding: 20px 0;">
+                    <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                      Go to Dashboard
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 30px 0 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                To your health,
+              </p>
+              
+              <p style="margin: 10px 0 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                The WhatTheFood Team
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Need Help Section -->
+          <tr>
+            <td style="padding: 30px 40px 20px; background-color: #f8f9fa; border-top: 1px solid #e9ecef;">
+              <div style="border-top: 1px solid #e0e0e0; padding-top: 30px;">
+                <h3 style="margin: 0 0 15px; color: #333333; font-size: 18px; font-weight: 600;">Need help?</h3>
+                <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                  If you have any questions, please contact us via the chat widget we have on the site.
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Disclaimer Section -->
+          <tr>
+            <td style="padding: 20px 40px 30px; background-color: #f8f9fa;">
+              <div style="border-top: 1px solid #e0e0e0; padding-top: 20px;">
+                <h3 style="margin: 0 0 15px; color: #333333; font-size: 16px; font-weight: 600;">Disclaimer</h3>
+                <p style="margin: 0 0 15px; color: #666666; font-size: 12px; line-height: 1.6;">
+                  The information provided by WhatTheFood, including any analysis or meal planning suggestions, is generated by artificial intelligence and is for informational purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition or dietary needs.
+                </p>
+                <p style="margin: 0; color: #666666; font-size: 12px; line-height: 1.6;">
+                  This email is intended only for the use of the individual or entity to which it is addressed and may contain information that is confidential and privileged. If you are not the intended recipient and have received this email in error, please notify the sender immediately and delete it from your system. Any unauthorized use, dissemination, or copying of this email is strictly prohibited.
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Copyright Footer -->
+          <tr>
+            <td style="padding: 20px 40px; text-align: center; background-color: #f8f9fa; border-radius: 0 0 8px 8px; border-top: 1px solid #e9ecef;">
+              <p style="margin: 0; color: #999999; font-size: 12px;">
+                © ${new Date().getFullYear()} WhatTheFood. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+// Generate HTML email for downgrade/cancellation
+function generateDowngradeEmailHTML(data: {
+  name: string;
+  premiumExpirationDate: string;
+  monthlyPrice: string;
+  monthlyOriginalPrice: string;
+  yearlyPrice: string;
+  yearlyOriginalPrice: string;
+  monthlyCheckoutUrl?: string;
+  yearlyCheckoutUrl?: string;
+}): string {
+  const appUrl = Deno.env.get("APP_URL") || "https://what-the-food-theta.vercel.app";
+  const monthlyUrl = data.monthlyCheckoutUrl || `${appUrl}/plans?plan=premium&cycle=monthly`;
+  const yearlyUrl = data.yearlyCheckoutUrl || `${appUrl}/plans?plan=premium&cycle=yearly`;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sorry to see you go</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table role="presentation" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">WhatTheFood</h1>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px;">
+              <h2 style="margin: 0 0 20px; color: #333333; font-size: 24px; font-weight: 600;">
+                Sorry to see you go, ${data.name} 😞
+              </h2>
+              
+              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                Dear ${data.name},
+              </p>
+              
+              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                This email confirms that your WhatTheFood Premium subscription has been successfully canceled, as per your request.
+              </p>
+              
+              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                Your Premium access will remain active until the end of your current billing period on <strong>${data.premiumExpirationDate}</strong>.
+              </p>
+              
+              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                After this date, your account will automatically revert to our free plan. You will still be able to use WhatTheFood, but your daily usage will be limited to 3 free scans per day.
+              </p>
+              
+              <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 30px 0; border-radius: 4px;">
+                <p style="margin: 0 0 15px; color: #856404; font-size: 16px; font-weight: 600;">
+                  Did you know you'll also be losing access to:
+                </p>
+                <ul style="margin: 0; padding-left: 20px; color: #856404; font-size: 15px; line-height: 1.8;">
+                  <li>Unlimited, ad-free scanning</li>
+                  <li>The meal planner and personalized health context</li>
+                  <li>Your complete scan history and macro account analytics</li>
+                  <li>And a lot more fun and continuously updated features…</li>
+                </ul>
+              </div>
+              
+              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                We'd love to keep you on board, though! As a thank-you for being a customer, we're offering you a special, limited one-time discount to renew your Premium subscription.
+              </p>
+              
+              <!-- Pricing Cards -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
+                <tr>
+                  <td style="padding: 0 10px 20px;">
+                    <div style="background-color: #f8f9fa; border: 2px solid #e9ecef; border-radius: 8px; padding: 25px; text-align: center;">
+                      <p style="margin: 0 0 10px; color: #28a745; font-size: 14px; font-weight: 600; text-transform: uppercase;">Get 33% off</p>
+                      <p style="margin: 0 0 15px; color: #333333; font-size: 18px; font-weight: 600;">
+                        <span style="text-decoration: line-through; color: #999; font-size: 16px;">$${data.monthlyOriginalPrice}/m</span>
+                        <span style="color: #28a745; margin-left: 8px;">$${data.monthlyPrice}/m</span>
+                      </p>
+                      <a href="${monthlyUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                        Resubscribe to Premium (Monthly)
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 0 10px;">
+                    <div style="background-color: #f8f9fa; border: 2px solid #e9ecef; border-radius: 8px; padding: 25px; text-align: center;">
+                      <p style="margin: 0 0 10px; color: #28a745; font-size: 14px; font-weight: 600; text-transform: uppercase;">Get 45% off</p>
+                      <p style="margin: 0 0 15px; color: #333333; font-size: 18px; font-weight: 600;">
+                        <span style="text-decoration: line-through; color: #999; font-size: 16px;">$${data.yearlyOriginalPrice}/y</span>
+                        <span style="color: #28a745; margin-left: 8px;">$${data.yearlyPrice}/y</span>
+                      </p>
+                      <a href="${yearlyUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                        Resubscribe to Premium (Yearly)
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                We appreciate you being a part of the WhatTheFood community and hope to welcome you back to Premium soon.
+              </p>
+              
+              <div style="background-color: #e7f3ff; border-left: 4px solid #2196F3; padding: 15px; margin: 30px 0; border-radius: 4px;">
+                <p style="margin: 0; color: #0c5460; font-size: 14px; font-style: italic;">
+                  <strong>Note:</strong> There's no other place to find these coupon codes than this email. Don't miss out!
+                </p>
+              </div>
+              
+              <p style="margin: 30px 0 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                To your health,
+              </p>
+              
+              <p style="margin: 10px 0 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                The WhatTheFood Team
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Need Help Section -->
+          <tr>
+            <td style="padding: 30px 40px 20px; background-color: #f8f9fa; border-top: 1px solid #e9ecef;">
+              <div style="border-top: 1px solid #e0e0e0; padding-top: 30px;">
+                <h3 style="margin: 0 0 15px; color: #333333; font-size: 18px; font-weight: 600;">Need help?</h3>
+                <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                  If you have any questions, please contact us via the chat widget we have on the site.
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Disclaimer Section -->
+          <tr>
+            <td style="padding: 20px 40px 30px; background-color: #f8f9fa;">
+              <div style="border-top: 1px solid #e0e0e0; padding-top: 20px;">
+                <h3 style="margin: 0 0 15px; color: #333333; font-size: 16px; font-weight: 600;">Disclaimer</h3>
+                <p style="margin: 0 0 15px; color: #666666; font-size: 12px; line-height: 1.6;">
+                  The information provided by WhatTheFood, including any analysis or meal planning suggestions, is generated by artificial intelligence and is for informational purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition or dietary needs.
+                </p>
+                <p style="margin: 0; color: #666666; font-size: 12px; line-height: 1.6;">
+                  This email is intended only for the use of the individual or entity to which it is addressed and may contain information that is confidential and privileged. If you are not the intended recipient and have received this email in error, please notify the sender immediately and delete it from your system. Any unauthorized use, dissemination, or copying of this email is strictly prohibited.
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Copyright Footer -->
+          <tr>
+            <td style="padding: 20px 40px; text-align: center; background-color: #f8f9fa; border-radius: 0 0 8px 8px; border-top: 1px solid #e9ecef;">
+              <p style="margin: 0; color: #999999; font-size: 12px;">
+                © ${new Date().getFullYear()} WhatTheFood. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+// Send HTML email without template
+async function sendMailerSendHTMLEmail(
+  toEmail: string,
+  subject: string,
+  htmlContent: string,
+  textContent?: string,
+  name?: string
+) {
   if (!MAILERSEND_API_KEY) {
-    console.warn("MAILERSEND_API_KEY not configured; skipping email send");
-    return { skipped: true, reason: "missing_api_key" };
+    console.error("MAILERSEND_API_KEY not configured; skipping email send");
+    return { skipped: true, reason: "missing_api_key", error: "MAILERSEND_API_KEY environment variable is not set" };
+  }
+
+  if (!subject) {
+    console.error("No subject provided; skipping email send");
+    return { skipped: true, reason: "missing_subject", error: "Subject is required" };
+  }
+
+  // Replace {{name}} in subject if present
+  const nameForSubject = name || "there";
+  const finalSubject = subject.replace(/\{\{name\}\}/g, nameForSubject);
+
+  const payload: any = {
+    from: {
+      email: MAILERSEND_FROM_EMAIL,
+      name: MAILERSEND_FROM_NAME,
+    },
+    to: [{ email: toEmail }],
+    subject: finalSubject,
+    html: htmlContent,
+  };
+
+  if (textContent) {
+    payload.text = textContent;
+  }
+
+  console.log("Sending HTML email via MailerSend:", {
+    to: toEmail,
+    subject: finalSubject,
+    from_email: MAILERSEND_FROM_EMAIL,
+  });
+
+  try {
+    const res = await fetch("https://api.mailersend.com/v1/email", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${MAILERSEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const responseText = await res.text();
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = responseText;
+    }
+
+    if (!res.ok) {
+      console.error("MailerSend API error:", {
+        status: res.status,
+        statusText: res.statusText,
+        response: responseData,
+        payload: JSON.stringify(payload, null, 2),
+      });
+      return { 
+        error: typeof responseData === 'string' ? responseData : JSON.stringify(responseData),
+        status: res.status,
+        details: responseData,
+      };
+    }
+
+    console.log("MailerSend HTML email sent successfully:", {
+      to: toEmail,
+      subject: finalSubject,
+      response: responseData,
+    });
+
+    return { ok: true, response: responseData };
+  } catch (fetchError: any) {
+    console.error("MailerSend fetch error:", fetchError?.message || fetchError);
+    return { 
+      error: fetchError?.message || "Failed to send email",
+      details: String(fetchError),
+    };
+  }
+}
+
+async function sendMailerSendEmail(toEmail: string, templateId: string, subject: string, data: Record<string, any> = {}) {
+  if (!MAILERSEND_API_KEY) {
+    console.error("MAILERSEND_API_KEY not configured; skipping email send");
+    return { skipped: true, reason: "missing_api_key", error: "MAILERSEND_API_KEY environment variable is not set" };
   }
 
   if (!templateId) {
-    console.warn("No templateId for this event; skipping email send");
-    return { skipped: true, reason: "missing_template" };
+    console.error("No templateId for this event; skipping email send");
+    return { skipped: true, reason: "missing_template", error: "Template ID is not configured for this event" };
+  }
+
+  if (!subject) {
+    console.error("No subject for this event; skipping email send");
+    return { skipped: true, reason: "missing_subject", error: "Subject is not configured for this event" };
   }
 
   const payload = {
@@ -42,6 +688,7 @@ async function sendMailerSendEmail(toEmail: string, templateId: string, data: Re
       name: MAILERSEND_FROM_NAME,
     },
     to: [{ email: toEmail }],
+    subject: subject,
     template_id: templateId,
     personalization: [
       {
@@ -51,6 +698,13 @@ async function sendMailerSendEmail(toEmail: string, templateId: string, data: Re
     ],
   };
 
+  console.log("Sending email via MailerSend:", {
+    to: toEmail,
+    template_id: templateId,
+    from_email: MAILERSEND_FROM_EMAIL,
+  });
+
+  try {
   const res = await fetch("https://api.mailersend.com/v1/email", {
     method: "POST",
     headers: {
@@ -60,18 +714,68 @@ async function sendMailerSendEmail(toEmail: string, templateId: string, data: Re
     body: JSON.stringify(payload),
   });
 
-  if (!res.ok) {
-    const errText = await res.text();
-    console.error("MailerSend send failed:", res.status, errText);
-    return { error: errText, status: res.status };
-  }
+    const responseText = await res.text();
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = responseText;
+    }
 
-  return { ok: true };
+  if (!res.ok) {
+      console.error("MailerSend API error:", {
+        status: res.status,
+        statusText: res.statusText,
+        response: responseData,
+        payload: JSON.stringify(payload, null, 2),
+      });
+      return { 
+        error: typeof responseData === 'string' ? responseData : JSON.stringify(responseData),
+        status: res.status,
+        details: responseData,
+      };
+    }
+
+    console.log("MailerSend email sent successfully:", {
+      to: toEmail,
+      template_id: templateId,
+      response: responseData,
+    });
+
+    return { ok: true, response: responseData };
+  } catch (fetchError: any) {
+    console.error("MailerSend fetch error:", fetchError?.message || fetchError);
+    return { 
+      error: fetchError?.message || "Failed to send email",
+      details: String(fetchError),
+    };
+  }
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
+  // Log every request immediately
+  console.log('=== SEND-LIFECYCLE-EMAIL REQUEST RECEIVED ===', {
+    method: req.method,
+    url: req.url,
+    timestamp: new Date().toISOString(),
+  });
+
   if (req.method === "OPTIONS") {
+    console.log('OPTIONS preflight request');
     return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  // Health check endpoint
+  if (req.method === "GET") {
+    console.log('Health check request');
+    return new Response(JSON.stringify({ 
+      status: 'ok', 
+      function: 'send-lifecycle-email',
+      timestamp: new Date().toISOString() 
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -82,21 +786,371 @@ serve(async (req) => {
     const metadata = body?.metadata || {};
     const dryRun = body?.dry_run === true;
 
+    console.log("send-lifecycle-email called:", {
+      eventType,
+      email,
+      hasName: !!name,
+      hasMetadata: !!metadata,
+      dryRun,
+    });
+
     if (!email) {
+      console.error("Email is required but not provided");
       return new Response(JSON.stringify({ error: "email is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (!eventType || !templateByEvent[eventType]) {
-      return new Response(JSON.stringify({ error: "invalid event_type" }), {
+    if (!eventType) {
+      console.error("event_type is required but not provided");
+      return new Response(JSON.stringify({ error: "event_type is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // Validate eventType
+    if (!eventType) {
+      return new Response(JSON.stringify({ error: "event_type is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check if this is a Free to Yearly Premium upgrade - send HTML email (bypasses template validation)
+    if (eventType === "upgrade_premium_yearly" || eventType === "upgrade_yearly") {
+      console.log("Processing yearly premium upgrade email request:", {
+        email,
+        name,
+        hasMetadata: !!metadata,
+      });
+
+      const subject = (subjectByEvent["upgrade_premium_yearly"] || "You're Premium, {{name}} 🎉").replace(/\{\{name\}\}/g, name || "there");
+      
+      // Get dashboard URL from metadata or use default
+      const dashboardUrl = metadata.dashboard_url || metadata.dashboardUrl || "https://what-the-food-theta.vercel.app/dashboard";
+      
+      console.log("Generating yearly premium upgrade email HTML with data:", {
+        name: name || "there",
+        dashboardUrl,
+      });
+      
+      const htmlContent = generateYearlyPremiumUpgradeEmailHTML({
+        name: name || "there",
+        dashboardUrl: dashboardUrl,
+      });
+      
+      if (dryRun) {
+        return new Response(
+          JSON.stringify({
+            dry_run: true,
+            event_type: eventType,
+            email,
+            subject: subject,
+            has_html_content: true,
+            metadata,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      console.log("Sending yearly premium upgrade HTML email via MailerSend");
+
+      const result = await sendMailerSendHTMLEmail(
+        email,
+        subject,
+        htmlContent,
+        undefined, // textContent
+        name || "there" // name for subject replacement
+      );
+
+      // Check if email was skipped or failed
+      if (result.skipped || result.error) {
+        console.error("Yearly premium upgrade email send failed or skipped:", {
+          event_type: eventType,
+          email,
+          result,
+        });
+        
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: result.error || result.reason || "Email send failed",
+            result 
+          }), 
+          {
+            status: result.status || 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      console.log("Yearly premium upgrade email sent successfully");
+
+      return new Response(JSON.stringify({ success: true, result }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check if this is a premium upgrade (monthly) - send HTML email (bypasses template validation)
+    if (eventType === "upgrade_premium" || eventType === "upgrade") {
+      console.log("Processing premium upgrade email request:", {
+        email,
+        name,
+        hasMetadata: !!metadata,
+      });
+
+      const subject = (subjectByEvent["upgrade_premium"] || "You're Premium, {{name}} 🎉").replace(/\{\{name\}\}/g, name || "there");
+      
+      // Get dashboard URL from metadata or use default
+      const dashboardUrl = metadata.dashboard_url || metadata.dashboardUrl || "https://what-the-food-theta.vercel.app/dashboard";
+      
+      console.log("Generating premium upgrade email HTML with data:", {
+        name: name || "there",
+        dashboardUrl,
+      });
+      
+      const htmlContent = generatePremiumUpgradeEmailHTML({
+        name: name || "there",
+        dashboardUrl: dashboardUrl,
+      });
+      
+      if (dryRun) {
+        return new Response(
+          JSON.stringify({
+            dry_run: true,
+            event_type: eventType,
+            email,
+            subject: subject,
+            has_html_content: true,
+            metadata,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      console.log("Sending premium upgrade HTML email via MailerSend");
+
+      const result = await sendMailerSendHTMLEmail(
+        email,
+        subject,
+        htmlContent,
+        undefined, // textContent
+        name || "there" // name for subject replacement
+      );
+
+      // Check if email was skipped or failed
+      if (result.skipped || result.error) {
+        console.error("Premium upgrade email send failed or skipped:", {
+          event_type: eventType,
+          email,
+          result,
+        });
+        
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: result.error || result.reason || "Email send failed",
+            result 
+          }), 
+          {
+            status: result.status || 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      console.log("Premium upgrade email sent successfully");
+
+      return new Response(JSON.stringify({ success: true, result }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check if this is a monthly to yearly upgrade - send HTML email (bypasses template validation)
+    if (eventType === "monthly_to_annual" || eventType === "monthly_to_yearly") {
+      console.log("Processing monthly to yearly email request:", {
+        email,
+        name,
+        hasMetadata: !!metadata,
+      });
+
+      const subject = (subjectByEvent["monthly_to_annual"] || "Smart Move, {{name}} 🎉").replace(/\{\{name\}\}/g, name || "there");
+      
+      // Get next renewal date from metadata or use default
+      const nextRenewalDate = metadata.next_renewal_date || metadata.nextRenewalDate || metadata.current_period_end || "your next billing date";
+      const manageSubscriptionUrl = metadata.manage_subscription_url || metadata.manageSubscriptionUrl || "https://what-the-food-theta.vercel.app/profile";
+      
+      console.log("Generating monthly to yearly email HTML with data:", {
+        name: name || "there",
+        nextRenewalDate,
+        manageSubscriptionUrl,
+      });
+      
+      const htmlContent = generateMonthlyToYearlyEmailHTML({
+        name: name || "there",
+        nextRenewalDate: nextRenewalDate,
+        manageSubscriptionUrl: manageSubscriptionUrl,
+      });
+      
+      if (dryRun) {
+        return new Response(
+          JSON.stringify({
+            dry_run: true,
+            event_type: eventType,
+            email,
+            subject: subject,
+            has_html_content: true,
+            metadata,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      console.log("Sending monthly to yearly HTML email via MailerSend");
+
+      const result = await sendMailerSendHTMLEmail(
+        email,
+        subject,
+        htmlContent,
+        undefined, // textContent
+        name || "there" // name for subject replacement
+      );
+
+      // Check if email was skipped or failed
+      if (result.skipped || result.error) {
+        console.error("Monthly to yearly email send failed or skipped:", {
+          event_type: eventType,
+          email,
+          result,
+        });
+        
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: result.error || result.reason || "Email send failed",
+            result 
+          }), 
+          {
+            status: result.status || 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      console.log("Monthly to yearly email sent successfully");
+
+      return new Response(JSON.stringify({ success: true, result }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check if this is a downgrade - send HTML email (bypasses template validation)
+    if (eventType === "downgrade") {
+      console.log("Processing downgrade email request:", {
+        email,
+        name,
+        hasMetadata: !!metadata,
+      });
+
+      const subject = (subjectByEvent[eventType] || "Sorry to see you go, {{name}} 😞").replace(/\{\{name\}\}/g, name || "there");
+      
+      // Generate HTML email from metadata
+      const premiumExpirationDate = metadata.premium_expiration_date || metadata.current_period_end || "the end of your billing period";
+      const monthlyPrice = metadata.monthly_price || "9.99";
+      const monthlyOriginalPrice = metadata.monthly_original_price || "14.99";
+      const yearlyPrice = metadata.yearly_price || "99.99";
+      const yearlyOriginalPrice = metadata.yearly_original_price || "149.99";
+      const monthlyCheckoutUrl = metadata.monthly_checkout_url;
+      const yearlyCheckoutUrl = metadata.yearly_checkout_url;
+      
+      console.log("Generating downgrade email HTML with data:", {
+        name: name || "there",
+        premiumExpirationDate,
+        monthlyPrice,
+        yearlyPrice,
+      });
+      
+      const htmlContent = generateDowngradeEmailHTML({
+        name: name || "there",
+        premiumExpirationDate: premiumExpirationDate,
+        monthlyPrice: monthlyPrice,
+        monthlyOriginalPrice: monthlyOriginalPrice,
+        yearlyPrice: yearlyPrice,
+        yearlyOriginalPrice: yearlyOriginalPrice,
+        monthlyCheckoutUrl: monthlyCheckoutUrl,
+        yearlyCheckoutUrl: yearlyCheckoutUrl,
+      });
+      
+      if (dryRun) {
+        return new Response(
+          JSON.stringify({
+            dry_run: true,
+            event_type: eventType,
+            email,
+            subject: subject,
+            has_html_content: true,
+            metadata,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      console.log("Sending downgrade HTML email via MailerSend");
+
+      const result = await sendMailerSendHTMLEmail(
+        email,
+        subject,
+        htmlContent,
+        undefined, // textContent
+        name || "there" // name for subject replacement
+      );
+
+      // Check if email was skipped or failed
+      if (result.skipped || result.error) {
+        console.error("Downgrade email send failed or skipped:", {
+          event_type: eventType,
+          email,
+          result,
+        });
+        
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: result.error || result.reason || "Email send failed",
+            result 
+          }), 
+          {
+            status: result.status || 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      console.log("Downgrade email sent successfully");
+
+      return new Response(JSON.stringify({ success: true, result }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Template-based emails (signup, upgrade, etc.)
+    // Note: downgrade is handled above and doesn't need a template
     const templateId = templateByEvent[eventType];
+    if (!templateId) {
+      console.error("Template not configured for event type:", eventType);
+      return new Response(JSON.stringify({ error: `Template not configured for event_type: ${eventType}` }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const subject = subjectByEvent[eventType] || "Email from What The Food";
 
     if (dryRun) {
       return new Response(
@@ -105,16 +1159,38 @@ serve(async (req) => {
           event_type: eventType,
           email,
           template_id: templateId,
+          subject: subject,
           metadata,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const result = await sendMailerSendEmail(email, templateId, {
+    const result = await sendMailerSendEmail(email, templateId, subject, {
       name: name || "there",
       ...metadata,
     });
+
+    // Check if email was skipped or failed
+    if (result.skipped || result.error) {
+      console.error("Email send failed or skipped:", {
+        event_type: eventType,
+        email,
+        result,
+      });
+      
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: result.error || result.reason || "Email send failed",
+          result 
+        }), 
+        {
+          status: result.status || 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
     return new Response(JSON.stringify({ success: true, result }), {
       status: 200,

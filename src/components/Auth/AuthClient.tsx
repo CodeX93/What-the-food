@@ -89,7 +89,22 @@ export function AuthClient() {
               name: data.user.user_metadata?.full_name || null,
             },
           })
-          .catch((err) => console.warn("send-lifecycle-email signup failed", err?.message || err));
+          .then((response) => {
+            if (response.error || (response.data && !response.data.success)) {
+              console.error("send-lifecycle-email failed:", {
+                error: response.error,
+                data: response.data,
+              });
+            } else {
+              console.log("Signup email sent successfully");
+            }
+          })
+          .catch((err) => {
+            console.error("send-lifecycle-email signup error:", {
+              message: err?.message || err,
+              error: err,
+            });
+          });
 
         setSignupEmail(email);
         setSignupUserId(data.user.id);

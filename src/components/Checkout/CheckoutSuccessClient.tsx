@@ -73,16 +73,84 @@ export function CheckoutSuccessClient() {
             return false;
           }
 
-          const subscriptionRecord = subData as { is_active?: boolean } | null;
+          const subscriptionRecord = subData as { is_active?: boolean; subscription_type?: string; billing_cycle?: string; stripe_price_id?: string } | null;
 
-          if (subscriptionRecord?.is_active) {
+          // Check both is_active and subscription_type to ensure it's premium
+          // Also verify billing_cycle is set for yearly upgrades
+          if (subscriptionRecord?.is_active && subscriptionRecord?.subscription_type === 'premium') {
+            console.log('Subscription found:', {
+              is_active: subscriptionRecord.is_active,
+              subscription_type: subscriptionRecord.subscription_type,
+              billing_cycle: subscriptionRecord.billing_cycle,
+              stripe_price_id: subscriptionRecord.stripe_price_id,
+              fullRecord: subscriptionRecord,
+            });
             setSubscription(subscriptionRecord);
             return true;
           }
+          
+          console.log('Subscription not active or not premium:', {
+            is_active: subscriptionRecord?.is_active,
+            subscription_type: subscriptionRecord?.subscription_type,
+            billing_cycle: subscriptionRecord?.billing_cycle,
+            stripe_price_id: subscriptionRecord?.stripe_price_id,
+            fullRecord: subscriptionRecord,
+          });
 
           return false;
         };
 
+        // PRIMARY METHOD: Call process-checkout immediately for all checkouts
+        // This handles both free-to-monthly and monthly-to-yearly upgrades
+        // Since webhook fails, we use process-checkout as the primary method
+        if (currentSessionId) {
+          console.log('Calling process-checkout function immediately (primary method)...', {
+            sessionId: currentSessionId,
+            userId: session.user.id,
+          });
+          
+          try {
+            const { data: processData, error: processError } = await supabase.functions.invoke('process-checkout', {
+              body: { sessionId: currentSessionId },
+            });
+            
+            console.log('process-checkout response:', {
+              data: processData,
+              error: processError,
+              hasData: !!processData,
+              hasError: !!processError,
+            });
+            
+            if (processError) {
+              console.error('Process checkout error:', processError);
+              // Fallback to sync-subscription
+              try {
+                const { error: syncError } = await supabase.functions.invoke('sync-subscription', {
+                  body: {},
+                });
+                if (syncError) {
+                  console.error('Sync error:', syncError);
+                }
+              } catch (syncErr) {
+                console.error('Sync error:', syncErr);
+              }
+            } else if (processData?.success) {
+              console.log('✓ Checkout processed successfully via process-checkout:', processData);
+              // Give it a moment to update the database
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+          } catch (processErr) {
+            console.error('Error processing checkout:', processErr);
+            // Fallback to sync
+            try {
+              await supabase.functions.invoke('sync-subscription', { body: {} });
+            } catch (syncErr) {
+              console.error('Sync error:', syncErr);
+            }
+          }
+        }
+
+        // SECONDARY: Poll to verify subscription is active (after process-checkout)
         let subscriptionActive = await checkSubscription();
 
         while (!subscriptionActive && attempts < maxAttempts) {
@@ -90,6 +158,28 @@ export function CheckoutSuccessClient() {
           await new Promise((resolve) => setTimeout(resolve, 1000));
           subscriptionActive = await checkSubscription();
           if (subscriptionActive) break;
+        }
+
+        // FINAL FALLBACK: If still not active after polling and process-checkout, try one more time
+        if (!subscriptionActive && currentSessionId) {
+          console.log('Subscription still not active after polling, retrying process-checkout...', {
+            sessionId: currentSessionId,
+            userId: session.user.id,
+            attempts: attempts,
+          });
+          try {
+            const { data: processData, error: processError } = await supabase.functions.invoke('process-checkout', {
+              body: { sessionId: currentSessionId },
+            });
+            
+            if (!processError && processData?.success) {
+              console.log('✓ Retry successful:', processData);
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+              subscriptionActive = await checkSubscription();
+            }
+          } catch (processErr) {
+            console.error('Error in retry:', processErr);
+          }
         }
 
         if (subscriptionActive) {
@@ -107,7 +197,8 @@ export function CheckoutSuccessClient() {
         } else {
           toast({
             title: "Subscription Processing",
-            description: "Your subscription is being processed. You'll have access shortly.",
+            description: "Your subscription is being processed. Please refresh the page in a few moments.",
+            variant: "default",
           });
 
           setTimeout(() => {
