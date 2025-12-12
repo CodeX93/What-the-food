@@ -377,8 +377,9 @@ export function ProfileClient({
               .eq("id", sub.platform_plan_id)
               .maybeSingle();
             
-            if (planRow?.name) {
-              setPlanName(planRow.name);
+            const plan = planRow as any; // Type assertion for plan row
+            if (plan?.name) {
+              setPlanName(plan.name);
             }
           } else {
             setPlanName(null);
