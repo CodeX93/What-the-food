@@ -205,3 +205,7 @@ sudo certbot --nginx -d yourdomain.com
 
 Then update nginx to redirect HTTP to HTTPS.
 
+
+
+
+

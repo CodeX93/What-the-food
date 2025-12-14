@@ -27,6 +27,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/hooks/use-translation";
 import { getPlatformSubscription } from "@/utils/subscription";
 import { analyzeFood, fetchRecentScans, saveScanHistory, uploadFoodImage } from "@/utils/foodScan";
+import { useAuth } from "@/contexts/AuthContext";
+import { queryWithRetry } from "@/utils/supabaseQuery";
 import type { User } from "@supabase/supabase-js";
 
 export type DashboardClientProps = {
@@ -45,9 +47,13 @@ export function DashboardClient({
   const router = useRouter();
   const { toast } = useToast();
   const t = useTranslation();
-  const [user, setUser] = useState<User | null>(initialUser);
+  const { user: authUser, loading: authLoading, refreshSession } = useAuth();
+  // Use auth context user, fallback to initialUser
+  const user = authUser || initialUser;
   const [subscription, setSubscription] = useState<any>(initialSubscription);
-  const [loading, setLoading] = useState(!initialUser);
+  // OPTIMIZATION: Start with loading=false if we have initialUser
+  // Only show loading if we truly have no user data
+  const [loading, setLoading] = useState(!initialUser && authLoading);
   const [analyzing, setAnalyzing] = useState(false);
   const [servings, setServings] = useState(1);
   const [recentScans, setRecentScans] = useState<any[]>(initialScans);
@@ -208,64 +214,101 @@ export function DashboardClient({
     }
   };
 
+  // Track if we've loaded data to prevent duplicate fetches
+  const hasLoadedRef = useRef(false);
+
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        if (!initialUser) {
-          setLoading(true);
-        }
+    // Prevent duplicate loads
+    if (hasLoadedRef.current) return;
 
-        const {
-          data: { session },
-          error: sessionError,
-        } = await supabase.auth.getSession();
+    // Use user from auth context, fallback to initialUser
+    const currentUser = authUser || initialUser;
 
-        if (sessionError || !session?.user) {
-          router.push("/auth");
-          return;
-        }
+    // OPTIMIZATION: Start rendering immediately with initial data
+    // Don't wait for auth if we have initialUser
+    if (!currentUser) {
+      // Only redirect if auth has finished loading and there's still no user
+      if (!authLoading) {
+        router.push("/auth");
+      }
+      return;
+    }
 
-        setUser(session.user);
+    // Mark as loaded immediately to prevent duplicate fetches
+    hasLoadedRef.current = true;
 
-        // Fetch user profile to get full_name (if not already provided from server)
-        if (!initialFullName) {
-          try {
-            const { data: profileData, error: profileError } = await (supabase as any)
-              .from("profiles")
-              .select("full_name")
-              .eq("id", session.user.id)
-              .maybeSingle();
+    // OPTIMIZATION: Set loading=false immediately if we have initial data
+    // Let the page render with what we have, fetch missing data in background
+    if (initialSubscription && initialScans.length > 0 && initialFullName) {
+      setLoading(false);
+    }
 
-            if (profileError) {
-              console.error("Profile fetch error:", profileError);
-            } else if (profileData) {
-              const fullName = profileData.full_name?.trim();
-              if (fullName && fullName.length > 0) {
-                setUserFullName(fullName);
+    // Fetch all data in parallel in the background (non-blocking)
+    const fetchMissingData = async () => {
+      const promises: Promise<any>[] = [];
+
+      // Fetch user profile to get full_name (if not already provided from server)
+      if (!initialFullName && currentUser) {
+        promises.push(
+          (supabase as any)
+            .from("profiles")
+            .select("full_name")
+            .eq("id", currentUser.id)
+            .maybeSingle()
+            .then(({ data: profileData, error: profileError }: any) => {
+              if (!profileError && profileData) {
+                const fullName = profileData.full_name?.trim();
+                if (fullName && fullName.length > 0) {
+                  setUserFullName(fullName);
+                }
               }
-            }
-          } catch (error) {
-            console.error("Failed to load user profile", error);
-          }
-        }
+            })
+            .catch((error: any) => {
+              console.error("Failed to load user profile", error);
+            })
+        );
+      }
 
-        const sub =
-          initialSubscription ??
-          (await getPlatformSubscription(session.user.id));
-        setSubscription(sub);
+      // Fetch subscription if not provided
+      if (!initialSubscription) {
+        promises.push(
+          getPlatformSubscription(currentUser.id)
+            .then((sub) => {
+              setSubscription(sub);
+            })
+            .catch((error) => {
+              console.error("Failed to load subscription", error);
+            })
+        );
+      }
 
-        const scans =
-          initialScans.length > 0
-            ? initialScans
-            : await fetchRecentScans(session.user.id, 6);
-        setRecentScans(scans);
+      // Fetch scans if not provided
+      if (initialScans.length === 0) {
+        promises.push(
+          fetchRecentScans(currentUser.id, 6)
+            .then((scans) => {
+              setRecentScans(scans);
+            })
+            .catch((error) => {
+              console.error("Failed to load recent scans", error);
+            })
+        );
+      }
 
-        try {
-          const remaining = await getRemainingFreeScans(true);
-          setFreeScanRemaining(remaining);
-        } catch (error) {
-          console.error("Failed to load free scan balance", error);
-        }
+      // Fetch free scan balance
+      promises.push(
+        getRemainingFreeScans(true)
+          .then((remaining) => {
+            setFreeScanRemaining(remaining);
+          })
+          .catch((error) => {
+            console.error("Failed to load free scan balance", error);
+          })
+      );
+
+      // Wait for all promises to complete, then set loading to false
+      try {
+        await Promise.all(promises);
       } catch (error) {
         console.error("Error fetching user data:", error);
         toast({
@@ -278,8 +321,10 @@ export function DashboardClient({
       }
     };
 
-    fetchUserData();
-  }, [initialScans, initialSubscription, initialUser, initialFullName, router, toast, t]);
+    // Start fetching in background - don't await
+    fetchMissingData();
+
+  }, [authUser, authLoading, initialUser]); // CRITICAL: Minimal dependencies
 
   // Handle iframe resizing for tinyAds widget - dynamic height based on content
   const iframeRef = useRef<HTMLIFrameElement>(null);

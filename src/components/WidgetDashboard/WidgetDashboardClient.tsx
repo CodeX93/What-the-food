@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Code, Copy, Check, Trash2, Plus, BarChart3, Zap, Edit, Save, Bookmark, AlertTriangle, ArrowRight, ShieldCheck, Upload, Search } from "lucide-react";
 import { getUrl } from "@/utils/url";
 import { useTranslation } from "@/hooks/use-translation";
+import { queryWithRetry } from "@/utils/supabaseQuery";
 
 // Helper functions to parse and combine value + unit
 const parseValueUnit = (value: string): { value: string; unit: "px" | "%" } => {
@@ -323,26 +324,47 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
 
     const loadData = async () => {
       try {
+        // OPTIMIZATION: Set loading to false immediately if we have initialSubscription
+        // Let the page render with what we have, fetch widgets in background
+        if (initialSubscription) {
+          setLoading(false);
+        }
+
         // Set a timeout to ensure page renders even if queries are slow
         timeoutId = setTimeout(() => {
           if (!cancelled) {
             setLoading(false);
           }
-        }, 3000); // Max 3 seconds wait
+        }, 2000); // Reduced from 3s to 2s
 
-        // Fast session check only
-        const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+        // OPTIMIZATION: Use queryWithRetry for automatic session refresh
+        let session;
+        try {
+          session = await queryWithRetry(async () => {
+            const { data, error } = await supabaseClient.auth.getSession();
+            if (error) throw error;
+            return data.session;
+          });
+        } catch (error) {
+          console.error('Failed to get session:', error);
+          clearTimeout(timeoutId);
+          setLoading(false);
+          router.push("/auth");
+          return;
+        }
         
         // Check if cancelled or no session
-        if (cancelled || !session?.user || sessionError) {
+        if (cancelled || !session?.user) {
           clearTimeout(timeoutId);
+          setLoading(false);
           if (!session?.user) {
             router.push("/auth");
           }
           return;
         }
 
-        setUser(session.user);
+        // Mark as loaded to prevent duplicate fetches
+        hasLoadedRef.current = true;
 
         // Use server-loaded subscription if available, otherwise set defaults
         // Only process subscription once to prevent infinite loops
@@ -377,32 +399,24 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         widgetsLoadingRef.current = true;
         
         try {
-          // Verify session is still valid before querying
-          const { data: { session: currentSession }, error: sessionCheckError } = await supabaseClient.auth.getSession();
-          
-          if (cancelled || sessionCheckError || !currentSession?.user || !currentSession?.access_token) {
+          // OPTIMIZATION: Skip redundant session check - we already have the session from above
+          // Just use the session variable we already fetched
+          if (cancelled || !session?.user) {
             widgetsLoadingRef.current = false;
             clearTimeout(timeoutId);
-            if (!currentSession?.user) {
-              console.error("No session found, redirecting to auth");
-              router.push("/auth");
-            }
             setLoading(false);
             return;
           }
 
-          // Ensure the client has the session by setting it explicitly
-          // This helps with timing issues where the client might not have the session attached yet
-          await new Promise(resolve => setTimeout(resolve, 50));
-
-          // Make the query - Supabase client should automatically include auth headers
-          console.log("Attempting to load widgets for user:", currentSession.user.id);
-          const { data: widgets, error: widgetsError } = await supabaseClient
+          // OPTIMIZATION: Remove artificial 50ms delay - not needed
+          // Make the query immediately - Supabase client automatically includes auth headers
+          console.log("Attempting to load widgets for user:", session.user.id);
+          const { data: widgets, error: widgetsError} = await supabaseClient
             .from("widget_settings")
             .select(
               "id, widget_id, widget_name, widget_description, primary_color, border_radius, background_color, is_default, created_at, custom_text, branding_visible, iframe_width, iframe_height, result_display_mode, iframe_padding_top, iframe_padding_bottom, iframe_padding_left, iframe_padding_right, iframe_margin_top, iframe_margin_bottom, iframe_margin_left, iframe_margin_right, upload_area_background_color"
             )
-            .eq("user_id", currentSession.user.id)
+            .eq("user_id", session.user.id)
             .order("created_at", { ascending: false })
             .limit(50);
 
@@ -663,69 +677,37 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
 
             console.log("Loading API stats for user:", userId);
 
-            // Add timeout to each query (5 seconds max per query - increased from 3)
-            const queryWithTimeout = (query: Promise<any>, timeoutMs = 5000) => {
-              return Promise.race([
-                query,
-                new Promise((_, reject) => 
-                  setTimeout(() => reject(new Error('Query timeout')), timeoutMs)
-                )
-              ]);
-            };
+            // OPTIMIZED: Fetch minimal data in ONE query and calculate stats client-side
+            // This is much faster than 4 separate COUNT queries
+            const statsPromise = supabaseClient
+              .from("widget_api_calls")
+              .select("created_at, status")
+              .eq("user_id", userId)
+              .order("created_at", { ascending: false })
+              .limit(1000); // Limit to recent 1000 calls for performance
 
-            Promise.all([
-              queryWithTimeout(
-                supabaseClient
-                  .from("widget_api_calls")
-                  .select("id", { count: "exact", head: true })
-                  .eq("user_id", userId)
-              ).catch((err) => {
-                console.error("Error loading total API stats:", err);
-                return { count: 0 };
-              }),
-              queryWithTimeout(
-                supabaseClient
-                  .from("widget_api_calls")
-                  .select("id", { count: "exact", head: true })
-                  .eq("user_id", userId)
-                  .gte("created_at", startOfToday.toISOString())
-              ).catch((err) => {
-                console.error("Error loading today API stats:", err);
-                return { count: 0 };
-              }),
-              queryWithTimeout(
-                supabaseClient
-                  .from("widget_api_calls")
-                  .select("id", { count: "exact", head: true })
-                  .eq("user_id", userId)
-                  .gte("created_at", startOfMonth.toISOString())
-              ).catch((err) => {
-                console.error("Error loading month API stats:", err);
-                return { count: 0 };
-              }),
-              queryWithTimeout(
-                supabaseClient
-                  .from("widget_api_calls")
-                  .select("id", { count: "exact", head: true })
-                  .eq("user_id", userId)
-                  .eq("status", "success")
-              ).catch((err) => {
-                console.error("Error loading successful API stats:", err);
-                return { count: 0 };
-              }),
-            ])
-            .then(([totalRes, todayRes, monthRes, successRes]) => {
-              if (cancelled) return;
-              // Verify user is still authenticated before updating state
-              supabaseClient.auth.getSession().then(({ data: { session: verifySession } }) => {
-                if (cancelled || !verifySession?.user) {
-                  console.log("API stats: Session expired or cancelled during load");
-                  return;
-                }
-                const totalCount = (totalRes?.count as number) || 0;
-                const todayCount = (todayRes?.count as number) || 0;
-                const monthCount = (monthRes?.count as number) || 0;
-                const successCount = (successRes?.count as number) || 0;
+            // Set timeout for the single query
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Query timeout')), 3000)
+            );
+
+            Promise.race([statsPromise, timeoutPromise])
+              .then((result: any) => {
+                if (cancelled) return;
+                
+                const calls = result?.data || [];
+                
+                // Calculate all stats from the single query result
+                const totalCount = calls.length;
+                const todayCount = calls.filter((call: any) => 
+                  new Date(call.created_at) >= startOfToday
+                ).length;
+                const monthCount = calls.filter((call: any) => 
+                  new Date(call.created_at) >= startOfMonth
+                ).length;
+                const successCount = calls.filter((call: any) => 
+                  call.status === 'success'
+                ).length;
 
                 console.log("API stats loaded:", { totalCount, todayCount, monthCount, successCount });
 
@@ -735,13 +717,18 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                   thisMonth: monthCount,
                   successful: successCount,
                 });
+              })
+              .catch((error) => {
+                if (cancelled) return;
+                console.error("Error loading API stats:", error);
+                // Keep stats at 0 on error
+                setApiStats({
+                  total: 0,
+                  today: 0,
+                  thisMonth: 0,
+                  successful: 0,
+                });
               });
-            })
-            .catch((error) => {
-              if (cancelled) return;
-              console.error("Error loading API stats (general):", error);
-              // Keep stats at 0 on error, but log it for debugging
-            });
           }).catch((error) => {
             if (cancelled) return;
             console.error("Error getting session for API stats:", error);
@@ -1100,94 +1087,52 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
         startOfToday.setHours(0, 0, 0, 0);
         const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 
-        // Use the same query structure and timeout handling as loadApiStats for consistency
-        const queryWithTimeout = (query: Promise<any>, timeoutMs = 5000) => {
-          return Promise.race([
-            query,
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Query timeout')), timeoutMs)
-            )
-          ]);
-        };
+        // OPTIMIZED: Use single query instead of 4 separate queries
+        const statsPromise = supabaseClient
+          .from("widget_api_calls")
+          .select("created_at, status")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1000);
 
-        Promise.all([
-          queryWithTimeout(
-            supabaseClient
-              .from("widget_api_calls")
-              .select("id", { count: "exact", head: true })
-              .eq("user_id", user.id)
-          ).catch((err) => {
-            console.error("Error loading total API stats after deletion:", err);
-            return { count: 0, error: err };
-          }),
-          queryWithTimeout(
-            supabaseClient
-              .from("widget_api_calls")
-              .select("id", { count: "exact", head: true })
-              .eq("user_id", user.id)
-              .gte("created_at", startOfToday.toISOString())
-          ).catch((err) => {
-            console.error("Error loading today API stats after deletion:", err);
-            return { count: 0, error: err };
-          }),
-          queryWithTimeout(
-            supabaseClient
-              .from("widget_api_calls")
-              .select("id", { count: "exact", head: true })
-              .eq("user_id", user.id)
-              .gte("created_at", startOfMonth.toISOString())
-          ).catch((err) => {
-            console.error("Error loading month API stats after deletion:", err);
-            return { count: 0, error: err };
-          }),
-          queryWithTimeout(
-            supabaseClient
-              .from("widget_api_calls")
-              .select("id", { count: "exact", head: true })
-              .eq("user_id", user.id)
-              .eq("status", "success")
-          ).catch((err) => {
-            console.error("Error loading successful API stats after deletion:", err);
-            return { count: 0, error: err };
-          }),
-        ]).then(([totalRes, todayRes, monthRes, successRes]) => {
-          // Check for Supabase errors in response
-          if (totalRes?.error) {
-            console.error("Total API stats query error:", totalRes.error);
-          }
-          if (todayRes?.error) {
-            console.error("Today API stats query error:", todayRes.error);
-          }
-          if (monthRes?.error) {
-            console.error("Month API stats query error:", monthRes.error);
-          }
-          if (successRes?.error) {
-            console.error("Success API stats query error:", successRes.error);
-          }
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Query timeout')), 3000)
+        );
 
-          const totalCount = (totalRes?.count as number) ?? 0;
-          const todayCount = (todayRes?.count as number) ?? 0;
-          const monthCount = (monthRes?.count as number) ?? 0;
-          const successCount = (successRes?.count as number) ?? 0;
+        Promise.race([statsPromise, timeoutPromise])
+          .then((result: any) => {
+            const calls = result?.data || [];
+            
+            // Calculate all stats from the single query result
+            const totalCount = calls.length;
+            const todayCount = calls.filter((call: any) => 
+              new Date(call.created_at) >= startOfToday
+            ).length;
+            const monthCount = calls.filter((call: any) => 
+              new Date(call.created_at) >= startOfMonth
+            ).length;
+            const successCount = calls.filter((call: any) => 
+              call.status === 'success'
+            ).length;
 
-          console.log("API stats reloaded after deletion:", { 
-            totalCount, 
-            todayCount, 
-            monthCount, 
-            successCount,
-            rawResponses: { totalRes, todayRes, monthRes, successRes }
+            console.log("API stats reloaded after deletion:", { 
+              totalCount, 
+              todayCount, 
+              monthCount, 
+              successCount
+            });
+
+            setApiStats({
+              total: totalCount,
+              today: todayCount,
+              thisMonth: monthCount,
+              successful: successCount,
+            });
+          })
+          .catch((err) => {
+            console.error("Error reloading API stats after deletion:", err);
+            // Keep current stats on error
           });
-
-          setApiStats({
-            total: totalCount,
-            today: todayCount,
-            thisMonth: monthCount,
-            successful: successCount,
-          });
-        }).catch((err) => {
-          // Silently fail - stats will remain as they were, don't show error
-          console.error("Error reloading API stats after deletion:", err);
-        });
       }
     } catch (error: any) {
       console.error("Error deleting widget:", error);
@@ -1255,13 +1200,13 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
     const code = getEmbedCode(widget);
     if (!code) return;
     navigator.clipboard.writeText(code);
-    const widgetId = widget?.id || currentWidget?.id || null;
-    setCopiedWidgetId(widgetId);
-    setTimeout(() => setCopiedWidgetId(null), 2000);
-    toast({
-      title: t("widgetdashboard.toast.copied"),
-      description: t("widgetdashboard.toast.copied.description"),
-    });
+      const widgetId = widget?.id || currentWidget?.id || null;
+        setCopiedWidgetId(widgetId);
+        setTimeout(() => setCopiedWidgetId(null), 2000);
+        toast({
+          title: t("widgetdashboard.toast.copied"),
+          description: t("widgetdashboard.toast.copied.description"),
+        });
   };
 
   const isFreePlan = subscriptionType === "free";

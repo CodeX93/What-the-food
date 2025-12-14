@@ -28,6 +28,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { NavigationLinks } from "./NavigationLinks";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 type HeaderClientProps = {
@@ -38,87 +39,41 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useLanguage();
+  const { user, loading: authLoading, profile } = useAuth();
   const [open, setOpen] = useState(false);
-  const [user, setUser] = useState<SupabaseUser | null>(initialUser);
-  const [loading, setLoading] = useState(!initialUser);
-  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
-  const [profileFullName, setProfileFullName] = useState<string | null>(null);
+  const [fallbackProfile, setFallbackProfile] = useState<{ avatar_url: string | null; full_name: string | null } | null>(null);
+  const loading = authLoading && !initialUser;
 
+  // Use profile from auth context - it's fetched automatically and updates instantly
+  // Fallback to local state if we have initialUser but context hasn't loaded profile yet
+  const currentUser = user || initialUser;
+  const profileAvatarUrl = profile?.avatar_url ?? fallbackProfile?.avatar_url ?? null;
+  const profileFullName = profile?.full_name ?? fallbackProfile?.full_name ?? null;
+
+  // Fallback: If we have initialUser but no profile from context, fetch it once
   useEffect(() => {
-    let isMounted = true;
-
-    const fetchProfileData = async (userId: string) => {
+    if (initialUser?.id && !profile && !fallbackProfile && !authLoading) {
+      // Quick fetch as fallback (should be rare)
+      (async () => {
       try {
-        const { data: profile } = await (supabase as any)
+          const { data: profileData } = await (supabase as any)
           .from("profiles")
           .select("avatar_url, full_name")
-          .eq("id", userId)
+            .eq("id", initialUser.id)
           .maybeSingle();
 
-        if (!isMounted) return;
-        if (profile?.avatar_url) {
-          setProfileAvatarUrl(profile.avatar_url);
-        } else {
-          setProfileAvatarUrl(null);
-        }
-        if (profile?.full_name) {
-          setProfileFullName(profile.full_name);
-        } else {
-          setProfileFullName(null);
+          if (profileData) {
+            setFallbackProfile({
+              avatar_url: profileData.avatar_url || null,
+              full_name: profileData.full_name || null,
+            });
         }
       } catch (error) {
-        console.error("HeaderClient: failed to fetch profile data", error);
-        if (isMounted) {
-          setProfileAvatarUrl(null);
-          setProfileFullName(null);
+          console.error("HeaderClient: fallback profile fetch failed", error);
         }
-      }
-    };
-
-    if (!initialUser) {
-      supabase.auth
-        .getSession()
-        .then(({ data: { session } }) => {
-          if (!isMounted) return;
-          setUser(session?.user ?? null);
-          if (session?.user?.id) {
-            void fetchProfileData(session.user.id);
-          }
-          setLoading(false);
-        })
-        .catch((error) => {
-          console.error("HeaderClient: failed to load session", error);
-          if (!isMounted) return;
-          setUser(null);
-          setProfileAvatarUrl(null);
-          setProfileFullName(null);
-          setLoading(false);
-        });
-    } else {
-      setUser(initialUser);
-      if (initialUser?.id) {
-        void fetchProfileData(initialUser.id);
-      }
-      setLoading(false);
-    }
-
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!isMounted) return;
-      setUser(session?.user ?? null);
-      if (session?.user?.id) {
-        void fetchProfileData(session.user.id);
-      } else {
-        setProfileAvatarUrl(null);
-        setProfileFullName(null);
-      }
-      setLoading(false);
-    });
-
-    return () => {
-      isMounted = false;
-      data.subscription.unsubscribe();
-    };
-  }, [initialUser]);
+      })();
+        }
+  }, [initialUser, profile, fallbackProfile, authLoading]);
 
   const handleLogout = async () => {
     try {
@@ -146,13 +101,11 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
         description: t("common.loggedoutdesc"),
       });
 
-      setUser(null);
-
       router.push("/");
       router.refresh();
     } catch (error: any) {
       if (error?.message === "Auth session missing!") {
-        setUser(null);
+        // Auth state will be updated by AuthContext
         router.push("/");
         router.refresh();
 
@@ -196,7 +149,7 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
         {loading ? (
           <div className="w-20 h-9" />
         ) : user ? (
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                 <Avatar className="h-10 w-10">

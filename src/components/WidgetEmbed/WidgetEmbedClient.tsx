@@ -512,6 +512,7 @@ function PremiumUserResultsView({
 export function WidgetEmbedClient() {
   const searchParams = useSearchParams();
   const widgetId = searchParams?.get("id") ?? null;
+  const isPreview = searchParams?.get("preview") === "true";
   const [widgetSettings, setWidgetSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
@@ -526,6 +527,117 @@ export function WidgetEmbedClient() {
   const isTrackingRef = useRef(false);
   const isLoadingRef = useRef<string | null>(null);
 
+  // Hide Tawk.io in preview mode
+  // Replace the existing "Hide Tawk.io in preview mode" useEffect with this improved version:
+
+useEffect(() => {
+  // Check if we should hide Tawk.io
+  const shouldHideTawk = () => {
+    if (typeof window === 'undefined') return false;
+    
+    // Hide if preview parameter is present
+    if (isPreview) return true;
+    
+    // Hide if we're in an iframe
+    try {
+      if (window.self !== window.top) {
+        // We're in an iframe - check if it's same-origin (dashboard preview)
+        try {
+          // If we can access parent.location, it's same-origin (your dashboard)
+          const parentHostname = window.parent.location.hostname;
+          const currentHostname = window.location.hostname;
+          
+          // If same hostname, it's a dashboard preview - hide Tawk.io
+          if (parentHostname === currentHostname) {
+            console.log('Same-origin iframe detected (dashboard preview) - hiding Tawk.io');
+            return true;
+          }
+        } catch (e) {
+          // Cross-origin iframe - this is an external embed, show Tawk.io
+          console.log('Cross-origin iframe detected (external embed) - showing Tawk.io');
+          return false;
+        }
+      }
+    } catch (e) {
+      console.error('Error checking iframe context:', e);
+    }
+    
+    return false;
+  };
+  
+  if (shouldHideTawk()) {
+    const styleId = 'hide-tawk-widget';
+    let style = document.getElementById(styleId);
+    
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    
+    style.textContent = `
+      /* Hide Tawk.io widget */
+      #tawkchat-container,
+      iframe[id^="tawkchat"],
+      iframe[title*="chat"],
+      div[id^="tawkchat"],
+      div[class*="tawk"],
+      [id*="tawkchat"],
+      [id*="Tawk"],
+      [class*="tawk-"],
+      .tawk-chat-container,
+      #tawk-bubble-container {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        width: 0 !important;
+        height: 0 !important;
+      }
+      
+      /* Also hide the Tawk.io API script effects */
+      body[class*="tawk"] {
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+      }
+    `;
+    
+    // Also try to hide via JavaScript API if available
+    const checkAndHideTawk = () => {
+      if (typeof window !== 'undefined' && (window as any).Tawk_API) {
+        try {
+          (window as any).Tawk_API.hideWidget();
+          console.log('Tawk.io hidden via API');
+        } catch (e) {
+          console.error('Error hiding Tawk.io via API:', e);
+        }
+      }
+    };
+    
+    // Try immediately
+    checkAndHideTawk();
+    
+    // Try again after a short delay (in case Tawk loads later)
+    const timeoutId = setTimeout(checkAndHideTawk, 1000);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      const existingStyle = document.getElementById(styleId);
+      if (existingStyle) {
+        existingStyle.remove();
+      }
+      
+      // Restore Tawk.io when component unmounts
+      if (typeof window !== 'undefined' && (window as any).Tawk_API) {
+        try {
+          (window as any).Tawk_API.showWidget();
+        } catch (e) {
+          // Ignore errors
+        }
+      }
+    };
+  }
+}, [isPreview]);
   // Log component mount for debugging
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -533,13 +645,14 @@ export function WidgetEmbedClient() {
       console.log("🔵 WIDGET EMBED CLIENT MOUNTED");
       console.log("═══════════════════════════════════════════════════════");
       console.log("Widget ID:", widgetId);
+      console.log("Is Preview:", isPreview);
       console.log("Current URL:", window.location.href);
       console.log("Current Path:", window.location.pathname);
       console.log("Referrer:", document.referrer || "(no referrer)");
       console.log("Hostname:", window.location.hostname);
       console.log("═══════════════════════════════════════════════════════");
     }
-  }, [widgetId]);
+  }, [widgetId, isPreview]);
 
   // No need to disable/restore widget - we just check the limit and show different UI
 

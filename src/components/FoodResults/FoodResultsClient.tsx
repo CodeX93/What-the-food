@@ -49,6 +49,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTranslation } from "@/hooks/use-translation";
+import { copyToClipboard } from "@/utils/clipboard";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -794,50 +795,77 @@ export function FoodResultsClient() {
     }
   };
   const handleShare = async () => {
+    // Use getUrl utility to get the correct app URL
+    const shareUrl = typeof window !== 'undefined' 
+      ? `${window.location.origin}/shared/${id}`
+      : `/shared/${id}`;
+    
+    const dishDisplay = analysis?.isManualEntry || analysis?.dish?.startsWith("Manual") || analysis?.dish?.startsWith("Manual Input")
+      ? `Manual Input: ${analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || ""}`
+      : analysis?.dish || "Food scan";
+    const shareData = {
+      title: dishDisplay || "Food Analysis Results",
+      text: `Check out this food analysis: ${dishDisplay}`,
+      url: shareUrl,
+    };
+
     try {
-      const shareUrl = `${window.location.origin}/shared/${id}`;
-      const dishDisplay = analysis?.isManualEntry || analysis?.dish?.startsWith("Manual") || analysis?.dish?.startsWith("Manual Input")
-        ? `Manual Input: ${analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || ""}`
-        : analysis?.dish || "Food scan";
-      const shareData = {
-        title: dishDisplay || "Food Analysis Results",
-        text: `Check out this food analysis: ${dishDisplay}`,
-        url: shareUrl,
-      };
-      // Try Web Share API first (mobile-friendly)
+      // Try Web Share API first (mobile-friendly, requires HTTPS)
       if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
         await navigator.share(shareData);
         toast({
           title: t("foodresults.share.success"),
           description: t("foodresults.share.success.description"),
         });
-      } else {
-        // Fallback: Copy to clipboard
-        await navigator.clipboard.writeText(shareUrl);
+        return;
+      }
+      
+      // Fallback: Copy to clipboard (works on both HTTP and HTTPS)
+      const copied = await copyToClipboard(shareUrl);
+      if (copied) {
         toast({
           title: t("foodresults.share.copied"),
           description: t("foodresults.share.copied.description"),
         });
+      } else {
+        // Show URL in toast for manual copying
+        toast({
+          title: "Copy this link",
+          description: shareUrl,
+          duration: 10000,
+        });
       }
     } catch (error: any) {
-      // User cancelled share or clipboard failed
-      if (error.name !== "AbortError") {
-        console.error("Share failed:", error);
-        // Fallback to copying URL
-        try {
-          const shareUrl = `${window.location.origin}/shared/${id}`;
-          await navigator.clipboard.writeText(shareUrl);
+      // User cancelled share
+      if (error.name === "AbortError") {
+        return;
+      }
+      
+      console.error("Share failed:", error);
+      
+      // Try clipboard as fallback
+      try {
+        const copied = await copyToClipboard(shareUrl);
+        if (copied) {
           toast({
             title: "Link copied!",
             description: "Food analysis link has been copied to your clipboard.",
           });
-        } catch (clipboardError) {
+        } else {
+          // Show URL for manual copying
           toast({
-            title: t("foodresults.share.error"),
-            description: t("foodresults.share.error.description"),
-            variant: "destructive",
+            title: "Copy this link",
+            description: shareUrl,
+            duration: 10000,
           });
         }
+      } catch (clipboardError) {
+        // Final fallback: show URL in toast
+        toast({
+          title: "Copy this link",
+          description: shareUrl,
+          duration: 10000,
+        });
       }
     }
   };
@@ -1489,7 +1517,7 @@ export function FoodResultsClient() {
             <div className="lg:col-span-4">
               <Card className="overflow-hidden lg:sticky lg:top-6">
                 {imageUrl ? (
-                  <div className="relative overflow-hidden" style={{ paddingBottom: 'calc(100% + 72px)' }}>
+                  <div className="relative overflow-hidden" style={{ paddingBottom: 'calc(100% + 92px)' }}>
                     <img src={imageUrl} alt={analysis.dish || "Food"} className="absolute inset-0 w-full h-full object-cover" />
                   </div>
                 ) : (

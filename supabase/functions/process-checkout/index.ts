@@ -636,7 +636,7 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (profile?.email) {
-          const appUrl = Deno.env.get('APP_URL') || 'https://what-the-food-theta.vercel.app';
+          const appUrl = Deno.env.get('APP_URL') || 'http://72.60.113.9';
           const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
 
           // Format next renewal date
@@ -726,7 +726,7 @@ Deno.serve(async (req) => {
           .maybeSingle();
 
         if (profile?.email) {
-          const appUrl = Deno.env.get('APP_URL') || 'https://what-the-food-theta.vercel.app';
+          const appUrl = Deno.env.get('APP_URL') || 'http://72.60.113.9';
           const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
 
           // Use different event type for yearly vs monthly upgrade

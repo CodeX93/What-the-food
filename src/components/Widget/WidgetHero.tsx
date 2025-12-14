@@ -1,85 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
-
-const withTimeout = async <T,>(promise: Promise<T>, timeoutMs = 8000): Promise<T> => {
-  let timeoutHandle: NodeJS.Timeout | undefined;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutHandle = setTimeout(() => {
-      reject(new Error("Request timed out"));
-    }, timeoutMs);
-  });
-
-  try {
-    const result = await Promise.race([promise, timeoutPromise]);
-    return result as T;
-  } finally {
-    if (timeoutHandle) {
-      clearTimeout(timeoutHandle);
-    }
-  }
-};
+import { useAuth } from "@/contexts/AuthContext";
 
 export function WidgetHero() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [checkingSubscription, setCheckingSubscription] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
   const { toast } = useToast();
   const { t } = useLanguage();
-  const supabaseClient = supabase as any;
+  const hasCheckedRef = useRef(false);
 
   useEffect(() => {
+    // Prevent duplicate checks
+    if (hasCheckedRef.current) return;
+    
     const checkAndRedirect = async () => {
+      // Wait for auth to load
+      if (authLoading) {
       setCheckingSubscription(true);
-      try {
-        const sessionResult = await withTimeout<any>(supabaseClient.auth.getSession());
-        const {
-          data: { session },
-        } = sessionResult;
-
-        // If user is logged in, redirect to dashboard
-        // The dashboard will handle showing appropriate content based on subscription status
-        if (session?.user) {
-          console.log("User is logged in, redirecting to widget dashboard...");
-          // Use both router.push and window.location as fallback to ensure redirect works
-          try {
-            router.push("/widget/dashboard");
-            // Fallback: if router.push doesn't work, use window.location
-            setTimeout(() => {
-              if (window.location.pathname === "/widget") {
-                window.location.href = "/widget/dashboard";
-              }
-            }, 100);
-          } catch (redirectError) {
-            console.error("Router redirect failed, using window.location:", redirectError);
-            window.location.href = "/widget/dashboard";
-          }
           return;
         }
-      } catch (error) {
-        console.error("Error checking authentication:", error);
-        // Only show toast for actual network issues
-        if (error instanceof Error && error.message.includes("timed out")) {
-          toast({
-            title: t("widgethero.networkissue"),
-            description: t("widgethero.networkissuedesc"),
-          });
-        }
-      } finally {
+
+      // Mark as checked
+      hasCheckedRef.current = true;
         setCheckingSubscription(false);
+
+      // OPTIMIZATION: Use user from AuthContext instead of calling getSession()
+      // This is instant and doesn't require any async calls
+      if (user) {
+        console.log("User is logged in, redirecting to widget dashboard...");
+        router.push("/widget/dashboard");
       }
     };
 
     checkAndRedirect();
-  }, [router, supabaseClient, toast, t]);
+  }, [user, authLoading, router]);
 
   useEffect(() => {
     const measureHeader = () => {

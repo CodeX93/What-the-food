@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/hooks/use-translation";
+import { useAuth } from "@/contexts/AuthContext";
 
 type ManualItem = {
   name?: string;
@@ -152,7 +153,9 @@ type MyFoodAnalyticsClientProps = {
 };
 
 export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnalyticsClientProps) {
-  const [loading, setLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
+  // OPTIMIZATION: Start with loading=false if auth is done, let reload set it
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const t = useTranslation();
@@ -215,10 +218,8 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
         throw new Error(manualData?.error || t("analytics.manual.error.description"));
       }
 
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session?.user) {
+      // OPTIMIZATION: Use user from auth context instead of calling getSession()
+      if (!user) {
         router.push("/auth");
         return;
       }
@@ -249,7 +250,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
       const scanId = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const { error: insertError } = await (supabase as any).from("food_scans").insert({
         id: scanId,
-        user_id: session.user.id,
+        user_id: user.id,
         image_path: `manual-entry-${Date.now()}-${crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substr(2, 9)}`,
         image_url: null,
         serving: 1,
@@ -316,41 +317,59 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
     }
     setLoading(true);
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session?.user) {
+      // OPTIMIZATION: Use user from auth context instead of calling getSession()
+      // This is faster and avoids unnecessary async calls
+      if (!user) {
         router.push("/auth");
         return;
       }
       
-      // Fetch profile
-      const { data: profileData } = await supabase
+      // Fetch profile and scans in parallel for faster loading
+      const [profileResult, scansResult] = await Promise.all([
+        supabase
         .from("profiles")
         .select("*")
-        .eq("id", session.user.id)
-        .maybeSingle();
-      setProfile(profileData);
-
-      const { data, error } = await supabase
+          .eq("id", user.id)
+          .maybeSingle(),
+        supabase
         .from("food_scans")
         .select("id, created_at, serving, result_json")
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      setScans((data || []) as FoodScan[]);
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true })
+      ]);
+      
+      if (profileResult.data) {
+        setProfile(profileResult.data);
+      }
+      
+      if (scansResult.error) throw scansResult.error;
+      setScans((scansResult.data || []) as FoodScan[]);
     } finally {
       setLoading(false);
     }
-  }, [router, isPremium]);
+  }, [router, isPremium, user]);
+
+  // Track if data has been loaded to prevent duplicate fetches
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
+    // Prevent duplicate loads
+    if (hasLoadedRef.current) return;
+
     if (!isPremium) {
       setLoading(false);
       return;
     }
+
+    // Wait for auth to load and user to be available
+    if (authLoading || !user) {
+      return;
+    }
+
+    // Mark as loaded and fetch data
+    hasLoadedRef.current = true;
     void reload();
-  }, [reload, isPremium]);
+  }, [user, authLoading, isPremium]); // CRITICAL: Only depend on user and authLoading
 
   useEffect(() => {
     if (!scans.length) return;

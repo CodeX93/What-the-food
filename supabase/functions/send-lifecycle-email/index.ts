@@ -45,7 +45,7 @@ function generateMonthlyToYearlyEmailHTML(data: {
   nextRenewalDate: string;
   manageSubscriptionUrl?: string;
 }): string {
-  const manageUrl = data.manageSubscriptionUrl || "https://what-the-food-theta.vercel.app/profile";
+  const manageUrl = data.manageSubscriptionUrl || "http://72.60.113.9/profile";
   
   return `
 <!DOCTYPE html>
@@ -63,7 +63,7 @@ function generateMonthlyToYearlyEmailHTML(data: {
           
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
                 🎉 Smart Move!
               </h1>
@@ -103,7 +103,7 @@ function generateMonthlyToYearlyEmailHTML(data: {
               <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
                 <tr>
                   <td align="center" style="padding: 20px 0;">
-                    <a href="${manageUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                    <a href="${manageUrl}" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
                       Manage My Subscription
                     </a>
                   </td>
@@ -169,7 +169,7 @@ function generateYearlyPremiumUpgradeEmailHTML(data: {
   name: string;
   dashboardUrl?: string;
 }): string {
-  const dashboardUrl = data.dashboardUrl || "https://what-the-food-theta.vercel.app/dashboard";
+  const dashboardUrl = data.dashboardUrl || "http://72.60.113.9/dashboard";
   
   return `
 <!DOCTYPE html>
@@ -187,7 +187,7 @@ function generateYearlyPremiumUpgradeEmailHTML(data: {
           
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
                 🎉 You're Premium!
               </h1>
@@ -227,7 +227,7 @@ function generateYearlyPremiumUpgradeEmailHTML(data: {
               <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
                 <tr>
                   <td align="center" style="padding: 20px 0;">
-                    <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                    <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
                       Go to Dashboard
                     </a>
                   </td>
@@ -293,7 +293,7 @@ function generatePremiumUpgradeEmailHTML(data: {
   name: string;
   dashboardUrl?: string;
 }): string {
-  const dashboardUrl = data.dashboardUrl || "https://what-the-food-theta.vercel.app/dashboard";
+  const dashboardUrl = data.dashboardUrl || "http://72.60.113.9/dashboard";
   
   return `
 <!DOCTYPE html>
@@ -311,7 +311,7 @@ function generatePremiumUpgradeEmailHTML(data: {
           
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
                 🎉 You're Premium!
               </h1>
@@ -345,7 +345,7 @@ function generatePremiumUpgradeEmailHTML(data: {
               <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
                 <tr>
                   <td align="center" style="padding: 20px 0;">
-                    <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                    <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
                       Go to Dashboard
                     </a>
                   </td>
@@ -417,7 +417,7 @@ function generateDowngradeEmailHTML(data: {
   monthlyCheckoutUrl?: string;
   yearlyCheckoutUrl?: string;
 }): string {
-  const appUrl = Deno.env.get("APP_URL") || "https://what-the-food-theta.vercel.app";
+  const appUrl = Deno.env.get("APP_URL") || "http://72.60.113.9";
   const monthlyUrl = data.monthlyCheckoutUrl || `${appUrl}/plans?plan=premium&cycle=monthly`;
   const yearlyUrl = data.yearlyCheckoutUrl || `${appUrl}/plans?plan=premium&cycle=yearly`;
 
@@ -436,7 +436,7 @@ function generateDowngradeEmailHTML(data: {
         <table role="presentation" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0;">
+            <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 8px 8px 0 0;">
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">WhatTheFood</h1>
             </td>
           </tr>
@@ -490,7 +490,7 @@ function generateDowngradeEmailHTML(data: {
                         <span style="text-decoration: line-through; color: #999; font-size: 16px;">$${data.monthlyOriginalPrice}/m</span>
                         <span style="color: #28a745; margin-left: 8px;">$${data.monthlyPrice}/m</span>
                       </p>
-                      <a href="${monthlyUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                      <a href="${monthlyUrl}" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
                         Resubscribe to Premium (Monthly)
                       </a>
                     </div>
@@ -504,7 +504,7 @@ function generateDowngradeEmailHTML(data: {
                         <span style="text-decoration: line-through; color: #999; font-size: 16px;">$${data.yearlyOriginalPrice}/y</span>
                         <span style="color: #28a745; margin-left: 8px;">$${data.yearlyPrice}/y</span>
                       </p>
-                      <a href="${yearlyUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                      <a href="${yearlyUrl}" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
                         Resubscribe to Premium (Yearly)
                       </a>
                     </div>
@@ -829,7 +829,7 @@ Deno.serve(async (req) => {
       const subject = (subjectByEvent["upgrade_premium_yearly"] || "You're Premium, {{name}} 🎉").replace(/\{\{name\}\}/g, name || "there");
       
       // Get dashboard URL from metadata or use default
-      const dashboardUrl = metadata.dashboard_url || metadata.dashboardUrl || "https://what-the-food-theta.vercel.app/dashboard";
+      const dashboardUrl = metadata.dashboard_url || metadata.dashboardUrl || "http://72.60.113.9/dashboard";
       
       console.log("Generating yearly premium upgrade email HTML with data:", {
         name: name || "there",
@@ -905,7 +905,7 @@ Deno.serve(async (req) => {
       const subject = (subjectByEvent["upgrade_premium"] || "You're Premium, {{name}} 🎉").replace(/\{\{name\}\}/g, name || "there");
       
       // Get dashboard URL from metadata or use default
-      const dashboardUrl = metadata.dashboard_url || metadata.dashboardUrl || "https://what-the-food-theta.vercel.app/dashboard";
+      const dashboardUrl = metadata.dashboard_url || metadata.dashboardUrl || "http://72.60.113.9/dashboard";
       
       console.log("Generating premium upgrade email HTML with data:", {
         name: name || "there",
@@ -982,7 +982,7 @@ Deno.serve(async (req) => {
       
       // Get next renewal date from metadata or use default
       const nextRenewalDate = metadata.next_renewal_date || metadata.nextRenewalDate || metadata.current_period_end || "your next billing date";
-      const manageSubscriptionUrl = metadata.manage_subscription_url || metadata.manageSubscriptionUrl || "https://what-the-food-theta.vercel.app/profile";
+      const manageSubscriptionUrl = metadata.manage_subscription_url || metadata.manageSubscriptionUrl || "http://72.60.113.9/profile";
       
       console.log("Generating monthly to yearly email HTML with data:", {
         name: name || "there",

@@ -64,3 +64,7 @@ echo "   1. Set up environment variables in .env.local"
 echo "   2. Configure nginx (see DEPLOYMENT_VPS.md)"
 echo "   3. Reload nginx: sudo systemctl reload nginx"
 
+
+
+
+

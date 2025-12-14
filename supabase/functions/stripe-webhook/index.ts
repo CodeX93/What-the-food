@@ -538,7 +538,7 @@ async function handleSubscriptionDeleted(stripe: any, supabase: any, subscriptio
 
         if (profile?.email) {
           const supabaseUrl = Deno.env.get('SUPABASE_URL');
-          const appUrl = Deno.env.get('APP_URL') || 'https://what-the-food-theta.vercel.app';
+          const appUrl = Deno.env.get('APP_URL') || 'http://72.60.113.9';
           
           const expirationDate = oldSub?.current_period_end
             ? new Date(oldSub.current_period_end).toLocaleDateString('en-US', {
@@ -1160,7 +1160,7 @@ async function updatePlatformSubscription(
         // Send HTML premium upgrade email via send-lifecycle-email function
         try {
           const supabaseUrl = Deno.env.get('SUPABASE_URL');
-          const appUrl = Deno.env.get('APP_URL') || 'https://what-the-food-theta.vercel.app';
+          const appUrl = Deno.env.get('APP_URL') || 'http://72.60.113.9';
           
           console.log('Preparing to send premium upgrade email:', {
             userId,
@@ -1225,7 +1225,7 @@ async function updatePlatformSubscription(
         // Send HTML downgrade email via send-lifecycle-email function
         try {
           const supabaseUrl = Deno.env.get('SUPABASE_URL');
-          const appUrl = Deno.env.get('APP_URL') || 'https://what-the-food-theta.vercel.app';
+          const appUrl = Deno.env.get('APP_URL') || 'http://72.60.113.9';
           
           console.log('Preparing to send downgrade email:', {
             userId,
@@ -1337,7 +1337,7 @@ async function updatePlatformSubscription(
         if (eventType === 'monthly_to_annual') {
           try {
             const supabaseUrl = Deno.env.get('SUPABASE_URL');
-            const appUrl = Deno.env.get('APP_URL') || 'https://what-the-food-theta.vercel.app';
+            const appUrl = Deno.env.get('APP_URL') || 'http://72.60.113.9';
             
             console.log('Preparing to send monthly to yearly email:', {
               userId,

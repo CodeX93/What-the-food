@@ -24,9 +24,9 @@ export function WidgetPricing() {
     },
     {
       name: t("widgetpricing.premiumplan.name"),
-      price: "$6.99",
+      price: "$14.99",
       period: "/month",
-      yearlyPrice: "$69.99/year",
+      yearlyPrice: "$149.99/year",
       widgetHighlights: [
         t("widgetpricing.premiumplan.widget1"),
         t("widgetpricing.premiumplan.widget2"),

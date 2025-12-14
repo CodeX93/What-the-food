@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
 
         if (profile?.email) {
-          const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://what-the-food-theta.vercel.app";
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://72.60.113.9";
           
           // Format expiration date
           const expirationDate = currentPeriodEnd

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { analyzeFood, saveScanHistory, uploadFoodImage } from "@/utils/foodScan";
 import { decrementFreeScan, hasFreeScanAvailable, getFreeScanStatus } from "@/utils/freeScanLimit";
 import { hasActivePremiumSubscription } from "@/utils/subscription";
@@ -18,7 +19,8 @@ export default function Hero() {
   const [user, setUser] = useState<any>(null);
   const [remainingScans, setRemainingScans] = useState<number | null>(null);
   const [scanStatusType, setScanStatusType] = useState<"registered" | "unregistered" | null>(null);
-  const [isPremium, setIsPremium] = useState<boolean | null>(null);
+  // OPTIMIZATION: Start with false to avoid "Checking benefits..." blocking state
+  const [isPremium, setIsPremium] = useState<boolean>(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [socialProofMargin, setSocialProofMargin] = useState<number>(0);
@@ -36,48 +38,74 @@ export default function Hero() {
     }
   };
 
-  useEffect(() => {
-    // Check authentication and premium status
-    const checkAuthAndScans = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const authUser = session?.user ?? null;
-      setUser(authUser);
+  const { user: authUser } = useAuth();
+  const hasCheckedRef = useRef(false);
+  const lastUserIdRef = useRef<string | null>(null);
 
+  useEffect(() => {
+    // Use user from auth context
+    setUser(authUser);
+
+    // Only check if user ID actually changed
+    const currentUserId = authUser?.id || null;
+    if (lastUserIdRef.current === currentUserId && hasCheckedRef.current) {
+      return;
+    }
+    
+    lastUserIdRef.current = currentUserId;
+    hasCheckedRef.current = true;
+
+    // OPTIMIZATION: Run checks in background - non-blocking for instant page load
+    const checkPremiumAndScans = async () => {
       if (authUser) {
-        try {
-          setIsPremium(null);
-          const premium = await hasActivePremiumSubscription(authUser.id);
-          setIsPremium(premium);
-        } catch (error) {
-          console.error("Failed to determine premium status", error);
+        // Run both checks in parallel (non-blocking - updates UI when ready)
+        const [premiumResult, scanStatusResult] = await Promise.allSettled([
+          hasActivePremiumSubscription(authUser.id),
+          getFreeScanStatus(true)
+        ]);
+
+        // Handle premium status
+        if (premiumResult.status === 'fulfilled') {
+          setIsPremium(premiumResult.value);
+        } else {
+          console.error("Failed to determine premium status", premiumResult.reason);
           setIsPremium(false);
+        }
+
+        // Handle scan status
+        if (scanStatusResult.status === 'fulfilled') {
+          setRemainingScans(scanStatusResult.value.remaining);
+          setScanStatusType(scanStatusResult.value.type);
+        } else {
+          console.error("Failed to load free scan status", scanStatusResult.reason);
+          // Default to 3 scans for new users
+          setRemainingScans(3);
+          setScanStatusType('unregistered');
         }
       } else {
         setIsPremium(false);
-      }
-
-      try {
-        const status = await getFreeScanStatus(true);
-        setRemainingScans(status.remaining);
-        setScanStatusType(status.type);
-      } catch (error) {
-        console.error("Failed to load free scan status", error);
-        setRemainingScans(null);
-        setScanStatusType(null);
+        
+        // Still check scan status for non-logged-in users (non-blocking)
+        try {
+          const status = await getFreeScanStatus(true);
+          setRemainingScans(status.remaining);
+          setScanStatusType(status.type);
+        } catch (error) {
+          console.error("Failed to load free scan status", error);
+          // Default to 3 scans for new users
+          setRemainingScans(3);
+          setScanStatusType('unregistered');
+        }
       }
     };
     
-    checkAuthAndScans();
-    
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      checkAuthAndScans();
-    });
-    
+    // Fire and forget - don't block UI
+    checkPremiumAndScans();
+  }, [authUser]);
+
+  // Separate effect for preview cleanup
+  useEffect(() => {
     return () => {
-      subscription.unsubscribe();
-      // Clean up preview URL on unmount
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
       }
@@ -355,9 +383,7 @@ export default function Hero() {
           {/* Free scans text */}
           <p className="text-xs sm:text-sm text-muted-foreground text-center">
             {user ? (
-              isPremium === null ? (
-                t("hero.checkingbenefits")
-              ) : isPremium ? (
+              isPremium ? (
                 t("hero.unlimitedscans")
               ) : remainingScans === null ? (
                 t("hero.checkingscans")
@@ -575,9 +601,7 @@ export default function Hero() {
               {/* Free scans text for desktop - after CTAs */}
               <p className="text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6 mb-8">
                 {user ? (
-                  isPremium === null ? (
-                    t("hero.checkingbenefits")
-                  ) : isPremium ? (
+                  isPremium ? (
                     t("hero.unlimitedscans")
                   ) : remainingScans === null ? (
                     t("hero.checkingscans")

@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getPlatformSubscription } from "@/utils/subscription";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -76,6 +77,7 @@ const PricingTable = () => {
     return `$${(priceCents / 100).toFixed(2)}`;
   };
 
+  const { user, loading: authLoading } = useAuth();
   const [fetchedPlans, setFetchedPlans] = useState<PlatformPlan[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [subscription, setSubscription] = useState<any>(null);
@@ -228,27 +230,12 @@ const PricingTable = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsLoggedIn(!!session);
+      // Use user from auth context
+      setIsLoggedIn(!!user);
       
-      if (session?.user) {
+      if (user) {
         try {
-          const sub = await getPlatformSubscription(session.user.id);
-          setSubscription(sub);
-        } catch (error) {
-          console.error("Error fetching subscription:", error);
-        }
-      }
-      setLoading(false);
-    };
-    checkAuth();
-    
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setIsLoggedIn(!!session);
-      if (session?.user) {
-        try {
-          const sub = await getPlatformSubscription(session.user.id);
+          const sub = await getPlatformSubscription(user.id);
           setSubscription(sub);
         } catch (error) {
           console.error("Error fetching subscription:", error);
@@ -256,10 +243,14 @@ const PricingTable = () => {
       } else {
         setSubscription(null);
       }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+      setLoading(false);
+    };
+    
+    // Wait for auth to load, then check subscription
+    if (!authLoading) {
+      checkAuth();
+    }
+  }, [user, authLoading]);
 
   const getPlanCTA = (planType: "free" | "premium", planName: string) => {
     if (!isLoggedIn || !subscription) {

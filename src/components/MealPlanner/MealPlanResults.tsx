@@ -33,6 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/hooks/use-translation";
 import { useToast } from "@/hooks/use-toast";
+import { copyToClipboard } from "@/utils/clipboard";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { useRef } from "react";
@@ -177,7 +178,10 @@ export function MealPlanResults({
     if (!mealPlanId) return;
     
     // Use mealPlanId directly as share_id (faster, no DB query needed)
-    const shareUrl = `${window.location.origin}/shared-meal-plan/${mealPlanId}`;
+    const shareUrl = typeof window !== 'undefined' 
+      ? `${window.location.origin}/shared-meal-plan/${mealPlanId}`
+      : `/shared-meal-plan/${mealPlanId}`;
+    
     const shareData = {
       title: plan?.overview || "Meal Plan",
       text: `Check out this meal plan: ${plan?.overview || "Personalized meal plan"}`,
@@ -185,38 +189,60 @@ export function MealPlanResults({
     };
 
     try {
-      // Try Web Share API first (mobile-friendly)
+      // Try Web Share API first (mobile-friendly, requires HTTPS)
       if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
         await navigator.share(shareData);
         toast({
           title: "Shared!",
           description: "Meal plan shared successfully.",
         });
-      } else {
-        // Fallback: Copy to clipboard
-        await navigator.clipboard.writeText(shareUrl);
+        return;
+      }
+      
+      // Fallback: Copy to clipboard
+      const copied = await copyToClipboard(shareUrl);
+      if (copied) {
         toast({
           title: "Link copied!",
           description: "Meal plan link has been copied to your clipboard.",
         });
+      } else {
+        // Show URL in toast for manual copying
+        toast({
+          title: "Copy this link",
+          description: shareUrl,
+          duration: 10000,
+        });
       }
     } catch (error: any) {
-      // User cancelled share or clipboard failed
-      if (error.name !== "AbortError") {
-        try {
-          // Final fallback: try clipboard again
-          await navigator.clipboard.writeText(shareUrl);
+      // User cancelled share
+      if (error.name === "AbortError") {
+        return;
+      }
+      
+      // Try clipboard as fallback
+      try {
+        const copied = await copyToClipboard(shareUrl);
+        if (copied) {
           toast({
             title: "Link copied!",
             description: "Meal plan link has been copied to your clipboard.",
           });
-        } catch (clipboardError) {
+        } else {
+          // Show URL for manual copying
           toast({
-            title: "Share failed",
-            description: `Unable to share. Please copy this URL manually: ${shareUrl}`,
-            variant: "destructive",
+            title: "Copy this link",
+            description: shareUrl,
+            duration: 10000,
           });
         }
+      } catch (clipboardError) {
+        // Final fallback: show URL in toast
+        toast({
+          title: "Copy this link",
+          description: shareUrl,
+          duration: 10000,
+        });
       }
     }
   };

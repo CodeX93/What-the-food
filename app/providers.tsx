@@ -8,25 +8,36 @@ import { Toaster as ShadcnToaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import TawkWidget from "@/components/Integrations/TawkWidget";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { User } from "@supabase/supabase-js";
+
+type ProfileData = {
+  avatar_url: string | null;
+  full_name: string | null;
+};
 
 type AppProvidersProps = {
   children: ReactNode;
+  initialUser?: User | null;
+  initialProfile?: ProfileData | null;
 };
 
-export function AppProviders({ children }: AppProvidersProps) {
+export function AppProviders({ children, initialUser, initialProfile }: AppProvidersProps) {
   const [queryClient] = useState(() => new QueryClient());
 
   return (
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <TooltipProvider>
-            <ShadcnToaster />
-            <Sonner />
-            <TawkWidget />
-            {children}
-          </TooltipProvider>
-        </ThemeProvider>
+        <AuthProvider initialUser={initialUser} initialProfile={initialProfile}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <TooltipProvider>
+              <ShadcnToaster />
+              <Sonner />
+              <TawkWidget />
+              {children}
+            </TooltipProvider>
+          </ThemeProvider>
+        </AuthProvider>
       </LanguageProvider>
     </QueryClientProvider>
   );
