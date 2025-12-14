@@ -1517,7 +1517,7 @@ export function FoodResultsClient() {
             <div className="lg:col-span-4">
               <Card className="overflow-hidden lg:sticky lg:top-6">
                 {imageUrl ? (
-                  <div className="relative overflow-hidden" style={{ paddingBottom: 'calc(100% + 92px)' }}>
+                  <div className="relative overflow-hidden" style={{ paddingBottom: 'calc(100% + 72px)' }}>
                     <img src={imageUrl} alt={analysis.dish || "Food"} className="absolute inset-0 w-full h-full object-cover" />
                   </div>
                 ) : (
