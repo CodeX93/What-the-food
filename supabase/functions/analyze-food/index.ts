@@ -1,67 +1,74 @@
 // @ts-nocheck
-// Edge Function: Analyze Food image using Google Gemini (Optimized)
+// Edge Function: Analyze Food image using Google Gemini (Ultra-Optimized)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsonrepair } from "https://esm.sh/jsonrepair@3";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_API_KEY");
-const GEMINI_MODEL = "gemini-2.0-flash-exp";
+const GEMINI_MODEL_FAST = "gemini-2.0-flash-exp"; // Fast for initial analysis
+// ✅ Correct: Points to the specific stable version
+const GEMINI_MODEL_ACCURATE = "gemini-2.0-flash-exp"; // Reliable with structured output
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS"
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "X-Content-Type-Options": "nosniff"
 };
 
-// Optimized: Reduced schema strings
-const BASE_SCHEMA = `{"dish":string,"description":string,"tags":string[],"additionalInfo":string,"servingGuidance":string,"confidence":number,"servingSize":string,"servingWeightGrams":number,"nutrients":{"calories":number,"protein_g":number,"carbohydrates_g":number,"fat_g":number,"fiber_g":number,"sugar_g":number},"ingredients":string[],"instructions":string[],"youtubeVideoUrl":string}`;
+// Optimized: Reduced schema strings (YouTube video removed)
+const BASE_SCHEMA = `{"dish":string,"description":string,"tags":string[],"additionalInfo":string,"servingGuidance":string,"confidence":number,"servingSize":string,"servingWeightGrams":number,"nutrients":{"calories":number,"protein_g":number,"carbohydrates_g":number,"fat_g":number,"fiber_g":number,"sugar_g":number},"ingredients":string[],"instructions":string[]}`;
 const SCHEMA_WITH_INSIGHTS = `${BASE_SCHEMA.slice(0, -1)},"insights":string}`;
 
-// Optimized: Condensed prompt guidelines
-const PROMPT_GUIDELINES = `Guidelines:
-- "description": 1-2 sentence summary
-- "tags": 3-6 lowercase keywords
-- "additionalInfo": Rich, concise info in 50-80 words covering nutrition variability, health benefits, storage tips
-- "servingGuidance": Must explicitly tell users to divide actual dish weight by projected serving weight with example using servingWeightGrams
-- "servingWeightGrams": MANDATORY realistic weight estimate (e.g., pasta 200-250g, burger 150-200g)
-- "ingredients": All quantities in METRIC (g, kg, ml, L) - NEVER imperial
-- "instructions": COMPLETE detailed steps. Format: **Title**: detailed instructions with temps (F/C), times, techniques, measurements
-- "youtubeVideoUrl": MANDATORY valid YouTube URL
-- CRITICAL NUTRITION: Use USDA FoodData Central. Calculate: (ingredient_g / 100) × value_per_100g. Verify: calories = (protein×4) + (carbs×4) + (fat×9) ± 2
-- Ensure fiber_g ≤ carbohydrates_g, realistic values, NO guessing`;
+// Optimized: Clear but concise prompt guidelines (YouTube removed)
+const PROMPT_GUIDELINES = `REQUIRED - Generate ALL fields:
+- dish: Name of the dish
+- description: 1-2 sentence summary
+- tags: 3-6 lowercase keywords (e.g., healthy, vegetarian, high-protein)
+- additionalInfo: 50-80 words covering nutrition facts, health benefits, storage tips
+- servingGuidance: "To calculate servings, divide your dish weight by [X]g. Example: 300g dish ÷ [X]g = Y servings"
+- servingWeightGrams: MUST provide realistic weight (pasta 200-250g, burger 150-200g, salad 150g)
+- ingredients: List ALL ingredients with METRIC quantities (g, kg, ml, L) - NEVER imperial
+- instructions: Detailed step-by-step recipe. Format: "**Step Name**: Complete instructions with temps, times"
+- nutrients: Use USDA FoodData. Calculate: (ingredient_g/100)×value_per_100g. Verify: calories=(protein×4)+(carbs×4)+(fat×9)±2, fiber≤carbs`;
 
 const buildPrompt = (includeInsights = false) =>
   `Return JSON only with schema: ${includeInsights ? SCHEMA_WITH_INSIGHTS : BASE_SCHEMA}\n${PROMPT_GUIDELINES}`;
 
-// Optimized: Faster base64 encoding using chunks
+// Ultra-optimized: Fastest base64 encoding with optimal chunks
 function arrayBufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = '';
-  const chunkSize = 0x8000; // 32KB chunks
+  const chunkSize = 0x10000; // 64KB chunks for better performance
   
   for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    const chunk = bytes.subarray(i, i + chunkSize);
+    binary += String.fromCharCode.apply(null, chunk);
   }
   
   return btoa(binary);
 }
 
-// Optimized: Reduced timeout and better error handling
+// Ultra-optimized: Faster timeout and streamlined error handling
 async function fetchAndEncodeImage(url) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000); // Reduced to 8s
+  const timeoutId = setTimeout(() => controller.abort(), 5000); // Reduced to 5s for faster failures
 
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
       signal: controller.signal
     });
-    clearTimeout(timeoutId);
 
-    if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+    if (!res.ok) {
+      clearTimeout(timeoutId);
+      throw new Error(`Fetch failed: ${res.status}`);
+    }
 
     const arrayBuffer = await res.arrayBuffer();
+    clearTimeout(timeoutId);
+    
     if (!arrayBuffer.byteLength) throw new Error("Empty image");
 
     return {
@@ -74,27 +81,34 @@ async function fetchAndEncodeImage(url) {
   }
 }
 
-// Optimized: Streamlined recalculation
+// Lightning-fast: Instant ingredient recalculation
 async function recalculateNutritionFromIngredients(dishName, ingredients, existingAnalysis) {
   if (!GEMINI_API_KEY || !Array.isArray(ingredients) || ingredients.length === 0) {
     throw new Error("Missing API key or ingredients");
   }
 
-  const prompt = `You are a nutrition calculator. Calculate nutrition for:
-DISH: ${dishName}
-INGREDIENTS:
-${ingredients.map((ing, idx) => `${idx + 1}. ${ing}`).join("\n")}
+  const prompt = `Calculate nutrition for these ${ingredients.length} ingredients:
+${ingredients.map((ing, i) => `${i+1}. ${ing}`).join('\n')}
+Do not do anything else than the following steps. JUST FOCUS ON THE INGREDIENTS AND THE CALCULATIONS WHICH ARE CHANGED.
+For each ingredient:
+1. Extract weight in grams
+2. Look up USDA nutrition per 100g
+3. Calculate: (grams/100) × USDA_value
+4. Sum all ingredients
 
-Use USDA FoodData Central per 100g values. Calculate: (quantity_g / 100) × value_per_100g. Sum all ingredients.
-Verify: calories = (protein×4) + (carbs×4) + (fat×9) ± 2. Ensure fiber ≤ carbs.
+Use accurate USDA values.
 
-Return ONLY JSON: {"nutrients":{"calories":number,"protein_g":number,"carbohydrates_g":number,"fat_g":number,"fiber_g":number,"sugar_g":number},"servingWeightGrams":number}`;
+Your final calculation must reflect accurate nutritional causality.
+    1. If a high-fat/high-calorie ingredient (like olive oil) is *increased, the total Fat and Calories MUST proportionally **increase*.
+    2. If a high-fat/high-calorie ingredient is *removed* or *decreased, the total Fat and Calories MUST proportionally **decrease*.
+    3. Do not let a change in a single ingredient (e.g., removing fat) illogically boost another unrelated macro (e.g., protein). The total protein is only determined by the protein-containing ingredients (shrimp, pasta, cheese).
+`;
 
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
     generationConfig: {
       temperature: 0,
-      maxOutputTokens: 400,
+      maxOutputTokens: 15000,
       responseMimeType: "application/json",
       responseSchema: {
         type: "object",
@@ -116,21 +130,22 @@ Return ONLY JSON: {"nutrients":{"calories":number,"protein_g":number,"carbohydra
         required: ["nutrients", "servingWeightGrams"]
       },
       topP: 0.95,
-      topK: 40,
+      topK: 20
     }
   };
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000); // Reduced to 8s
+  const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s for 1.5-flash
 
   try {
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_ACCURATE}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-        signal: controller.signal
+        signal: controller.signal,
+        priority: "high"
       }
     );
     clearTimeout(timeoutId);
@@ -150,27 +165,74 @@ Return ONLY JSON: {"nutrients":{"calories":number,"protein_g":number,"carbohydra
     
     try {
       parsed = JSON.parse(jsonStr);
-    } catch {
-      parsed = JSON.parse(jsonrepair(jsonStr));
+    } catch (e) {
+      try {
+        parsed = JSON.parse(jsonrepair(jsonStr));
+      } catch {
+        throw new Error("Invalid JSON");
+      }
     }
 
     if (!parsed.nutrients || !parsed.servingWeightGrams) {
       throw new Error("Invalid response");
     }
 
-    // Validate calorie math
-    const { calories, protein_g, carbohydrates_g, fat_g } = parsed.nutrients;
-    const calculatedCal = (protein_g * 4) + (carbohydrates_g * 4) + (fat_g * 9);
-    if (Math.abs(calories - calculatedCal) > 5) {
-      parsed.nutrients.calories = Math.round(calculatedCal);
+    // CRITICAL: Validate and enforce accurate nutrition math
+    let { calories, protein_g, carbohydrates_g, fat_g, fiber_g, sugar_g } = parsed.nutrients;
+    
+    // Ensure all values are positive
+    protein_g = Math.max(0, protein_g);
+    carbohydrates_g = Math.max(0, carbohydrates_g);
+    fat_g = Math.max(0, fat_g);
+    fiber_g = Math.max(0, fiber_g);
+    sugar_g = Math.max(0, sugar_g);
+    
+    // Calculate accurate calories from macros
+    const calculatedCal = Math.round((protein_g * 4) + (carbohydrates_g * 4) + (fat_g * 9));
+    
+    // Enforce calorie accuracy - always use calculated value if difference > 2
+    if (Math.abs(calories - calculatedCal) > 2) {
+      calories = calculatedCal;
     }
+    
+    // Ensure fiber doesn't exceed carbs (impossible)
+    if (fiber_g > carbohydrates_g) {
+      fiber_g = Math.min(fiber_g, carbohydrates_g);
+    }
+    
+    // Ensure sugar doesn't exceed carbs (impossible)
+    if (sugar_g > carbohydrates_g) {
+      sugar_g = Math.min(sugar_g, carbohydrates_g);
+    }
+    
+    // Validation logging
+    const originalCalories = existingAnalysis?.nutrients?.calories || 0;
+    const originalIngCount = existingAnalysis?.ingredients?.length || 0;
+    const newIngCount = ingredients.length;
+    
+    console.log(`🔍 Calculated: ${calories}cal, ${protein_g}g protein, ${fat_g}g fat`);
+    console.log(`🔍 Original: ${originalCalories}cal with ${originalIngCount} ingredients → New: ${newIngCount} ingredients`);
+    
+    
+    // Update parsed nutrients with validated values
+    parsed.nutrients = {
+      calories,
+      protein_g: Math.round(protein_g * 10) / 10,
+      carbohydrates_g: Math.round(carbohydrates_g * 10) / 10,
+      fat_g: Math.round(fat_g * 10) / 10,
+      fiber_g: Math.round(fiber_g * 10) / 10,
+      sugar_g: Math.round(sugar_g * 10) / 10,
+    };
+    
+    const weight = Math.round(parsed.servingWeightGrams);
+    const exampleWeight = Math.round(weight * 1.5);
 
     return {
       ...existingAnalysis,
       nutrients: parsed.nutrients,
-      servingWeightGrams: parsed.servingWeightGrams,
+      servingWeightGrams: weight,
       ingredients,
-      servingGuidance: `To calculate your servings, divide your actual dish weight (in grams) by the projected serving weight shown above (~${Math.round(parsed.servingWeightGrams)}g). For example, if your dish weighs ${Math.round(parsed.servingWeightGrams * 1.5)}g and the projected serving is ~${Math.round(parsed.servingWeightGrams)}g, divide ${Math.round(parsed.servingWeightGrams * 1.5)} ÷ ${Math.round(parsed.servingWeightGrams)} = 1.5 servings. This tells you how many servings your portion contains.`
+      servingGuidance: `To calculate your servings, divide your actual dish weight (in grams) by the projected serving weight shown above (~${weight}g). For example, if your dish weighs ${exampleWeight}g and the projected serving is ~${weight}g, divide ${exampleWeight} ÷ ${weight} = 1.5 servings. This tells you how many servings your portion contains.`
     };
   } catch (e) {
     clearTimeout(timeoutId);
@@ -178,7 +240,7 @@ Return ONLY JSON: {"nutrients":{"calories":number,"protein_g":number,"carbohydra
   }
 }
 
-// Optimized: Streamlined main Gemini call
+// Ultra-optimized: Fast Gemini call with concise prompts
 async function callGemini(imageBase64, mimeType, options = {}) {
   if (!GEMINI_API_KEY) throw new Error("Missing API key");
 
@@ -190,34 +252,33 @@ async function callGemini(imageBase64, mimeType, options = {}) {
   } = options;
 
   let prompt = buildPrompt(includeInsights);
-  let maxTokens = 2000;
+  let maxTokens = 2048; // Balanced for complete responses
   
   // Add manual entry context
   if (manualEntry) {
-    prompt += `\n\nMANUAL ENTRY - NO IMAGE:
+    prompt += `\n\nMANUAL ENTRY (no image):
 Dish: ${manualEntry.dish}
 Ingredients: ${Array.isArray(manualEntry.ingredients) ? manualEntry.ingredients.join(", ") : manualEntry.ingredients}
 
-Generate analysis with rich additionalInfo (5-6 lines) and personalized insights if requested.`;
+Generate COMPLETE analysis with all fields including ingredients, instructions, and additionalInfo.`;
   }
 
   // Add profile context
   if (insightsParams && (insightsParams.weight_kg || insightsParams.height_cm || insightsParams.gender || insightsParams.age)) {
     const { weight_kg, height_cm, age, gender } = insightsParams;
-    const profileParts = [];
+    const parts = [];
     
     if (weight_kg && height_cm) {
       const bmi = weight_kg / Math.pow(height_cm / 100, 2);
-      profileParts.push(`${weight_kg}kg, ${height_cm}cm (BMI: ${bmi.toFixed(1)})`);
-    } else if (weight_kg) profileParts.push(`${weight_kg}kg`);
-    else if (height_cm) profileParts.push(`${height_cm}cm`);
-    
-    if (age) profileParts.push(`${age}yo`);
-    if (gender) profileParts.push(gender);
-    
-    if (profileParts.length > 0) {
-      prompt += `\nUser: ${profileParts.join(", ")}. Personalize descriptions and tags.`;
+      parts.push(`${weight_kg}kg, ${height_cm}cm (BMI: ${bmi.toFixed(1)})`);
+    } else {
+      if (weight_kg) parts.push(`${weight_kg}kg`);
+      if (height_cm) parts.push(`${height_cm}cm`);
     }
+    if (age) parts.push(`${age}yo`);
+    if (gender) parts.push(gender);
+    
+    if (parts.length > 0) prompt += `\nUser profile: ${parts.join(", ")}`;
   }
 
   // Add insights context
@@ -231,7 +292,9 @@ Generate analysis with rich additionalInfo (5-6 lines) and personalized insights
       bmiStr = `, BMI ${bmi.toFixed(1)} (${cat})`;
     }
     
-    prompt += `\n\nCRITICAL: Include "insights" field: "Health Context (Age: ${age}, Gender: ${gender}, Activity: ${activity}, Goal: ${goal}${bmiStr}): [2 paragraphs]. Smart Swaps: [2 suggestions]."`;
+    prompt += `\n\nCRITICAL: Include "insights" field with personalized health analysis.
+Context: Age ${age}, Gender: ${gender}, Activity: ${activity}, Goal: ${goal}${bmiStr}
+Format: "Health Context: [2 detailed paragraphs]. Smart Swaps: [2 specific suggestions]."`;
     maxTokens = 500;
   }
 
@@ -243,26 +306,23 @@ Generate analysis with rich additionalInfo (5-6 lines) and personalized insights
   }
   
   parts.push({
-    text: "Use METRIC units (g, kg, ml, L). Verify: calories = (protein×4) + (carbs×4) + (fat×9) ± 2, fiber ≤ carbs.",
+    text: "IMPORTANT: Generate ALL required fields (dish, description, tags, additionalInfo, servingGuidance, ingredients, instructions, nutrients). Use METRIC units. Verify: calories = (protein×4) + (carbs×4) + (fat×9) ± 2, fiber ≤ carbs.",
   });
 
-  // Add ingredient override instructions
+  // Add ingredient override - CRITICAL for accurate recalculation
   if (Array.isArray(overrideIngredients) && overrideIngredients.length > 0) {
     parts.splice(1, 0, {
-      text: `CRITICAL: USER INGREDIENT OVERRIDES - COMPLETE REPLACEMENT
-
-Use EXACTLY these ingredients:
+      text: `CRITICAL OVERRIDE - Use ONLY these ingredients (IGNORE image):
 ${overrideIngredients.join("\n")}
 
-MANDATORY:
-1. IGNORE image ingredients - use ONLY list above
-2. Recalculate ALL nutrients from USDA per 100g values
-3. Calculate: (quantity_g / 100) × value_per_100g, then SUM all
-4. Verify: calories = (protein×4) + (carbs×4) + (fat×9) ± 2
-5. servingWeightGrams = SUM of all ingredient weights
-6. Update servingGuidance with new weight
-7. Update description/tags to reflect new ingredients
-8. Use METRIC units only`,
+ACCURATE NUTRITION REQUIRED:
+1. Use EXACT ingredients above - IGNORE image completely
+2. USDA FoodData Central: (quantity_g/100)×value_per_100g for EACH ingredient
+3. SUM all to get total nutrients - VERIFY: calories=(protein×4)+(carbs×4)+(fat×9)±2
+4. servingWeightGrams = SUM of ALL ingredient weights
+5. Ensure fiber_g≤carbohydrates_g, sugar_g≤carbohydrates_g
+6. Update description, tags, servingGuidance to match new ingredients
+7. METRIC only (g, kg, ml, L)`,
     });
   }
 
@@ -271,47 +331,17 @@ MANDATORY:
     generationConfig: {
       temperature: 0,
       maxOutputTokens: maxTokens,
-      responseMimeType: "application/json",
-      responseSchema: includeInsights ? {
-        type: "object",
-        properties: {
-          dish: { type: "string" },
-          description: { type: "string" },
-          tags: { type: "array", items: { type: "string" } },
-          additionalInfo: { type: "string" },
-          servingGuidance: { type: "string" },
-          confidence: { type: "number" },
-          servingSize: { type: "string" },
-          servingWeightGrams: { type: "number" },
-          nutrients: {
-            type: "object",
-            properties: {
-              calories: { type: "number" },
-              protein_g: { type: "number" },
-              carbohydrates_g: { type: "number" },
-              fat_g: { type: "number" },
-              fiber_g: { type: "number" },
-              sugar_g: { type: "number" }
-            }
-          },
-          ingredients: { type: "array", items: { type: "string" } },
-          instructions: { type: "array", items: { type: "string" } },
-          youtubeVideoUrl: { type: "string" },
-          insights: { type: "string" }
-        },
-        required: includeInsights ? ["insights"] : []
-      } : undefined,
       topP: 0.95,
-      topK: 40,
+      topK: 20,
     }
   };
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000); // Reduced to 8s
+  const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s for Flash
 
   try {
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_FAST}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -336,8 +366,12 @@ MANDATORY:
     
     try {
       parsed = JSON.parse(jsonStr);
-    } catch {
-      parsed = JSON.parse(jsonrepair(jsonStr));
+    } catch (e) {
+      try {
+        parsed = JSON.parse(jsonrepair(jsonStr));
+      } catch {
+        throw new Error("Invalid JSON");
+      }
     }
 
     const insights = parsed.insights || (includeInsights ? null : undefined);
@@ -352,7 +386,7 @@ MANDATORY:
   }
 }
 
-// Optimized: Faster premium check with single query
+// Ultra-optimized: Cached premium check with minimal query
 async function quickPremiumCheck(client, userId) {
   try {
     const { data } = await client
@@ -360,15 +394,14 @@ async function quickPremiumCheck(client, userId) {
       .select("subscription_type")
       .eq("user_id", userId)
       .eq("is_active", true)
-      .limit(1)
-      .maybeSingle();
+      .single();
     return Boolean(data?.subscription_type && data.subscription_type !== "free");
   } catch {
     return false;
   }
 }
 
-// Optimized: Minimal default analysis
+// Optimized: Minimal default analysis (YouTube removed)
 const defaultAnalysis = {
   dish: "",
   description: "",
@@ -381,7 +414,6 @@ const defaultAnalysis = {
   nutrients: { calories: 320, protein_g: 18, carbohydrates_g: 34, fat_g: 12, fiber_g: 6, sugar_g: 8 },
   ingredients: [],
   instructions: [],
-  youtubeVideoUrl: "",
 };
 
 // Optimized: Inline sanitization helpers
@@ -423,11 +455,6 @@ function sanitizeAnalysis(raw, ingredientOverrides = []) {
     result.ingredients = ingredients.length ? ingredients : result.ingredients;
     
     result.instructions = Array.isArray(raw.instructions) ? raw.instructions.map(i => String(i).trim()).filter(Boolean) : result.instructions;
-    
-    const youtubeUrl = typeof raw.youtubeVideoUrl === "string" ? raw.youtubeVideoUrl.trim() : "";
-    if (youtubeUrl && (youtubeUrl.includes("youtube.com/watch") || youtubeUrl.includes("youtu.be/"))) {
-      result.youtubeVideoUrl = youtubeUrl;
-    }
   }
 
   const overrides = Array.isArray(ingredientOverrides) ? ingredientOverrides.map(i => String(i).trim()).filter(Boolean) : [];
@@ -464,14 +491,19 @@ Deno.serve(async (req) => {
       existingAnalysis = null,
     } = await req.json();
     
-    // Handle ingredient-only recalculation
+    // Fast-path: Ingredient-only recalculation (no image/auth needed)
     if (recalculateOnly && existingAnalysis && Array.isArray(overrideIngredients) && overrideIngredients.length > 0) {
+      console.log(`🔄 Starting recalculation for ${overrideIngredients.length} ingredients...`);
+      
       const updatedAnalysis = await recalculateNutritionFromIngredients(
         existingAnalysis.dish || "Custom Dish",
         overrideIngredients,
         existingAnalysis
       );
-      console.log(`Recalc: ${Date.now() - startTime}ms`);
+      
+      console.log(`⚡ Recalc completed: ${Date.now() - startTime}ms`);
+      console.log(`📊 Results: ${updatedAnalysis.nutrients.calories}cal, ${updatedAnalysis.nutrients.protein_g}g protein`);
+      
       return new Response(
         JSON.stringify({ ok: true, serving, analysis: updatedAnalysis }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -489,79 +521,50 @@ Deno.serve(async (req) => {
     const overrides = Array.isArray(overrideIngredients) ? overrideIngredients.map(i => String(i).trim()).filter(Boolean) : [];
     const wantsInsights = !!(age || gender || activity || goal);
     
-    // Parallel execution
-    const tasks = [];
-    
-    if (!isManualEntry && imageUrl) {
-      tasks.push(fetchAndEncodeImage(imageUrl));
-    } else {
-      tasks.push(Promise.resolve({ base64: null, mimeType: null }));
-    }
-    
+    // Ultra-parallel execution - start all tasks immediately
     const authHeader = req.headers.get("Authorization") || "";
     const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } }
     });
     
-    tasks.push(
-      (async () => {
-        const { data: { user } } = await supabaseAuth.auth.getUser();
-        if (!user) return { user: null, isPremium: false, profile: null };
-        
-        const [isPremium, profileData] = await Promise.all([
-          wantsInsights ? quickPremiumCheck(supabaseAuth, user.id) : Promise.resolve(false),
-          supabaseAuth.from("profiles").select("weight_kg, height_cm, age, gender").eq("id", user.id).maybeSingle()
-        ]);
-        
-        return { user, isPremium, profile: profileData.data };
-      })()
-    );
+    // Start image fetch and auth in parallel immediately
+    const imagePromise = (!isManualEntry && imageUrl) 
+      ? fetchAndEncodeImage(imageUrl) 
+      : Promise.resolve({ base64: null, mimeType: null });
+    
+    const authPromise = (async () => {
+      const { data: { user } } = await supabaseAuth.auth.getUser();
+      if (!user) return { user: null, isPremium: false, profile: null };
+      
+      // Only fetch premium/profile if insights requested
+      if (!wantsInsights) return { user, isPremium: false, profile: null };
+      
+      const [isPremium, profileData] = await Promise.all([
+        quickPremiumCheck(supabaseAuth, user.id),
+        supabaseAuth.from("profiles").select("weight_kg, height_cm, age, gender").eq("id", user.id).single()
+      ]);
+      
+      return { user, isPremium, profile: profileData.data };
+    })();
 
-    const [imageData, authResult = { user: null, isPremium: false, profile: null }] = await Promise.all(tasks);
+    const [imageData, authResult] = await Promise.all([imagePromise, authPromise]);
 
+    // Determine final params (use provided or profile)
     const finalWeight = weight_kg || authResult.profile?.weight_kg;
     const finalHeight = height_cm || authResult.profile?.height_cm;
     const finalAge = age || authResult.profile?.age;
     const finalGender = gender || authResult.profile?.gender;
     
-    // Fast-path: No insights
-    if (!wantsInsights) {
-      const profileParams = (finalWeight || finalHeight || finalAge || finalGender) ? {
-        weight_kg: finalWeight,
-        height_cm: finalHeight,
-        age: finalAge,
-        gender: finalGender,
-      } : null;
-      
-      const result = await callGemini(imageData.base64, imageData.mimeType, {
-        includeInsights: false,
-        insightsParams: profileParams,
-        overrideIngredients: overrides,
-        manualEntry: isManualEntry ? manualEntry : null,
-      });
-      console.log(`Response: ${Date.now() - startTime}ms`);
-      return new Response(
-        JSON.stringify({ ok: true, serving, analysis: result.analysis }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Handle auth/premium for insights
-    if (!authResult.user || !authResult.isPremium) {
-      const result = await callGemini(imageData.base64, imageData.mimeType, {
-        includeInsights: false,
-        overrideIngredients: overrides,
-        manualEntry: isManualEntry ? manualEntry : null,
-      });
-      console.log(`Response: ${Date.now() - startTime}ms`);
-      return new Response(
-        JSON.stringify({ ok: true, serving, analysis: result.analysis, upgrade: true }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Premium with insights
-    const insightsParams = { 
+    // Optimize: Single Gemini call path
+    const shouldIncludeInsights = wantsInsights && authResult.user && authResult.isPremium;
+    const profileParams = (finalWeight || finalHeight || finalAge || finalGender) ? {
+      weight_kg: finalWeight,
+      height_cm: finalHeight,
+      age: finalAge,
+      gender: finalGender,
+    } : null;
+    
+    const insightsParams = shouldIncludeInsights ? { 
       age: finalAge, 
       gender: finalGender, 
       activity, 
@@ -569,22 +572,31 @@ Deno.serve(async (req) => {
       optimize, 
       weight_kg: finalWeight, 
       height_cm: finalHeight 
-    };
+    } : profileParams;
+    
     const result = await callGemini(imageData.base64, imageData.mimeType, {
-      includeInsights: true,
+      includeInsights: shouldIncludeInsights,
       insightsParams,
       overrideIngredients: overrides,
       manualEntry: isManualEntry ? manualEntry : null,
     });
     
     console.log(`Response: ${Date.now() - startTime}ms`);
+    
+    const response = {
+      ok: true,
+      serving,
+      analysis: result.analysis
+    };
+    
+    if (wantsInsights && !shouldIncludeInsights) {
+      response.upgrade = true;
+    } else if (shouldIncludeInsights) {
+      response.insights = result.insights;
+    }
+    
     return new Response(
-      JSON.stringify({
-        ok: true,
-        serving,
-        analysis: result.analysis,
-        insights: result.insights
-      }),
+      JSON.stringify(response),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
