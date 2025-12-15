@@ -1737,7 +1737,15 @@ export function FoodResultsClient() {
             </Card>
             <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
               <Card className={`relative ${analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input") ? "md:col-span-2" : ""}`}>
-                <Badge className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-orange-500 text-white border-0 text-xs sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 z-10">
+                <Badge 
+                  className="absolute top-2 right-2 bg-orange-500 text-white border-0 text-[10px] px-1.5 py-0.5 z-10 cursor-pointer hover:bg-orange-600 transition-colors"
+                  onClick={() => {
+                    toast({
+                      title: "Coming Soon",
+                      description: "The ingredient editor feature is currently under development and will be available soon. Thank you for your patience!",
+                    });
+                  }}
+                >
                   Coming Soon
                 </Badge>
                 <CardHeader className="pb-3">
@@ -1750,13 +1758,6 @@ export function FoodResultsClient() {
                       variant="outline" 
                       size="sm" 
                       disabled
-                      onClick={() => {
-                        toast({
-                          title: "Coming Soon",
-                          description: "The ingredient editor feature is currently under development and will be available soon. Thank you for your patience!",
-                          variant: "orange",
-                        });
-                      }}
                       className="text-xs sm:text-sm px-2 sm:px-3 opacity-50 cursor-not-allowed"
                     >
                       <Pencil className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
