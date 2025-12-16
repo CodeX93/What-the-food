@@ -1680,13 +1680,13 @@ export function FoodResultsClient() {
         <div className="grid lg:grid-cols-12 gap-4 sm:gap-6">
           {!(analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")) && (
             <div className="lg:col-span-4">
-              <Card className="overflow-hidden lg:sticky lg:top-6">
+              <Card className="overflow-hidden lg:sticky lg:top-4">
                 {imageUrl ? (
-                  <div className="relative overflow-hidden" style={{ paddingBottom: 'calc(100% + 52px)' }}>
+                  <div className="relative overflow-hidden" style={{ paddingBottom: 'calc(96% + 2px)' }}>
                     <img src={imageUrl} alt={analysis.dish || "Food"} className="absolute inset-0 w-full h-full object-cover" />
                   </div>
                 ) : (
-                  <div className="relative flex items-center justify-center text-muted-foreground bg-muted" style={{ paddingBottom: 'calc(100% + 24px)' }}>
+                  <div className="relative flex items-center justify-center text-muted-foreground bg-muted" style={{ paddingBottom: 'calc(90% + 12px)' }}>
                     <Salad className="absolute inset-0 m-auto h-16 w-16 opacity-30" />
                   </div>
                 )}

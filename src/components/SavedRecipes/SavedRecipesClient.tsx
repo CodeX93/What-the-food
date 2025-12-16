@@ -317,7 +317,21 @@ export function SavedRecipesClient({ initialSubscription = null }: SavedRecipesC
           </div>
           <p className="text-muted-foreground">{t("savedrecipes.description")}</p>
         </div>
-
+        {recipes.length > 0 && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>{t("savedrecipes.total.title")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{recipes.length}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {filteredRecipes.length === recipes.length
+                  ? t("savedrecipes.total.all")
+                  : `${filteredRecipes.length} ${t("savedrecipes.total.matching")}`}
+              </p>
+            </CardContent>
+          </Card>
+        )}
         <Card className="mb-6">
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row gap-4">
@@ -461,21 +475,7 @@ export function SavedRecipesClient({ initialSubscription = null }: SavedRecipesC
           </div>
         )}
 
-        {recipes.length > 0 && (
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>{t("savedrecipes.total.title")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{recipes.length}</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {filteredRecipes.length === recipes.length
-                  ? t("savedrecipes.total.all")
-                  : `${filteredRecipes.length} ${t("savedrecipes.total.matching")}`}
-              </p>
-            </CardContent>
-          </Card>
-        )}
+       
       </div>
     </main>
   );
