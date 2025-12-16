@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeFood, saveScanHistory, uploadFoodImage } from "@/utils/foodScan";
-import { decrementFreeScan, hasFreeScanAvailable, getFreeScanStatus } from "@/utils/freeScanLimit";
+import { decrementFreeScan, hasFreeScanAvailable, getFreeScanStatus, getCachedScanStatusSync } from "@/utils/freeScanLimit";
 import { hasActivePremiumSubscription } from "@/utils/subscription";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -16,6 +16,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 export default function Hero() {
   const [uploading, setUploading] = useState(false);
   const [user, setUser] = useState<any>(null);
+  
+  // OPTIMIZATION: Initialize with cached data AFTER hydration to avoid mismatch
   const [remainingScans, setRemainingScans] = useState<number | null>(null);
   const [scanStatusType, setScanStatusType] = useState<"registered" | "unregistered" | null>(null);
   const [isPremium, setIsPremium] = useState<boolean | null>(null);
@@ -48,22 +50,46 @@ export default function Hero() {
           setIsPremium(null);
           const premium = await hasActivePremiumSubscription(authUser.id);
           setIsPremium(premium);
+          
+          // Only check scans if NOT premium
+          if (!premium) {
+            try {
+              const status = await getFreeScanStatus(true); // Force refresh
+              setRemainingScans(status.remaining);
+              setScanStatusType(status.type);
+            } catch (error) {
+              console.error("Failed to load free scan status", error);
+              setRemainingScans(3);
+              setScanStatusType('registered');
+            }
+          }
         } catch (error) {
           console.error("Failed to determine premium status", error);
           setIsPremium(false);
+          
+          // Fallback: check scans
+          try {
+            const status = await getFreeScanStatus(true); // Force refresh
+            setRemainingScans(status.remaining);
+            setScanStatusType(status.type);
+          } catch (err) {
+            setRemainingScans(3);
+            setScanStatusType('registered');
+          }
         }
       } else {
         setIsPremium(false);
-      }
-
-      try {
-        const status = await getFreeScanStatus(true);
-        setRemainingScans(status.remaining);
-        setScanStatusType(status.type);
-      } catch (error) {
-        console.error("Failed to load free scan status", error);
-        setRemainingScans(null);
-        setScanStatusType(null);
+        
+        // Check scans for non-logged-in users
+        try {
+          const status = await getFreeScanStatus(true); // Force refresh
+          setRemainingScans(status.remaining);
+          setScanStatusType(status.type);
+        } catch (error) {
+          console.error("Failed to load free scan status", error);
+          setRemainingScans(3);
+          setScanStatusType('unregistered');
+        }
       }
     };
     

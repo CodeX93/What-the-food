@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Camera, Calendar, Trash2, Search, Filter, ArrowLeft } from "lucide-react";
+import { DataCache, CACHE_DURATION } from "@/utils/dataCache";
 
 interface Scan {
   id: string;
@@ -41,6 +42,17 @@ export function ScanHistoryClient() {
           return;
         }
 
+        const cacheKey = `scan_history_${session.user.id}`;
+        
+        // OPTIMIZATION: Check cache first for instant loading
+        const cached = DataCache.get<Scan[]>(cacheKey);
+        if (cached) {
+          setScans(cached);
+          setFilteredScans(cached);
+          setLoading(false);
+        }
+
+        // Fetch fresh data from database
         const { data: scansData, error: scansError } = await supabase
           .from("scans")
           .select("*")
@@ -54,6 +66,9 @@ export function ScanHistoryClient() {
         const list = scansData || [];
         setScans(list);
         setFilteredScans(list);
+        
+        // OPTIMIZATION: Cache for 2 minutes
+        DataCache.set(cacheKey, list, CACHE_DURATION.SHORT);
       } catch (err) {
         console.error("Error fetching scans:", err);
         toast({
@@ -92,6 +107,13 @@ export function ScanHistoryClient() {
       const nextFiltered = filteredScans.filter((scan) => scan.id !== scanId);
       setScans(nextAll);
       setFilteredScans(nextFiltered);
+      
+      // OPTIMIZATION: Update cache after deletion
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const cacheKey = `scan_history_${session.user.id}`;
+        DataCache.set(cacheKey, nextAll, CACHE_DURATION.SHORT);
+      }
 
       toast({ title: "Success", description: "Scan deleted successfully." });
     } catch (error) {

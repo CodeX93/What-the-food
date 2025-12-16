@@ -29,6 +29,7 @@ import { getPlatformSubscription } from "@/utils/subscription";
 import { analyzeFood, fetchRecentScans, saveScanHistory, uploadFoodImage } from "@/utils/foodScan";
 import { useAuth } from "@/contexts/AuthContext";
 import { queryWithRetry } from "@/utils/supabaseQuery";
+import { DataCache, CACHE_KEYS, CACHE_DURATION } from "@/utils/dataCache";
 import type { User } from "@supabase/supabase-js";
 
 export type DashboardClientProps = {
@@ -50,13 +51,26 @@ export function DashboardClient({
   const { user: authUser, loading: authLoading, refreshSession } = useAuth();
   // Use auth context user, fallback to initialUser
   const user = authUser || initialUser;
-  const [subscription, setSubscription] = useState<any>(initialSubscription);
+  
+  // OPTIMIZATION: Use cached data for instant loading
+  const [subscription, setSubscription] = useState<any>(() => {
+    if (initialSubscription) return initialSubscription;
+    if (user?.id) return DataCache.get(CACHE_KEYS.SUBSCRIPTION(user.id));
+    return null;
+  });
+  
   // OPTIMIZATION: Start with loading=false if we have initialUser
   // Only show loading if we truly have no user data
   const [loading, setLoading] = useState(!initialUser && authLoading);
   const [analyzing, setAnalyzing] = useState(false);
   const [servings, setServings] = useState(1);
-  const [recentScans, setRecentScans] = useState<any[]>(initialScans);
+  
+  // OPTIMIZATION: Use cached scans for instant loading
+  const [recentScans, setRecentScans] = useState<any[]>(() => {
+    if (initialScans && initialScans.length > 0) return initialScans;
+    if (user?.id) return DataCache.get(CACHE_KEYS.SCANS(user.id)) || [];
+    return [];
+  });
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [uploadedImagePath, setUploadedImagePath] = useState<string | null>(null);
@@ -269,12 +283,15 @@ export function DashboardClient({
         );
       }
 
-      // Fetch subscription if not provided
-      if (!initialSubscription) {
+      // Fetch subscription and cache it
+      const shouldFetchSubscription = !initialSubscription || !DataCache.has(CACHE_KEYS.SUBSCRIPTION(currentUser.id));
+      if (shouldFetchSubscription) {
         promises.push(
           getPlatformSubscription(currentUser.id)
             .then((sub) => {
               setSubscription(sub);
+              // Cache for 5 minutes
+              DataCache.set(CACHE_KEYS.SUBSCRIPTION(currentUser.id), sub, CACHE_DURATION.MEDIUM);
             })
             .catch((error) => {
               console.error("Failed to load subscription", error);
@@ -282,12 +299,15 @@ export function DashboardClient({
         );
       }
 
-      // Fetch scans if not provided
-      if (initialScans.length === 0) {
+      // Fetch scans and cache them
+      const shouldFetchScans = !initialScans.length || !DataCache.has(CACHE_KEYS.SCANS(currentUser.id));
+      if (shouldFetchScans) {
         promises.push(
           fetchRecentScans(currentUser.id, 6)
             .then((scans) => {
               setRecentScans(scans);
+              // Cache for 2 minutes (scans change frequently)
+              DataCache.set(CACHE_KEYS.SCANS(currentUser.id), scans, CACHE_DURATION.SHORT);
             })
             .catch((error) => {
               console.error("Failed to load recent scans", error);

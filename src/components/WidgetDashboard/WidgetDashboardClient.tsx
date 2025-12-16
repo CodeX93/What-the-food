@@ -18,6 +18,8 @@ import { getUrl } from "@/utils/url";
 import { useTranslation } from "@/hooks/use-translation";
 import { queryWithRetry } from "@/utils/supabaseQuery";
 
+import { DataCache, CACHE_DURATION } from "@/utils/dataCache";
+
 // Helper functions to parse and combine value + unit
 const parseValueUnit = (value: string): { value: string; unit: "px" | "%" } => {
   if (!value) return { value: "", unit: "px" };
@@ -335,7 +337,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           if (!cancelled) {
             setLoading(false);
           }
-        }, 2000); // Reduced from 3s to 2s
+        }, 500); // Show page quickly even without data
 
         // OPTIMIZATION: Use queryWithRetry for automatic session refresh
         let session;
@@ -408,6 +410,16 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
             return;
           }
 
+          // OPTIMIZATION: Check cache first for instant loading
+          const widgetCacheKey = `widgets_${session.user.id}`;
+          const cachedWidgets = DataCache.get<any[]>(widgetCacheKey);
+          
+          if (cachedWidgets && !cancelled) {
+            console.log("Loading widgets from cache:", cachedWidgets.length);
+            setSavedWidgets(cachedWidgets);
+            setLoading(false);
+          }
+          
           // OPTIMIZATION: Remove artificial 50ms delay - not needed
           // Make the query immediately - Supabase client automatically includes auth headers
           console.log("Attempting to load widgets for user:", session.user.id);
@@ -484,6 +496,9 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
               console.log("Loaded widgets after refresh:", widgetList.length);
               setSavedWidgets(widgetList);
               
+              // OPTIMIZATION: Cache widgets after successful retry
+              DataCache.set(widgetCacheKey, widgetList, CACHE_DURATION.MEDIUM);
+              
               if (widgetList.length > 0) {
                 const defaultWidget = widgetList.find((w) => w.is_default) || widgetList[0];
                 if (!currentWidgetRef.current) {
@@ -533,6 +548,9 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           const widgetList = (widgets || []) as Array<{ is_default?: boolean }>;
           console.log("Successfully loaded widgets:", widgetList.length, widgetList);
           setSavedWidgets(widgetList);
+          
+          // OPTIMIZATION: Cache widgets for 5 minutes
+          DataCache.set(widgetCacheKey, widgetList, CACHE_DURATION.MEDIUM);
           
           // Don't auto-select - let user choose from dropdown
           // selectedWidgetForEmbed will remain null until user selects
@@ -677,6 +695,35 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
 
             console.log("Loading API stats for user:", userId);
 
+            const statsCacheKey = `widget_api_stats_${userId}`;
+            
+            // OPTIMIZATION: Check cache first
+            const cachedStats = DataCache.get<any[]>(statsCacheKey);
+            if (cachedStats) {
+              console.log("Loading API stats from cache");
+              const startOfToday = new Date();
+              startOfToday.setHours(0, 0, 0, 0);
+              const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+              
+              const totalCount = cachedStats.length;
+              const todayCount = cachedStats.filter((call: any) => 
+                new Date(call.created_at) >= startOfToday
+              ).length;
+              const monthCount = cachedStats.filter((call: any) => 
+                new Date(call.created_at) >= startOfMonth
+              ).length;
+              const successCount = cachedStats.filter((call: any) => 
+                call.status === 200
+              ).length;
+              
+              setApiStats({
+                total: totalCount,
+                today: todayCount,
+                thisMonth: monthCount,
+                successful: successCount
+              });
+            }
+
             // OPTIMIZED: Fetch minimal data in ONE query and calculate stats client-side
             // This is much faster than 4 separate COUNT queries
             const statsPromise = supabaseClient
@@ -696,6 +743,9 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                 if (cancelled) return;
                 
                 const calls = result?.data || [];
+                
+                // OPTIMIZATION: Cache the raw API calls data
+                DataCache.set(statsCacheKey, calls, CACHE_DURATION.SHORT);
                 
                 // Calculate all stats from the single query result
                 const totalCount = calls.length;

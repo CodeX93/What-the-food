@@ -29,6 +29,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/hooks/use-translation";
 import { useAuth } from "@/contexts/AuthContext";
+import { DataCache, CACHE_DURATION } from "@/utils/dataCache";
 
 type ManualItem = {
   name?: string;
@@ -324,6 +325,15 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
         return;
       }
       
+      const cacheKey = `analytics_scans_${user.id}`;
+      
+      // OPTIMIZATION: Check cache first for instant loading
+      const cachedScans = DataCache.get<FoodScan[]>(cacheKey);
+      if (cachedScans) {
+        setScans(cachedScans);
+        setLoading(false);
+      }
+      
       // Fetch profile and scans in parallel for faster loading
       const [profileResult, scansResult] = await Promise.all([
         supabase
@@ -343,7 +353,11 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
       }
       
       if (scansResult.error) throw scansResult.error;
-      setScans((scansResult.data || []) as FoodScan[]);
+      const freshScans = (scansResult.data || []) as FoodScan[];
+      setScans(freshScans);
+      
+      // OPTIMIZATION: Cache for 2 minutes
+      DataCache.set(cacheKey, freshScans, CACHE_DURATION.SHORT);
     } finally {
       setLoading(false);
     }

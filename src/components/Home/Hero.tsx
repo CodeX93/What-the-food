@@ -9,7 +9,7 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { analyzeFood, saveScanHistory, uploadFoodImage } from "@/utils/foodScan";
-import { decrementFreeScan, hasFreeScanAvailable, getFreeScanStatus } from "@/utils/freeScanLimit";
+import { decrementFreeScan, hasFreeScanAvailable, getFreeScanStatus, getCachedScanStatusSync } from "@/utils/freeScanLimit";
 import { hasActivePremiumSubscription } from "@/utils/subscription";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -17,6 +17,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 export default function Hero() {
   const [uploading, setUploading] = useState(false);
   const [user, setUser] = useState<any>(null);
+  
+  // OPTIMIZATION: Initialize with cached data AFTER hydration to avoid mismatch
   const [remainingScans, setRemainingScans] = useState<number | null>(null);
   const [scanStatusType, setScanStatusType] = useState<"registered" | "unregistered" | null>(null);
   // OPTIMIZATION: Start with false to avoid "Checking benefits..." blocking state
@@ -58,36 +60,44 @@ export default function Hero() {
     // OPTIMIZATION: Run checks in background - non-blocking for instant page load
     const checkPremiumAndScans = async () => {
       if (authUser) {
-        // Run both checks in parallel (non-blocking - updates UI when ready)
-        const [premiumResult, scanStatusResult] = await Promise.allSettled([
-          hasActivePremiumSubscription(authUser.id),
-          getFreeScanStatus(true)
-        ]);
-
-        // Handle premium status
-        if (premiumResult.status === 'fulfilled') {
-          setIsPremium(premiumResult.value);
-        } else {
-          console.error("Failed to determine premium status", premiumResult.reason);
+        // OPTIMIZATION: Check premium status FIRST
+        try {
+          const isPremiumUser = await hasActivePremiumSubscription(authUser.id);
+          setIsPremium(isPremiumUser);
+          
+          // Only check scans if NOT premium
+          if (!isPremiumUser) {
+            try {
+              const status = await getFreeScanStatus(true); // Force refresh
+              setRemainingScans(status.remaining);
+              setScanStatusType(status.type);
+            } catch (error) {
+              console.error("Failed to load free scan status", error);
+              setRemainingScans(3);
+              setScanStatusType('registered');
+            }
+          }
+        } catch (error) {
+          console.error("Failed to determine premium status", error);
           setIsPremium(false);
-        }
-
-        // Handle scan status
-        if (scanStatusResult.status === 'fulfilled') {
-          setRemainingScans(scanStatusResult.value.remaining);
-          setScanStatusType(scanStatusResult.value.type);
-        } else {
-          console.error("Failed to load free scan status", scanStatusResult.reason);
-          // Default to 3 scans for new users
-          setRemainingScans(3);
-          setScanStatusType('unregistered');
+          
+          // Fallback: check scans
+          try {
+            const status = await getFreeScanStatus(true); // Force refresh
+            setRemainingScans(status.remaining);
+            setScanStatusType(status.type);
+          } catch (err) {
+            setRemainingScans(3);
+            setScanStatusType('registered');
+          }
         }
       } else {
         setIsPremium(false);
         
         // Still check scan status for non-logged-in users (non-blocking)
+        // OPTIMIZATION: Always fetch fresh data on page load
         try {
-          const status = await getFreeScanStatus(true);
+          const status = await getFreeScanStatus(true); // Force refresh
           setRemainingScans(status.remaining);
           setScanStatusType(status.type);
         } catch (error) {

@@ -22,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { DataCache, CACHE_KEYS, CACHE_DURATION } from "@/utils/dataCache";
 
 const PricingTable = () => {
   const router = useRouter();
@@ -92,6 +93,14 @@ const PricingTable = () => {
     let cancelled = false;
     const loadPlans = async () => {
       try {
+        // OPTIMIZATION: Try cache first for instant loading
+        const cached = DataCache.get<PlatformPlan[]>('pricing_plans');
+        if (cached && !cancelled) {
+          setFetchedPlans(cached);
+          setLoading(false);
+        }
+        
+        // Fetch fresh data (even if cached)
         const { data, error } = await supabase
           .from("platform_plans")
           .select("*")
@@ -100,13 +109,16 @@ const PricingTable = () => {
 
         if (error) throw error;
         if (!cancelled && data) {
-          setFetchedPlans(
-            data.map((plan: any) => ({
-              ...plan,
-              features: parseFeatures(plan.features),
-              not_included: parseFeatures(plan.not_included),
-            }))
-          );
+          const plans = data.map((plan: any) => ({
+            ...plan,
+            features: parseFeatures(plan.features),
+            not_included: parseFeatures(plan.not_included),
+          }));
+          
+          setFetchedPlans(plans);
+          
+          // OPTIMIZATION: Cache plans for 10 minutes (they rarely change)
+          DataCache.set('pricing_plans', plans, CACHE_DURATION.LONG);
         }
       } catch (err) {
         console.error("Error fetching plans for pricing:", err);
@@ -232,11 +244,22 @@ const PricingTable = () => {
     const checkAuth = async () => {
       // Use user from auth context
       setIsLoggedIn(!!user);
-      
+
       if (user) {
         try {
+          // OPTIMIZATION: Try cache first for instant loading
+          const cached = DataCache.get(CACHE_KEYS.SUBSCRIPTION(user.id));
+          if (cached) {
+            setSubscription(cached);
+            setLoading(false);
+          }
+          
+          // Fetch fresh data (even if cached)
           const sub = await getPlatformSubscription(user.id);
           setSubscription(sub);
+          
+          // OPTIMIZATION: Cache subscription for 5 minutes
+          DataCache.set(CACHE_KEYS.SUBSCRIPTION(user.id), sub, CACHE_DURATION.MEDIUM);
         } catch (error) {
           console.error("Error fetching subscription:", error);
         }
@@ -245,7 +268,7 @@ const PricingTable = () => {
       }
       setLoading(false);
     };
-    
+
     // Wait for auth to load, then check subscription
     if (!authLoading) {
       checkAuth();
