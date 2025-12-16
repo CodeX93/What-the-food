@@ -79,14 +79,14 @@ export default function Hero() {
         }
       } else {
         setIsPremium(false);
-        
+
         // Check scans for non-logged-in users
-        try {
+      try {
           const status = await getFreeScanStatus(true); // Force refresh
-          setRemainingScans(status.remaining);
-          setScanStatusType(status.type);
-        } catch (error) {
-          console.error("Failed to load free scan status", error);
+        setRemainingScans(status.remaining);
+        setScanStatusType(status.type);
+      } catch (error) {
+        console.error("Failed to load free scan status", error);
           setRemainingScans(3);
           setScanStatusType('unregistered');
         }

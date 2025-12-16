@@ -110,9 +110,9 @@ const PricingTable = () => {
         if (error) throw error;
         if (!cancelled && data) {
           const plans = data.map((plan: any) => ({
-            ...plan,
-            features: parseFeatures(plan.features),
-            not_included: parseFeatures(plan.not_included),
+              ...plan,
+              features: parseFeatures(plan.features),
+              not_included: parseFeatures(plan.not_included),
           }));
           
           setFetchedPlans(plans);
@@ -244,7 +244,7 @@ const PricingTable = () => {
     const checkAuth = async () => {
       // Use user from auth context
       setIsLoggedIn(!!user);
-
+      
       if (user) {
         try {
           // OPTIMIZATION: Try cache first for instant loading
@@ -268,7 +268,7 @@ const PricingTable = () => {
       }
       setLoading(false);
     };
-
+    
     // Wait for auth to load, then check subscription
     if (!authLoading) {
       checkAuth();

@@ -37,6 +37,7 @@ import {
   Heart,
   Sparkles,
   Crown,
+  Bookmark,
   Info,
   Pencil,
   AlertCircle,
@@ -82,6 +83,20 @@ export function FoodResultsClient() {
     setServings(clamped);
     setServingsInput(clamped.toString());
   };
+  // Helper to truncate serving guidance to fit on one line
+  const truncateServingGuidance = (text: string, maxLength: number = 120) => {
+    if (!text) return text;
+    if (text.length <= maxLength) return text;
+    // Try to truncate at a sentence boundary
+    const truncated = text.substring(0, maxLength);
+    const lastPeriod = truncated.lastIndexOf('.');
+    const lastComma = truncated.lastIndexOf(',');
+    const cutPoint = Math.max(lastPeriod, lastComma);
+    if (cutPoint > maxLength * 0.7) {
+      return truncated.substring(0, cutPoint + 1);
+    }
+    return truncated.trim() + '...';
+  };
   const persistInsights = async (newInsights: string) => {
     setInsightsText(newInsights);
     if (!analysis) {
@@ -97,6 +112,95 @@ export function FoodResultsClient() {
         .eq("id", id);
     } catch (error) {
       console.error("Failed to save insights", error);
+    }
+  };
+  const saveRecipe = async () => {
+    if (!analysis || !id || !hasPremiumAccess) {
+      toast({
+        title: t("foodresults.recipe.save.error.premium.title"),
+        description: t("foodresults.recipe.save.error.premium.description"),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setSavingRecipe(true);
+
+      // Check authentication
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error("Please sign in to save recipes");
+      }
+
+      // Check if recipe already saved
+      const { data: existing } = await (supabase as any)
+        .from("saved_recipes")
+        .select("id")
+        .eq("food_scan_id", id)
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (existing) {
+        toast({
+          title: t("foodresults.recipe.save.already.title"),
+          description: t("foodresults.recipe.save.already.description"),
+        });
+        setIsRecipeSaved(true);
+        return;
+      }
+
+      // Prepare recipe text from instructions
+      const recipeText = analysis.instructions?.join("\n\n") || "";
+
+      if (!recipeText) {
+        throw new Error("No recipe instructions available");
+      }
+
+      // Get nutrition summary (scaled for current servings)
+      const scaled = scaleNutrients(analysis.nutrients, servings);
+      const nutritionSummary = {
+        calories: scaled?.calories ?? analysis.nutrients?.calories ?? null,
+        protein_g: scaled?.protein_g ?? analysis.nutrients?.protein_g ?? null,
+        carbohydrates_g: scaled?.carbohydrates_g ?? analysis.nutrients?.carbohydrates_g ?? null,
+        fat_g: scaled?.fat_g ?? analysis.nutrients?.fat_g ?? null,
+        fiber_g: scaled?.fiber_g ?? analysis.nutrients?.fiber_g ?? null,
+        sugar_g: scaled?.sugar_g ?? analysis.nutrients?.sugar_g ?? null,
+        sodium_mg: scaled?.sodium_mg ?? analysis.nutrients?.sodium_mg ?? null,
+        serving: servings,
+      };
+
+      // Save recipe
+      const { error: saveError } = await (supabase as any)
+        .from("saved_recipes")
+        .insert({
+          user_id: session.user.id,
+          food_name: analysis.dish || "Unknown Recipe",
+          recipe_text: recipeText,
+          image_url: imageUrl || null,
+          image_path: imagePath || null,
+          food_scan_id: id,
+          nutrition_summary: nutritionSummary,
+        });
+
+      if (saveError) {
+        throw saveError;
+      }
+
+      setIsRecipeSaved(true);
+      toast({
+        title: t("foodresults.recipe.save.success.title"),
+        description: t("foodresults.recipe.save.success.description"),
+      });
+    } catch (error: any) {
+      console.error("Failed to save recipe:", error);
+      toast({
+        title: t("foodresults.error"),
+        description: error.message || t("foodresults.recipe.save.error.general"),
+        variant: "destructive",
+      });
+    } finally {
+      setSavingRecipe(false);
     }
   };
   const [savedServings, setSavedServings] = useState(1);
@@ -124,6 +228,8 @@ export function FoodResultsClient() {
   const [updatingIngredients, setUpdatingIngredients] = useState(false);
   const [analysisRefreshing, setAnalysisRefreshing] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [savingRecipe, setSavingRecipe] = useState(false);
+  const [isRecipeSaved, setIsRecipeSaved] = useState(false);
   const reportRef = useRef<HTMLDivElement | null>(null);
   const fetchImageAsDataUrl = async (url: string) => {
     try {
@@ -1233,6 +1339,35 @@ export function FoodResultsClient() {
     }
   }, [analysis]);
 
+  // Check if recipe is already saved
+  useEffect(() => {
+    const checkIfSaved = async () => {
+      if (!id || !isAuthenticated || !hasPremiumAccess) {
+        setIsRecipeSaved(false);
+        return;
+      }
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+
+        const { data } = await (supabase as any)
+          .from("saved_recipes")
+          .select("id")
+          .eq("food_scan_id", id)
+          .eq("user_id", session.user.id)
+          .maybeSingle();
+
+        setIsRecipeSaved(!!data);
+      } catch (error) {
+        console.error("Failed to check if recipe is saved:", error);
+        setIsRecipeSaved(false);
+      }
+    };
+
+    void checkIfSaved();
+  }, [id, isAuthenticated, hasPremiumAccess]);
+
   // Suppress TinyAdz errors to prevent breaking the page
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -1325,10 +1460,39 @@ export function FoodResultsClient() {
   );
   const parsedInsights = useMemo(() => {
     if (!insightsText) return null;
+    
+    // Try to parse as JSON first (new format)
+    try {
+      // Remove markdown code blocks if present
+      let jsonStr = insightsText.replace(/^```(?:json)?|```$/gi, "").trim();
+      // If it's wrapped in quotes, unescape it
+      if (jsonStr.startsWith('"') && jsonStr.endsWith('"')) {
+        jsonStr = JSON.parse(jsonStr);
+      }
+      const parsed = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
+      
+      if (parsed && (parsed.keyRecommendations || parsed.actionItems)) {
+        return {
+          demographics: parsed.demographics || "",
+          keyRecommendations: Array.isArray(parsed.keyRecommendations) ? parsed.keyRecommendations : [],
+          actionItems: Array.isArray(parsed.actionItems) ? parsed.actionItems : [],
+          // Legacy fields for backward compatibility
+          healthContext: "",
+          substitutions: [] as Array<{ title: string; description: string }>,
+        };
+      }
+    } catch (e) {
+      // Not JSON, fall through to legacy parsing
+      console.log("Insights not in JSON format, trying legacy parsing");
+    }
+    
+    // Legacy format parsing (for backward compatibility)
     const sections = {
       healthContext: "",
       substitutions: [] as Array<{ title: string; description: string }>,
       demographics: "",
+      keyRecommendations: [] as string[],
+      actionItems: [] as string[],
     };
     const contextWithDemoMatch = insightsText.match(
       /Personalized Health Context\s*\(([^)]+)\)[:\s]*(.*?)(?=Smart Substitution Suggestions|$)/is
@@ -1517,7 +1681,7 @@ export function FoodResultsClient() {
             <div className="lg:col-span-4">
               <Card className="overflow-hidden lg:sticky lg:top-6">
                 {imageUrl ? (
-                  <div className="relative overflow-hidden" style={{ paddingBottom: 'calc(100% + 72px)' }}>
+                  <div className="relative overflow-hidden" style={{ paddingBottom: 'calc(100% + 52px)' }}>
                     <img src={imageUrl} alt={analysis.dish || "Food"} className="absolute inset-0 w-full h-full object-cover" />
                   </div>
                 ) : (
@@ -1627,29 +1791,72 @@ export function FoodResultsClient() {
                             if (!id) return;
                             try {
                               setSavingServings(true);
-                              const { error } = await (supabase as any)
-                                .from("food_scans")
-                                .update({ serving: Number(servings) })
-                                .eq("id", id);
-                              if (error) {
-                                console.error("Failed to update serving in database:", error);
-                              toast({
-                                title: t("foodresults.error"),
-                                description: `${t("foodresults.error.save")} ${error.message}`,
-                                variant: "destructive",
-                              });
-                                return;
+                              
+                              // Check authentication first
+                              const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                              if (sessionError || !session) {
+                                throw new Error("Please sign in to save changes");
                               }
-                              setSavedServings(servings);
-                              toast({
-                                title: t("foodresults.servings.saved.title"),
-                                description: t("foodresults.servings.saved.description"),
-                              });
+                              
+                              // Retry logic for network errors
+                              let lastError: any = null;
+                              for (let attempt = 0; attempt < 3; attempt++) {
+                                try {
+                                  const { data, error } = await (supabase as any)
+                                    .from("food_scans")
+                                    .update({ serving: Number(servings) })
+                                    .eq("id", id)
+                                    .select()
+                                    .single();
+                                  
+                                  if (error) {
+                                    lastError = error;
+                                    // If it's a network error, retry
+                                    if (error.message?.includes("Load failed") || error.message?.includes("fetch")) {
+                                      if (attempt < 2) {
+                                        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+                                        continue;
+                                      }
+                                    }
+                                    throw error;
+                                  }
+                                  
+                                  // Success
+                                  setSavedServings(servings);
+                                  toast({
+                                    title: t("foodresults.servings.saved.title"),
+                                    description: t("foodresults.servings.saved.description"),
+                                  });
+                                  return;
+                                } catch (err: any) {
+                                  lastError = err;
+                                  // If it's not a network error, don't retry
+                                  if (!err?.message?.includes("Load failed") && !err?.message?.includes("fetch")) {
+                                    throw err;
+                                  }
+                                  // If last attempt, throw
+                                  if (attempt === 2) {
+                                    throw err;
+                                  }
+                                }
+                              }
+                              
+                              // If we get here, all retries failed
+                              throw lastError || new Error("Failed to save after multiple attempts");
                             } catch (error: any) {
                               console.error("Failed to update serving in database:", error);
+                              
+                              // Provide user-friendly error messages
+                              let errorMessage = t("foodresults.error.servings");
+                              if (error?.message?.includes("Load failed") || error?.message?.includes("fetch")) {
+                                errorMessage = "Network error. Please check your connection and try again.";
+                              } else if (error?.message) {
+                                errorMessage = error.message;
+                              }
+                              
                               toast({
                                 title: t("foodresults.error"),
-                                description: error?.message || t("foodresults.error.servings"),
+                                description: `${t("foodresults.error.save")} ${errorMessage}`,
                                 variant: "destructive",
                               });
                             } finally {
@@ -1693,13 +1900,15 @@ export function FoodResultsClient() {
               </CardHeader>
               <CardContent className="pt-3 sm:pt-4">
                 {analysis.servingGuidance && (
-                  <div className="mb-4 sm:mb-5 rounded-lg border border-primary/20 bg-primary/5 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-primary">
-                    {analysis.servingGuidance}
+                  <div className="mb-4 sm:mb-5 rounded-lg border border-primary/20 bg-primary/5 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-primary overflow-hidden" title={analysis.servingGuidance}>
+                    <div className="truncate">{truncateServingGuidance(analysis.servingGuidance, 100)}</div>
                   </div>
                 )}
                 {!analysis.servingGuidance && servingApproximation && (
-                  <div className="mb-4 sm:mb-5 rounded-lg border border-muted/50 bg-muted/40 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">{servingApproximation.label}</span> ≈ {servingApproximation.grams} grams. To adjust servings, divide your dish weight (in grams) by {servingApproximation.grams}. For example, 650 g ÷ {servingApproximation.grams} ≈ {(650 / servingApproximation.grams).toFixed(1)} servings.
+                  <div className="mb-4 sm:mb-5 rounded-lg border border-muted/50 bg-muted/40 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-muted-foreground overflow-hidden">
+                    <div className="truncate">
+                      <span className="font-medium text-foreground">{servingApproximation.label}</span> ≈ {servingApproximation.grams}g. Divide dish weight by {servingApproximation.grams}g for servings.
+                    </div>
                   </div>
                 )}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
@@ -1780,9 +1989,37 @@ export function FoodResultsClient() {
               {!(analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")) && (
                 <Card>
                   <CardHeader className="pb-3">
-                    <div className="flex items-center gap-2">
-                      <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-                      <CardTitle className="text-base sm:text-lg">How to Prepare</CardTitle>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                        <CardTitle className="text-base sm:text-lg">How to Prepare</CardTitle>
+                      </div>
+                      {hasPremiumAccess && isAuthenticated && analysis.instructions && analysis.instructions.length > 0 && (
+                        <Button
+                          size="sm"
+                          variant={isRecipeSaved ? "secondary" : "default"}
+                          className="text-xs sm:text-sm"
+                          onClick={saveRecipe}
+                          disabled={savingRecipe || isRecipeSaved}
+                        >
+                          {savingRecipe ? (
+                            <>
+                              <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-spin" />
+                              <span className="hidden sm:inline">{t("foodresults.recipe.save.saving")}</span>
+                            </>
+                          ) : isRecipeSaved ? (
+                            <>
+                              <Bookmark className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 fill-current" />
+                              <span className="hidden sm:inline">{t("foodresults.recipe.save.saved")}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Bookmark className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                              <span className="hidden sm:inline">{t("foodresults.recipe.save.button")}</span>
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
                     <CardDescription className="text-xs sm:text-sm">Step-by-step instructions</CardDescription>
                   </CardHeader>
@@ -2010,9 +2247,9 @@ export function FoodResultsClient() {
                                 setUpgradeRequired(false);
                                 console.log("Starting insights generation...");
                                
-                                // Add timeout wrapper (20 seconds max)
+                                // Add timeout wrapper (40 seconds max for insights)
                                 const timeoutPromise = new Promise((_, reject) => {
-                                  setTimeout(() => reject(new Error("Insights generation timed out after 20 seconds. Please try again.")), 20000);
+                                  setTimeout(() => reject(new Error("Insights generation timed out after 40 seconds. Please try again.")), 40000);
                                 });
                                
                                 const insightsPromise = getPersonalizedInsights({
@@ -2090,69 +2327,122 @@ export function FoodResultsClient() {
                         className="space-y-6"
                         data-collapse-gap-in-pdf={insightsText ? "true" : undefined}
                       >
-                        {parsedInsights.healthContext && (
-                          <div className="space-y-6">
-                            {/* Profile Badges */}
-                            <div className="flex flex-wrap items-center gap-2">
-                              {parsedInsights.demographics && (
-                                <Badge variant="outline" className="text-xs px-3 bg-background/80 border-primary/30">
-                                  {parsedInsights.demographics}
+                        {/* Profile Badges */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {parsedInsights.demographics && (
+                            <Badge variant="outline" className="text-xs px-3 bg-background/80 border-primary/30">
+                              {parsedInsights.demographics}
+                            </Badge>
+                          )}
+                          {profile?.weight_kg && profile?.height_cm && (() => {
+                            const bmi = calculateBMI(profile.weight_kg, profile.height_cm);
+                            const bmiCategory = getBMICategory(bmi);
+                            if (bmi) {
+                              return (
+                                <Badge
+                                  variant="outline"
+                                  className={`text-xs px-3 py-1.5 border-2 ${
+                                    bmiCategory.color === "green" ? "bg-green-50 border-green-500 text-green-700" :
+                                    bmiCategory.color === "blue" ? "bg-blue-50 border-blue-500 text-blue-700" :
+                                    bmiCategory.color === "orange" ? "bg-orange-50 border-orange-500 text-orange-700" :
+                                    "bg-red-50 border-red-500 text-red-700"
+                                  }`}
+                                >
+                                  <Scale className="h-3 w-3 mr-1.5" />
+                                  BMI: {bmi.toFixed(1)} ({bmiCategory.category})
                                 </Badge>
-                              )}
-                              {profile?.goal && (
-                                <Badge variant="outline" className="text-xs px-3 bg-primary/10 border-primary/30 text-primary">
-                                  <Target className="h-3 w-3 mr-1.5" />
-                                  {profile.goal.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
-                                </Badge>
-                              )}
-                              {profile?.activity_level && (
-                                <Badge variant="outline" className="text-xs px-3 py-1 bg-primary/10 border-primary/30 text-primary">
-                                  <Activity className="h-3 w-3 mr-1.5" />
-                                  {profile.activity_level.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
-                                </Badge>
-                              )}
-                              {profile?.weight_kg && profile?.height_cm && (() => {
-                                const bmi = calculateBMI(profile.weight_kg, profile.height_cm);
-                                const bmiCategory = getBMICategory(bmi);
-                                if (bmi) {
-                                  return (
-                                    <Badge
-                                      variant="outline"
-                                      className={`text-xs px-3 py-1.5 border-2 ${
-                                        bmiCategory.color === "green" ? "bg-green-50 border-green-500 text-green-700" :
-                                        bmiCategory.color === "blue" ? "bg-blue-50 border-blue-500 text-blue-700" :
-                                        bmiCategory.color === "orange" ? "bg-orange-50 border-orange-500 text-orange-700" :
-                                        "bg-red-50 border-red-500 text-red-700"
-                                      }`}
-                                    >
-                                      <Scale className="h-3 w-3 mr-1.5" />
-                                      BMI: {bmi.toFixed(1)} ({bmiCategory.category})
-                                    </Badge>
-                                  );
-                                }
-                                return null;
-                              })()}
-                            </div>
-                            {/* Enhanced Insights Display */}
-                            <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
-                              {/* Key Recommendations & Tips Card */}
+                              );
+                            }
+                            return null;
+                          })()}
+                          {profile?.goal && (
+                            <Badge variant="outline" className="text-xs px-3 bg-primary/10 border-primary/30 text-primary">
+                              <Target className="h-3 w-3 mr-1.5" />
+                              {profile.goal.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                            </Badge>
+                          )}
+                          {profile?.activity_level && (
+                            <Badge variant="outline" className="text-xs px-3 py-1 bg-primary/10 border-primary/30 text-primary">
+                              <Activity className="h-3 w-3 mr-1.5" />
+                              {profile.activity_level.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* New Format: Key Recommendations and Action Items */}
+                        {(parsedInsights.keyRecommendations?.length > 0 || parsedInsights.actionItems?.length > 0) ? (
+                          <div className="grid md:grid-cols-2 gap-4">
+                            {/* Key Recommendations Card */}
+                            {parsedInsights.keyRecommendations?.length > 0 && (
                               <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
                                 <CardHeader className="pb-3">
                                   <div className="flex items-center gap-2">
                                     <div className="p-2 rounded-lg bg-primary/20">
                                       <CheckCircle2 className="h-5 w-5 text-primary" />
                                     </div>
-                                    <CardTitle className="text-base">Key Recommendations & Tips</CardTitle>
+                                    <CardTitle className="text-base">Key Recommendations</CardTitle>
+                                  </div>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="space-y-3">
+                                    {parsedInsights.keyRecommendations.map((rec, idx) => (
+                                      <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-background/60 border border-primary/10">
+                                        <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
+                                          <span className="text-xs font-semibold text-primary">{idx + 1}</span>
+                                        </div>
+                                        <p className="text-sm leading-relaxed text-foreground flex-1">{rec}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+                            
+                            {/* Action Items Card */}
+                            {parsedInsights.actionItems?.length > 0 && (
+                              <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+                                <CardHeader className="pb-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded-lg bg-primary/20">
+                                      <Zap className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <CardTitle className="text-base">Action Items</CardTitle>
+                                  </div>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="space-y-3">
+                                    {parsedInsights.actionItems.map((item, idx) => (
+                                      <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-background/60 border border-primary/10">
+                                        <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
+                                          <Zap className="h-3 w-3 text-primary" />
+                                        </div>
+                                        <p className="text-sm leading-relaxed text-foreground flex-1">{item}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+                          </div>
+                        ) : parsedInsights.healthContext ? (
+                          /* Legacy format fallback */
+                          <div className="space-y-6">
+                            <div className="grid md:grid-cols-2 gap-3 sm:gap-4">
+                              <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+                                <CardHeader className="pb-3">
+                                  <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded-lg bg-primary/20">
+                                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <CardTitle className="text-base">Key Recommendations</CardTitle>
                                   </div>
                                 </CardHeader>
                                 <CardContent>
                                   <div className="space-y-3">
                                     {(() => {
-                                      // Parse the health context to extract key points
                                       const text = parsedInsights.healthContext;
                                       const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
                                       const keyPoints = sentences.slice(0, 4).map(s => s.trim());
-                                     
                                       return keyPoints.map((point, idx) => (
                                         <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-background/60 border border-primary/10">
                                           <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
@@ -2165,7 +2455,6 @@ export function FoodResultsClient() {
                                   </div>
                                 </CardContent>
                               </Card>
-                              {/* Smart Substitution Suggestions Card */}
                               {parsedInsights.substitutions.length > 0 && (
                                 <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
                                   <CardHeader className="pb-3">
@@ -2179,10 +2468,7 @@ export function FoodResultsClient() {
                                   <CardContent>
                                     <div className="space-y-3">
                                       {parsedInsights.substitutions.map((sub, idx) => (
-                                        <div
-                                          key={idx}
-                                          className="flex items-start gap-3 p-3 rounded-lg bg-background/60 border border-primary/10"
-                                        >
+                                        <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-background/60 border border-primary/10">
                                           <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
                                             <CheckCircle2 className="h-4 w-4 text-primary" />
                                           </div>
@@ -2198,14 +2484,11 @@ export function FoodResultsClient() {
                               )}
                             </div>
                           </div>
-                        )}
-                        {!parsedInsights.healthContext &&
-                          !parsedInsights.substitutions.length &&
-                          insightsText && (
-                            <div className="rounded-lg border p-4 bg-muted/30">
-                              <div className="whitespace-pre-wrap text-sm leading-relaxed">{insightsText}</div>
-                            </div>
-                          )}
+                        ) : insightsText ? (
+                          <div className="rounded-lg border p-4 bg-muted/30">
+                            <div className="whitespace-pre-wrap text-sm leading-relaxed">{insightsText}</div>
+                          </div>
+                        ) : null}
                       </div>
                     )}
                   </>

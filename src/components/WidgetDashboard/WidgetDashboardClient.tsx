@@ -419,7 +419,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
             setSavedWidgets(cachedWidgets);
             setLoading(false);
           }
-          
+
           // OPTIMIZATION: Remove artificial 50ms delay - not needed
           // Make the query immediately - Supabase client automatically includes auth headers
           console.log("Attempting to load widgets for user:", session.user.id);

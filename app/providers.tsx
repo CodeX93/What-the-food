@@ -28,20 +28,20 @@ export function AppProviders({ children, initialUser, initialProfile }: AppProvi
 
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <LanguageProvider>
-          <AuthProvider initialUser={initialUser} initialProfile={initialProfile}>
-            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-              <TooltipProvider>
-                <ShadcnToaster />
-                <Sonner />
-                <TawkWidget />
-                {children}
-              </TooltipProvider>
-            </ThemeProvider>
-          </AuthProvider>
-        </LanguageProvider>
-      </QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <LanguageProvider>
+        <AuthProvider initialUser={initialUser} initialProfile={initialProfile}>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <TooltipProvider>
+              <ShadcnToaster />
+              <Sonner />
+              <TawkWidget />
+              {children}
+            </TooltipProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </LanguageProvider>
+    </QueryClientProvider>
     </ErrorBoundary>
   );
 }

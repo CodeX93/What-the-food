@@ -14,7 +14,7 @@ export async function HeaderServer() {
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 py-4 flex items-center gap-6">
-        <Link href="/" className="flex items-center">
+        <Link href="/" className="flex items-center border-0 outline-none focus:outline-none focus-visible:outline-none">
           <Logo />
         </Link>
         <div className="hidden md:flex flex-1">

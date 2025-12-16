@@ -22,6 +22,7 @@ import {
   UtensilsCrossed,
   Plus,
   X,
+  BookOpen,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/hooks/use-translation";
@@ -609,22 +610,28 @@ export function DashboardClient({
       <div className="container mx-auto px-4 pb-10">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card
-            className="cursor-pointer hover:shadow-lg transition-shadow"
+            className={`cursor-pointer hover:shadow-lg transition-shadow ${!isPremium ? "opacity-80" : ""}`}
+            title={!isPremium ? "Upgrade to Premium to access saved recipes" : undefined}
             onClick={() => {
-              const el = document.getElementById("upload-section");
-              if (el) {
-                el.scrollIntoView({ behavior: "smooth", block: "start" });
+              if (!isPremium) {
+                toast({
+                  title: t("dashboard.premium.feature"),
+                  description: "Upgrade to a premium plan to access your saved recipes.",
+                  variant: "warning",
+                });
+                return;
               }
+              router.push("/saved-recipes");
             }}
           >
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-primary/10 rounded-lg">
-                  <Camera className="h-6 w-6 text-primary" />
+                  <BookOpen className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">{t("dashboard.card.scan.title")}</CardTitle>
-                  <CardDescription>{t("dashboard.card.scan.description")}</CardDescription>
+                  <CardTitle className="text-lg">{t("dashboard.card.recipes.title")}</CardTitle>
+                  <CardDescription>{t("dashboard.card.recipes.description")}</CardDescription>
                 </div>
               </div>
             </CardHeader>

@@ -64,7 +64,7 @@ export default function Hero() {
         try {
           const isPremiumUser = await hasActivePremiumSubscription(authUser.id);
           setIsPremium(isPremiumUser);
-          
+
           // Only check scans if NOT premium
           if (!isPremiumUser) {
             try {
@@ -80,14 +80,14 @@ export default function Hero() {
         } catch (error) {
           console.error("Failed to determine premium status", error);
           setIsPremium(false);
-          
+
           // Fallback: check scans
           try {
             const status = await getFreeScanStatus(true); // Force refresh
             setRemainingScans(status.remaining);
             setScanStatusType(status.type);
           } catch (err) {
-            setRemainingScans(3);
+          setRemainingScans(3);
             setScanStatusType('registered');
           }
         }

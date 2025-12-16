@@ -301,7 +301,7 @@ export async function getPersonalizedInsights(params: {
   });
 
   const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error("Request timeout - insights generation took too long. Please try again.")), 15000);
+    setTimeout(() => reject(new Error("Request timeout - insights generation took too long. Please try again.")), 35000); // Increased to 35s
   });
 
   let result: AnalyzeFoodInvokeResult;

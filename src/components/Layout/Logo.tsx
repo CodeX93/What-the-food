@@ -21,7 +21,7 @@ export function Logo() {
       alt="WhatTheFood"
       width={180}
       height={80}
-      className="h-12 w-auto object-contain"
+      className="h-12 w-auto object-contain border-0 outline-none"
       priority
     />
   );

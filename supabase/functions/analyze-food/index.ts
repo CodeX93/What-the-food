@@ -27,7 +27,7 @@ const PROMPT_GUIDELINES = `REQUIRED - Generate ALL fields:
 - description: 1-2 sentence summary
 - tags: 3-6 lowercase keywords (e.g., healthy, vegetarian, high-protein)
 - additionalInfo: 50-80 words covering nutrition facts, health benefits, storage tips
-- servingGuidance: "To calculate servings, divide your dish weight by [X]g. Example: 300g dish ÷ [X]g = Y servings"
+- servingGuidance: "To calculate servings, divide your dish weight by [X]g. Example: 300g dish ÷ [X]g = Y servings. Also include a note about the serving size and how to calculate it."
 - servingWeightGrams: MUST provide realistic weight (pasta 200-250g, burger 150-200g, salad 150g)
 - ingredients: List ALL ingredients with METRIC quantities (g, kg, ml, L) - NEVER imperial
 - instructions: Detailed step-by-step recipe. Format: "**Step Name**: Complete instructions with temps, times"
@@ -292,10 +292,27 @@ Generate COMPLETE analysis with all fields including ingredients, instructions, 
       bmiStr = `, BMI ${bmi.toFixed(1)} (${cat})`;
     }
     
-    prompt += `\n\nCRITICAL: Include "insights" field with personalized health analysis.
+    prompt += `\n\nCRITICAL: Include "insights" field with personalized health analysis in JSON format.
 Context: Age ${age}, Gender: ${gender}, Activity: ${activity}, Goal: ${goal}${bmiStr}
-Format: "Health Context: [2 detailed paragraphs]. Smart Swaps: [2 specific suggestions]."`;
-    maxTokens = 500;
+
+Required format (JSON string in "insights" field):
+{
+  "demographics": "Age: ${age}, Gender: ${gender}, Activity: ${activity}, Goal: ${goal}${bmiStr ? `, BMI ${bmiStr.replace(/^,\s*BMI\s*/, '')}` : ''}",
+  "keyRecommendations": [
+    "First detailed recommendation about this meal in context of user's profile",
+    "Second recommendation focusing on portion control or nutrition",
+    "Third recommendation about protein, carbs, or fat content",
+    "Fourth recommendation about activity or lifestyle adjustments"
+  ],
+  "actionItems": [
+    "First actionable item (e.g., 'Focus on lean protein sources and be mindful of overall fat content')",
+    "Second actionable item (e.g., 'Consider increasing physical activity to create larger calorie deficit')",
+    "Third actionable item (e.g., 'Incorporate more vegetables to increase fiber intake')"
+  ]
+}
+
+IMPORTANT: Return insights as a JSON string that can be parsed. Each recommendation and action item should be a complete, actionable sentence.`;
+    maxTokens = 1500; // Increased for detailed insights
   }
 
   const parts = [{ text: prompt }];
@@ -337,7 +354,9 @@ ACCURATE NUTRITION REQUIRED:
   };
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s for Flash
+  // Increased timeout for insights generation (needs more time for detailed analysis)
+  const timeoutDuration = includeInsights ? 30000 : 12000; // 30s for insights, 12s for regular
+  const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
 
   try {
     const resp = await fetch(

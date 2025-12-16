@@ -53,7 +53,7 @@ async function requestStatus(force = false): Promise<FreeScanStatus> {
   if (!force) {
     // Try memory cache first (fastest)
     if (cachedStatus) {
-      return cachedStatus;
+    return cachedStatus;
     }
     
     // Try localStorage cache (still fast)
