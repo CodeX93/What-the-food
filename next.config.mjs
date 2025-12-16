@@ -42,14 +42,13 @@ const nextConfig = {
             reuseExistingChunk: true,
           },
         },
-        maxInitialRequests: 25,
-        minSize: 20000,
-      };
-    }
-    return config;
-  },
-  // Output standalone for better deployment
-  output: 'standalone',
+      maxInitialRequests: 25,
+      minSize: 20000,
+    };
+  }
+  return config;
+},
+// Note: Use output: 'standalone' only for Docker deployments
 };
 
 export default nextConfig;
