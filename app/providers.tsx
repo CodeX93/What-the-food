@@ -9,6 +9,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import TawkWidget from "@/components/Integrations/TawkWidget";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { User } from "@supabase/supabase-js";
 
 type ProfileData = {
@@ -26,20 +27,22 @@ export function AppProviders({ children, initialUser, initialProfile }: AppProvi
   const [queryClient] = useState(() => new QueryClient());
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <AuthProvider initialUser={initialUser} initialProfile={initialProfile}>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <TooltipProvider>
-              <ShadcnToaster />
-              <Sonner />
-              <TawkWidget />
-              {children}
-            </TooltipProvider>
-          </ThemeProvider>
-        </AuthProvider>
-      </LanguageProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
+          <AuthProvider initialUser={initialUser} initialProfile={initialProfile}>
+            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+              <TooltipProvider>
+                <ShadcnToaster />
+                <Sonner />
+                <TawkWidget />
+                {children}
+              </TooltipProvider>
+            </ThemeProvider>
+          </AuthProvider>
+        </LanguageProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

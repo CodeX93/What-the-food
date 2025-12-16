@@ -47,10 +47,9 @@ export default async function RootLayout({ children }: RootLayoutProps) {
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground">
         <Script
-          defer
           src="https://cloud.umami.is/script.js"
           data-website-id="ceebc044-5c92-4d48-b07c-65372c8cfbc8"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
         <AppProviders initialUser={initialUser} initialProfile={initialProfile}>
           {children}
