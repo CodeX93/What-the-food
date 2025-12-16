@@ -158,7 +158,8 @@ export function FoodResultsClient() {
       }
 
       // Get nutrition summary (scaled for current servings)
-      const scaled = scaleNutrients(analysis.nutrients, servings);
+      const scaled = scaleNutrients(analysis.nutrients, servings) as any;
+      const nutrients = analysis.nutrients as any;
       const nutritionSummary = {
         calories: scaled?.calories ?? analysis.nutrients?.calories ?? null,
         protein_g: scaled?.protein_g ?? analysis.nutrients?.protein_g ?? null,
@@ -166,7 +167,7 @@ export function FoodResultsClient() {
         fat_g: scaled?.fat_g ?? analysis.nutrients?.fat_g ?? null,
         fiber_g: scaled?.fiber_g ?? analysis.nutrients?.fiber_g ?? null,
         sugar_g: scaled?.sugar_g ?? analysis.nutrients?.sugar_g ?? null,
-        sodium_mg: scaled?.sodium_mg ?? analysis.nutrients?.sodium_mg ?? null,
+        sodium_mg: scaled?.sodium_mg ?? nutrients?.sodium_mg ?? null,
         serving: servings,
       };
 
