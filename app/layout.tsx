@@ -6,8 +6,60 @@ import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import type { User } from "@supabase/supabase-js";
 
 export const metadata: Metadata = {
-  title: "WhatTheFood | AI-Powered Food Insights",
-  description: "Analyze meals instantly with AI to understand calories, macros, and personalized health insights.",
+  metadataBase: new URL("https://whatthefood.io"),
+  title: "Free AI Food Detection & Calorie Counter App By Recipe",
+  description: "Get accurate nutritional analysis and recipe preparation instructions from any food image in seconds with our free AI food detection app; What The Food.",
+  keywords: [
+    "What The Food",
+    "ai food scanner",
+    "ai food tracker",
+    "ai recipe generator",
+    "best calorie counter app",
+    "calorie counter app",
+    "calorie counter by recipe",
+    "calorie counter mobile app",
+    "food detection",
+    "food recognition",
+    "free calorie counter app",
+    "macro tracking",
+    "what is this food"
+  ],
+  authors: [{ name: "Odeh Ahwal" }],
+  robots: {
+    index: true,
+    follow: true,
+  },
+  themeColor: "#22C55E",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+  },
+  openGraph: {
+    title: "AI Food Detection & Free Calorie Counter App By Recipe",
+    description: "Get accurate nutritional analysis and recipe preparation instructions from any food image in seconds with our free AI food detection app; What The Food.",
+    type: "website",
+    url: "https://whatthefood.io",
+    images: [
+      {
+        url: "https://ucarecdn.com/a3a1fb62-3a45-408f-864a-3b30789c8377/WTFpreview.png",
+      },
+    ],
+  },
+  alternates: {
+    canonical: "https://whatthefood.io",
+  },
+  icons: {
+    icon: "/images/favicon.png",
+  },
+  other: {
+    "fo-verify": "5e2b562c-d6e8-4a24-aef4-7c1bbdd4a97a",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
 };
 
 type RootLayoutProps = {

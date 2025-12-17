@@ -108,12 +108,6 @@ const translations: Record<Language, Record<string, string>> = {
     "features.history.description": "Track all your meals in one place. Premium members get unlimited access to their complete food analytics and diary.",
     "features.freemium.title": "Freemium AI Scanner",
     "features.freemium.description": "Unlike other AI food scanners with hard paywalls, What The Food a free version - No signup/cards required.",
-    "features.macro.title": "Macro Tracking App",
-    "features.macro.description": "What The Food is perfect for tracking your meals, planning your diet, or checking nutritional values on the go.",
-    "features.recipeCounter.title": "Calorie Counter By Recipe",
-    "features.recipeCounter.description": "Our AI food recognition app will scan your meal and give you the closest estimate of total calorie count by its recipe.",
-    "features.recipeGenerator.title": "AI Recipe Generator",
-    "features.recipeGenerator.description": "Our recipe analyzer app helps you discover exact ingredients, nutrition facts and how to recreate it with easy-to-follow steps, from photos.",
     "features.serving.title": "Serving Adjustments",
     "features.serving.description": "Fine-tune portion sizes and ingredients to get the most accurate nutritional information possible.",
     "features.pdf.title": "PDF Reports",
@@ -376,7 +370,7 @@ const translations: Record<Language, Record<string, string>> = {
     "blog.viewall": "View All Posts",
     
     // TopBar Promotional Banner
-    "topbar.promo": "🎉 Launch Special: Get 71% off Premium - Limited Time Only!",
+    "topbar.promo": "🎉 50% Early Bird Discount - Limited Time Only!",
     
     // Widget Section
     "widgethero.title": "Embeddable Widget included in your plan",
@@ -1306,8 +1300,6 @@ const translations: Record<Language, Record<string, string>> = {
     "features.freemium.description": "A diferencia de otros escáneres de alimentos con IA con muros de pago estrictos, What The Food tiene una versión gratuita - No se requiere registro/tarjetas.",
     "features.serving.title": "Ajustes de Porción",
     "features.serving.description": "Ajusta los tamaños de porción y los ingredientes para obtener la información nutricional más precisa posible.",
-    "features.pdf.title": "Informes PDF",
-    "features.pdf.description": "Exporta informes nutricionales detallados como PDFs. Perfecto para compartir con nutricionistas o seguimiento personal.",
     "features.ai.detail1": "Reconoce más de 10,000 alimentos",
     "features.ai.detail2": "Funciona con cualquier cocina o tipo de comida",
     "features.ai.detail3": "No se requiere entrada manual",
@@ -1560,7 +1552,7 @@ const translations: Record<Language, Record<string, string>> = {
     "blog.viewall": "Ver Todas las Entradas",
     
     // TopBar Promotional Banner
-    "topbar.promo": "🎉 Oferta Especial de Lanzamiento: ¡Obtén 71% de descuento en Premium - Tiempo Limitado!",
+    "topbar.promo": "🎉 50% de descuento por reserva anticipada – ¡Por tiempo limitado!",
     
     // Widget Section
     "widgethero.title": "Widget integrable incluido en tu plan",
@@ -2732,7 +2724,7 @@ const translations: Record<Language, Record<string, string>> = {
     "blog.viewall": "Voir tous les articles",
     
     // TopBar Promotional Banner
-    "topbar.promo": "🎉 Offre Spéciale de Lancement : Obtenez 71% de réduction sur Premium - Temps Limité !",
+    "topbar.promo": "🎉 50 % de réduction Early Bird – Offre à durée limitée !",
     
     // Widget Section
     "widgethero.title": "Widget intégrable inclus dans votre plan",
@@ -3896,7 +3888,7 @@ const translations: Record<Language, Record<string, string>> = {
     "blog.viewall": "Alle Beiträge anzeigen",
     
     // TopBar Promotional Banner
-    "topbar.promo": "🎉 Startangebot: Erhalten Sie 71% Rabatt auf Premium - Nur für kurze Zeit!",
+    "topbar.promo": "🎉 50 % Frühbucherrabatt – Nur für kurze Zeit!",
     
     // Widget Section
     "widgethero.title": "Einbettbares Widget in Ihrem Plan enthalten",
@@ -5022,7 +5014,7 @@ const translations: Record<Language, Record<string, string>> = {
     "blog.viewall": "Visualizza tutti i post",
     
     // TopBar Promotional Banner
-    "topbar.promo": "🎉 Offerta Speciale di Lancio: Ottieni il 71% di sconto su Premium - Tempo Limitato!",
+    "topbar.promo": "🎉 Sconto Early Bird del 50% – Solo per un periodo limitato!",
     
     // Widget Section
     "widgethero.title": "Widget integrabile incluso nel tuo piano",
@@ -6147,7 +6139,7 @@ const translations: Record<Language, Record<string, string>> = {
     "blog.viewall": "Ver todas as postagens",
     
     // TopBar Promotional Banner
-    "topbar.promo": "🎉 Oferta Especial de Lançamento: Ganhe 71% de desconto no Premium - Tempo Limitado!",
+    "topbar.promo": "🎉 50% de desconto Early Bird – Por tempo limitado!",
     
     // Widget Section
     "widgethero.title": "Widget incorporável incluído no seu plano",
@@ -7028,7 +7020,6 @@ const translations: Record<Language, Record<string, string>> = {
     "features.serving.description": "微调份量大小和成分，以获得最准确的营养信息。",
     "features.pdf.title": "PDF报告",
     "features.pdf.description": "将详细的营养报告导出为PDF。非常适合与营养师分享或个人追踪。",
-    "features.adfree.description": "Premium会员享受干净、无干扰的界面，专注于您的健康目标。",
     "features.ai.detail1": "识别超过10,000种食物",
     "features.ai.detail2": "适用于任何菜系或餐食类型",
     "features.ai.detail3": "无需手动输入",
@@ -7281,7 +7272,7 @@ const translations: Record<Language, Record<string, string>> = {
     "blog.viewall": "查看所有文章",
     
     // TopBar Promotional Banner
-    "topbar.promo": "🎉 发布特惠：Premium 限时 71% 折扣！",
+    "topbar.promo": "🎉 早鸟优惠 50% 折扣 – 限时优惠！",
     
     // Widget Section
     "widgethero.title": "可嵌入小部件包含在您的计划中",
@@ -8155,7 +8146,6 @@ const translations: Record<Language, Record<string, string>> = {
     "features.serving.description": "ポーションサイズと材料を微調整して、可能な限り正確な栄養情報を取得します。",
     "features.pdf.title": "PDFレポート",
     "features.pdf.description": "詳細な栄養レポートをPDFとしてエクスポート。栄養士との共有や個人の追跡に最適です。",
-    "features.adfree.description": "プレミアムメンバーは、健康目標に焦点を当てたクリーンで気が散らないインターフェースを楽しめます。",
     "features.ai.detail1": "10,000以上の食品を認識",
     "features.ai.detail2": "あらゆる料理や食事タイプに対応",
     "features.ai.detail3": "手動入力不要",
@@ -8408,7 +8398,7 @@ const translations: Record<Language, Record<string, string>> = {
     "blog.viewall": "すべての投稿を表示",
     
     // TopBar Promotional Banner
-    "topbar.promo": "🎉 ローンチ特別価格：Premium 71%オフ - 期間限定！",
+    "topbar.promo": "🎉 早割50％割引 – 期間限定！",
     
     // Widget Section
     "widgethero.title": "プランに含まれる埋め込み可能なウィジェット",
@@ -9290,7 +9280,6 @@ const translations: Record<Language, Record<string, string>> = {
     "features.serving.description": "قم بضبط أحجام الحصص والمكونات بدقة للحصول على أدق المعلومات الغذائية الممكنة.",
     "features.pdf.title": "تقارير PDF",
     "features.pdf.description": "قم بتصدير تقارير غذائية مفصلة كملفات PDF. مثالية للمشاركة مع أخصائيي التغذية أو التتبع الشخصي.",
-    "features.adfree.description": "يستمتع أعضاء Premium بواجهة نظيفة وخالية من الإلهاءات تركز على أهدافك الصحية.",
     "features.ai.detail1": "يتعرف على أكثر من 10,000 طعام",
     "features.ai.detail2": "يعمل مع أي مطبخ أو نوع وجبة",
     "features.ai.detail3": "لا يتطلب إدخال يدوي",
@@ -9543,7 +9532,7 @@ const translations: Record<Language, Record<string, string>> = {
     "blog.viewall": "عرض جميع المشاركات",
     
     // TopBar Promotional Banner
-    "topbar.promo": "🎉 عرض خاص للإطلاق: احصل على خصم 71% على Premium - لفترة محدودة فقط!",
+    "topbar.promo": "🎉 خصم الحجز المبكر 50٪ – لفترة محدودة فقط!",
     
     // Widget Section
     "widgethero.title": "ودجت قابل للتضمين مدرج في خطتك",

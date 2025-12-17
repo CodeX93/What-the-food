@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { hasActivePremiumSubscription } from "@/utils/subscription";
+import { useAuth } from "@/contexts/AuthContext";
 
 const TAWK_SCRIPT_ID = "tawk-chat-widget";
 const TAWK_SRC = "https://embed.tawk.to/68fd5017511129194ce14d9a/1j8eo1nmv";
@@ -175,6 +176,7 @@ const loadWidget = () => {
 };
 
 const TawkWidget = () => {
+  const { user } = useAuth();
   const cleanupTitleGuardRef = useRef<() => void>(() => {});
   const loadingRef = useRef(false);
   const observerRef = useRef<MutationObserver | null>(null);
@@ -242,8 +244,11 @@ const TawkWidget = () => {
       loadingRef.current = true;
 
       try {
-        const isPremium = await hasActivePremiumSubscription();
-        if (isPremium) {
+        // Only show widget for Premium registered users
+        const isRegistered = !!user;
+        const isPremium = isRegistered ? await hasActivePremiumSubscription() : false;
+        
+        if (isRegistered && isPremium) {
           if (!document.getElementById(TAWK_SCRIPT_ID)) {
             cleanupTitleGuardRef.current = installTitleGuard();
             loadWidget();
@@ -329,7 +334,9 @@ const TawkWidget = () => {
     checkAndToggleWidget();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      checkAndToggleWidget();
+      if (isMounted) {
+        checkAndToggleWidget();
+      }
     });
 
     return () => {
@@ -347,7 +354,7 @@ const TawkWidget = () => {
       }
       removeExistingWidget();
     };
-  }, []);
+  }, [user]);
 
   return null;
 };
