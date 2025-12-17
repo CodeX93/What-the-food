@@ -36,14 +36,62 @@ export function HowItWorksHero() {
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
               {(() => {
                 const title = t("howitworkshero.title");
-                // Split on "works" or "Works" (case insensitive) and similar words in other languages
-                const parts = title.split(/(\s+works|\s+Works|\s+Funciona|\s+funciona|\s+Marche|\s+marche|\s+Funktioniert|\s+funktioniert|\s+Funziona|\s+funziona|\s+funciona|\s+Funciona|\s+工作原理|\s+仕組み|\s+يعمل|\s+يعمل)/i);
-                if (parts.length > 1) {
+                // Split on "Food Analyzer Work?" to make it green (English) - including the question mark
+                const foodAnalyzerMatch = title.match(/(Food Analyzer Work\?)/i);
+                if (foodAnalyzerMatch) {
+                  const parts = title.split(/(Food Analyzer Work\?)/i);
                   return (
                     <>
-                      <span className="text-black dark:text-white whitespace-normal">{parts[0]}</span>
-                      <span className="text-primary whitespace-normal ml-2">{parts[1]?.trim()}</span>
-                      {parts[2] && <span className="text-black dark:text-white whitespace-normal">{parts[2]}</span>}
+                      {parts.map((part, index) => {
+                        if (part.match(/(Food Analyzer Work\?)/i)) {
+                          return <span key={index} className="text-primary whitespace-nowrap">{part}</span>;
+                        }
+                        return <span key={index} className="text-black dark:text-white whitespace-normal">{part}</span>;
+                      })}
+                    </>
+                  );
+                }
+                // Split on translated equivalents for "Food Analyzer" + "Work" equivalent
+                const analyzerPatterns = [
+                  /(Analizador de Alimentos)/i, // Spanish
+                  /(Analyseur d'Aliments)/i, // French
+                  /(Lebensmittelanalysator)/i, // German
+                  /(Analizzatore di Alimenti)/i, // Italian
+                  /(Analisador de Alimentos)/i, // Portuguese
+                  /(食物分析器)/i, // Chinese
+                  /(食品分析器)/i, // Japanese
+                  /(محلل الطعام)/i, // Arabic
+                ];
+                
+                for (const pattern of analyzerPatterns) {
+                  const match = title.match(pattern);
+                  if (match) {
+                    const parts = title.split(pattern);
+                    return (
+                      <>
+                        {parts.map((part, index) => {
+                          if (part.match(pattern)) {
+                            return <span key={index} className="text-primary whitespace-normal">{part}</span>;
+                          }
+                          return <span key={index} className="text-black dark:text-white whitespace-normal">{part}</span>;
+                        })}
+                      </>
+                    );
+                  }
+                }
+                
+                // Fallback: Split on "Calorie Cal" to make it green
+                const calorieCalMatch = title.match(/(Calorie Cal)/i);
+                if (calorieCalMatch) {
+                  const parts = title.split(/(Calorie Cal)/i);
+                  return (
+                    <>
+                      {parts.map((part, index) => {
+                        if (part.match(/(Calorie Cal)/i)) {
+                          return <span key={index} className="text-primary whitespace-normal">{part}</span>;
+                        }
+                        return <span key={index} className="text-black dark:text-white whitespace-normal">{part}</span>;
+                      })}
                     </>
                   );
                 }
@@ -64,20 +112,20 @@ export function HowItWorksHero() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                 <div className="text-center sm:text-left">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("howitworkshero.foodsdetected")}</p>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("howitworkshero.foodscanned")}</p>
                   <p className="text-2xl sm:text-3xl font-semibold text-primary mt-1">12K+</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                 <div className="text-center sm:text-left">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("howitworkshero.accuracy")}</p>
-                  <p className="text-2xl sm:text-3xl font-semibold text-primary mt-1">97%</p>
+                  <p className="text-2xl sm:text-3xl font-semibold text-primary mt-1">&gt; 95%</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                 <div className="text-center sm:text-left">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("howitworkshero.timetoinsight")}</p>
-                  <p className="text-2xl sm:text-3xl font-semibold text-primary mt-1">30s</p>
+                  <p className="text-2xl sm:text-3xl font-semibold text-primary mt-1">~12s</p>
                 </div>
               </div>
             </div>

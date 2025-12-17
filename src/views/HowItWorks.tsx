@@ -15,12 +15,6 @@ function HowItWorksPage() {
       icon: Upload,
       title: t("howitworks.step1.title"),
       description: t("howitworks.step1.description"),
-      details: [
-        t("howitworks.step1.detail1"),
-        t("howitworks.step1.detail2"),
-        t("howitworks.step1.detail3"),
-        t("howitworks.step1.detail4")
-      ],
       number: "01",
       colorClass: "bg-gradient-hero",
     },
@@ -28,12 +22,6 @@ function HowItWorksPage() {
       icon: Sparkles,
       title: t("howitworks.step2.title"),
       description: t("howitworks.step2.description"),
-      details: [
-        t("howitworks.step2.detail1"),
-        t("howitworks.step2.detail2"),
-        t("howitworks.step2.detail3"),
-        t("howitworks.step2.detail4")
-      ],
       number: "02",
       colorClass: "bg-gradient-hero",
     },
@@ -41,12 +29,6 @@ function HowItWorksPage() {
       icon: TrendingUp,
       title: t("howitworks.step3.title"),
       description: t("howitworks.step3.description"),
-      details: [
-        t("howitworks.step3.detail1"),
-        t("howitworks.step3.detail2"),
-        t("howitworks.step3.detail3"),
-        t("howitworks.step3.detail4")
-      ],
       number: "03",
       colorClass: "bg-gradient-hero",
     },
@@ -83,17 +65,6 @@ function HowItWorksPage() {
                     <div>
                       <h3 className="text-2xl font-semibold text-foreground mb-2">{step.title}</h3>
                       <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">{step.description}</p>
-                    </div>
-                    <div className="space-y-2">
-                      {step.details.map((detail, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-start gap-3 rounded-lg border border-primary/15 bg-primary/5 dark:bg-white/5 px-3 py-2 text-sm text-muted-foreground"
-                        >
-                          <span className="mt-1 block h-2 w-2 rounded-full bg-primary" />
-                          <span>{detail}</span>
-                        </div>
-                      ))}
                     </div>
                   </CardContent>
                 </Card>

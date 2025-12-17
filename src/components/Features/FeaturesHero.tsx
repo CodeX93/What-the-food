@@ -23,14 +23,33 @@ export function FeaturesHero() {
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                 {(() => {
                   const title = t("featureshero.title");
+                  // Split on "AI Food Scanner?" to make it green
+                  const scannerMatch = title.match(/(AI Food Scanner\?)/i);
+                  if (scannerMatch) {
+                    const parts = title.split(/(AI Food Scanner\?)/i);
+                    return (
+                      <>
+                        {parts.map((part, index) => {
+                          if (part.match(/(AI Food Scanner\?)/i)) {
+                            return <span key={index} className="text-primary whitespace-normal">{part}</span>;
+                          }
+                          return <span key={index} className="text-black dark:text-white whitespace-normal">{part}</span>;
+                        })}
+                      </>
+                    );
+                  }
+                  // Fallback: Split on "Healthy Living"
                   const parts = title.split("Healthy Living");
-                  return (
-                    <>
-                      <span className="text-black dark:text-white whitespace-normal">{parts[0]}</span>
-                      <span className="text-primary whitespace-normal">Healthy Living</span>
-                      {parts[1] && <span className="text-black dark:text-white whitespace-normal">{parts[1]}</span>}
-                    </>
-                  );
+                  if (parts.length > 1) {
+                    return (
+                      <>
+                        <span className="text-black dark:text-white whitespace-normal">{parts[0]}</span>
+                        <span className="text-primary whitespace-normal">Healthy Living</span>
+                        {parts[1] && <span className="text-black dark:text-white whitespace-normal">{parts[1]}</span>}
+                      </>
+                    );
+                  }
+                  return <span className="text-black dark:text-white">{title}</span>;
                 })()}
               </h1>
               <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed">
@@ -90,7 +109,7 @@ export function FeaturesHero() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="rounded-xl bg-primary/10 p-4">
                       <p className="text-xs uppercase tracking-wide text-primary font-semibold">{t("featureshero.avgtimetoinsights")}</p>
-                      <p className="text-3xl font-bold text-primary mt-2">7s</p>
+                      <p className="text-3xl font-bold text-primary mt-2">7s ~ 12s</p>
                       <p className="text-xs text-primary/80 mt-1">{t("featureshero.fromupload")}</p>
                     </div>
                     <div className="rounded-xl bg-slate-900 text-white dark:bg-white/10 dark:text-white p-4">
@@ -195,7 +214,7 @@ export function FeaturesHero() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="rounded-xl bg-primary/10 p-4">
                     <p className="text-xs uppercase tracking-wide text-primary font-semibold">{t("featureshero.avgtimetoinsights")}</p>
-                    <p className="text-3xl font-bold text-primary mt-2">7s</p>
+                    <p className="text-3xl font-bold text-primary mt-2">7s ~ 12s</p>
                     <p className="text-xs text-primary/80 mt-1">{t("featureshero.fromupload")}</p>
                   </div>
                   <div className="rounded-xl bg-slate-900 text-white dark:bg-white/10 dark:text-white p-4">

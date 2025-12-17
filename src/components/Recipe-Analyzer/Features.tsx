@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, BarChart3, History, FileText, Sliders, Sparkles } from "lucide-react";
+import { Camera, BarChart3, History, FileText, Sliders, Sparkles, Target, Calculator, ChefHat, Gift } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -19,14 +19,29 @@ const Features = () => {
       description: t("features.nutrition.description"),
     },
     {
+      icon: Target,
+      title: t("features.macro.title"),
+      description: t("features.macro.description"),
+    },
+    {
+      icon: Calculator,
+      title: t("features.recipeCounter.title"),
+      description: t("features.recipeCounter.description"),
+    },
+    {
+      icon: ChefHat,
+      title: t("features.recipeGenerator.title"),
+      description: t("features.recipeGenerator.description"),
+    },
+    {
       icon: History,
       title: t("features.history.title"),
       description: t("features.history.description"),
     },
     {
-      icon: FileText,
-      title: t("features.pdf.title"),
-      description: t("features.pdf.description"),
+      icon: Gift,
+      title: t("features.freemium.title"),
+      description: t("features.freemium.description"),
     },
     {
       icon: Sliders,
@@ -34,9 +49,9 @@ const Features = () => {
       description: t("features.serving.description"),
     },
     {
-      icon: Sparkles,
-      title: t("features.adfree.title"),
-      description: t("features.adfree.description"),
+      icon: FileText,
+      title: t("features.pdf.title"),
+      description: t("features.pdf.description"),
     },
   ];
   return (
@@ -46,7 +61,27 @@ const Features = () => {
     >
       <div className="container mx-auto px-4 w-full">
         <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">{t("features.title")}</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">
+            {(() => {
+              const title = t("features.title");
+              // Split on "AI Food Scanner?" to make it green
+              const scannerMatch = title.match(/(AI Food Scanner\?)/i);
+              if (scannerMatch) {
+                const parts = title.split(/(AI Food Scanner\?)/i);
+                return (
+                  <>
+                    {parts.map((part, index) => {
+                      if (part.match(/(AI Food Scanner\?)/i)) {
+                        return <span key={index} className="text-primary whitespace-normal">{part}</span>;
+                      }
+                      return <span key={index} className="text-black dark:text-white whitespace-normal">{part}</span>;
+                    })}
+                  </>
+                );
+              }
+              return <span className="text-black dark:text-white">{title}</span>;
+            })()}
+          </h2>
           <p className="text-base sm:text-lg text-muted-foreground">
             {t("features.subtitle")}
           </p>

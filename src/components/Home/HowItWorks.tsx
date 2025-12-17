@@ -37,7 +37,22 @@ const HowItWorks = () => {
           <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">
             {(() => {
               const title = t("howitworks.title");
-              // Split on "works" or "Works" (case insensitive)
+              // Split on "Calorie Cal" to make it green
+              const calorieCalMatch = title.match(/(Calorie Cal)/i);
+              if (calorieCalMatch) {
+                const parts = title.split(/(Calorie Cal)/i);
+                return (
+                  <>
+                    {parts.map((part, index) => {
+                      if (part.match(/(Calorie Cal)/i)) {
+                        return <span key={index} className="text-primary whitespace-normal">{part}</span>;
+                      }
+                      return <span key={index} className="text-black dark:text-white whitespace-normal">{part}</span>;
+                    })}
+                  </>
+                );
+              }
+              // Fallback: Split on "works" or "Works" (case insensitive)
               const parts = title.split(/(\s+works|\s+Works)/i);
               if (parts.length > 1) {
                 return (

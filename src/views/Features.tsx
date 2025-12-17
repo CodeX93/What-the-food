@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, BarChart3, History, FileText, Sliders, Sparkles, CheckCircle2 } from "lucide-react";
+import { Camera, BarChart3, History, FileText, Sliders, Sparkles, CheckCircle2, Target, Calculator, ChefHat } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -75,6 +75,39 @@ export default function FeaturesPage() {
         t("features.adfree.detail2"),
         t("features.adfree.detail3"),
         t("features.adfree.detail4"),
+      ],
+    },
+    {
+      icon: Calculator,
+      title: t("features.recipeCounter.title"),
+      description: t("features.recipeCounter.description"),
+      details: [
+        t("features.recipeCounter.detail1"),
+        t("features.recipeCounter.detail2"),
+        t("features.recipeCounter.detail3"),
+        t("features.recipeCounter.detail4"),
+      ],
+    },
+    {
+      icon: ChefHat,
+      title: t("features.recipeGenerator.title"),
+      description: t("features.recipeGenerator.description"),
+      details: [
+        t("features.recipeGenerator.detail1"),
+        t("features.recipeGenerator.detail2"),
+        t("features.recipeGenerator.detail3"),
+        t("features.recipeGenerator.detail4"),
+      ],
+    },
+    {
+      icon: Target,
+      title: t("features.macro.title"),
+      description: t("features.macro.description"),
+      details: [
+        t("features.macro.detail1"),
+        t("features.macro.detail2"),
+        t("features.macro.detail3"),
+        t("features.macro.detail4"),
       ],
     },
   ];
