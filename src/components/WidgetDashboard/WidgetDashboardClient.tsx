@@ -2076,8 +2076,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                       <CardTitle>{t("widgetdashboard.form.preview")}</CardTitle>
                       <CardDescription>See how your widget will look in real-time</CardDescription>
                     </CardHeader>
-                    <CardContent className="flex-1 flex items-center justify-center">
-                      <div className="w-full max-w-md mx-auto">
+                    <CardContent className="flex-1 flex justify-center">
+                      <div className="w-full max-w-md mx-auto sticky top-6">
                         <WidgetPreview form={editForm} />
                       </div>
                     </CardContent>
@@ -2116,8 +2116,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                     <CardTitle>{t("widgetdashboard.form.preview")}</CardTitle>
                     <CardDescription>See how your widget will look in real-time</CardDescription>
                   </CardHeader>
-                  <CardContent className="flex-1 flex items-center justify-center">
-                    <div className="w-full max-w-md mx-auto">
+                  <CardContent className="flex-1 flex justify-center">
+                    <div className="w-full max-w-md mx-auto sticky top-6">
                       <WidgetPreview form={createForm} />
                     </div>
                   </CardContent>

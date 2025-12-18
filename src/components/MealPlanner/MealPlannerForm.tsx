@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import { getIdealWeightRange } from "@/utils/bmi";
+import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/hooks/use-translation";
 
 interface MealPlannerFormProps {
@@ -142,6 +143,7 @@ const getExerciseKey = (value: string) => {
 };
 
 export function MealPlannerForm({ profile, onGenerate, generating }: MealPlannerFormProps) {
+  const { toast } = useToast();
   const t = useTranslation();
   
   // Create translated arrays for display
@@ -434,17 +436,56 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
               <div>
                 <Label className="text-base font-semibold mb-4 block">{t("mealplanner.form.planduration")}</Label>
                 <div className="flex gap-3 flex-wrap mb-4">
-                  {PLAN_DURATIONS.map((duration) => (
-                    <Button
-                      key={duration.value}
-                      type="button"
-                      variant={planDuration === duration.value ? "default" : "outline"}
-                      onClick={() => setPlanDuration(duration.value)}
-                      className={`min-w-[60px] ${planDuration === duration.value ? "bg-primary text-primary-foreground" : ""}`}
-                    >
-                      {duration.label}
-                    </Button>
-                  ))}
+                  {PLAN_DURATIONS.map((duration) => {
+                    const isComingSoon = duration.value >= 14 && duration.value <= 30;
+
+                    if (isComingSoon) {
+                      return (
+                        <span
+                          key={duration.value}
+                          role="button"
+                          tabIndex={0}
+                          className="inline-block cursor-not-allowed"
+                          onClick={() => {
+                            toast({
+                              title: t("mealplanner.form.planduration.comingsoon.title"),
+                              description: t("mealplanner.form.planduration.comingsoon.description"),
+                            });
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              toast({
+                                title: t("mealplanner.form.planduration.comingsoon.title"),
+                                description: t("mealplanner.form.planduration.comingsoon.description"),
+                              });
+                            }
+                          }}
+                        >
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled
+                            className="min-w-[60px] pointer-events-none opacity-50"
+                          >
+                            {duration.label}
+                          </Button>
+                        </span>
+                      );
+                    }
+
+                    return (
+                      <Button
+                        key={duration.value}
+                        type="button"
+                        variant={planDuration === duration.value ? "default" : "outline"}
+                        onClick={() => setPlanDuration(duration.value)}
+                        className={`min-w-[60px] ${planDuration === duration.value ? "bg-primary text-primary-foreground" : ""}`}
+                      >
+                        {duration.label}
+                      </Button>
+                    );
+                  })}
                 </div>
                 <div>
                   <Input
@@ -452,10 +493,11 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
                     value={planDuration}
                     onChange={(e) => setPlanDuration(parseInt(e.target.value) || 7)}
                     min={1}
-                    max={365}
+                    max={7}
                     className="max-w-xs"
                   />
                 </div>
+                <p className="text-xs text-muted-foreground mt-2">You can choose a duration between 1 and 7 days.</p>
               </div>
             </div>
           )}

@@ -1052,6 +1052,8 @@ const translations: Record<Language, Record<string, string>> = {
     "mealplanner.form.includesnacks.yes": "Yes",
     "mealplanner.form.includesnacks.no": "No",
     "mealplanner.form.planduration": "Plan Duration (days)",
+    "mealplanner.form.planduration.comingsoon.title": "Coming soon",
+    "mealplanner.form.planduration.comingsoon.description": "14–30 day meal plans are coming soon. For now, please choose 7 days.",
     "mealplanner.form.allergies": "Allergies (Select all that apply)",
     "mealplanner.form.customrestrictions": "Custom Dietary Restrictions (Optional)",
     "mealplanner.form.customrestrictions.placeholder": "e.g., Low sodium, diabetic-friendly",
