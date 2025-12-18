@@ -16,7 +16,21 @@ const BlogPreview = () => {
       <div className="container mx-auto px-4 w-full relative z-10">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 gap-3">
           <div>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">{t("blog.latest")}</h2>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">
+              {(() => {
+                const title = t("blog.latest");
+                const match = title.match(/(Blog(s)?)/);
+                if (!match) return title;
+                const parts = title.split(match[0]);
+                return (
+                  <>
+                    {parts[0]}
+                    <span className="text-primary">{match[0]}</span>
+                    {parts[1]}
+                  </>
+                );
+              })()}
+            </h2>
             <p className="text-sm sm:text-base text-muted-foreground">
               {t("blog.subtitle")}
             </p>

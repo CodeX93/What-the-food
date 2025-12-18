@@ -93,7 +93,21 @@ const FAQ = () => {
     <section className="w-full bg-[#F8FAF9] dark:bg-[#111111] transition-colors duration-300">
       <div className="container mx-auto px-4 w-full relative z-10 py-16 sm:py-20 lg:py-24">
         <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">{t("faq.title")}</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">
+            {(() => {
+              const title = t("faq.title");
+              const match = title.match(/(Questions)/);
+              if (!match) return title;
+              const parts = title.split(match[0]);
+              return (
+                <>
+                  {parts[0]}
+                  <span className="text-primary">{match[0]}</span>
+                  {parts[1]}
+                </>
+              );
+            })()}
+          </h2>
           <p className="text-base sm:text-lg text-muted-foreground">
             {t("faq.subtitle")}
           </p>

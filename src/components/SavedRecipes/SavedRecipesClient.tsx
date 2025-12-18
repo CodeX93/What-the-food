@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,8 @@ export function SavedRecipesClient({ initialSubscription = null }: SavedRecipesC
   const { toast } = useToast();
   const t = useTranslation();
   const isPremium = initialSubscription?.subscription_type === "premium";
+  const cacheKeyRef = useRef<string | null>(null);
+  const retriedImageIdsRef = useRef<Set<string>>(new Set());
   
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,6 +67,7 @@ export function SavedRecipesClient({ initialSubscription = null }: SavedRecipesC
         }
 
         const cacheKey = `saved_recipes_${session.user.id}`;
+        cacheKeyRef.current = cacheKey;
         
         // OPTIMIZATION: Check cache first for instant loading
         const cached = DataCache.get<Recipe[]>(cacheKey);
@@ -118,12 +122,17 @@ export function SavedRecipesClient({ initialSubscription = null }: SavedRecipesC
         DataCache.set(cacheKey, recipesWithImages, CACHE_DURATION.SHORT);
 
         // Load signed image URLs in background (only for recipes that need it)
-        // Only load if image_path exists and differs from what we're already using
+        // Only load if image_path exists and we don't already have a cached signed URL.
         const recipesNeedingSignedUrls = recipesWithImages.filter(
-          (recipe) => 
-            recipe.image_path && 
-            !recipe.image_path.toLowerCase().startsWith("manual-entry") &&
-            recipe.image_url !== recipe.displayUrl // Only if we're not already using image_url
+          (recipe) => {
+            if (!recipe.image_path) return false;
+            if (recipe.image_path.toLowerCase().startsWith("manual-entry")) return false;
+
+            // If we already have a cached signed URL (different from raw image_url), skip.
+            // Otherwise fetch a signed URL (covers missing/expired image_url).
+            if (recipe.displayUrl && recipe.image_url && recipe.displayUrl !== recipe.image_url) return false;
+            return true;
+          }
         );
 
         if (recipesNeedingSignedUrls.length > 0) {
@@ -132,7 +141,7 @@ export function SavedRecipesClient({ initialSubscription = null }: SavedRecipesC
             recipesNeedingSignedUrls.map(async (recipe) => {
               try {
                 const displayUrl = await getImageUrl(recipe.image_path!, 60 * 60);
-                return { id: recipe.id, displayUrl };
+                return { id: recipe.id, displayUrl: displayUrl || recipe.image_url };
               } catch (err) {
                 return { id: recipe.id, displayUrl: recipe.image_url };
               }
@@ -317,96 +326,96 @@ export function SavedRecipesClient({ initialSubscription = null }: SavedRecipesC
           </div>
           <p className="text-muted-foreground">{t("savedrecipes.description")}</p>
         </div>
-        {recipes.length > 0 && (
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>{t("savedrecipes.total.title")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{recipes.length}</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {filteredRecipes.length === recipes.length
-                  ? t("savedrecipes.total.all")
-                  : `${filteredRecipes.length} ${t("savedrecipes.total.matching")}`}
-              </p>
+        <div className="mt-6 mb-6 grid grid-cols-1 lg:grid-cols-[18rem_1fr] gap-4">
+          <Card className="h-full">
+            <CardContent className="pt-6 h-full flex items-center">
+              <div className="w-full flex items-center justify-between gap-4 min-h-10">
+                <h4 className="text-lg font-bold text-foreground">
+                  {t("savedrecipes.total.title")}
+                </h4>
+                <p className="text-base font-semibold tabular-nums">
+                  {recipes.length}
+                </p>
+              </div>
             </CardContent>
           </Card>
-        )}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={t("savedrecipes.search.placeholder")}
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Popover open={openRange} onOpenChange={setOpenRange}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="justify-between">
-                    <CalendarIcon className="h-4 w-4 mr-2" />
-                    {range.from && range.to
-                      ? `${range.from.toLocaleDateString()} - ${range.to.toLocaleDateString()}`
-                      : t("savedrecipes.daterange")}
-                    <ChevronDown className="h-4 w-4 ml-2" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-4" align="end">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <div className="text-sm font-medium mb-2">{t("savedrecipes.daterange.presets")}</div>
-                      <div className="flex flex-wrap gap-2">
-                        {[
-                          { key: "all", label: t("savedrecipes.daterange.all") },
-                          { key: "today", label: t("savedrecipes.daterange.today") },
-                          { key: "7d", label: t("savedrecipes.daterange.7d") },
-                          { key: "month", label: t("savedrecipes.daterange.month") },
-                        ].map(({ key, label }) => (
-                          <Badge
-                            key={key}
-                            onClick={() => applyPreset(key)}
-                            className={cn("cursor-pointer", activePreset === key && "bg-primary text-primary-foreground")}
+
+          <Card className="h-full">
+            <CardContent className="pt-6 h-full">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={t("savedrecipes.search.placeholder")}
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Popover open={openRange} onOpenChange={setOpenRange}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="justify-between">
+                      <CalendarIcon className="h-4 w-4 mr-2" />
+                      {range.from && range.to
+                        ? `${range.from.toLocaleDateString()} - ${range.to.toLocaleDateString()}`
+                        : t("savedrecipes.daterange")}
+                      <ChevronDown className="h-4 w-4 ml-2" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-4" align="end">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <div className="text-sm font-medium mb-2">{t("savedrecipes.daterange.presets")}</div>
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { key: "all", label: t("savedrecipes.daterange.all") },
+                            { key: "today", label: t("savedrecipes.daterange.today") },
+                            { key: "7d", label: t("savedrecipes.daterange.7d") },
+                            { key: "month", label: t("savedrecipes.daterange.month") },
+                          ].map(({ key, label }) => (
+                            <Badge
+                              key={key}
+                              onClick={() => applyPreset(key)}
+                              className={cn("cursor-pointer", activePreset === key && "bg-primary text-primary-foreground")}
+                            >
+                              {label}
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="mt-4 flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setRange({ from: null, to: null });
+                              setActivePreset("all");
+                            }}
                           >
-                            {label}
-                          </Badge>
-                        ))}
+                            {t("savedrecipes.daterange.clear")}
+                          </Button>
+                          <Button size="sm" onClick={() => setOpenRange(false)}>
+                            {t("savedrecipes.daterange.apply")}
+                          </Button>
+                        </div>
                       </div>
-                      <div className="mt-4 flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setRange({ from: null, to: null });
-                            setActivePreset("all");
-                          }}
-                        >
-                          {t("savedrecipes.daterange.clear")}
-                        </Button>
-                        <Button size="sm" onClick={() => setOpenRange(false)}>
-                          {t("savedrecipes.daterange.apply")}
-                        </Button>
+                      <div>
+                        <div className="text-sm font-medium mb-2">{t("savedrecipes.daterange.custom")}</div>
+                        <Calendar
+                          mode="range"
+                          selected={{ from: range.from || undefined, to: range.to || undefined }}
+                          onSelect={(selectedRange: any) =>
+                            setRange({ from: selectedRange?.from || null, to: selectedRange?.to || null })
+                          }
+                          numberOfMonths={2}
+                        />
                       </div>
                     </div>
-                    <div>
-                      <div className="text-sm font-medium mb-2">{t("savedrecipes.daterange.custom")}</div>
-                      <Calendar
-                        mode="range"
-                        selected={{ from: range.from || undefined, to: range.to || undefined }}
-                        onSelect={(selectedRange: any) =>
-                          setRange({ from: selectedRange?.from || null, to: selectedRange?.to || null })
-                        }
-                        numberOfMonths={2}
-                      />
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </CardContent>
-        </Card>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {filteredRecipes.length === 0 ? (
           <Card>
@@ -463,8 +472,39 @@ export function SavedRecipesClient({ initialSubscription = null }: SavedRecipesC
                         src={recipe.displayUrl || recipe.image_url || ""}
                         alt={recipe.dish_name || "Recipe"}
                         className="w-full h-full object-cover"
-                        onError={(event) => {
-                          (event.target as HTMLImageElement).style.display = "none";
+                        loading="lazy"
+                        decoding="async"
+                        onError={async (event) => {
+                          const imgEl = event.currentTarget;
+
+                          // If we have an image_path, try once to refresh with a signed URL.
+                          if (
+                            recipe.image_path &&
+                            !recipe.image_path.toLowerCase().startsWith("manual-entry") &&
+                            !retriedImageIdsRef.current.has(recipe.id)
+                          ) {
+                            retriedImageIdsRef.current.add(recipe.id);
+                            try {
+                              const freshUrl = await getImageUrl(recipe.image_path, 60 * 60);
+                              if (!freshUrl) throw new Error("No signed URL");
+                              imgEl.src = freshUrl;
+                              setRecipes((current) => {
+                                const updated = current.map((r) =>
+                                  r.id === recipe.id ? { ...r, displayUrl: freshUrl } : r
+                                );
+                                if (cacheKeyRef.current) {
+                                  DataCache.set(cacheKeyRef.current, updated, CACHE_DURATION.SHORT);
+                                }
+                                return updated;
+                              });
+                              return;
+                            } catch {
+                              // fallthrough to hide
+                            }
+                          }
+
+                          // Hide broken image icon if we can't recover.
+                          imgEl.style.display = "none";
                         }}
                       />
                     </div>

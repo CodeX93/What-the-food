@@ -190,15 +190,15 @@ export default function FeaturesPage() {
                   </div>
                   <div className="grid grid-cols-2 sm:flex sm:gap-8 text-left sm:text-center">
                     <div>
-                      <p className="text-2xl font-bold text-primary">35+</p>
+                      <p className="text-2xl font-bold text-primary">180+</p>
                       <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("featurespage.countries")}</p>
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-primary">4.8★</p>
+                      <p className="text-2xl font-bold text-primary">4.95</p>
                       <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("featurespage.userrating")}</p>
                     </div>
                     <div>
-                      <p className="text-2xl font-bold text-primary">2M+</p>
+                      <p className="text-2xl font-bold text-primary">150K+</p>
                       <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("featurespage.mealsanalyzed")}</p>
                     </div>
                     <div>

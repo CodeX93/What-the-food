@@ -23,7 +23,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.blog": "Blog",
     "nav.dashboard": "Dashboard",
     "nav.profile": "Profile",
-    "nav.settings": "Account Settings",
+    "nav.settings": "Settings",
     "nav.logout": "Log out",
     "nav.signin": "Sign In",
     "nav.getstarted": "Get Started",
@@ -62,8 +62,8 @@ const translations: Record<Language, Record<string, string>> = {
     "common.failedanalyze": "Failed to analyze image. Please try again.",
     
     // Hero Section
-    "hero.title": "Free Calorie Estimator (It's Shazam For Food)",
-    "hero.description": "Upload a meal photo and get instant AI nutrition insights. Track calories, macros, and make healthier choices with our smart calorie estimator.",
+    "hero.title": "Free AI Food Scanner and Calorie Estimator",
+    "hero.description": "Upload a meal photo and get instant AI nutrition insights. Track calories, macros, and make healthier choices with our smart calorie estimator. <strong>It's like Shazam, but for your food</strong>",
     "hero.uploadphoto": "Upload Photo",
     "hero.remaining": "remaining",
     "hero.scans": "scans",
@@ -178,7 +178,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.stayontrack": "Stay on track with daily analysis, history, and insights tailored to your nutrition goals.",
     "featurespage.upgradeanytime": "Upgrade any time",
     "featurespage.unlimitedscans": "Unlimited scans",
-    "featurespage.unlockcomplete": "Unlock complete history, white-label widgets, and PDF reporting for professional use.",
+    "featurespage.unlockcomplete": "Unlock complete history, macro analytics, PDF reporting, recipe saver, ingredient adjuster, and more.",
     "featurespage.communityresults": "Community Results",
     "featurespage.trustedworldwide": "Trusted worldwide",
     "featurespage.countries": "Countries",
@@ -641,7 +641,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.activity": "Activity Level",
     
     // Settings Page Section
-    "settings.title": "Account Settings",
+    "settings.title": "Settings",
     "settings.description": "Manage your account preferences",
     "settings.language.title": "Choose Default Language",
     "settings.language.description": "Select your preferred language for the application",
@@ -1211,7 +1211,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.blog": "Blog",
     "nav.dashboard": "Panel",
     "nav.profile": "Perfil",
-    "nav.settings": "Configuración de Cuenta",
+    "nav.settings": "Configuración",
     "nav.logout": "Cerrar sesión",
     "nav.signin": "Iniciar sesión",
     "nav.getstarted": "Comenzar",
@@ -1250,8 +1250,8 @@ const translations: Record<Language, Record<string, string>> = {
     "common.failedanalyze": "Error al analizar la imagen. Por favor, inténtalo de nuevo.",
     
     // Hero Section
-    "hero.title": "Estimador de Calorías Gratis (Es Shazam Para Comida)",
-    "hero.description": "Sube una foto de comida y obtén información nutricional instantánea con IA. Rastrea calorías, macros y toma decisiones más saludables con nuestro inteligente estimador de calorías.",
+    "hero.title": "Escáner de Alimentos con IA Gratis y Estimador de Calorías",
+    "hero.description": "Sube una foto de comida y obtén información nutricional instantánea con IA. Rastrea calorías, macros y toma decisiones más saludables con nuestro inteligente estimador de calorías. <strong>Es como Shazam, pero para tu comida</strong>",
     "hero.uploadphoto": "Subir Foto",
     "hero.remaining": "restantes",
     "hero.scans": "escaneos",
@@ -1362,7 +1362,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.stayontrack": "Mantente en el camino con análisis diario, historial e información adaptada a tus objetivos nutricionales.",
     "featurespage.upgradeanytime": "Actualiza en cualquier momento",
     "featurespage.unlimitedscans": "Escaneos ilimitados",
-    "featurespage.unlockcomplete": "Desbloquea historial completo, widgets de marca blanca e informes PDF para uso profesional.",
+    "featurespage.unlockcomplete": "Desbloquea el historial completo, el análisis de macros, los informes en PDF, el guardado de recetas, el ajuste de ingredientes y mucho más.",
     "featurespage.communityresults": "Resultados de la Comunidad",
     "featurespage.trustedworldwide": "Confiado en todo el mundo",
     "featurespage.countries": "Países",
@@ -1823,7 +1823,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.activity": "Nivel de Actividad",
     
     // Settings Page Section
-    "settings.title": "Configuración de Cuenta",
+    "settings.title": "Configuración",
     "settings.description": "Administre las preferencias de su cuenta",
     "settings.language.title": "Elegir Idioma Predeterminado",
     "settings.language.description": "Seleccione su idioma preferido para la aplicación",
@@ -2383,7 +2383,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.blog": "Blog",
     "nav.dashboard": "Tableau de bord",
     "nav.profile": "Profil",
-    "nav.settings": "Paramètres du Compte",
+    "nav.settings": "Paramètres",
     "nav.logout": "Déconnexion",
     "nav.signin": "Se connecter",
     "nav.getstarted": "Commencer",
@@ -2421,8 +2421,8 @@ const translations: Record<Language, Record<string, string>> = {
     "common.failedanalyze": "Échec de l'analyse de l'image. Veuillez réessayer.",
     
     // Hero Section
-    "hero.title": "Estimateur de Calories Gratuit (C'est Shazam Pour la Nourriture)",
-    "hero.description": "Téléchargez une photo de repas et obtenez des informations nutritionnelles instantanées avec l'IA. Suivez les calories, les macros et faites des choix plus sains avec notre intelligent estimateur de calories.",
+    "hero.title": "Scanner alimentaire IA gratuit et estimateur de calories",
+    "hero.description": "Téléchargez une photo de repas et obtenez des informations nutritionnelles instantanées avec l'IA. Suivez les calories, les macros et faites des choix plus sains avec notre intelligent estimateur de calories. <strong>C'est comme Shazam, mais pour votre nourriture</strong>",
     "hero.uploadphoto": "Télécharger une photo",
     "hero.remaining": "restants",
     "hero.scans": "scans",
@@ -2533,7 +2533,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.stayontrack": "Restez sur la bonne voie avec une analyse quotidienne, un historique et des informations adaptées à vos objectifs nutritionnels.",
     "featurespage.upgradeanytime": "Mettre à niveau à tout moment",
     "featurespage.unlimitedscans": "Scans illimités",
-    "featurespage.unlockcomplete": "Débloquez un historique complet, des widgets en marque blanche et des rapports PDF pour un usage professionnel.",
+    "featurespage.unlockcomplete": "Débloquez l’historique complet, l’analyse des macros, les rapports PDF, l’enregistrement de recettes, l’ajustement des ingrédients, et bien plus.",
     "featurespage.communityresults": "Résultats de la communauté",
     "featurespage.trustedworldwide": "Approuvé dans le monde entier",
     "featurespage.countries": "Pays",
@@ -2995,7 +2995,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.activity": "Niveau d'Activité",
     
     // Settings Page Section
-    "settings.title": "Paramètres du Compte",
+    "settings.title": "Paramètres",
     "settings.description": "Gérez vos préférences de compte",
     "settings.language.title": "Choisir la Langue par Défaut",
     "settings.language.description": "Sélectionnez votre langue préférée pour l'application",
@@ -3546,7 +3546,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.blog": "Blog",
     "nav.dashboard": "Dashboard",
     "nav.profile": "Profil",
-    "nav.settings": "Kontoeinstellungen",
+    "nav.settings": "Einstellungen",
     "nav.logout": "Abmelden",
     "nav.signin": "Anmelden",
     "nav.getstarted": "Loslegen",
@@ -3585,8 +3585,8 @@ const translations: Record<Language, Record<string, string>> = {
     "common.failedanalyze": "Bildanalyse fehlgeschlagen. Bitte versuchen Sie es erneut.",
     
     // Hero Section
-    "hero.title": "Kostenloser Kalorienrechner (Es Ist Shazam Für Essen)",
-    "hero.description": "Laden Sie ein Foto von einer Mahlzeit hoch und erhalten Sie sofortige KI-Ernährungseinblicke. Verfolgen Sie Kalorien, Makros und treffen Sie gesündere Entscheidungen mit unserem intelligenten Kalorienrechner.",
+    "hero.title": "Kostenloser KI-Essenscanner und Kalorienschätzer",
+    "hero.description": "Laden Sie ein Foto von einer Mahlzeit hoch und erhalten Sie sofortige KI-Ernährungseinblicke. Verfolgen Sie Kalorien, Makros und treffen Sie gesündere Entscheidungen mit unserem intelligenten Kalorienrechner. <strong>Wie Shazam – nur für dein Essen</strong>",
     "hero.uploadphoto": "Foto hochladen",
     "hero.remaining": "verbleibend",
     "hero.scans": "Scans",
@@ -3697,7 +3697,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.stayontrack": "Bleiben Sie auf Kurs mit täglicher Analyse, Historie und Erkenntnissen, die auf Ihre Ernährungsziele zugeschnitten sind.",
     "featurespage.upgradeanytime": "Jederzeit upgraden",
     "featurespage.unlimitedscans": "Unbegrenzte Scans",
-    "featurespage.unlockcomplete": "Schalten Sie vollständige Historie, White-Label-Widgets und PDF-Berichte für den professionellen Einsatz frei.",
+    "featurespage.unlockcomplete": "Schalten Sie den vollständigen Verlauf, Makro-Analysen, PDF-Berichte, Rezeptspeicher, Zutatenanpassung und mehr frei.",
     "featurespage.communityresults": "Community-Ergebnisse",
     "featurespage.trustedworldwide": "Weltweit vertraut",
     "featurespage.countries": "Länder",
@@ -4159,7 +4159,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.activity": "Aktivitätsniveau",
     
     // Settings Page Section
-    "settings.title": "Kontoeinstellungen",
+    "settings.title": "Einstellungen",
     "settings.description": "Verwalten Sie Ihre Kontoeinstellungen",
     "settings.language.title": "Standardsprache Wählen",
     "settings.language.description": "Wählen Sie Ihre bevorzugte Sprache für die Anwendung",
@@ -4673,7 +4673,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.blog": "Blog",
     "nav.dashboard": "Dashboard",
     "nav.profile": "Profilo",
-    "nav.settings": "Impostazioni Account",
+    "nav.settings": "Impostazioni",
     "nav.logout": "Esci",
     "nav.signin": "Accedi",
     "nav.getstarted": "Inizia",
@@ -4712,8 +4712,8 @@ const translations: Record<Language, Record<string, string>> = {
     "common.failedanalyze": "Analisi dell'immagine fallita. Riprova.",
     
     // Hero Section
-    "hero.title": "Stimatore di Calorie Gratuito (È Shazam Per il Cibo)",
-    "hero.description": "Carica una foto di un pasto e ottieni informazioni nutrizionali istantanee con l'IA. Traccia calorie, macro e fai scelte più sane con il nostro intelligente stimatore di calorie.",
+    "hero.title": "Scanner alimentare IA gratuito e stimatore di calorie",
+    "hero.description": "Carica una foto di un pasto e ottieni informazioni nutrizionali istantanee con l'IA. Traccia calorie, macro e fai scelte più sane con il nostro intelligente stimatore di calorie. <strong>È come Shazam, ma per il tuo cibo</strong>",
     "hero.uploadphoto": "Carica foto",
     "hero.remaining": "rimanenti",
     "hero.scans": "scansioni",
@@ -4824,7 +4824,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.stayontrack": "Resta in carreggiata con analisi giornaliera, cronologia e informazioni su misura per i tuoi obiettivi nutrizionali.",
     "featurespage.upgradeanytime": "Aggiorna in qualsiasi momento",
     "featurespage.unlimitedscans": "Scansioni illimitate",
-    "featurespage.unlockcomplete": "Sblocca cronologia completa, widget white-label e report PDF per uso professionale.",
+    "featurespage.unlockcomplete": "Sblocca la cronologia completa, l’analisi dei macro, i report PDF, il salvataggio delle ricette, la modifica degli ingredienti e molto altro.",
     "featurespage.communityresults": "Risultati della Comunità",
     "featurespage.trustedworldwide": "Fidato in tutto il mondo",
     "featurespage.countries": "Paesi",
@@ -5284,7 +5284,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.activity": "Livello di Attività",
     
     // Settings Page Section
-    "settings.title": "Impostazioni Account",
+    "settings.title": "Impostazioni",
     "settings.description": "Gestisci le preferenze del tuo account",
     "settings.language.title": "Scegli Lingua Predefinita",
     "settings.language.description": "Seleziona la tua lingua preferita per l'applicazione",
@@ -5798,7 +5798,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.blog": "Blog",
     "nav.dashboard": "Painel",
     "nav.profile": "Perfil",
-    "nav.settings": "Configurações da Conta",
+    "nav.settings": "Configurações",
     "nav.logout": "Sair",
     "nav.signin": "Entrar",
     "nav.getstarted": "Começar",
@@ -5837,8 +5837,8 @@ const translations: Record<Language, Record<string, string>> = {
     "common.failedanalyze": "Falha ao analisar a imagem. Por favor, tente novamente.",
     
     // Hero Section
-    "hero.title": "Estimador de Calorias Grátis (É Shazam Para Comida)",
-    "hero.description": "Envie uma foto de uma refeição e obtenha informações nutricionais instantâneas com IA. Rastreie calorias, macros e faça escolhas mais saudáveis com nosso inteligente estimador de calorias.",
+    "hero.title": "Scanner de alimentos com IA grátis e estimador de calorias",
+    "hero.description": "Envie uma foto de uma refeição e obtenha informações nutricionais instantâneas com IA. Rastreie calorias, macros e faça escolhas mais saudáveis com nosso inteligente estimador de calorias. <strong>É como o Shazam, mas para a sua comida</strong>",
     "hero.uploadphoto": "Enviar foto",
     "hero.remaining": "restantes",
     "hero.scans": "escaneamentos",
@@ -5949,7 +5949,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.stayontrack": "Mantenha-se no caminho com análise diária, histórico e insights adaptados aos seus objetivos nutricionais.",
     "featurespage.upgradeanytime": "Atualize a qualquer momento",
     "featurespage.unlimitedscans": "Escaneamentos ilimitados",
-    "featurespage.unlockcomplete": "Desbloqueie histórico completo, widgets white-label e relatórios PDF para uso profissional.",
+    "featurespage.unlockcomplete": "Desbloqueie o histórico completo, a análise de macros, relatórios em PDF, salvamento de receitas, ajuste de ingredientes e muito mais.",
     "featurespage.communityresults": "Resultados da Comunidade",
     "featurespage.trustedworldwide": "Confiado em todo o mundo",
     "featurespage.countries": "Países",
@@ -6410,7 +6410,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.activity": "Nível de Atividade",
     
     // Settings Page Section
-    "settings.title": "Configurações da Conta",
+    "settings.title": "Configurações",
     "settings.description": "Gerencie as preferências da sua conta",
     "settings.language.title": "Escolher Idioma Padrão",
     "settings.language.description": "Selecione seu idioma preferido para o aplicativo",
@@ -6932,7 +6932,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.blog": "博客",
     "nav.dashboard": "仪表板",
     "nav.profile": "个人资料",
-    "nav.settings": "账户设置",
+    "nav.settings": "设置",
     "nav.logout": "登出",
     "nav.signin": "登录",
     "nav.getstarted": "开始",
@@ -6970,8 +6970,8 @@ const translations: Record<Language, Record<string, string>> = {
     "common.failedanalyze": "分析图像失败。请重试。",
     
     // Hero Section
-    "hero.title": "免费卡路里估算器（食物的Shazam）",
-    "hero.description": "上传餐食照片，立即获得AI营养洞察。追踪卡路里、宏量营养素，使用我们智能的卡路里估算器做出更健康的选择。",
+    "hero.title": "免费AI食物扫描器和卡路里估算器",
+    "hero.description": "上传餐食照片，立即获得AI营养洞察。追踪卡路里、宏量营养素，使用我们智能的卡路里估算器做出更健康的选择。 <strong>就像 Shazam，但用于你的食物</strong>",
     "hero.uploadphoto": "上传照片",
     "hero.remaining": "剩余",
     "hero.scans": "次扫描",
@@ -7082,7 +7082,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.stayontrack": "通过每日分析、历史记录和针对您营养目标的见解保持正轨。",
     "featurespage.upgradeanytime": "随时升级",
     "featurespage.unlimitedscans": "无限扫描",
-    "featurespage.unlockcomplete": "解锁完整历史、白标小部件和PDF报告，供专业使用。",
+    "featurespage.unlockcomplete": "解锁完整历史、宏量分析、PDF报告、食谱保存、食材调整等更多功能。",
     "featurespage.communityresults": "社区成果",
     "featurespage.trustedworldwide": "全球信赖",
     "featurespage.countries": "国家",
@@ -7543,7 +7543,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.activity": "活动水平",
     
     // Settings Page Section
-    "settings.title": "账户设置",
+    "settings.title": "设置",
     "settings.description": "管理您的账户偏好",
     "settings.language.title": "选择默认语言",
     "settings.language.description": "为应用程序选择您的首选语言",
@@ -8057,7 +8057,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.blog": "ブログ",
     "nav.dashboard": "ダッシュボード",
     "nav.profile": "プロフィール",
-    "nav.settings": "アカウント設定",
+    "nav.settings": "設定",
     "nav.logout": "ログアウト",
     "nav.signin": "ログイン",
     "nav.getstarted": "始める",
@@ -8096,8 +8096,8 @@ const translations: Record<Language, Record<string, string>> = {
     "common.failedanalyze": "画像の分析に失敗しました。もう一度お試しください。",
     
     // Hero Section
-    "hero.title": "無料カロリー推定ツール（食べ物のShazam）",
-    "hero.description": "食事の写真をアップロードして、即座にAI栄養インサイトを取得。カロリー、マクロを追跡し、スマートなカロリー推定ツールでより健康的な選択をしましょう。",
+    "hero.title": "無料AIフードスキャナーとカロリー推定ツール",
+    "hero.description": "食事の写真をアップロードして、即座にAI栄養インサイトを取得。カロリー、マクロを追跡し、スマートなカロリー推定ツールでより健康的な選択をしましょう。 <strong>Shazamの食べ物版</strong>",
     "hero.uploadphoto": "写真をアップロード",
     "hero.remaining": "残り",
     "hero.scans": "スキャン",
@@ -8208,7 +8208,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.stayontrack": "栄養目標に合わせた毎日の分析、履歴、洞察で軌道に乗り続けます。",
     "featurespage.upgradeanytime": "いつでもアップグレード",
     "featurespage.unlimitedscans": "無制限のスキャン",
-    "featurespage.unlockcomplete": "完全な履歴、ホワイトラベルウィジェット、PDFレポートをプロフェッショナルな使用のためにアンロック。",
+    "featurespage.unlockcomplete": "完全な履歴、マクロ分析、PDFレポート、レシピ保存、材料調整など、さらに多くの機能をアンロック。",
     "featurespage.communityresults": "コミュニティの結果",
     "featurespage.trustedworldwide": "世界中で信頼されています",
     "featurespage.countries": "国",
@@ -8669,7 +8669,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.activity": "活動レベル",
     
     // Settings Page Section
-    "settings.title": "アカウント設定",
+    "settings.title": "設定",
     "settings.description": "アカウントの設定を管理",
     "settings.language.title": "デフォルト言語を選択",
     "settings.language.description": "アプリケーションの好みの言語を選択",
@@ -9191,7 +9191,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.blog": "المدونة",
     "nav.dashboard": "لوحة التحكم",
     "nav.profile": "الملف الشخصي",
-    "nav.settings": "إعدادات الحساب",
+    "nav.settings": "الإعدادات",
     "nav.logout": "تسجيل الخروج",
     "nav.signin": "تسجيل الدخول",
     "nav.getstarted": "ابدأ",
@@ -9230,8 +9230,8 @@ const translations: Record<Language, Record<string, string>> = {
     "common.failedanalyze": "فشل تحليل الصورة. يرجى المحاولة مرة أخرى.",
     
     // Hero Section
-    "hero.title": "مقدر السعرات الحرارية المجاني (إنه Shazam للطعام)",
-    "hero.description": "قم بتحميل صورة لوجبة واحصل على رؤى غذائية فورية مدعومة بالذكاء الاصطناعي. تتبع السعرات الحرارية والماكرو واتخذ خيارات أكثر صحة باستخدام مقدر السعرات الحرارية الذكي.",
+    "hero.title": "ماسح طعام بالذكاء الاصطناعي مجاني ومقدر السعرات الحرارية",
+    "hero.description": "قم بتحميل صورة لوجبة واحصل على رؤى غذائية فورية مدعومة بالذكاء الاصطناعي. تتبع السعرات الحرارية والماكرو واتخذ خيارات أكثر صحة باستخدام مقدر السعرات الحرارية الذكي. <strong>مثل Shazam، ولكن لطعامك</strong>",
     "hero.uploadphoto": "تحميل صورة",
     "hero.remaining": "متبقي",
     "hero.scans": "مسح",
@@ -9342,7 +9342,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.stayontrack": "ابق على المسار الصحيح مع التحليل اليومي، والتاريخ، والرؤى المخصصة لأهدافك الغذائية.",
     "featurespage.upgradeanytime": "ترقية في أي وقت",
     "featurespage.unlimitedscans": "مسوحات غير محدودة",
-    "featurespage.unlockcomplete": "افتح التاريخ الكامل، والودجت ذات العلامة البيضاء، وتقارير PDF للاستخدام المهني.",
+    "featurespage.unlockcomplete": "افتح السجل الكامل، تحليلات الماكرو، تقارير PDF، حفظ الوصفات، تعديل المكونات، والمزيد.",
     "featurespage.communityresults": "نتائج المجتمع",
     "featurespage.trustedworldwide": "موثوق به في جميع أنحاء العالم",
     "featurespage.countries": "الدول",
@@ -9803,7 +9803,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.activity": "مستوى النشاط",
     
     // Settings Page Section
-    "settings.title": "إعدادات الحساب",
+    "settings.title": "الإعدادات",
     "settings.description": "إدارة تفضيلات حسابك",
     "settings.language.title": "اختر اللغة الافتراضية",
     "settings.language.description": "اختر لغتك المفضلة للتطبيق",

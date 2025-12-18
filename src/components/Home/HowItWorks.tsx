@@ -33,8 +33,8 @@ const HowItWorks = () => {
       className="relative w-full bg-white dark:bg-[#000000] transition-colors duration-300 py-16 sm:py-20 lg:py-24"
     >
       <div className="container mx-auto px-4 w-full">
-        <div className="text-center max-w-2xl mx-auto mb-10 sm:mb-12 md:mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">
+        <div className="text-center max-w-2xl md:max-w-5xl mx-auto mb-10 sm:mb-12 md:mb-16">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4 md:whitespace-nowrap">
             {(() => {
               const title = t("howitworks.title");
               // Split on "Calorie Cal" to make it green
@@ -45,9 +45,9 @@ const HowItWorks = () => {
                   <>
                     {parts.map((part, index) => {
                       if (part.match(/(Calorie Cal)/i)) {
-                        return <span key={index} className="text-primary whitespace-normal">{part}</span>;
+                        return <span key={index} className="text-primary whitespace-normal md:whitespace-nowrap">{part}</span>;
                       }
-                      return <span key={index} className="text-black dark:text-white whitespace-normal">{part}</span>;
+                      return <span key={index} className="text-black dark:text-white whitespace-normal md:whitespace-nowrap">{part}</span>;
                     })}
                   </>
                 );
@@ -57,9 +57,9 @@ const HowItWorks = () => {
               if (parts.length > 1) {
                 return (
                   <>
-                    <span className="text-black dark:text-white whitespace-normal">{parts[0]}</span>
-                    <span className="text-primary whitespace-normal"> {parts[1]?.trim()}</span>
-                    {parts[2] && <span className="text-black dark:text-white whitespace-normal">{parts[2]}</span>}
+                    <span className="text-black dark:text-white whitespace-normal md:whitespace-nowrap">{parts[0]}</span>
+                    <span className="text-primary whitespace-normal md:whitespace-nowrap"> {parts[1]?.trim()}</span>
+                    {parts[2] && <span className="text-black dark:text-white whitespace-normal md:whitespace-nowrap">{parts[2]}</span>}
                   </>
                 );
               }

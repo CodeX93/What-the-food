@@ -30,7 +30,19 @@ export default function Hero() {
   const leftSectionRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { toast } = useToast();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+
+  // Only clamp English titles to 2 lines.
+  // Other languages can be longer; clamping causes "..." truncation.
+  const titleClampStyle =
+    language === "en"
+      ? {
+          display: "-webkit-box",
+          WebkitBoxOrient: "vertical" as const,
+          WebkitLineClamp: 2,
+          overflow: "hidden",
+        }
+      : {};
 
   const handleGetStarted = () => {
     if (user) {
@@ -326,9 +338,23 @@ export default function Hero() {
           {/* H1 and Description */}
           <div className="w-full text-center">
             <div className="inline-block max-w-[32rem] sm:max-w-[36rem] mx-auto">
-              <h1 className="text-3xl sm:text-4xl font-bold mb-4 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+              <h1
+                className="text-3xl sm:text-4xl font-bold mb-4 leading-tight tracking-tight break-words inline-block"
+                style={{ wordWrap: "break-word", overflowWrap: "break-word", ...titleClampStyle }}
+              >
                 {(() => {
                   const title = t("hero.title");
+                  if (title.includes("Free AI Food Scanner")) {
+                    return (
+                      <>
+                        <span className="text-black dark:text-white whitespace-normal">Free </span>
+                        <span className="text-black dark:text-white whitespace-normal">AI Food Scanner</span>
+                        <span className="text-black dark:text-white whitespace-normal block">
+                          and <span className="text-primary whitespace-normal">Calorie Estimator</span>
+                        </span>
+                      </>
+                    );
+                  }
                   if (title.includes("Free Calorie Estimator")) {
                     const shazamMatch = title.match(/\(It's Shazam For Food\)/);
                     return (
@@ -560,11 +586,25 @@ export default function Hero() {
         <div className="hidden lg:flex items-center w-full">
           <div className="w-full flex flex-row items-start justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
             {/* Left Section - Value Proposition (aligned with logo) */}
-            <div ref={leftSectionRef} className="w-full text-left max-w-2xl lg:max-w-[36rem] xl:max-w-[42rem] lg:pr-8 xl:pr-12 self-start flex flex-col lg:mt-1.5 xl:mt-2">
+            <div ref={leftSectionRef} className="w-full text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start flex flex-col lg:mt-1.5 xl:mt-2">
               <div className="inline-block">
-                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+                <h1
+                  className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words inline-block"
+                  style={{ wordWrap: "break-word", overflowWrap: "break-word", ...titleClampStyle }}
+                >
                   {(() => {
                     const title = t("hero.title");
+                  if (title.includes("Free AI Food Scanner")) {
+                    return (
+                      <>
+                        <span className="text-black dark:text-white whitespace-normal">Free </span>
+                        <span className="text-black dark:text-white whitespace-normal">AI Food Scanner</span>
+                        <span className="text-black dark:text-white whitespace-normal block">
+                          and <span className="text-primary whitespace-normal">Calorie Estimator</span>
+                        </span>
+                      </>
+                    );
+                  }
                     if (title.includes("Free Calorie Estimator")) {
                       const shazamMatch = title.match(/\(It's Shazam For Food\)/);
                       return (
@@ -592,7 +632,11 @@ export default function Hero() {
                     );
                   })()}
               </h1>
-                <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed block" style={{ width: '100%', maxWidth: '90%', lineHeight: '1.6', fontSize: '125%', wordWrap: 'break-word', overflowWrap: 'break-word', boxSizing: 'border-box' }} dangerouslySetInnerHTML={{ __html: t("hero.description") }}>
+                <p
+                  className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed block"
+                  style={{ width: "100%", maxWidth: "100%", lineHeight: "1.6", fontSize: "125%", wordWrap: "break-word", overflowWrap: "break-word", boxSizing: "border-box" }}
+                  dangerouslySetInnerHTML={{ __html: t("hero.description") }}
+                >
               </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-start">

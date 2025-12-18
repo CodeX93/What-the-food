@@ -45,6 +45,18 @@ const Reviews = () => {
           <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">
             {(() => {
               const title = t("reviews.title");
+              const highlightMatch = title.match(/(10[., ]?000)\s+(Food Lovers)/i);
+              if (highlightMatch) {
+                const [full] = highlightMatch;
+                const parts = title.split(full);
+                return (
+                  <>
+                    {parts[0]}
+                    <span className="text-primary whitespace-nowrap">{full}</span>
+                    {parts[1]}
+                  </>
+                );
+              }
               // Keep "Food Lovers" on one line
               const foodLoversMatch = title.match(/(Food Lovers)/i);
               if (foodLoversMatch) {

@@ -109,7 +109,7 @@ export function FeaturesHero() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="rounded-xl bg-primary/10 p-4">
                       <p className="text-xs uppercase tracking-wide text-primary font-semibold">{t("featureshero.avgtimetoinsights")}</p>
-                      <p className="text-3xl font-bold text-primary mt-2">7s ~ 12s</p>
+                      <p className="text-3xl font-bold text-primary mt-2">~12s</p>
                       <p className="text-xs text-primary/80 mt-1">{t("featureshero.fromupload")}</p>
                     </div>
                     <div className="rounded-xl bg-slate-900 text-white dark:bg-white/10 dark:text-white p-4">

@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, BarChart3, History, FileText, Sliders, Sparkles, Target, Calculator, ChefHat, Gift } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const Features = () => {
@@ -91,14 +91,17 @@ const Features = () => {
           {features.map((feature, index) => {
             const IconComponent = feature.icon;
             return (
-              <Card key={index} className="h-full">
-                <CardHeader className="p-4 sm:p-6">
-                  <IconComponent className="h-8 w-8 sm:h-10 sm:w-10 text-primary mb-2" />
-                  <CardTitle className="text-base sm:text-lg">{feature.title}</CardTitle>
+              <Card
+                key={index}
+                className="hover:shadow-strong transition-all duration-300 border border-slate-200/60 dark:border-white/10 hover:border-primary/30 dark:hover:border-primary/30 backdrop-blur-sm bg-white/90 dark:bg-white/5 h-full flex flex-col"
+              >
+                <CardHeader className="pb-4">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-hero flex items-center justify-center mb-4">
+                    <IconComponent className="h-7 w-7 text-white" />
+                  </div>
+                  <CardTitle className="text-xl mb-2">{feature.title}</CardTitle>
+                  <CardDescription className="text-base">{feature.description}</CardDescription>
                 </CardHeader>
-                <CardContent className="p-4 sm:p-6 pt-0">
-                  <p className="text-sm sm:text-base text-muted-foreground">{feature.description}</p>
-                </CardContent>
               </Card>
             );
           })}

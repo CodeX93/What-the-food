@@ -395,7 +395,21 @@ const PricingTable = () => {
     <section className="w-full bg-white dark:bg-[#000000] transition-colors duration-300">
       <div className="mx-auto w-full max-w-6xl px-6 sm:px-10 lg:px-16 relative z-10 py-16 sm:py-20 lg:py-24">
         <div className="text-center max-w-3xl mx-auto mb-10 sm:mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">{t("pricing.title")}</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">
+            {(() => {
+              const title = t("pricing.title");
+              const match = title.match(/(Simple Pricing)/i);
+              if (!match) return title;
+              const parts = title.split(match[0]);
+              return (
+                <>
+                  <span className="text-black dark:text-white">{parts[0]}</span>
+                  <span className="text-primary">{match[0]}</span>
+                  <span className="text-black dark:text-white">{parts[1]}</span>
+                </>
+              );
+            })()}
+          </h2>
           <p className="text-base sm:text-lg text-muted-foreground">
             {t("pricing.subtitle")}
           </p>

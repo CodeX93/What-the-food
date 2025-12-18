@@ -22,7 +22,9 @@ export const metadata: Metadata = {
     "food recognition",
     "free calorie counter app",
     "macro tracking",
-    "what is this food"
+    "what is this food","calorie estimator",
+    "food calorie finder","calorie cal","calorie calculator","calorie counter","food calorie calculator",
+    
   ],
   authors: [{ name: "Odeh Ahwal" }],
   robots: {
