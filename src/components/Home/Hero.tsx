@@ -335,11 +335,11 @@ export default function Hero() {
                   if (title.includes("Free AI Food Scanner")) {
                     return (
                       <>
-                        <span className="text-black dark:text-white whitespace-normal whitespace-nowrap block">
+                        <span className="text-black dark:text-white whitespace-normal lg:whitespace-nowrap block">
                           Free AI Food Scanner
                         </span>
-                        <span className="text-black dark:text-white whitespace-normal whitespace-nowrap block">
-                          and <span className="text-primary whitespace-normal whitespace-nowrap">Calorie Estimator</span>
+                        <span className="text-black dark:text-white whitespace-normal lg:whitespace-nowrap block">
+                          and <span className="text-primary whitespace-normal lg:whitespace-nowrap">Calorie Estimator</span>
                         </span>
                       </>
                     );
@@ -371,7 +371,11 @@ export default function Hero() {
                   );
                 })()}
           </h1>
-              <p className="text-base sm:text-lg text-muted-foreground mb-6 leading-relaxed block text-center sm:text-left" style={{ width: '100%', maxWidth: '90%', fontSize: '125%', wordWrap: 'break-word', overflowWrap: 'break-word', boxSizing: 'border-box', marginLeft: 'auto', marginRight: 'auto' }} dangerouslySetInnerHTML={{ __html: t("hero.description") }}>
+              <p
+                className="w-full text-base sm:text-lg text-muted-foreground mb-6 leading-relaxed block text-center sm:text-left"
+                style={{ width: "100%", maxWidth: "100%", fontSize: "125%", wordWrap: "break-word", overflowWrap: "break-word", boxSizing: "border-box" }}
+                dangerouslySetInnerHTML={{ __html: t("hero.description") }}
+              >
             </p>
             </div>
           </div>
@@ -576,7 +580,7 @@ export default function Hero() {
           <div className="w-full flex flex-row items-start justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
             {/* Left Section - Value Proposition (aligned with logo) */}
             <div ref={leftSectionRef} className="w-full text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start flex flex-col lg:mt-1.5 xl:mt-2">
-              <div className="inline-block">
+              <div className="w-full">
                 <h1
                   className={`w-full text-3xl sm:text-4xl md:text-5xl ${language === "en" ? "lg:text-[3.1rem] xl:text-[3.35rem]" : "lg:text-[3.5rem]"} font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words`}
                   style={{ wordWrap: "break-word", overflowWrap: "break-word" }}
@@ -586,11 +590,11 @@ export default function Hero() {
                   if (title.includes("Free AI Food Scanner")) {
                     return (
                       <>
-                        <span className="text-black dark:text-white whitespace-normal whitespace-nowrap block">
+                        <span className="text-black dark:text-white whitespace-normal lg:whitespace-nowrap block">
                           Free AI Food Scanner
                         </span>
-                        <span className="text-black dark:text-white whitespace-normal whitespace-nowrap block">
-                          and <span className="text-primary whitespace-normal whitespace-nowrap">Calorie Estimator</span>
+                        <span className="text-black dark:text-white whitespace-normal lg:whitespace-nowrap block">
+                          and <span className="text-primary whitespace-normal lg:whitespace-nowrap">Calorie Estimator</span>
                         </span>
                       </>
                     );
@@ -623,7 +627,7 @@ export default function Hero() {
                   })()}
               </h1>
                 <p
-                  className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed block"
+                  className="w-full text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed block"
                   style={{ width: "100%", maxWidth: "100%", lineHeight: "1.6", fontSize: "125%", wordWrap: "break-word", overflowWrap: "break-word", boxSizing: "border-box" }}
                   dangerouslySetInnerHTML={{ __html: t("hero.description") }}
                 >
