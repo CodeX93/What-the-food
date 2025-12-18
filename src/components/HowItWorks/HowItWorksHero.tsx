@@ -113,7 +113,7 @@ export function HowItWorksHero() {
               <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
                 <div className="text-center sm:text-left">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("howitworkshero.foodscanned")}</p>
-                  <p className="text-2xl sm:text-3xl font-semibold text-primary mt-1">12K+</p>
+                  <p className="text-2xl sm:text-3xl font-semibold text-primary mt-1">150K+</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">

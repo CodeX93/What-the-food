@@ -63,7 +63,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Hero Section
     "hero.title": "Free AI Food Scanner and Calorie Estimator",
-    "hero.description": "Upload a meal photo and get instant AI nutrition insights. Track calories, macros, and make healthier choices with our smart calorie estimator. <strong>It's like Shazam, but for your food</strong>",
+    "hero.description": "Upload a meal photo and get instant AI nutrition insights. Track calories, macros, and make healthier choices with our smart calorie estimator. <strong>It's like Shazam, but for your food !</strong>",
     "hero.uploadphoto": "Upload Photo",
     "hero.remaining": "remaining",
     "hero.scans": "scans",
@@ -1251,7 +1251,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Hero Section
     "hero.title": "Escáner de Alimentos con IA Gratis y Estimador de Calorías",
-    "hero.description": "Sube una foto de comida y obtén información nutricional instantánea con IA. Rastrea calorías, macros y toma decisiones más saludables con nuestro inteligente estimador de calorías. <strong>Es como Shazam, pero para tu comida</strong>",
+    "hero.description": "Sube una foto de comida y obtén información nutricional instantánea con IA. Rastrea calorías, macros y toma decisiones más saludables con nuestro inteligente estimador de calorías. <strong>Es como Shazam, pero para tu comida !</strong>",
     "hero.uploadphoto": "Subir Foto",
     "hero.remaining": "restantes",
     "hero.scans": "escaneos",
@@ -2422,7 +2422,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Hero Section
     "hero.title": "Scanner alimentaire IA gratuit et estimateur de calories",
-    "hero.description": "Téléchargez une photo de repas et obtenez des informations nutritionnelles instantanées avec l'IA. Suivez les calories, les macros et faites des choix plus sains avec notre intelligent estimateur de calories. <strong>C'est comme Shazam, mais pour votre nourriture</strong>",
+    "hero.description": "Téléchargez une photo de repas et obtenez des informations nutritionnelles instantanées avec l'IA. Suivez les calories, les macros et faites des choix plus sains avec notre intelligent estimateur de calories. <strong>C'est comme Shazam, mais pour votre nourriture !</strong>",
     "hero.uploadphoto": "Télécharger une photo",
     "hero.remaining": "restants",
     "hero.scans": "scans",
@@ -3586,7 +3586,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Hero Section
     "hero.title": "Kostenloser KI-Essenscanner und Kalorienschätzer",
-    "hero.description": "Laden Sie ein Foto von einer Mahlzeit hoch und erhalten Sie sofortige KI-Ernährungseinblicke. Verfolgen Sie Kalorien, Makros und treffen Sie gesündere Entscheidungen mit unserem intelligenten Kalorienrechner. <strong>Wie Shazam – nur für dein Essen</strong>",
+    "hero.description": "Laden Sie ein Foto von einer Mahlzeit hoch und erhalten Sie sofortige KI-Ernährungseinblicke. Verfolgen Sie Kalorien, Makros und treffen Sie gesündere Entscheidungen mit unserem intelligenten Kalorienrechner. <strong>Wie Shazam – nur für dein Essen !</strong>",
     "hero.uploadphoto": "Foto hochladen",
     "hero.remaining": "verbleibend",
     "hero.scans": "Scans",
@@ -4713,7 +4713,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Hero Section
     "hero.title": "Scanner alimentare IA gratuito e stimatore di calorie",
-    "hero.description": "Carica una foto di un pasto e ottieni informazioni nutrizionali istantanee con l'IA. Traccia calorie, macro e fai scelte più sane con il nostro intelligente stimatore di calorie. <strong>È come Shazam, ma per il tuo cibo</strong>",
+    "hero.description": "Carica una foto di un pasto e ottieni informazioni nutrizionali istantanee con l'IA. Traccia calorie, macro e fai scelte più sane con il nostro intelligente stimatore di calorie. <strong>È come Shazam, ma per il tuo cibo !</strong>",
     "hero.uploadphoto": "Carica foto",
     "hero.remaining": "rimanenti",
     "hero.scans": "scansioni",
@@ -5838,7 +5838,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Hero Section
     "hero.title": "Scanner de alimentos com IA grátis e estimador de calorias",
-    "hero.description": "Envie uma foto de uma refeição e obtenha informações nutricionais instantâneas com IA. Rastreie calorias, macros e faça escolhas mais saudáveis com nosso inteligente estimador de calorias. <strong>É como o Shazam, mas para a sua comida</strong>",
+    "hero.description": "Envie uma foto de uma refeição e obtenha informações nutricionais instantâneas com IA. Rastreie calorias, macros e faça escolhas mais saudáveis com nosso inteligente estimador de calorias. <strong>É como o Shazam, mas para a sua comida !</strong>",
     "hero.uploadphoto": "Enviar foto",
     "hero.remaining": "restantes",
     "hero.scans": "escaneamentos",
@@ -6971,7 +6971,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Hero Section
     "hero.title": "免费AI食物扫描器和卡路里估算器",
-    "hero.description": "上传餐食照片，立即获得AI营养洞察。追踪卡路里、宏量营养素，使用我们智能的卡路里估算器做出更健康的选择。 <strong>就像 Shazam，但用于你的食物</strong>",
+    "hero.description": "上传餐食照片，立即获得AI营养洞察。追踪卡路里、宏量营养素，使用我们智能的卡路里估算器做出更健康的选择。 <strong>就像 Shazam，但用于你的食物 !</strong>",
     "hero.uploadphoto": "上传照片",
     "hero.remaining": "剩余",
     "hero.scans": "次扫描",
@@ -8097,7 +8097,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Hero Section
     "hero.title": "無料AIフードスキャナーとカロリー推定ツール",
-    "hero.description": "食事の写真をアップロードして、即座にAI栄養インサイトを取得。カロリー、マクロを追跡し、スマートなカロリー推定ツールでより健康的な選択をしましょう。 <strong>Shazamの食べ物版</strong>",
+    "hero.description": "食事の写真をアップロードして、即座にAI栄養インサイトを取得。カロリー、マクロを追跡し、スマートなカロリー推定ツールでより健康的な選択をしましょう。 <strong>Shazamの食べ物版 !</strong>",
     "hero.uploadphoto": "写真をアップロード",
     "hero.remaining": "残り",
     "hero.scans": "スキャン",
@@ -9231,7 +9231,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Hero Section
     "hero.title": "ماسح طعام بالذكاء الاصطناعي مجاني ومقدر السعرات الحرارية",
-    "hero.description": "قم بتحميل صورة لوجبة واحصل على رؤى غذائية فورية مدعومة بالذكاء الاصطناعي. تتبع السعرات الحرارية والماكرو واتخذ خيارات أكثر صحة باستخدام مقدر السعرات الحرارية الذكي. <strong>مثل Shazam، ولكن لطعامك</strong>",
+    "hero.description": "قم بتحميل صورة لوجبة واحصل على رؤى غذائية فورية مدعومة بالذكاء الاصطناعي. تتبع السعرات الحرارية والماكرو واتخذ خيارات أكثر صحة باستخدام مقدر السعرات الحرارية الذكي. <strong>! مثل  Shazam، ولكن لطعامك/strong>",
     "hero.uploadphoto": "تحميل صورة",
     "hero.remaining": "متبقي",
     "hero.scans": "مسح",
