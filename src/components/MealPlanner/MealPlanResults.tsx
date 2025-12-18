@@ -445,9 +445,9 @@ export function MealPlanResults({
                   alt={userFirstName || "Profile"}
                   className="h-12 w-12 rounded-full border-2 border-white/60 object-cover shadow-md"
                 />
-            <p className="text-sm uppercase tracking-[0.3em] text-white/80">
+            <h2 className="text-2xl md:text-2xl font-bold mt-2 line-clamp-2 max-h-[3.5rem]">
                   Personalized Meal Plan For {userFirstName || "You"}
-                </p>
+                </h2>
               </div>
             )}
             {!profileAvatarUrl && (
@@ -461,14 +461,14 @@ export function MealPlanResults({
               
               return (
                 <>
-                  {heading && (
-                    <h2 className="text-xl md:text-xl font-bold mt-2 line-clamp-2 max-h-[3.5rem]">
-                      {heading}
-                    </h2>
-                  )}
-                  {description && (
-                    <p className="text-white/80 mt-3 leading-relaxed text-justify">{description}</p>
-                  )}
+                {heading && description && (
+  <p className="text-sm text-white/80 mt-3 leading-relaxed text-justify">
+    {heading}
+    <br />
+    {description}
+  </p>
+)}
+
                 </>
               );
             })()}
@@ -485,10 +485,28 @@ export function MealPlanResults({
           </div>
           <div className="flex flex-wrap gap-3">
             {!isEditingMeals ? (
-              <Button variant="secondary" className="bg-white text-primary hover:bg-white/90" onClick={onStartEditing}>
-                <Edit3 className="mr-2 h-4 w-4" />
-                {t("mealplanner.results.edit")}
-              </Button>
+              <div className="relative inline-flex">
+                <Button
+                  variant="secondary"
+                  className="bg-white/80 text-primary/70 hover:bg-white/80 cursor-not-allowed"
+                  aria-disabled="true"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    toast({
+                      title: "Coming soon",
+                      description:
+                        "Editing meals and ingredients is coming soon. For now, you can view this plan, share it, or export it as a PDF.",
+                      variant: "orange",
+                    });
+                  }}
+                >
+                  <Edit3 className="mr-2 h-4 w-4" />
+                  {t("mealplanner.results.edit")}
+                </Button>
+                <Badge className="absolute -top-2 -right-2 bg-orange-500 text-white border-0 text-[10px] px-1.5 py-0.5">
+                  Coming soon
+                </Badge>
+              </div>
             ) : (
               <>
                 <Button variant="outline" className="bg-white/10 text-white border-white/40" onClick={onCancelEditing}>

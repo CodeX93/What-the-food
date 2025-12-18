@@ -711,16 +711,11 @@ export function DashboardClient({
                 });
                 return;
               }
-              // Feature coming soon - show toast instead of navigating
-              toast({
-                title: "Coming Soon",
-                description: "The Meal Planner feature is currently under development and will be available soon. Thank you for your patience!",
-                variant: "orange",
-              });
+              router.push("/meal-planner");
             }}
           >
             <Badge className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-orange-500 text-white border-0 text-xs sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 z-10">
-              Coming Soon
+              Beta
             </Badge>
             <CardHeader className="pr-16 sm:pr-20">
               <div className="flex items-center gap-3">

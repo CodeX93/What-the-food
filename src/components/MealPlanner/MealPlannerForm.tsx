@@ -253,7 +253,13 @@ export function MealPlannerForm({ profile, onGenerate, generating }: MealPlanner
   const canGenerate = canProceedStep1 && canProceedStep2;
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full">
+      <div className="mb-3 flex items-center justify-between gap-4">
+        <p className="text-sm text-muted-foreground">{t("mealplanner.description")}</p>
+        <p className="text-sm text-muted-foreground whitespace-nowrap">
+          Step {currentStep} of {totalSteps}
+        </p>
+      </div>
       {/* Progress Bar */}
       <div className="mb-8">
         

@@ -1143,12 +1143,13 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
         {/* Modal for Meal Planner Form */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{t("mealplanner.form.title")}</DialogTitle>
-              <DialogDescription>{t("mealplanner.description")}</DialogDescription>
-            </DialogHeader>
-            <div className="mt-4">
-              <MealPlannerForm profile={profile} onGenerate={generateMealPlan} generating={generating} />
+            <div className="w-full max-w-4xl mx-auto">
+              <DialogHeader className="text-left">
+                <DialogTitle>{t("mealplanner.form.title")}</DialogTitle>
+              </DialogHeader>
+              <div className="mt-4">
+                <MealPlannerForm profile={profile} onGenerate={generateMealPlan} generating={generating} />
+              </div>
             </div>
           </DialogContent>
         </Dialog>
