@@ -123,6 +123,14 @@ export function FoodResultsClient() {
       });
       return;
     }
+    if (analysis.foodDetected === false) {
+      toast({
+        title: t("common.error"),
+        description: "No food detected in this image. Please scan a food photo to save a recipe.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       setSavingRecipe(true);
@@ -249,6 +257,7 @@ export function FoodResultsClient() {
   };
   const buildPdfHtml = (imageSrc?: string | null) => {
     if (!analysis) return "";
+    const nonFood = analysis.foodDetected === false;
     const nutrientStats = [
       { label: "Calories", value: scaled?.calories ?? analysis.nutrients?.calories, suffix: " kcal", className: "stat-card calories" },
       { label: "Protein", value: scaled?.protein_g ?? analysis.nutrients?.protein_g, suffix: " g", className: "stat-card protein" },
@@ -262,7 +271,7 @@ export function FoodResultsClient() {
         (stat) => `
         <div class="${stat.className || "stat-card"}">
           <div class="stat-label">${stat.label}</div>
-          <div class="stat-value">${formatNumber(stat.value)}${stat.suffix}</div>
+          <div class="stat-value">${nonFood ? "N/A" : `${formatNumber(stat.value)}${stat.suffix}`}</div>
         </div>
       `
       )
@@ -1459,6 +1468,7 @@ export function FoodResultsClient() {
     () => (analysis ? scaleNutrients(analysis.nutrients, servings) : null),
     [analysis, servings]
   );
+  const isNonFood = analysis?.foodDetected === false;
   const parsedInsights = useMemo(() => {
     if (!insightsText) return null;
     
@@ -1674,6 +1684,16 @@ export function FoodResultsClient() {
               >
                 {t("foodresults.complete.profile.button")}
               </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        {isNonFood && (
+          <Alert className="mb-4 sm:mb-6 border-2 border-primary/20 bg-primary/5">
+            <AlertCircle className="h-4 w-4 text-primary flex-shrink-0" />
+            <AlertTitle className="font-semibold text-sm sm:text-base">No food detected</AlertTitle>
+            <AlertDescription className="mt-1 text-xs sm:text-sm">
+              {analysis?.message ||
+                "We couldn't find any edible food in this image. Upload a clear photo of a meal, snack, or ingredient for nutrition and recipe results."}
             </AlertDescription>
           </Alert>
         )}
@@ -1914,12 +1934,12 @@ export function FoodResultsClient() {
                 )}
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                 {[
-                    { icon: Flame, label: "Calories", value: scaled?.calories ?? "-", suffix: "", style: "bg-orange-100/90 border-orange-200 text-orange-900" },
-                    { icon: Beef, label: "Protein", value: scaled?.protein_g ?? "-", suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
-                    { icon: Wheat, label: "Carbs", value: scaled?.carbohydrates_g ?? "-", suffix: "g", style: "bg-yellow-100/90 border-yellow-200 text-yellow-900" },
-                    { icon: Droplet, label: "Fat", value: scaled?.fat_g ?? "-", suffix: "g", style: "bg-sky-100/90 border-sky-200 text-sky-900" },
-                    { icon: Apple, label: "Fiber", value: scaled?.fiber_g ?? "-", suffix: "g", style: "bg-emerald-100/90 border-emerald-200 text-emerald-900" },
-                    { icon: Candy, label: "Sugar", value: scaled?.sugar_g ?? "-", suffix: "g", style: "bg-pink-100/90 border-pink-200 text-pink-900" },
+                    { icon: Flame, label: "Calories", value: isNonFood ? "N/A" : (scaled?.calories ?? "-"), suffix: "", style: "bg-orange-100/90 border-orange-200 text-orange-900" },
+                    { icon: Beef, label: "Protein", value: isNonFood ? "N/A" : (scaled?.protein_g ?? "-"), suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
+                    { icon: Wheat, label: "Carbs", value: isNonFood ? "N/A" : (scaled?.carbohydrates_g ?? "-"), suffix: "g", style: "bg-yellow-100/90 border-yellow-200 text-yellow-900" },
+                    { icon: Droplet, label: "Fat", value: isNonFood ? "N/A" : (scaled?.fat_g ?? "-"), suffix: "g", style: "bg-sky-100/90 border-sky-200 text-sky-900" },
+                    { icon: Apple, label: "Fiber", value: isNonFood ? "N/A" : (scaled?.fiber_g ?? "-"), suffix: "g", style: "bg-emerald-100/90 border-emerald-200 text-emerald-900" },
+                    { icon: Candy, label: "Sugar", value: isNonFood ? "N/A" : (scaled?.sugar_g ?? "-"), suffix: "g", style: "bg-pink-100/90 border-pink-200 text-pink-900" },
                   ].map((item, index) => (
                     <div
                       key={index}

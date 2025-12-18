@@ -148,6 +148,7 @@ function FreeUserResultsView({
   onScanAnother: () => void;
 }) {
   const scaled = useMemo(() => scaleNutrients(result.nutrients, 1), [result.nutrients]);
+  const isNonFood = result?.foodDetected === false;
   
   return (
     <div className="space-y-4">
@@ -218,12 +219,12 @@ function FreeUserResultsView({
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
-              { icon: Flame, label: "Calories", value: scaled?.calories ?? "-", suffix: "", style: "bg-orange-100/90 border-orange-200 text-orange-900" },
-              { icon: Beef, label: "Protein", value: scaled?.protein_g ?? "-", suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
-              { icon: Wheat, label: "Carbs", value: scaled?.carbohydrates_g ?? "-", suffix: "g", style: "bg-yellow-100/90 border-yellow-200 text-yellow-900" },
-              { icon: Droplet, label: "Fat", value: scaled?.fat_g ?? "-", suffix: "g", style: "bg-sky-100/90 border-sky-200 text-sky-900" },
-              { icon: Apple, label: "Fiber", value: scaled?.fiber_g ?? "-", suffix: "g", style: "bg-emerald-100/90 border-emerald-200 text-emerald-900" },
-              { icon: Candy, label: "Sugar", value: scaled?.sugar_g ?? "-", suffix: "g", style: "bg-pink-100/90 border-pink-200 text-pink-900" },
+              { icon: Flame, label: "Calories", value: isNonFood ? "N/A" : (scaled?.calories ?? "-"), suffix: "", style: "bg-orange-100/90 border-orange-200 text-orange-900" },
+              { icon: Beef, label: "Protein", value: isNonFood ? "N/A" : (scaled?.protein_g ?? "-"), suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
+              { icon: Wheat, label: "Carbs", value: isNonFood ? "N/A" : (scaled?.carbohydrates_g ?? "-"), suffix: "g", style: "bg-yellow-100/90 border-yellow-200 text-yellow-900" },
+              { icon: Droplet, label: "Fat", value: isNonFood ? "N/A" : (scaled?.fat_g ?? "-"), suffix: "g", style: "bg-sky-100/90 border-sky-200 text-sky-900" },
+              { icon: Apple, label: "Fiber", value: isNonFood ? "N/A" : (scaled?.fiber_g ?? "-"), suffix: "g", style: "bg-emerald-100/90 border-emerald-200 text-emerald-900" },
+              { icon: Candy, label: "Sugar", value: isNonFood ? "N/A" : (scaled?.sugar_g ?? "-"), suffix: "g", style: "bg-pink-100/90 border-pink-200 text-pink-900" },
             ].map((item, index) => {
               const Icon = item.icon;
               return (
@@ -275,6 +276,7 @@ function PremiumUserResultsView({
   onScanAnother: () => void;
 }) {
   const scaled = useMemo(() => scaleNutrients(result.nutrients, servings), [result.nutrients, servings]);
+  const isNonFood = result?.foodDetected === false;
   
   return (
     <div className="space-y-4">
@@ -373,12 +375,12 @@ function PremiumUserResultsView({
           )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
-              { icon: Flame, label: "Calories", value: scaled?.calories ?? "-", suffix: "", style: "bg-orange-100/90 border-orange-200 text-orange-900" },
-              { icon: Beef, label: "Protein", value: scaled?.protein_g ?? "-", suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
-              { icon: Wheat, label: "Carbs", value: scaled?.carbohydrates_g ?? "-", suffix: "g", style: "bg-yellow-100/90 border-yellow-200 text-yellow-900" },
-              { icon: Droplet, label: "Fat", value: scaled?.fat_g ?? "-", suffix: "g", style: "bg-sky-100/90 border-sky-200 text-sky-900" },
-              { icon: Apple, label: "Fiber", value: scaled?.fiber_g ?? "-", suffix: "g", style: "bg-emerald-100/90 border-emerald-200 text-emerald-900" },
-              { icon: Candy, label: "Sugar", value: scaled?.sugar_g ?? "-", suffix: "g", style: "bg-pink-100/90 border-pink-200 text-pink-900" },
+              { icon: Flame, label: "Calories", value: isNonFood ? "N/A" : (scaled?.calories ?? "-"), suffix: "", style: "bg-orange-100/90 border-orange-200 text-orange-900" },
+              { icon: Beef, label: "Protein", value: isNonFood ? "N/A" : (scaled?.protein_g ?? "-"), suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
+              { icon: Wheat, label: "Carbs", value: isNonFood ? "N/A" : (scaled?.carbohydrates_g ?? "-"), suffix: "g", style: "bg-yellow-100/90 border-yellow-200 text-yellow-900" },
+              { icon: Droplet, label: "Fat", value: isNonFood ? "N/A" : (scaled?.fat_g ?? "-"), suffix: "g", style: "bg-sky-100/90 border-sky-200 text-sky-900" },
+              { icon: Apple, label: "Fiber", value: isNonFood ? "N/A" : (scaled?.fiber_g ?? "-"), suffix: "g", style: "bg-emerald-100/90 border-emerald-200 text-emerald-900" },
+              { icon: Candy, label: "Sugar", value: isNonFood ? "N/A" : (scaled?.sugar_g ?? "-"), suffix: "g", style: "bg-pink-100/90 border-pink-200 text-pink-900" },
             ].map((item, index) => {
               const Icon = item.icon;
               return (

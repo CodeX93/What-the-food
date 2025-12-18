@@ -1,6 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type FoodAnalysis = {
+  // If false, the model determined the image does not contain edible food.
+  // When false, UI should avoid showing nutrition/recipes as real.
+  foodDetected?: boolean;
+  message?: string;
   dish: string;
   description?: string;
   tags?: string[];
@@ -10,12 +14,12 @@ export type FoodAnalysis = {
   servingSize: string;
   servingWeightGrams?: number;
   nutrients?: {
-    calories?: number;
-    protein_g?: number;
-    carbohydrates_g?: number;
-    fat_g?: number;
-    fiber_g?: number;
-    sugar_g?: number;
+    calories?: number | null;
+    protein_g?: number | null;
+    carbohydrates_g?: number | null;
+    fat_g?: number | null;
+    fiber_g?: number | null;
+    sugar_g?: number | null;
   };
   ingredients: string[];
   instructions: string[];
@@ -124,7 +128,7 @@ export async function recalculateNutritionFromIngredients(
 }
 
 export function scaleNutrients(base: FoodAnalysis["nutrients"] | undefined, multiplier: number){
-  const scale = (v?: number) => (typeof v === "number" ? Math.round(v * multiplier * 10) / 10 : undefined);
+  const scale = (v?: number | null) => (typeof v === "number" ? Math.round(v * multiplier * 10) / 10 : undefined);
   return {
     calories: scale(base?.calories),
     protein_g: scale(base?.protein_g),

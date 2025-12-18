@@ -9,6 +9,7 @@ const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_AP
 const GEMINI_MODEL_FAST = "gemini-2.0-flash-exp"; // Fast for initial analysis
 // ✅ Correct: Points to the specific stable version
 const GEMINI_MODEL_ACCURATE = "gemini-2.0-flash-exp"; // Reliable with structured output
+const FOOD_CONFIDENCE_THRESHOLD = 0.7;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +24,9 @@ const SCHEMA_WITH_INSIGHTS = `${BASE_SCHEMA.slice(0, -1)},"insights":string}`;
 
 // Optimized: Clear but concise prompt guidelines (YouTube removed)
 const PROMPT_GUIDELINES = `REQUIRED - Generate ALL fields:
+- IMPORTANT: Before any nutritional analysis, determine whether the image clearly contains edible food intended for human consumption.
+- If the image does NOT contain food (animals, people, objects, scenery, screenshots, drawings, or ambiguous content), do NOT guess and do NOT invent nutrition/recipes.
+- In non-food cases, return a minimal, honest response with low confidence.
 - dish: Name of the dish
 - description: 1-2 sentence summary
 - tags: 3-6 lowercase keywords (e.g., healthy, vegetarian, high-protein)
@@ -48,6 +52,245 @@ function arrayBufferToBase64(buffer) {
   }
   
   return btoa(binary);
+}
+
+// Classification (strict): Decide if image is food before analysis
+async function classifyFoodImage(imageBase64, mimeType) {
+  if (!GEMINI_API_KEY) throw new Error("Missing API key");
+
+  const payload = {
+    contents: [
+      {
+        parts: [
+          {
+            text:
+              `You are a food image validator.\n` +
+              `Task: Determine whether the uploaded image clearly contains edible food intended for human consumption.\n` +
+              `Rules:\n` +
+              `- If NOT food (animals, people, objects, scenery, screenshots, drawings, or ambiguous content), set food_detected=false.\n` +
+              `- Do NOT guess food items when not clearly food.\n` +
+              `- Return JSON only.\n` +
+              `Return fields:\n` +
+              `food_detected: boolean\n` +
+              `food_confidence: number between 0 and 1\n` +
+              `non_food_category: one of [animal, person, electronics, object, screenshot, drawing, scenery, text, unknown]\n` +
+              `primary_subject: short noun phrase of what is shown (e.g. "laptop", "cat", "receipt screenshot")\n` +
+              `message: short friendly sentence explaining the decision.\n`,
+          },
+          { inlineData: { mimeType, data: imageBase64 } },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0,
+      maxOutputTokens: 256,
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "object",
+        properties: {
+          food_detected: { type: "boolean" },
+          food_confidence: { type: "number" },
+          non_food_category: {
+            type: "string",
+            enum: ["animal", "person", "electronics", "object", "screenshot", "drawing", "scenery", "text", "unknown"]
+          },
+          primary_subject: { type: "string" },
+          message: { type: "string" },
+        },
+        required: ["food_detected", "food_confidence", "non_food_category", "primary_subject", "message"],
+      },
+      topP: 0.95,
+      topK: 20,
+    },
+  };
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_FAST}:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      }
+    );
+    clearTimeout(timeoutId);
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      throw new Error(`Gemini ${resp.status}: ${text.slice(0, 150)}`);
+    }
+
+    const data = await resp.json();
+    const text = data?.candidates?.[0]?.content?.parts?.map((p) => p?.text || "").join("").trim();
+    if (!text) throw new Error("Empty classifier response");
+
+    const jsonStr = text.replace(/^```(?:json)?|```$/gi, "").trim();
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch {
+      parsed = JSON.parse(jsonrepair(jsonStr));
+    }
+
+    const food_detected = !!parsed.food_detected;
+    const food_confidence =
+      typeof parsed.food_confidence === "number"
+        ? Math.max(0, Math.min(1, parsed.food_confidence))
+        : 0;
+    const message = typeof parsed.message === "string" ? parsed.message.trim() : "";
+    const non_food_category = typeof parsed.non_food_category === "string" ? parsed.non_food_category.trim() : "unknown";
+    const primary_subject = typeof parsed.primary_subject === "string" ? parsed.primary_subject.trim() : "";
+
+    return { food_detected, food_confidence, non_food_category, primary_subject, message };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+const cleanSubject = (s) => String(s || "").trim().replace(/\s+/g, " ").slice(0, 80);
+
+async function generateNonFoodCopy({ category, subject, classifierMessage }) {
+  if (!GEMINI_API_KEY) throw new Error("Missing API key");
+
+  const prompt =
+    `You are writing a friendly, light, cute non-food response for an AI food scanner.\n` +
+    `The uploaded image is NOT food. Be definitive.\n` +
+    `Primary subject: "${subject}". Category: "${category}".\n` +
+    (classifierMessage ? `Classifier note: "${classifierMessage}".\n` : "") +
+    `\n` +
+    `Write JSON only with these fields:\n` +
+    `- message: 1 sentence (max 20 words). Friendly, playful, non-sarcastic. Never shame.\n` +
+    `- ingredients: 3 short lines. Must NOT invent edible food. Must be relevant to the subject.\n` +
+    `- instructions: 3 steps. Each MUST start with "**Step X**:" (X=1..3). Be definitive (no "if this is food").\n` +
+    `\n` +
+    `Extra guidance:\n` +
+    `- For babies/children, you may include a cute "good vibes" type phrase.\n` +
+    `- For electronics/objects, avoid animal-specific jokes.\n` +
+    `- Do not mention cats unless the subject is a cat.\n` +
+    `- Vary wording across runs; avoid repeating stock phrases.\n`;
+
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.9,
+      maxOutputTokens: 300,
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "object",
+        properties: {
+          message: { type: "string" },
+          ingredients: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 3 },
+          instructions: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 3 },
+        },
+        required: ["message", "ingredients", "instructions"],
+      },
+      topP: 0.95,
+      topK: 20,
+    },
+  };
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 9000);
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL_FAST}:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      }
+    );
+    clearTimeout(timeoutId);
+
+    if (!resp.ok) {
+      const text = await resp.text();
+      throw new Error(`Gemini ${resp.status}: ${text.slice(0, 150)}`);
+    }
+
+    const data = await resp.json();
+    const text = data?.candidates?.[0]?.content?.parts?.map((p) => p?.text || "").join("").trim();
+    if (!text) throw new Error("Empty non-food copy response");
+
+    const jsonStr = text.replace(/^```(?:json)?|```$/gi, "").trim();
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch {
+      parsed = JSON.parse(jsonrepair(jsonStr));
+    }
+
+    const message = typeof parsed.message === "string" ? parsed.message.trim() : "";
+    const ingredients = Array.isArray(parsed.ingredients) ? parsed.ingredients.map((s) => String(s).trim()).filter(Boolean) : [];
+    const instructions = Array.isArray(parsed.instructions) ? parsed.instructions.map((s) => String(s).trim()).filter(Boolean) : [];
+
+    if (!message || ingredients.length < 3 || instructions.length < 3) {
+      throw new Error("Invalid non-food copy");
+    }
+
+    return { message, ingredients: ingredients.slice(0, 3), instructions: instructions.slice(0, 3) };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function buildNonFoodAnalysis(classification) {
+  const conf = typeof classification?.food_confidence === "number" ? classification.food_confidence : 0;
+  const category = cleanSubject(classification?.non_food_category) || "unknown";
+  const subject = cleanSubject(classification?.primary_subject) || "this image";
+
+  let generated = null;
+  try {
+    generated = await generateNonFoodCopy({
+      category,
+      subject,
+      classifierMessage: cleanSubject(classification?.message),
+    });
+  } catch (e) {
+    // Fallback is intentionally plain (no hardcoded jokes)
+    generated = null;
+  }
+
+  const message =
+    (generated?.message && String(generated.message).trim()) ||
+    (typeof classification?.message === "string" && classification.message.trim()) ||
+    "No food detected in this image. Please upload a clear photo of a meal, snack, or ingredient.";
+
+  const ingredients =
+    (generated?.ingredients && generated.ingredients.length === 3 ? generated.ingredients : null) ||
+    ["Non-food image", "No edible ingredients detected", "Upload a meal photo to analyze"];
+
+  const instructions =
+    (generated?.instructions && generated.instructions.length === 3 ? generated.instructions : null) ||
+    ["**Step 1**: No food detected.", "**Step 2**: Nutrition is N/A for non-food images.", "**Step 3**: Upload a food photo to analyze."];
+
+  return {
+    foodDetected: false,
+    message,
+    dish: "No food detected",
+    description: message,
+    tags: [],
+    additionalInfo:
+      "No edible food was detected in the uploaded image. Nutrition values are not applicable for non-food images.",
+    servingGuidance: "",
+    confidence: Math.max(0, Math.min(1, conf)),
+    servingSize: "N/A",
+    servingWeightGrams: 0,
+    nutrients: {
+      calories: null,
+      protein_g: null,
+      carbohydrates_g: null,
+      fat_g: null,
+      fiber_g: null,
+      sugar_g: null,
+    },
+    ingredients,
+    instructions,
+  };
 }
 
 // Ultra-optimized: Faster timeout and streamlined error handling
@@ -593,6 +836,18 @@ Deno.serve(async (req) => {
       height_cm: finalHeight 
     } : profileParams;
     
+    // Strict non-food guard (prompt-level + programmatic threshold)
+    if (!isManualEntry && imageData.base64 && imageData.mimeType && overrides.length === 0) {
+      const classification = await classifyFoodImage(imageData.base64, imageData.mimeType);
+      if (!classification.food_detected || classification.food_confidence < FOOD_CONFIDENCE_THRESHOLD) {
+        const analysis = await buildNonFoodAnalysis(classification);
+        return new Response(
+          JSON.stringify({ ok: true, serving, analysis }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     const result = await callGemini(imageData.base64, imageData.mimeType, {
       includeInsights: shouldIncludeInsights,
       insightsParams,
