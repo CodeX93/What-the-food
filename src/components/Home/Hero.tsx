@@ -32,18 +32,6 @@ export default function Hero() {
   const { toast } = useToast();
   const { t, language } = useLanguage();
 
-  // Only clamp English titles to 2 lines.
-  // Other languages can be longer; clamping causes "..." truncation.
-  const titleClampStyle =
-    language === "en"
-      ? {
-          display: "-webkit-box",
-          WebkitBoxOrient: "vertical" as const,
-          WebkitLineClamp: 2,
-          overflow: "hidden",
-        }
-      : {};
-
   const handleGetStarted = () => {
     if (user) {
       router.push("/dashboard");
@@ -340,15 +328,16 @@ export default function Hero() {
             <div className="inline-block max-w-[32rem] sm:max-w-[36rem] mx-auto">
               <h1
                 className="text-3xl sm:text-4xl font-bold mb-4 leading-tight tracking-tight break-words inline-block"
-                style={{ wordWrap: "break-word", overflowWrap: "break-word", ...titleClampStyle }}
+                style={{ wordWrap: "break-word", overflowWrap: "break-word" }}
               >
                 {(() => {
                   const title = t("hero.title");
                   if (title.includes("Free AI Food Scanner")) {
                     return (
                       <>
-                        <span className="text-black dark:text-white whitespace-normal">Free </span>
-                        <span className="text-black dark:text-white whitespace-normal">AI Food Scanner</span>
+                        <span className="text-black dark:text-white whitespace-normal block">
+                          Free AI Food Scanner
+                        </span>
                         <span className="text-black dark:text-white whitespace-normal block">
                           and <span className="text-primary whitespace-normal">Calorie Estimator</span>
                         </span>
@@ -590,15 +579,16 @@ export default function Hero() {
               <div className="inline-block">
                 <h1
                   className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words inline-block"
-                  style={{ wordWrap: "break-word", overflowWrap: "break-word", ...titleClampStyle }}
+                  style={{ wordWrap: "break-word", overflowWrap: "break-word" }}
                 >
                   {(() => {
                     const title = t("hero.title");
                   if (title.includes("Free AI Food Scanner")) {
                     return (
                       <>
-                        <span className="text-black dark:text-white whitespace-normal">Free </span>
-                        <span className="text-black dark:text-white whitespace-normal">AI Food Scanner</span>
+                        <span className="text-black dark:text-white whitespace-normal block">
+                          Free AI Food Scanner
+                        </span>
                         <span className="text-black dark:text-white whitespace-normal block">
                           and <span className="text-primary whitespace-normal">Calorie Estimator</span>
                         </span>
