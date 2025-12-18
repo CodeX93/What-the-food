@@ -11,6 +11,17 @@ let cachedStatus: FreeScanStatus | null = null;
 const API_ENDPOINT = "/api/free-scans";
 const CACHE_KEY = "wtf_free_scans_cache";
 const CACHE_DURATION = 60 * 1000; // 1 minute
+const REQUEST_TIMEOUT_MS = 8000; // prevent UI from hanging indefinitely
+
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit, timeoutMs = REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 // Get cached scan status from localStorage
 function getCachedScanStatus(): FreeScanStatus | null {
@@ -64,7 +75,7 @@ async function requestStatus(force = false): Promise<FreeScanStatus> {
     }
   }
 
-  const response = await fetch(API_ENDPOINT, {
+  const response = await fetchWithTimeout(API_ENDPOINT, {
     method: "GET",
     credentials: "include",
   });
@@ -93,7 +104,8 @@ export async function getRemainingFreeScans(force = false): Promise<number> {
     return status.remaining;
   } catch (error) {
     console.error("getRemainingFreeScans error", error);
-    return 0;
+    // Prefer optimistic UX (server still enforces limits)
+    return 3;
   }
 }
 
@@ -103,7 +115,7 @@ export async function hasFreeScanAvailable(): Promise<boolean> {
 }
 
 export async function decrementFreeScan(): Promise<number> {
-  const response = await fetch(API_ENDPOINT, {
+  const response = await fetchWithTimeout(API_ENDPOINT, {
     method: "POST",
     credentials: "include",
   });
@@ -123,7 +135,7 @@ export async function decrementFreeScan(): Promise<number> {
 }
 
 export async function resetFreeScans(): Promise<number> {
-  const response = await fetch(API_ENDPOINT, {
+  const response = await fetchWithTimeout(API_ENDPOINT, {
     method: "PATCH",
     credentials: "include",
   });

@@ -30,19 +30,10 @@ export default function Hero() {
   const leftSectionRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { toast } = useToast();
-  const { t, language } = useLanguage();
-
-  // Only clamp English titles to 2 lines.
-  // Other languages can be longer; clamping causes "..." truncation.
-  const titleClampStyle =
-    language === "en"
-      ? {
-          display: "-webkit-box",
-          WebkitBoxOrient: "vertical" as const,
-          WebkitLineClamp: 2,
-          overflow: "hidden",
-        }
-      : {};
+  const { t } = useLanguage();
+  // NOTE: Do not line-clamp the H1. On some devices (different fonts/zoom/width),
+  // the headline becomes 3 lines and gets truncated with "...".
+  const titleClampStyle = {};
 
   const handleGetStarted = () => {
     if (user) {
@@ -339,7 +330,7 @@ export default function Hero() {
           <div className="w-full text-center">
             <div className="inline-block max-w-[32rem] sm:max-w-[36rem] mx-auto">
               <h1
-                className="text-3xl sm:text-4xl font-bold mb-4 leading-tight tracking-tight break-words inline-block"
+                className="text-3xl sm:text-4xl font-bold mb-4 leading-tight tracking-tight break-words"
                 style={{ wordWrap: "break-word", overflowWrap: "break-word", ...titleClampStyle }}
               >
                 {(() => {
@@ -589,7 +580,7 @@ export default function Hero() {
             <div ref={leftSectionRef} className="w-full text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start flex flex-col lg:mt-1.5 xl:mt-2">
               <div className="inline-block">
                 <h1
-                  className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words inline-block"
+                  className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words"
                   style={{ wordWrap: "break-word", overflowWrap: "break-word", ...titleClampStyle }}
                 >
                   {(() => {

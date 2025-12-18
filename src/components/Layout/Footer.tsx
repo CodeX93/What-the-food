@@ -20,44 +20,8 @@ const Footer = () => {
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white">{t("footer.product")}</h3>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Tour Our Site</h3>
             <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
-              <li>
-                <Link href="/features" className="hover:text-primary transition-colors">
-                  {t("nav.features")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/how-it-works" className="hover:text-primary transition-colors">
-                  {t("nav.howitworks")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/pricing" className="hover:text-primary transition-colors">
-                  {t("nav.pricing")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/widget" className="hover:text-primary transition-colors">
-                  {t("nav.widget")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/wall-of-love" className="hover:text-primary transition-colors">
-                  {t("footer.walloflove")}
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white">{t("footer.company")}</h3>
-            <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
-              <li>
-                <Link href="/about" className="hover:text-primary transition-colors">
-                  {t("footer.aboutus")}
-                </Link>
-              </li>
               <li>
                 <a
                   href="https://odehahwal.com"
@@ -65,44 +29,120 @@ const Footer = () => {
                   rel="noopener noreferrer"
                   className="hover:text-primary transition-colors"
                 >
-                  {t("footer.aboutfounder")}
+                  About Founder
                 </a>
               </li>
               <li>
+                <Link href="/about" className="hover:text-primary transition-colors">
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link href="/analytics" className="hover:text-primary transition-colors">
+                  Analytics
+                </Link>
+              </li>
+              <li>
                 <Link href="/blog" className="hover:text-primary transition-colors">
-                  {t("nav.blog")}
+                  Blog
+                </Link>
+              </li>
+              <li>
+                <Link href="/features" className="hover:text-primary transition-colors">
+                  Features
+                </Link>
+              </li>
+              <li>
+                <Link href="/how-it-works" className="hover:text-primary transition-colors">
+                  How it Works
+                </Link>
+              </li>
+              <li>
+                <Link href="/pricing" className="hover:text-primary transition-colors">
+                  Pricing
+                </Link>
+              </li>
+              <li>
+                <Link href="/widget" className="hover:text-primary transition-colors">
+                  Widget
+                </Link>
+              </li>
+              <li>
+                <Link href="/wall-of-love" className="hover:text-primary transition-colors">
+                  Wall of Love
                 </Link>
               </li>
             </ul>
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white">{t("footer.legal")}</h3>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Resources</h3>
             <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
               <li>
-                <Link href="/privacy" className="hover:text-primary transition-colors">
-                  {t("footer.privacypolicy")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms" className="hover:text-primary transition-colors">
-                  {t("footer.terms")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/refund" className="hover:text-primary transition-colors">
-                  {t("footer.refundpolicy")}
-                </Link>
-              </li>
-              <li>
                 <a
-                  href="https://dashboard.simpleanalytics.com/whatthefood.io"
+                  href="https://blog.whatthefood.io/free-calorie-calculator"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-primary transition-colors"
                 >
-                  {t("footer.analytics")}
+                  Free Calorie Calculator
                 </a>
+              </li>
+              <li>
+                <a
+                  href="https://blog.whatthefood.io/random-recipe-generator"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-primary transition-colors"
+                >
+                  Random Recipe Generator
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://aitoolsforthat.com"
+                  target="_blank"
+                  rel="noopener"
+                  className="hover:text-primary transition-colors"
+                >
+                  AI Tools For That
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://spanglishtranslator.net"
+                  target="_blank"
+                  rel="noopener"
+                  className="hover:text-primary transition-colors"
+                >
+                  Spanglish Translator
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Legal</h3>
+            <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
+              <li>
+                <Link href="/privacy" className="hover:text-primary transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="hover:text-primary transition-colors">
+                  Terms &amp; Conditions
+                </Link>
+              </li>
+              <li>
+                <Link href="/refund" className="hover:text-primary transition-colors">
+                  Refund Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/disclaimer" className="hover:text-primary transition-colors">
+                  Disclaimer
+                </Link>
               </li>
             </ul>
           </div>
