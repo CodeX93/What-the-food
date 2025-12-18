@@ -627,8 +627,8 @@ export default function Hero() {
                   })()}
               </h1>
                 <p
-                  className="w-full text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed block"
-                  style={{ width: "100%", maxWidth: "100%", lineHeight: "1.6", fontSize: "125%", wordWrap: "break-word", overflowWrap: "break-word", boxSizing: "border-box" }}
+                  className="w-full text-base sm:text-lg md:text-lg text-muted-foreground mb-6 sm:mb-7 leading-relaxed block"
+                  style={{ width: "100%", maxWidth: "100%", lineHeight: "1.6", fontSize: "120%", wordWrap: "break-word", overflowWrap: "break-word", boxSizing: "border-box" }}
                   dangerouslySetInnerHTML={{ __html: t("hero.description") }}
                 >
               </p>
