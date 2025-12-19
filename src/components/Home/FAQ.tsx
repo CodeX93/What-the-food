@@ -114,26 +114,26 @@ const FAQ = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
-          <Accordion type="single" collapsible className="space-y-4">
+          <Accordion type="single" collapsible className="space-y-4 w-full">
             {faqs.slice(0, 10).map((faq, index) => (
-              <AccordionItem key={index} value={`item-${index}`} className="border rounded-lg px-3 sm:px-4">
-                <AccordionTrigger className="hover:text-primary text-left text-sm sm:text-base whitespace-nowrap">
+              <AccordionItem key={index} value={`item-${index}`} className="border rounded-lg px-3 sm:px-4 w-full">
+                <AccordionTrigger className="hover:text-primary text-left text-sm sm:text-base pr-4">
                   {faq.question}
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground text-sm sm:text-base">
+                <AccordionContent className="text-muted-foreground text-sm sm:text-base pb-4">
                   {faq.answer}
                 </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
 
-          <Accordion type="single" collapsible className="space-y-4">
+          <Accordion type="single" collapsible className="space-y-4 w-full">
             {faqs.slice(10).map((faq, index) => (
-              <AccordionItem key={index + 10} value={`item-${index + 10}`} className="border rounded-lg px-3 sm:px-4">
-                <AccordionTrigger className="hover:text-primary text-left text-sm sm:text-base whitespace-nowrap">
+              <AccordionItem key={index + 10} value={`item-${index + 10}`} className="border rounded-lg px-3 sm:px-4 w-full">
+                <AccordionTrigger className="hover:text-primary text-left text-sm sm:text-base pr-4">
                   {faq.question}
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground text-sm sm:text-base">
+                <AccordionContent className="text-muted-foreground text-sm sm:text-base pb-4">
                   {faq.answer}
                 </AccordionContent>
               </AccordionItem>

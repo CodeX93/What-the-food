@@ -111,19 +111,19 @@ export function HowItWorksHero() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-                <div className="text-center sm:text-left">
+                <div className="text-left">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("howitworkshero.foodscanned")}</p>
                   <p className="text-2xl sm:text-3xl font-semibold text-primary mt-1">150K+</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-                <div className="text-center sm:text-left">
+                <div className="text-left">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("howitworkshero.accuracy")}</p>
                   <p className="text-2xl sm:text-3xl font-semibold text-primary mt-1">&gt; 95%</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-                <div className="text-center sm:text-left">
+                <div className="text-left">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("howitworkshero.timetoinsight")}</p>
                   <p className="text-2xl sm:text-3xl font-semibold text-primary mt-1">~12s</p>
                 </div>

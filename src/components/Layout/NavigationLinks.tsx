@@ -16,9 +16,10 @@ const navigationLinks: Array<{ href: Route; translationKey: string; defaultLabel
 
 type NavigationLinksProps = {
   className?: string;
+  onLinkClick?: () => void;
 };
 
-export function NavigationLinks({ className }: NavigationLinksProps) {
+export function NavigationLinks({ className, onLinkClick }: NavigationLinksProps) {
   const [mounted, setMounted] = useState(false);
   const languageContext = useContext(LanguageContext);
   
@@ -70,6 +71,7 @@ export function NavigationLinks({ className }: NavigationLinksProps) {
             key={link.href}
             href={link.href}
             className="text-sm font-medium hover:text-primary transition-colors"
+            onClick={onLinkClick}
           >
               {linkContent}
           </Link>

@@ -1871,20 +1871,31 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
             )}
         
             <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="saved-widgets">
-              <Bookmark className="h-4 w-4 mr-2" /> {t("widgetdashboard.tabs.saved")} ({savedWidgets.length})
-            </TabsTrigger>
-            <TabsTrigger value="create">
-              <Plus className="h-4 w-4 mr-2" /> {t("widgetdashboard.tabs.create")}
-            </TabsTrigger>
-            <TabsTrigger value="embed">
-              <Code className="h-4 w-4 mr-2" /> {t("widgetdashboard.tabs.embed")}
-            </TabsTrigger>
-            <TabsTrigger value="analytics">
-              <BarChart3 className="h-4 w-4 mr-2" /> {t("widgetdashboard.tabs.analytics")}
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+            <TabsList className="w-full min-w-max md:w-auto inline-flex flex-nowrap md:flex-wrap">
+              <TabsTrigger value="saved-widgets" className="text-xs sm:text-sm px-2 sm:px-3 flex-shrink-0 whitespace-nowrap">
+                <Bookmark className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" /> 
+                <span className="hidden sm:inline">{t("widgetdashboard.tabs.saved")}</span>
+                <span className="sm:hidden">Saved</span>
+                <span className="ml-1">({savedWidgets.length})</span>
+              </TabsTrigger>
+              <TabsTrigger value="create" className="text-xs sm:text-sm px-2 sm:px-3 flex-shrink-0 whitespace-nowrap">
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" /> 
+                <span className="hidden sm:inline">{t("widgetdashboard.tabs.create")}</span>
+                <span className="sm:hidden">Create</span>
+              </TabsTrigger>
+              <TabsTrigger value="embed" className="text-xs sm:text-sm px-2 sm:px-3 flex-shrink-0 whitespace-nowrap">
+                <Code className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" /> 
+                <span className="hidden sm:inline">{t("widgetdashboard.tabs.embed")}</span>
+                <span className="sm:hidden">Embed</span>
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="text-xs sm:text-sm px-2 sm:px-3 flex-shrink-0 whitespace-nowrap">
+                <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" /> 
+                <span className="hidden sm:inline">{t("widgetdashboard.tabs.analytics")}</span>
+                <span className="sm:hidden">Analytics</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="saved-widgets" className="space-y-6">
             <Card>

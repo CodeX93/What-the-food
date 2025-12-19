@@ -571,38 +571,7 @@ useEffect(() => {
     const styleId = 'hide-tawk-widget';
     let style = document.getElementById(styleId);
     
-    if (!style) {
-      style = document.createElement('style');
-      style.id = styleId;
-      document.head.appendChild(style);
-    }
     
-    style.textContent = `
-      /* Hide Tawk.io widget */
-      #tawkchat-container,
-      iframe[id^="tawkchat"],
-      iframe[title*="chat"],
-      div[id^="tawkchat"],
-      div[class*="tawk"],
-      [id*="tawkchat"],
-      [id*="Tawk"],
-      [class*="tawk-"],
-      .tawk-chat-container,
-      #tawk-bubble-container {
-        display: none !important;
-        visibility: hidden !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-        width: 0 !important;
-        height: 0 !important;
-      }
-      
-      /* Also hide the Tawk.io API script effects */
-      body[class*="tawk"] {
-        margin-bottom: 0 !important;
-        padding-bottom: 0 !important;
-      }
-    `;
     
     // Also try to hide via JavaScript API if available
     const checkAndHideTawk = () => {
