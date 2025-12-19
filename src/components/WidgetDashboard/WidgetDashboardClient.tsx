@@ -365,6 +365,9 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           return;
         }
 
+        // Set user state from session
+        setUser(session.user);
+
         // Mark as loaded to prevent duplicate fetches
         hasLoadedRef.current = true;
 
@@ -828,9 +831,31 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
   }, [initialSubscription]);
 
   const handleSaveWidget = async (mode: "create" | "edit", saveAsNew: boolean = false) => {
-    if (!user) return;
+    console.log("handleSaveWidget called with mode:", mode, "saveAsNew:", saveAsNew);
+    
+    // Verify session is still valid and get user
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession();
+    if (sessionError || !session?.user) {
+      console.error("Session error:", sessionError);
+      toast({
+        title: t("widgetdashboard.toast.error"),
+        description: "Your session has expired. Please log in again.",
+        variant: "destructive",
+      });
+      router.push("/auth");
+      return;
+    }
+
+    // Use session user (more reliable than state)
+    const currentUser = session.user;
+    
+    // Update user state if it's not set
+    if (!user) {
+      setUser(currentUser);
+    }
 
     const formState = mode === "create" ? createForm : editForm;
+    console.log("Form state:", { name: formState.name, mode });
 
     if (!formState.name.trim()) {
       toast({
@@ -856,11 +881,11 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
 
     setSaving(true);
     try {
-      const widgetId = isCreatingNew ? `widget_${user.id}_${Date.now()}` : currentWidget.widget_id;
+      const widgetId = isCreatingNew ? `widget_${currentUser.id}_${Date.now()}` : currentWidget.widget_id;
       const finalBrandingVisible = isFree ? true : formState.brandingVisible;
 
       const widgetData: any = {
-        user_id: user.id,
+        user_id: currentUser.id,
         widget_id: widgetId,
         widget_name: formState.name,
         widget_description: formState.description || null,
@@ -885,25 +910,36 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
 
       if (isCreatingNew) {
         // Check if this should be the default widget (first widget for this user)
-        const { data: existingWidgets } = await supabaseClient
+        const { data: existingWidgets, error: existingWidgetsError } = await supabaseClient
           .from("widget_settings")
           .select("id")
-          .eq("user_id", user.id)
+          .eq("user_id", currentUser.id)
           .limit(1);
+        
+        if (existingWidgetsError) {
+          console.error("Error checking for existing widgets:", existingWidgetsError);
+          // Continue anyway - we'll treat it as if there are no existing widgets
+        }
         
         const shouldBeDefault = !existingWidgets || existingWidgets.length === 0;
         widgetData.is_default = shouldBeDefault;
         
         // If setting as default, unset all other default widgets for this user
         if (shouldBeDefault) {
-          await supabaseClient
+          const { error: updateError } = await supabaseClient
             .from("widget_settings")
             .update({ is_default: false })
-            .eq("user_id", user.id)
+            .eq("user_id", currentUser.id)
             .eq("is_default", true);
+          
+          if (updateError) {
+            console.warn("Error unsetting other default widgets (non-critical):", updateError);
+            // Continue anyway - this is not critical
+          }
         }
         
         // Insert without timeout wrapper for faster response
+        console.log("Inserting widget with data:", { ...widgetData, user_id: currentUser.id });
         const insertResponse = await supabaseClient
           .from("widget_settings")
           .insert(widgetData)
@@ -911,6 +947,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           .single();
 
         if (insertResponse.error) {
+          console.error("Error inserting widget:", insertResponse.error);
+          console.error("Widget data attempted:", widgetData);
           throw insertResponse.error;
         }
         
@@ -1048,9 +1086,27 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
       }
     } catch (error: any) {
       console.error("Error saving widget:", error);
+      console.error("Error details:", {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+      });
+      
+      let errorMessage = t("widgetdashboard.toast.save.failed");
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.code === "23505") {
+        errorMessage = "A widget with this ID already exists. Please try again.";
+      } else if (error?.code === "42501") {
+        errorMessage = "Permission denied. Please check your account permissions.";
+      } else if (error?.code === "PGRST116") {
+        errorMessage = "No rows returned. Please check your widget settings.";
+      }
+      
       toast({
         title: t("widgetdashboard.toast.error"),
-        description: error?.message || t("widgetdashboard.toast.save.failed"),
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -1064,11 +1120,11 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) {
-        toast({
-          title: t("widgetdashboard.toast.error"),
-          description: "You must be logged in to delete widgets.",
-          variant: "destructive",
-        });
+        // toast({
+        //   title: t("widgetdashboard.toast.error"),
+        //   description: "You must be logged in to delete widgets.",
+        //   variant: "destructive",
+        // });
         return;
       }
 
