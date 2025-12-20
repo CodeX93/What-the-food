@@ -660,7 +660,7 @@ export function PlansClient({
           )}
         </div>
 
-        {/* Stripe Pricing Table for Monthly Premium */}
+        {/* Stripe Pricing Table for Monthly Premium
         <div className="mt-16 mb-8">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold mb-2">
@@ -670,13 +670,8 @@ export function PlansClient({
               {t("plans.description")}
             </p>
           </div>
-          <div className="max-w-4xl mx-auto">
-            <stripe-pricing-table
-              pricing-table-id="prctbl_1Sg62QJeymrjhmZgSPNZoPsZ"
-              publishable-key={stripePublishableKey}
-            />
-          </div>
-        </div>
+      
+        </div> */}
       </div>
 
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
