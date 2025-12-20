@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import MealPlannerPage from "@/views/MealPlanner";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { getPlatformSubscriptionServer } from "@/utils/subscription.server";
+import { getPreviewImageUrl } from "@/lib/seo/siteUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -14,13 +15,13 @@ export const metadata: Metadata = {
     follow: false,
   },
   openGraph: {
-    images: ["/preview-images/Meal Planner.png"],
+    images: [getPreviewImageUrl("Meal Planner.png")],
   },
   twitter: {
     card: "summary_large_image",
     title: "Meal Planner | Personalize Your Diets With What The Food",
     description: "Use What The Food meal planner to create personalized meal plans, track nutrition, and accommodate allergies or diet preferences to achieve your health goals.",
-    images: ["/preview-images/Meal Planner.png"],
+    images: [getPreviewImageUrl("Meal Planner.png")],
   },
 };
 

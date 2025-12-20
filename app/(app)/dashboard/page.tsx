@@ -4,6 +4,7 @@ import DashboardPage from "@/views/Dashboard";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { getPlatformSubscriptionServer } from "@/utils/subscription.server";
 import { fetchRecentScansServer } from "@/utils/foodScan.server";
+import { getPreviewImageUrl } from "@/lib/seo/siteUrl";
 
 export const metadata: Metadata = {
   title: "What The Food User Dashboard | Your Health Copilot",
@@ -13,13 +14,13 @@ export const metadata: Metadata = {
     follow: false,
   },
   openGraph: {
-    images: ["/preview-images/Dashboard.png"],
+    images: [getPreviewImageUrl("Dashboard.png")],
   },
   twitter: {
     card: "summary_large_image",
     title: "What The Food User Dashboard | Your Health Copilot",
     description: "Your health copilot that lets you track macros, scan history, save recipes, and plan meals. Manage your nutrition smarter with our What The Food.",
-    images: ["/preview-images/Dashboard.png"],
+    images: [getPreviewImageUrl("Dashboard.png")],
   },
 };
 

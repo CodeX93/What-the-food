@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import ScanHistoriesPage from "@/views/ScanHistories";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { getPlatformSubscriptionServer } from "@/utils/subscription.server";
+import { getPreviewImageUrl } from "@/lib/seo/siteUrl";
 
 export const metadata: Metadata = {
   title: "What The Food Scan History | Track Scanned Foods and Meals",
@@ -12,13 +13,13 @@ export const metadata: Metadata = {
     follow: false,
   },
   openGraph: {
-    images: ["/preview-images/Scan History.png"],
+    images: [getPreviewImageUrl("Scan History.png")],
   },
   twitter: {
     card: "summary_large_image",
     title: "What The Food Scan History | Track Scanned Foods and Meals",
     description: "View all your scanned meals in one place. What The Food all-in-one food calorie finder helps you keep track of all your scanned food photos for smarter eating.",
-    images: ["/preview-images/Scan History.png"],
+    images: [getPreviewImageUrl("Scan History.png")],
   },
 };
 

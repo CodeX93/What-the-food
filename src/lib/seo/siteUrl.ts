@@ -27,3 +27,14 @@ export function toAbsoluteUrl(pathname: string): string {
   return new URL(cleanPath, base).toString();
 }
 
+/**
+ * Get absolute URL for preview images
+ * Works with Vercel preview deployments automatically
+ */
+export function getPreviewImageUrl(filename: string): string {
+  const base = getSiteUrl();
+  // URL encode the filename to handle spaces and special characters
+  const encodedFilename = encodeURIComponent(filename);
+  return `${base}/preview-images/${encodedFilename}`;
+}
+

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import MyFoodAnalyticsPage from "@/views/MyFoodAnalytics";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { getPlatformSubscriptionServer } from "@/utils/subscription.server";
+import { getPreviewImageUrl } from "@/lib/seo/siteUrl";
 
 export const dynamic = "force-dynamic";
 
@@ -14,13 +15,13 @@ export const metadata: Metadata = {
     follow: false,
   },
   openGraph: {
-    images: ["/preview-images/My Food Analytics.png"],
+    images: [getPreviewImageUrl("My Food Analytics.png")],
   },
   twitter: {
     card: "summary_large_image",
     title: "Analytics | Track Macros and Nutrition with What The Food",
     description: "Analyze your daily, weekly, and monthly food intake. Our AI Food Scanner helps you track macros, calories, and nutrition trends for smarter eating habits.",
-    images: ["/preview-images/My Food Analytics.png"],
+    images: [getPreviewImageUrl("My Food Analytics.png")],
   },
 };
 
