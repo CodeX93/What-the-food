@@ -32,16 +32,49 @@ export function toAbsoluteUrl(pathname: string): string {
 }
 
 /**
- * Get URL for preview images
- * Returns relative path - Next.js will resolve it against metadataBase
- * This ensures it works correctly on all domains (Vercel preview, production, etc.)
- * 
- * The metadataBase in app/layout.tsx is now dynamic and will use the correct domain
+ * Get the request URL from Next.js headers
+ * Helper for generateMetadata functions
  */
-export function getPreviewImageUrl(filename: string): string {
-  // Use relative path - Next.js resolves it against metadataBase
+export async function getRequestUrl(): Promise<string> {
+  const { headers } = await import("next/headers");
+  const headersList = await headers();
+  const host = headersList.get("host") || "whatthefood.io";
+  const protocol = headersList.get("x-forwarded-proto") || "https";
+  return `${protocol}://${host}`;
+}
+
+/**
+ * Get absolute URL for preview images
+ * For use in generateMetadata functions where we can access request headers
+ */
+export function getPreviewImageUrlFromRequest(
+  filename: string,
+  requestUrl?: string | URL
+): string {
+  let base: string;
+  
+  if (requestUrl) {
+    // Use the request URL to determine the base
+    const url = typeof requestUrl === 'string' ? new URL(requestUrl) : requestUrl;
+    base = `${url.protocol}//${url.host}`;
+  } else {
+    // Fallback to getSiteUrl() for static metadata
+    base = getSiteUrl();
+  }
+  
   // URL encode the filename to handle spaces and special characters
   const encodedFilename = encodeURIComponent(filename);
-  return `/preview-images/${encodedFilename}`;
+  return `${base}/preview-images/${encodedFilename}`;
+}
+
+/**
+ * Get URL for preview images (for static metadata)
+ * Returns absolute URL using getSiteUrl()
+ */
+export function getPreviewImageUrl(filename: string): string {
+  const base = getSiteUrl();
+  // URL encode the filename to handle spaces and special characters
+  const encodedFilename = encodeURIComponent(filename);
+  return `${base}/preview-images/${encodedFilename}`;
 }
 
