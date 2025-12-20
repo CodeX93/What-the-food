@@ -1,8 +1,27 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import DashboardPage from "@/views/Dashboard";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { getPlatformSubscriptionServer } from "@/utils/subscription.server";
 import { fetchRecentScansServer } from "@/utils/foodScan.server";
+
+export const metadata: Metadata = {
+  title: "What The Food User Dashboard | Your Health Copilot",
+  description: "Your health copilot that lets you track macros, scan history, save recipes, and plan meals. Manage your nutrition smarter with our What The Food.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+  openGraph: {
+    images: ["/preview-images/Dashboard.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "What The Food User Dashboard | Your Health Copilot",
+    description: "Your health copilot that lets you track macros, scan history, save recipes, and plan meals. Manage your nutrition smarter with our What The Food.",
+    images: ["/preview-images/Dashboard.png"],
+  },
+};
 
 export default async function DashboardRoute() {
   const supabase = createServerSupabaseClient();

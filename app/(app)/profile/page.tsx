@@ -1,7 +1,26 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import ProfilePage from "@/views/Profile";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { fetchProfileDataServer } from "@/utils/profile.server";
+
+export const metadata: Metadata = {
+  title: "Your What The Food Health Profile | Personalize Your Goals",
+  description: "Add your personal info: Age, weight, height, and health goals to your profile for tailored and personalized health insights that can optimize your nutrition.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+  openGraph: {
+    images: ["/preview-images/Profile.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Your What The Food Health Profile | Personalize Your Goals",
+    description: "Add your personal info: Age, weight, height, and health goals to your profile for tailored and personalized health insights that can optimize your nutrition.",
+    images: ["/preview-images/Profile.png"],
+  },
+};
 
 export default async function ProfileRoute() {
   const supabase = createServerSupabaseClient();
