@@ -12,7 +12,11 @@ export function getSiteUrl(): string {
     process.env.SITE_URL;
 
   if (fromEnv) return normalizeSiteUrl(fromEnv);
-  if (process.env.VERCEL_URL) return normalizeSiteUrl(`https://${process.env.VERCEL_URL}`);
+  
+  // VERCEL_URL is available during build and runtime on Vercel
+  if (process.env.VERCEL_URL) {
+    return normalizeSiteUrl(`https://${process.env.VERCEL_URL}`);
+  }
 
   // Local/dev fallback (still absolute URLs).
   if (process.env.NODE_ENV !== "production") return "http://localhost:3000";
@@ -28,13 +32,16 @@ export function toAbsoluteUrl(pathname: string): string {
 }
 
 /**
- * Get absolute URL for preview images
- * Works with Vercel preview deployments automatically
+ * Get URL for preview images
+ * Returns relative path - Next.js will resolve it against metadataBase
+ * This ensures it works correctly on all domains (Vercel preview, production, etc.)
+ * 
+ * The metadataBase in app/layout.tsx is now dynamic and will use the correct domain
  */
 export function getPreviewImageUrl(filename: string): string {
-  const base = getSiteUrl();
+  // Use relative path - Next.js resolves it against metadataBase
   // URL encode the filename to handle spaces and special characters
   const encodedFilename = encodeURIComponent(filename);
-  return `${base}/preview-images/${encodedFilename}`;
+  return `/preview-images/${encodedFilename}`;
 }
 

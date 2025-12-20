@@ -4,9 +4,16 @@ import "./globals.css";
 import { AppProviders } from "./providers";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import type { User } from "@supabase/supabase-js";
+import { getSiteUrl } from "@/lib/seo/siteUrl";
+
+// Dynamic metadataBase that works with Vercel previews
+const getMetadataBase = (): URL => {
+  const baseUrl = getSiteUrl();
+  return new URL(baseUrl);
+};
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://whatthefood.io"),
+  metadataBase: getMetadataBase(),
   title: "Free AI Food Detection & Calorie Counter App By Recipe",
   description: "Get accurate nutritional analysis and recipe preparation instructions from any food image in seconds with our free AI food detection app; What The Food.",
   keywords: [
