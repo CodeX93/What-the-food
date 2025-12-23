@@ -3,26 +3,37 @@ import { redirect } from "next/navigation";
 import ProfilePage from "@/views/Profile";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { fetchProfileDataServer } from "@/utils/profile.server";
-import { getPreviewImageUrlFromRequest, getRequestUrl } from "@/lib/seo/siteUrl";
+import { getPreviewImageUrlFromRequest, getRequestUrl, getCanonicalUrlFromRequest } from "@/lib/seo/siteUrl";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestUrl = await getRequestUrl();
   const imageUrl = getPreviewImageUrlFromRequest("Profile.png", requestUrl);
+  const canonicalUrl = await getCanonicalUrlFromRequest('/profile');
+
+  const title = "Your What The Food Health Profile | Personalize Your Goals";
+  const description = "Add your personal info: Age, weight, height, and health goals to your profile for tailored and personalized health insights that can optimize your nutrition.";
 
   return {
-    title: "Your What The Food Health Profile | Personalize Your Goals",
-    description: "Add your personal info: Age, weight, height, and health goals to your profile for tailored and personalized health insights that can optimize your nutrition.",
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     robots: {
       index: false,
       follow: false,
     },
     openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      type: "website",
       images: [imageUrl],
     },
     twitter: {
       card: "summary_large_image",
-      title: "Your What The Food Health Profile | Personalize Your Goals",
-      description: "Add your personal info: Age, weight, height, and health goals to your profile for tailored and personalized health insights that can optimize your nutrition.",
+      title,
+      description,
       images: [imageUrl],
     },
   };

@@ -25,10 +25,11 @@ const templateByEvent: Record<string, string> = {
 };
 
 // Subject lines for each event type (can be overridden via env vars)
-const SUBJECT_SIGNUP = Deno.env.get("MAILERSEND_SUBJECT_SIGNUP") || "Welcome to our family, {{name}} 🎉";
+const SUBJECT_SIGNUP = Deno.env.get("MAILERSEND_SUBJECT_SIGNUP") || "Welcome to our family 🎉";
 const SUBJECT_UPGRADE_PREMIUM = Deno.env.get("MAILERSEND_SUBJECT_UPGRADE_PREMIUM") || "You're Premium, {{name}} 🎉";
 const SUBJECT_UPGRADE_PREMIUM_YEARLY = Deno.env.get("MAILERSEND_SUBJECT_UPGRADE_PREMIUM_YEARLY") || "You're Premium, {{name}} 🎉";
 const SUBJECT_MONTHLY_TO_ANNUAL = Deno.env.get("MAILERSEND_SUBJECT_MONTHLY_TO_ANNUAL") || "Smart Move, {{name}} 🎉";
+const SUBJECT_YEARLY_TO_MONTHLY = Deno.env.get("MAILERSEND_SUBJECT_YEARLY_TO_MONTHLY") || "You've switched to monthly, {{name}} ✅";
 const SUBJECT_DOWNGRADE = Deno.env.get("MAILERSEND_SUBJECT_DOWNGRADE") || "Sorry to see you go, {{name}} 😞";
 
 const subjectByEvent: Record<string, string> = {
@@ -36,8 +37,145 @@ const subjectByEvent: Record<string, string> = {
   upgrade_premium: SUBJECT_UPGRADE_PREMIUM,
   upgrade_premium_yearly: SUBJECT_UPGRADE_PREMIUM_YEARLY,
   monthly_to_annual: SUBJECT_MONTHLY_TO_ANNUAL,
+  yearly_to_monthly: SUBJECT_YEARLY_TO_MONTHLY,
   downgrade: SUBJECT_DOWNGRADE,
 };
+// Basic responsive styles reused across all HTML emails
+const RESPONSIVE_STYLES = `
+<style>
+  body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+  img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+  body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+  a[x-apple-data-detectors] {
+    color: inherit !important; text-decoration: none !important; font-size: inherit !important;
+    font-family: inherit !important; font-weight: inherit !important; line-height: inherit !important;
+  }
+  /* Mobile */
+  @media only screen and (max-width: 600px) {
+    .wrapper { width: 100% !important; }
+    .mobile-padding { padding: 20px !important; }
+    .mobile-padding-sm { padding: 16px !important; }
+    .mobile-title { font-size: 22px !important; line-height: 1.3 !important; }
+    .mobile-text { font-size: 15px !important; line-height: 1.6 !important; }
+    .mobile-button { width: 100% !important; display: block !important; padding: 14px 0 !important; }
+  }
+</style>
+`;
+
+// Generate HTML email for yearly to monthly change
+function generateYearlyToMonthlyEmailHTML(data: {
+  name: string;
+  nextRenewalDate: string;
+  manageSubscriptionUrl?: string;
+}): string {
+  const manageUrl = data.manageSubscriptionUrl || "http://72.60.113.9/profile";
+  
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plan updated - Yearly to Monthly</title>
+  ${RESPONSIVE_STYLES}
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 20px 0;">
+    <tr>
+      <td align="center" class="mobile-padding" style="padding: 40px 20px;">
+        <table role="presentation" class="wrapper" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+          
+          <!-- Header -->
+          <tr>
+            <td class="mobile-padding-sm" style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
+              <h1 class="mobile-title" style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
+                ✅ Your plan has been updated
+              </h1>
+            </td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td class="mobile-padding" style="padding: 40px; background-color: #ffffff;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #333333; font-size: 18px; line-height: 1.6; font-weight: 600;">
+                Hi ${data.name || "there"}, your WhatTheFood Premium subscription has been switched from a yearly plan to a monthly plan.
+              </p>
+              
+              <p class="mobile-text" style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                You’ll keep full access to all Premium features, now with the flexibility of monthly billing.
+              </p>
+              
+              <p class="mobile-text" style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+                Your new billing cycle will renew on <strong style="color: #333333;">${data.nextRenewalDate}</strong>.
+              </p>
+              
+              <!-- Manage Subscription Button -->
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
+                <tr>
+                  <td align="center" style="padding: 20px 0;">
+                    <a href="${manageUrl}" class="mobile-button" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                      Manage My Subscription
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p class="mobile-text" style="margin: 30px 0 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                To your health,
+              </p>
+              
+              <p class="mobile-text" style="margin: 10px 0 0; color: #666666; font-size: 16px; line-height: 1.6;">
+                The WhatTheFood Team
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Need Help Section -->
+          <tr>
+            <td style="padding: 30px 40px 20px; background-color: #f8f9fa; border-top: 1px solid #e9ecef;">
+              <div style="border-top: 1px solid #e0e0e0; padding-top: 30px;">
+                <h3 style="margin: 0 0 15px; color: #333333; font-size: 18px; font-weight: 600;">Need help?</h3>
+                <p style="margin: 0; color: #666666; font-size: 14px; line-height: 1.6;">
+                  If you have any questions, please contact us via the chat widget we have on the site.
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Disclaimer Section -->
+          <tr>
+            <td style="padding: 20px 40px 30px; background-color: #f8f9fa;">
+              <div style="border-top: 1px solid #e0e0e0; padding-top: 20px;">
+                <h3 style="margin: 0 0 15px; color: #333333; font-size: 16px; font-weight: 600;">Disclaimer</h3>
+                <p style="margin: 0 0 15px; color: #666666; font-size: 12px; line-height: 1.6;">
+                  The information provided by WhatTheFood, including any analysis or meal planning suggestions, is generated by artificial intelligence and is for informational purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment.
+                </p>
+                <p style="margin: 0; color: #666666; font-size: 12px; line-height: 1.6;">
+                  This email is intended only for the use of the individual or entity to which it is addressed and may contain information that is confidential and privileged.
+                </p>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 20px 40px; text-align: center; background-color: #f8f9fa; border-radius: 0 0 8px 8px; border-top: 1px solid #e9ecef;">
+              <p style="margin: 0; color: #999999; font-size: 12px;">
+                © ${new Date().getFullYear()} WhatTheFood. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `.trim();
+}
+
+
 
 // Generate HTML email for monthly to yearly upgrade
 function generateMonthlyToYearlyEmailHTML(data: {
@@ -54,17 +192,18 @@ function generateMonthlyToYearlyEmailHTML(data: {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart Move - Monthly to Yearly</title>
+  ${RESPONSIVE_STYLES}
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 20px 0;">
     <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+      <td align="center" class="mobile-padding" style="padding: 40px 20px;">
+        <table role="presentation" class="wrapper" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
           
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
+            <td class="mobile-padding-sm" style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
+              <h1 class="mobile-title" style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
                 🎉 Smart Move!
               </h1>
             </td>
@@ -72,30 +211,30 @@ function generateMonthlyToYearlyEmailHTML(data: {
           
           <!-- Main Content -->
           <tr>
-            <td style="padding: 40px; background-color: #ffffff;">
-              <p style="margin: 0 0 20px; color: #333333; font-size: 18px; line-height: 1.6; font-weight: 600;">
+            <td class="mobile-padding" style="padding: 40px; background-color: #ffffff;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #333333; font-size: 18px; line-height: 1.6; font-weight: 600;">
                 We are delighted to confirm your successful switch from a monthly to a WhatTheFood Yearly Premium subscription.
               </p>
               
-              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 This is a brilliant decision that shows your commitment to long-term health and smart savings.
               </p>
               
               <div style="background-color: #e7f3ff; border-left: 4px solid #2196F3; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                <p style="margin: 0; color: #0c5460; font-size: 16px; line-height: 1.6; font-weight: 600;">
+                <p class="mobile-text" style="margin: 0; color: #0c5460; font-size: 16px; line-height: 1.6; font-weight: 600;">
                   By choosing the annual plan, you have secured 12 months of uninterrupted Premium access while effectively receiving 2 months of service completely free!
                 </p>
               </div>
               
-              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 Your new billing cycle is now set to renew annually on <strong style="color: #333333;">${data.nextRenewalDate}</strong>.
               </p>
               
-              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 You don't need to do anything else—just continue enjoying all the powerful features you love: Unlimited scans, personalized analytics, the Meal Planner, and more.
               </p>
               
-              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 Thank you for your continued loyalty and commitment to WhatTheFood.
               </p>
               
@@ -103,7 +242,7 @@ function generateMonthlyToYearlyEmailHTML(data: {
               <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
                 <tr>
                   <td align="center" style="padding: 20px 0;">
-                    <a href="${manageUrl}" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                    <a href="${manageUrl}" class="mobile-button" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
                       Manage My Subscription
                     </a>
                   </td>
@@ -178,17 +317,18 @@ function generateYearlyPremiumUpgradeEmailHTML(data: {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>You're Premium - Yearly</title>
+  ${RESPONSIVE_STYLES}
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 20px 0;">
     <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+      <td align="center" class="mobile-padding" style="padding: 40px 20px;">
+        <table role="presentation" class="wrapper" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
           
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
+            <td class="mobile-padding-sm" style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
+              <h1 class="mobile-title" style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
                 🎉 You're Premium!
               </h1>
             </td>
@@ -196,30 +336,30 @@ function generateYearlyPremiumUpgradeEmailHTML(data: {
           
           <!-- Main Content -->
           <tr>
-            <td style="padding: 40px; background-color: #ffffff;">
-              <p style="margin: 0 0 20px; color: #333333; font-size: 18px; line-height: 1.6; font-weight: 600;">
+            <td class="mobile-padding" style="padding: 40px; background-color: #ffffff;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #333333; font-size: 18px; line-height: 1.6; font-weight: 600;">
                 Congratulations, ${data.name || "there"}! Your upgrade to WhatTheFood Premium is now complete, and your account has been fully activated.
               </p>
               
-              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 You are now officially free from the 3-scan daily limit and eligible for all of our site's features.
               </p>
               
               <div style="background-color: #e7f3ff; border-left: 4px solid #2196F3; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                <p style="margin: 0; color: #0c5460; font-size: 16px; line-height: 1.6; font-weight: 600;">
+                <p class="mobile-text" style="margin: 0; color: #0c5460; font-size: 16px; line-height: 1.6; font-weight: 600;">
                   By choosing the annual plan, you have secured 12 months of uninterrupted Premium access while effectively receiving 2 months of service completely free!
                 </p>
               </div>
               
-              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 This is a brilliant decision that shows your commitment to long-term health and smart savings.
               </p>
               
-              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 We built WhatTheFood Premium to provide the most comprehensive, seamless, and personalized food analysis experience possible.
               </p>
               
-              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 Thank you for trusting us to be your partner in smarter nutrition. We are confident this investment in your health will pay dividends.
               </p>
               
@@ -227,7 +367,7 @@ function generateYearlyPremiumUpgradeEmailHTML(data: {
               <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
                 <tr>
                   <td align="center" style="padding: 20px 0;">
-                    <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                    <a href="${dashboardUrl}" class="mobile-button" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
                       Go to Dashboard
                     </a>
                   </td>
@@ -302,17 +442,18 @@ function generatePremiumUpgradeEmailHTML(data: {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>You're Premium!</title>
+  ${RESPONSIVE_STYLES}
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 20px 0;">
     <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+      <td align="center" class="mobile-padding" style="padding: 40px 20px;">
+        <table role="presentation" class="wrapper" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
           
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
+            <td class="mobile-padding-sm" style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
+              <h1 class="mobile-title" style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
                 🎉 You're Premium!
               </h1>
             </td>
@@ -320,24 +461,24 @@ function generatePremiumUpgradeEmailHTML(data: {
           
           <!-- Main Content -->
           <tr>
-            <td style="padding: 40px; background-color: #ffffff;">
-              <p style="margin: 0 0 20px; color: #333333; font-size: 18px; line-height: 1.6; font-weight: 600;">
+            <td class="mobile-padding" style="padding: 40px; background-color: #ffffff;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #333333; font-size: 18px; line-height: 1.6; font-weight: 600;">
                 Congratulations, ${data.name}!
               </p>
               
-              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 Your upgrade to WhatTheFood Premium is now complete and your account has been fully activated.
               </p>
               
-              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 You are now officially free from the 3-scan daily limit and eligible for all of our site's features.
               </p>
               
-              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 We built WhatTheFood Premium to provide the most comprehensive, seamless, and personalized food analysis experience possible.
               </p>
               
-              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 Thank you for trusting us to be your partner in smarter nutrition. We are confident this investment in your health will pay dividends.
               </p>
               
@@ -345,7 +486,7 @@ function generatePremiumUpgradeEmailHTML(data: {
               <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
                 <tr>
                   <td align="center" style="padding: 20px 0;">
-                    <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                    <a href="${dashboardUrl}" class="mobile-button" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
                       Go to Dashboard
                     </a>
                   </td>
@@ -421,48 +562,49 @@ function generateSignupWelcomeEmailHTML(data: {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Welcome to WhatTheFood</title>
+  ${RESPONSIVE_STYLES}
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 20px 0;">
     <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
+      <td align="center" class="mobile-padding" style="padding: 40px 20px;">
+        <table role="presentation" class="wrapper" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); overflow: hidden;">
           
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
-                🎉 Welcome to our family, ${data.name}!
+            <td class="mobile-padding-sm" style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);">
+              <h1 class="mobile-title" style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
+                🎉 Welcome to our family!
               </h1>
             </td>
           </tr>
           
           <!-- Main Content -->
           <tr>
-            <td style="padding: 40px; background-color: #ffffff;">
-              <p style="margin: 0 0 20px; color: #333333; font-size: 18px; line-height: 1.6; font-weight: 600;">
-                Hooray, ${data.name}. 🎉
+            <td class="mobile-padding" style="padding: 40px; background-color: #ffffff;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #333333; font-size: 18px; line-height: 1.6; font-weight: 600;">
+                Hooray  🎉
               </p>
               
-              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 You've just taken the first step toward smarter, more informed eating with our powerful AI food analyzer, and we are thrilled to have you on board.
               </p>
               
-              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 Your free account is now active, granting you 3 complimentary food scans every day. This is a fantastic way to get started and experience the core functionality of WhatTheFood.
               </p>
               
-              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 However, to truly transform your health journey and unlock the full potential of our platform, we invite you to explore WhatTheFood Premium.
               </p>
               
               <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                <p style="margin: 0 0 15px; color: #856404; font-size: 16px; font-weight: 600;">
+                <p class="mobile-text" style="margin: 0 0 15px; color: #856404; font-size: 16px; font-weight: 600;">
                   The free version is a great start, but it's designed to give you a taste of what's possible. If you're serious about your health and want a seamless, powerful experience, Premium is the answer.
                 </p>
               </div>
               
-              <p style="margin: 30px 0 20px; color: #333333; font-size: 18px; font-weight: 600; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 30px 0 20px; color: #333333; font-size: 18px; font-weight: 600; line-height: 1.6;">
                 Upgrade to Premium today to instantly unlock:
               </p>
               
@@ -475,7 +617,7 @@ function generateSignupWelcomeEmailHTML(data: {
                 <li><strong>Customizable Widget:</strong> Access your most important data right from your home screen.</li>
               </ul>
               
-              <p style="margin: 0 0 30px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 0 0 30px; color: #666666; font-size: 16px; line-height: 1.6;">
                 Ready to move beyond the daily limit and take control of your nutrition?
               </p>
               
@@ -483,7 +625,7 @@ function generateSignupWelcomeEmailHTML(data: {
               <table role="presentation" style="width: 100%; border-collapse: collapse; margin: 30px 0;">
                 <tr>
                   <td align="center" style="padding: 20px 0;">
-                    <a href="${upgradeUrl}" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                    <a href="${upgradeUrl}" class="mobile-button" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
                       Upgrade to Premium Now
                     </a>
                   </td>
@@ -570,44 +712,45 @@ function generateDowngradeEmailHTML(data: {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sorry to see you go</title>
+  ${RESPONSIVE_STYLES}
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
   <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5;">
     <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table role="presentation" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <td align="center" class="mobile-padding" style="padding: 40px 20px;">
+        <table role="presentation" class="wrapper" style="max-width: 600px; width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 8px 8px 0 0;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">WhatTheFood</h1>
+            <td class="mobile-padding-sm" style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 8px 8px 0 0;">
+              <h1 class="mobile-title" style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">WhatTheFood</h1>
             </td>
           </tr>
           
           <!-- Content -->
           <tr>
-            <td style="padding: 40px;">
-              <h2 style="margin: 0 0 20px; color: #333333; font-size: 24px; font-weight: 600;">
+            <td class="mobile-padding" style="padding: 40px;">
+              <h2 class="mobile-title" style="margin: 0 0 20px; color: #333333; font-size: 24px; font-weight: 600;">
                 Sorry to see you go, ${data.name} 😞
               </h2>
               
-              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 Dear ${data.name},
               </p>
               
-              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 This email confirms that your WhatTheFood Premium subscription has been successfully canceled, as per your request.
               </p>
               
-              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 Your Premium access will remain active until the end of your current billing period on <strong>${data.premiumExpirationDate}</strong>.
               </p>
               
-              <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 After this date, your account will automatically revert to our free plan. You will still be able to use WhatTheFood, but your daily usage will be limited to 3 free scans per day.
               </p>
               
               <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 30px 0; border-radius: 4px;">
-                <p style="margin: 0 0 15px; color: #856404; font-size: 16px; font-weight: 600;">
+                <p class="mobile-text" style="margin: 0 0 15px; color: #856404; font-size: 16px; font-weight: 600;">
                   Did you know you'll also be losing access to:
                 </p>
                 <ul style="margin: 0; padding-left: 20px; color: #856404; font-size: 15px; line-height: 1.8;">
@@ -618,7 +761,7 @@ function generateDowngradeEmailHTML(data: {
                 </ul>
               </div>
               
-              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 We'd love to keep you on board, though! As a thank-you for being a customer, we're offering you a special, limited one-time discount to renew your Premium subscription.
               </p>
               
@@ -632,7 +775,7 @@ function generateDowngradeEmailHTML(data: {
                         <span style="text-decoration: line-through; color: #999; font-size: 16px;">$${data.monthlyOriginalPrice}/m</span>
                         <span style="color: #28a745; margin-left: 8px;">$${data.monthlyPrice}/m</span>
                       </p>
-                      <a href="${monthlyUrl}" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                      <a href="${monthlyUrl}" class="mobile-button" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
                         Resubscribe to Premium (Monthly)
                       </a>
                     </div>
@@ -646,7 +789,7 @@ function generateDowngradeEmailHTML(data: {
                         <span style="text-decoration: line-through; color: #999; font-size: 16px;">$${data.yearlyOriginalPrice}/y</span>
                         <span style="color: #28a745; margin-left: 8px;">$${data.yearlyPrice}/y</span>
                       </p>
-                      <a href="${yearlyUrl}" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
+                      <a href="${yearlyUrl}" class="mobile-button" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #ffffff; text-decoration: none; padding: 12px 30px; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">
                         Resubscribe to Premium (Yearly)
                       </a>
                     </div>
@@ -654,12 +797,12 @@ function generateDowngradeEmailHTML(data: {
                 </tr>
               </table>
               
-              <p style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
+              <p class="mobile-text" style="margin: 30px 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
                 We appreciate you being a part of the WhatTheFood community and hope to welcome you back to Premium soon.
               </p>
               
               <div style="background-color: #e7f3ff; border-left: 4px solid #2196F3; padding: 15px; margin: 30px 0; border-radius: 4px;">
-                <p style="margin: 0; color: #0c5460; font-size: 14px; font-style: italic;">
+                <p class="mobile-text" style="margin: 0; color: #0c5460; font-size: 14px; font-style: italic;">
                   <strong>Note:</strong> There's no other place to find these coupon codes than this email. Don't miss out!
                 </p>
               </div>
@@ -1184,6 +1327,82 @@ Deno.serve(async (req) => {
       }
 
       console.log("Monthly to yearly email sent successfully");
+
+      return new Response(JSON.stringify({ success: true, result }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // Check if this is a yearly to monthly change - send HTML email (bypasses template validation)
+    if (eventType === "yearly_to_monthly") {
+      console.log("Processing yearly to monthly email request:", {
+        email,
+        name,
+        hasMetadata: !!metadata,
+      });
+
+      const subject = (subjectByEvent["yearly_to_monthly"] || "You've switched to monthly, {{name}} ✅").replace(/\{\{name\}\}/g, name || "there");
+      
+      const nextRenewalDate = metadata.next_renewal_date || metadata.nextRenewalDate || metadata.current_period_end || "your next billing date";
+      const manageSubscriptionUrl = metadata.manage_subscription_url || metadata.manageSubscriptionUrl || "http://72.60.113.9/profile";
+      
+      console.log("Generating yearly to monthly email HTML with data:", {
+        name: name || "there",
+        nextRenewalDate,
+        manageSubscriptionUrl,
+      });
+      
+      const htmlContent = generateYearlyToMonthlyEmailHTML({
+        name: name || "there",
+        nextRenewalDate,
+        manageSubscriptionUrl,
+      });
+      
+      if (dryRun) {
+        return new Response(
+          JSON.stringify({
+            dry_run: true,
+            event_type: eventType,
+            email,
+            subject: subject,
+            has_html_content: true,
+            metadata,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      console.log("Sending yearly to monthly HTML email via MailerSend");
+
+      const result = await sendMailerSendHTMLEmail(
+        email,
+        subject,
+        htmlContent,
+        undefined,
+        name || "there"
+      );
+
+      if (result.skipped || result.error) {
+        console.error("Yearly to monthly email send failed or skipped:", {
+          event_type: eventType,
+          email,
+          result,
+        });
+        
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: result.error || result.reason || "Email send failed",
+            result 
+          }), 
+          {
+            status: result.status || 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
+      }
+
+      console.log("Yearly to monthly email sent successfully");
 
       return new Response(JSON.stringify({ success: true, result }), {
         status: 200,

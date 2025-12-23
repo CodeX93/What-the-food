@@ -214,3 +214,49 @@ All colors MUST be HSL.
   }
 }
 
+/* Food Results Image Container - Remove aspect ratio on large screens to allow height matching */
+@media (min-width: 1024px) {
+  .food-results-image-container {
+    padding-bottom: 0 !important;
+    max-height: none !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .food-results-image-container img {
+    position: relative !important;
+    height: 100% !important;
+    width: 100% !important;
+    object-fit: cover !important;
+    flex: 1 !important;
+    min-height: 0 !important;
+  }
+}
+
+/* Prevent image container from expanding too much on smaller screens */
+@media (max-width: 1023px) {
+  .food-results-image-container {
+    max-height: 500px !important;
+    overflow: hidden !important;
+    height: auto !important;
+  }
+  /* Cap the padding-bottom to prevent excessive expansion */
+  .food-results-image-container {
+    padding-bottom: clamp(200px, calc(96% + 2px), 500px) !important;
+  }
+  .food-results-image-container img {
+    max-height: 500px !important;
+    object-fit: cover !important;
+  }
+  /* On very small screens, limit even more */
+  @media (max-width: 640px) {
+    .food-results-image-container {
+      max-height: 400px !important;
+      padding-bottom: clamp(200px, calc(96% + 2px), 400px) !important;
+    }
+    .food-results-image-container img {
+      max-height: 400px !important;
+    }
+  }
+}
+

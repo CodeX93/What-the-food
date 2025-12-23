@@ -1,3 +1,4 @@
+// app/providers.tsx
 "use client";
 
 import { useState, type ReactNode } from "react";
@@ -10,12 +11,9 @@ import TawkWidget from "@/components/Integrations/TawkWidget";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { User } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 
-type ProfileData = {
-  avatar_url: string | null;
-  full_name: string | null;
-};
+type ProfileData = { avatar_url: string | null; full_name: string | null; };
 
 type AppProvidersProps = {
   children: ReactNode;
@@ -28,21 +26,20 @@ export function AppProviders({ children, initialUser, initialProfile }: AppProvi
 
   return (
     <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <AuthProvider initialUser={initialUser} initialProfile={initialProfile}>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <TooltipProvider>
-              <ShadcnToaster />
-              <Sonner />
-              <TawkWidget />
-              {children}
-            </TooltipProvider>
-          </ThemeProvider>
-        </AuthProvider>
-      </LanguageProvider>
-    </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
+          <AuthProvider initialUser={initialUser} initialProfile={initialProfile}>
+            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+              <TooltipProvider>
+                <ShadcnToaster />
+                <Sonner />
+                <TawkWidget />
+                {children}
+              </TooltipProvider>
+            </ThemeProvider>
+          </AuthProvider>
+        </LanguageProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }
-

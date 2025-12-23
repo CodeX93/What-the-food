@@ -20,7 +20,7 @@ export function FeaturesHero() {
           <div className="w-full flex flex-row items-start justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
             {/* Left Section - Value Proposition (aligned with logo) */}
             <div className="w-full text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                 {(() => {
                   const title = t("featureshero.title");
                   // Split on "AI Food Scanner?" to make it green
@@ -51,7 +51,7 @@ export function FeaturesHero() {
                   }
                   return <span className="text-black dark:text-white">{title}</span>;
                 })()}
-              </h1>
+              </h2>
               <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed">
                 {t("featureshero.description")}
               </p>

@@ -392,36 +392,49 @@ Deno.serve(async (req) => {
     // Check existing subscription BEFORE updating to determine if this is an upgrade or monthly to yearly switch
     const { data: existingSub } = await adminSupabase
       .from('platform_subscriptions')
-      .select('subscription_type, billing_cycle')
+      .select('subscription_type, billing_cycle, current_period_end')
       .eq('user_id', user.id)
       .maybeSingle();
 
     const wasPremium = existingSub?.subscription_type === 'premium';
     const isUpgrade = !wasPremium && subscriptionTypeValue === 'premium' && isActive;
+    const isDowngrade = wasPremium && (subscriptionTypeValue === 'free' || !isActive);
     
-    // Check if this is a monthly to yearly switch
+    // Check if this is a monthly ↔ yearly switch
     // Normalize billing cycles for comparison
     const prevCycle = (existingSub?.billing_cycle || '').toLowerCase().trim();
     const newCycle = (billingCycle || '').toLowerCase().trim();
     
-    // Check for monthly (month, monthly, etc.)
-    const isMonthly = prevCycle.startsWith('month') || prevCycle === 'monthly' || prevCycle.includes('month');
-    // Check for yearly (year, yearly, annual, etc.)
-    const isYearly = newCycle.startsWith('year') || 
+    // Previous monthly?
+    const isPrevMonthly = prevCycle.startsWith('month') || prevCycle === 'monthly' || prevCycle.includes('month');
+    // New yearly?
+    const isNewYearly = newCycle.startsWith('year') || 
                      newCycle === 'annual' || 
                      newCycle === 'yearly' || 
                      newCycle.includes('year') ||
                      newCycle.includes('annual');
+    // Previous yearly?
+    const isPrevYearly = prevCycle.startsWith('year') ||
+                         prevCycle === 'yearly' ||
+                         prevCycle === 'annual' ||
+                         prevCycle.includes('year') ||
+                         prevCycle.includes('annual');
+    // New monthly?
+    const isNewMonthly = newCycle.startsWith('month') || newCycle === 'monthly' || newCycle.includes('month');
     
-    const isMonthlyToYearly = wasPremium && isMonthly && isYearly;
+    const isMonthlyToYearly = wasPremium && isPrevMonthly && isNewYearly;
+    const isYearlyToMonthly = wasPremium && isPrevYearly && isNewMonthly;
     
-    console.log('Monthly to yearly detection:', {
+    console.log('Monthly / yearly switch detection:', {
       prevCycle,
       newCycle,
-      isMonthly,
-      isYearly,
+      isPrevMonthly,
+      isNewYearly,
+      isPrevYearly,
+      isNewMonthly,
       wasPremium,
       isMonthlyToYearly,
+      isYearlyToMonthly,
       existingSubBillingCycle: existingSub?.billing_cycle,
       stripeBillingCycle: billingCycle,
     });
@@ -432,11 +445,15 @@ Deno.serve(async (req) => {
       newType: subscriptionTypeValue,
       isActive,
       isUpgrade,
+      isDowngrade,
       prevCycle,
       newCycle,
-      isMonthly,
-      isYearly,
+      isPrevMonthly,
+      isNewYearly,
+      isPrevYearly,
+      isNewMonthly,
       isMonthlyToYearly,
+      isYearlyToMonthly,
       existingSubData: existingSub,
       billingCycleFromStripe: billingCycle,
     });
@@ -701,6 +718,224 @@ Deno.serve(async (req) => {
         }
       } catch (emailErr: any) {
         console.error('Error sending monthly to yearly email:', emailErr?.message || emailErr);
+        // Don't fail the request if email fails
+      }
+    }
+    // Send yearly to monthly email if this is a switch from yearly to monthly
+    else if (isYearlyToMonthly) {
+      try {
+        console.log('Detected yearly to monthly switch, sending email:', {
+          userId: user.id,
+          prevCycle,
+          newCycle,
+        });
+
+        const { data: profile } = await adminSupabase
+          .from('profiles')
+          .select('email, full_name')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (profile?.email) {
+          const appUrl = Deno.env.get('APP_URL') || 'http://72.60.113.9';
+          const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+
+          const nextRenewalDate = subscription.current_period_end
+            ? new Date(subscription.current_period_end * 1000).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })
+            : 'your next billing date';
+
+          const requestBody = {
+            event_type: 'yearly_to_monthly',
+            email: profile.email,
+            name: profile.full_name,
+            metadata: {
+              next_renewal_date: nextRenewalDate,
+              current_period_end: nextRenewalDate,
+              manage_subscription_url: `${appUrl}/profile`,
+            },
+          };
+
+          console.log('Calling send-lifecycle-email for yearly to monthly:', {
+            url: `${supabaseUrl}/functions/v1/send-lifecycle-email`,
+            email: profile.email,
+            name: profile.full_name,
+          });
+
+          if (anonKey) {
+            const response = await fetch(`${supabaseUrl}/functions/v1/send-lifecycle-email`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${anonKey}`,
+              },
+              body: JSON.stringify(requestBody),
+            });
+
+            const responseText = await response.text();
+            let responseData;
+            try {
+              responseData = JSON.parse(responseText);
+            } catch {
+              responseData = responseText;
+            }
+
+            if (!response.ok) {
+              console.error('Failed to send yearly to monthly email:', {
+                status: response.status,
+                statusText: response.statusText,
+                response: responseData,
+                requestBody: JSON.stringify(requestBody, null, 2),
+              });
+            } else {
+              console.log('Yearly to monthly email sent successfully:', responseData);
+            }
+          } else {
+            console.error('SUPABASE_ANON_KEY not set, cannot send yearly to monthly email');
+          }
+        } else {
+          console.warn('User profile email not found, cannot send yearly to monthly email');
+        }
+      } catch (emailErr: any) {
+        console.error('Error sending yearly to monthly email:', emailErr?.message || emailErr);
+        // Don't fail the request if email fails
+      }
+    }
+    // Send downgrade email if this is a downgrade from premium to free
+    else if (isDowngrade) {
+      try {
+        console.log('Detected downgrade from premium to free, sending email:', {
+          userId: user.id,
+          wasPremium,
+          newType: subscriptionTypeValue,
+          isActive,
+          prevCycle,
+        });
+
+        const { data: profile } = await adminSupabase
+          .from('profiles')
+          .select('email, full_name')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (profile?.email) {
+          const appUrl = Deno.env.get('APP_URL') || 'http://72.60.113.9';
+          const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+
+          // Format premium expiration date (current period end or use existing subscription's end date)
+          const premiumExpirationDate = subscription.current_period_end
+            ? new Date(subscription.current_period_end * 1000).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })
+            : existingSub?.current_period_end
+            ? new Date(existingSub.current_period_end).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })
+            : 'the end of your billing period';
+
+          // Get pricing from platform_plans or use defaults
+          let monthlyPrice = '9.99';
+          let monthlyOriginalPrice = '14.99';
+          let yearlyPrice = '99.99';
+          let yearlyOriginalPrice = '149.99';
+
+          try {
+            const { data: monthlyPlan } = await adminSupabase
+              .from('platform_plans')
+              .select('price, original_price')
+              .eq('name', 'Premium')
+              .eq('billing_cycle', 'monthly')
+              .maybeSingle();
+            
+            if (monthlyPlan?.price) {
+              monthlyPrice = (monthlyPlan.price / 100).toFixed(2);
+            }
+            if (monthlyPlan?.original_price) {
+              monthlyOriginalPrice = (monthlyPlan.original_price / 100).toFixed(2);
+            }
+
+            const { data: yearlyPlan } = await adminSupabase
+              .from('platform_plans')
+              .select('price, original_price')
+              .eq('name', 'Premium')
+              .eq('billing_cycle', 'yearly')
+              .maybeSingle();
+            
+            if (yearlyPlan?.price) {
+              yearlyPrice = (yearlyPlan.price / 100).toFixed(2);
+            }
+            if (yearlyPlan?.original_price) {
+              yearlyOriginalPrice = (yearlyPlan.original_price / 100).toFixed(2);
+            }
+          } catch (priceErr) {
+            console.warn('Error fetching plan prices, using defaults:', priceErr);
+          }
+
+          const requestBody = {
+            event_type: 'downgrade',
+            email: profile.email,
+            name: profile.full_name,
+            metadata: {
+              premium_expiration_date: premiumExpirationDate,
+              current_period_end: premiumExpirationDate,
+              monthly_price: monthlyPrice,
+              monthly_original_price: monthlyOriginalPrice,
+              yearly_price: yearlyPrice,
+              yearly_original_price: yearlyOriginalPrice,
+              monthly_checkout_url: `${appUrl}/plans?plan=premium&cycle=monthly`,
+              yearly_checkout_url: `${appUrl}/plans?plan=premium&cycle=yearly`,
+            },
+          };
+
+          console.log('Calling send-lifecycle-email for downgrade:', {
+            url: `${supabaseUrl}/functions/v1/send-lifecycle-email`,
+            email: profile.email,
+            name: profile.full_name,
+          });
+
+          if (anonKey) {
+            const response = await fetch(`${supabaseUrl}/functions/v1/send-lifecycle-email`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${anonKey}`,
+              },
+              body: JSON.stringify(requestBody),
+            });
+
+            const responseText = await response.text();
+            let responseData;
+            try {
+              responseData = JSON.parse(responseText);
+            } catch {
+              responseData = responseText;
+            }
+
+            if (!response.ok) {
+              console.error('Failed to send downgrade email:', {
+                status: response.status,
+                statusText: response.statusText,
+                response: responseData,
+                requestBody: JSON.stringify(requestBody, null, 2),
+              });
+            } else {
+              console.log('Downgrade email sent successfully:', responseData);
+            }
+          } else {
+            console.error('SUPABASE_ANON_KEY not set, cannot send downgrade email');
+          }
+        } else {
+          console.warn('User profile email not found, cannot send downgrade email');
+        }
+      } catch (emailErr: any) {
+        console.error('Error sending downgrade email:', emailErr?.message || emailErr);
         // Don't fail the request if email fails
       }
     }

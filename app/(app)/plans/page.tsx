@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import PlansPage from "@/views/Plans";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { getPlatformSubscriptionServer } from "@/utils/subscription.server";
 import { fetchActivePlatformPlansServer } from "@/utils/plans.server";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function PlansRoute() {
   const supabase = createServerSupabaseClient();

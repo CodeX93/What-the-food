@@ -196,9 +196,16 @@ export function AuthClient() {
     setIsGoogleLoading(true);
 
     try {
+      // Use window.location.origin to ensure we use the current domain (production or localhost)
+      const redirectUrl = typeof window !== 'undefined' 
+        ? `${window.location.origin}/auth/callback`
+        : getUrl("/auth/callback");
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: getUrl("/auth/callback") },
+        options: { 
+          redirectTo: redirectUrl,
+        },
       });
       if (error) throw error;
     } catch (error: any) {

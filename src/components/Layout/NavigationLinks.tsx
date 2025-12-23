@@ -58,7 +58,7 @@ export function NavigationLinks({ className, onLinkClick }: NavigationLinksProps
                 key={link.href}
                 href={link.href}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noopener noreferrer nofollow"
                 className="text-sm font-medium hover:text-primary transition-colors"
               >
                 {linkContent}

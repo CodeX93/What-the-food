@@ -3,28 +3,39 @@ import { redirect } from "next/navigation";
 import SavedRecipesPage from "@/views/SavedRecipes";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { getPlatformSubscriptionServer } from "@/utils/subscription.server";
-import { getPreviewImageUrlFromRequest, getRequestUrl } from "@/lib/seo/siteUrl";
+import { getPreviewImageUrlFromRequest, getRequestUrl, getCanonicalUrlFromRequest } from "@/lib/seo/siteUrl";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestUrl = await getRequestUrl();
   const imageUrl = getPreviewImageUrlFromRequest("Saved Recipes.png", requestUrl);
+  const canonicalUrl = await getCanonicalUrlFromRequest('/saved-recipes');
+
+  const title = "Saved Recipes | What The Food AI Recipe Analyzer";
+  const description = "Access your saved recipes and plan meals effortlessly. What The Food helps you track calories, macros, and organize recipes for smarter nutrition.";
 
   return {
-    title: "Saved Recipes | What The Food AI Recipe Analyzer",
-    description: "Access your saved recipes and plan meals effortlessly. What The Food helps you track calories, macros, and organize recipes for smarter nutrition.",
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     robots: {
       index: false,
       follow: false,
     },
     openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      type: "website",
       images: [imageUrl],
     },
     twitter: {
       card: "summary_large_image",
-      title: "Saved Recipes | What The Food AI Recipe Analyzer",
-      description: "Access your saved recipes and plan meals effortlessly. What The Food helps you track calories, macros, and organize recipes for smarter nutrition.",
+      title,
+      description,
       images: [imageUrl],
     },
   };

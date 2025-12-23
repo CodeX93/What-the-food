@@ -78,3 +78,31 @@ export function getPreviewImageUrl(filename: string): string {
   return `${base}/preview-images/${encodedFilename}`;
 }
 
+/**
+ * Get canonical URL for a page
+ * Always returns non-www version
+ */
+export function getCanonicalUrl(pathname: string = '/'): string {
+  const base = getSiteUrl();
+  // Remove www if present
+  const cleanBase = base.replace(/^https?:\/\/(www\.)?/, 'https://');
+  const cleanPath = pathname === '/' ? '/' : `/${pathname}`.replace(/\/{2,}/g, '/');
+  return new URL(cleanPath, cleanBase).toString();
+}
+
+/**
+ * Get canonical URL from request (for generateMetadata)
+ * Always returns non-www version
+ */
+export async function getCanonicalUrlFromRequest(pathname: string = '/'): Promise<string> {
+  const requestUrl = await getRequestUrl();
+  // Remove www if present and ensure https
+  let cleanBase = requestUrl.replace(/^https?:\/\/(www\.)?/, 'https://');
+  // If no protocol, add https
+  if (!cleanBase.startsWith('http')) {
+    cleanBase = `https://${cleanBase}`;
+  }
+  const cleanPath = pathname === '/' ? '/' : `/${pathname}`.replace(/\/{2,}/g, '/');
+  return new URL(cleanPath, cleanBase).toString();
+}
+

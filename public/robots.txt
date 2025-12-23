@@ -1,0 +1,41 @@
+User-agent: *
+Allow: /
+
+# Block Next.js static files and build artifacts
+Disallow: /_next/
+Allow: /_next/static/
+Allow: /_next/image/
+
+# Block private app/auth areas (match app/robots.ts)
+Disallow: /auth/callback
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /settings
+Disallow: /billing
+Disallow: /checkout
+Disallow: /history
+Disallow: /scan-histories
+Disallow: /food-results
+Disallow: /saved-recipes
+Disallow: /meal-planner
+Disallow: /meal-plan
+Disallow: /my-food-analytics
+
+# Block widget private/admin dashboards
+Disallow: /widget/admin
+Disallow: /widget/dashboard
+Disallow: /widget/embed
+Disallow: /widget/plans
+Disallow: /widget-results
+
+# Block API routes
+Disallow: /api/
+
+# Block query parameters with tracking codes
+Disallow: /*?utm_*
+Disallow: /*?fbclid=*
+Disallow: /*?gclid=*
+Disallow: /*?ref=*
+
+# Sitemaps
+Sitemap: https://whatthefood.io/sitemap-index.xml

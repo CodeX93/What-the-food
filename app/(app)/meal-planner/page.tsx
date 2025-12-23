@@ -3,28 +3,39 @@ import { redirect } from "next/navigation";
 import MealPlannerPage from "@/views/MealPlanner";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { getPlatformSubscriptionServer } from "@/utils/subscription.server";
-import { getPreviewImageUrlFromRequest, getRequestUrl } from "@/lib/seo/siteUrl";
+import { getPreviewImageUrlFromRequest, getRequestUrl, getCanonicalUrlFromRequest } from "@/lib/seo/siteUrl";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestUrl = await getRequestUrl();
   const imageUrl = getPreviewImageUrlFromRequest("Meal Planner.png", requestUrl);
+  const canonicalUrl = await getCanonicalUrlFromRequest('/meal-planner');
+
+  const title = "Meal Planner | Personalize Your Diets With What The Food";
+  const description = "Use What The Food meal planner to create personalized meal plans, track nutrition, and accommodate allergies or diet preferences to achieve your health goals.";
 
   return {
-    title: "Meal Planner | Personalize Your Diets With What The Food",
-    description: "Use What The Food meal planner to create personalized meal plans, track nutrition, and accommodate allergies or diet preferences to achieve your health goals.",
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     robots: {
       index: false,
       follow: false,
     },
     openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      type: "website",
       images: [imageUrl],
     },
     twitter: {
       card: "summary_large_image",
-      title: "Meal Planner | Personalize Your Diets With What The Food",
-      description: "Use What The Food meal planner to create personalized meal plans, track nutrition, and accommodate allergies or diet preferences to achieve your health goals.",
+      title,
+      description,
       images: [imageUrl],
     },
   };

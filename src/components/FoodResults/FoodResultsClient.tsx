@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Script from "next/script";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -240,6 +240,32 @@ export function FoodResultsClient() {
   const [savingRecipe, setSavingRecipe] = useState(false);
   const [isRecipeSaved, setIsRecipeSaved] = useState(false);
   const reportRef = useRef<HTMLDivElement | null>(null);
+  const imageCardRef = useRef<HTMLDivElement | null>(null);
+  const nutritionCardRef = useRef<HTMLDivElement | null>(null);
+
+  const syncCardHeights = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const imageEl = imageCardRef.current;
+    const nutritionEl = nutritionCardRef.current;
+    if (!imageEl || !nutritionEl) return;
+
+    // Only sync on large screens (lg breakpoint and above)
+    const isLargeScreen = window.innerWidth >= 1024;
+    if (!isLargeScreen) {
+      // Reset minHeight on smaller screens
+      imageEl.style.minHeight = '';
+      imageEl.style.maxHeight = '';
+      return;
+    }
+
+    const nutritionHeight = nutritionEl.offsetHeight;
+    if (nutritionHeight > 0) {
+      // Set both min and max height to exactly match nutrition summary
+      imageEl.style.minHeight = `${nutritionHeight}px`;
+      imageEl.style.maxHeight = `${nutritionHeight}px`;
+      imageEl.style.height = `${nutritionHeight}px`;
+    }
+  }, []);
   const fetchImageAsDataUrl = async (url: string) => {
     try {
       const response = await fetch(url, { mode: "cors" });
@@ -1591,15 +1617,62 @@ export function FoodResultsClient() {
     }
     return sections;
   }, [insightsText]);
+  useEffect(() => {
+    // Sync heights once analysis is loaded
+    if (!loading && analysis) {
+      // Use setTimeout to ensure DOM has updated
+      setTimeout(() => {
+        syncCardHeights();
+      }, 100);
+    }
+  }, [loading, analysis, syncCardHeights]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    let resizeTimeout: NodeJS.Timeout;
+    const handleResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        syncCardHeights();
+      }, 150);
+    };
+    
+    window.addEventListener("resize", handleResize);
+    
+    // Also observe changes to the nutrition card content
+    const nutritionEl = nutritionCardRef.current;
+    let observer: MutationObserver | null = null;
+    if (nutritionEl && typeof MutationObserver !== "undefined") {
+      observer = new MutationObserver(() => {
+        syncCardHeights();
+      });
+      observer.observe(nutritionEl, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class'],
+      });
+    }
+    
+    return () => {
+      clearTimeout(resizeTimeout);
+      window.removeEventListener("resize", handleResize);
+      if (observer) {
+        observer.disconnect();
+      }
+    };
+  }, [syncCardHeights]);
+
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-background to-muted/20">
+      <div className="min-h-[60vh] flex items-center justify-center py-12">
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary" />
-            <Salad className="h-8 w-8 text-primary absolute inset-0 m-auto animate-pulse" />
+            <div className="animate-spin rounded-full h-12 w-12 border-3 border-primary/20 border-t-primary" />
+            <Salad className="h-6 w-6 text-primary absolute inset-0 m-auto animate-pulse" />
           </div>
-          <p className="text-muted-foreground">Loading your food analysis...</p>
+          <p className="text-muted-foreground text-sm">Loading your food analysis...</p>
         </div>
       </div>
     );
@@ -1622,7 +1695,7 @@ export function FoodResultsClient() {
   return (
     <>
       <main className="flex-1">
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8 relative w-full" ref={reportRef}>
+      <div className="container mx-auto px-4 py-6 md:py-8 relative w-full overflow-x-hidden" ref={reportRef}>
         <div className="mb-4 sm:mb-6 md:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -1630,9 +1703,9 @@ export function FoodResultsClient() {
                 <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
               <div className="min-w-0 flex-1">
-                <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold flex items-center gap-1 sm:gap-2 truncate">
-                  <Salad className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 text-primary flex-shrink-0" />
-                  <span className="truncate">
+                <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold flex items-center gap-1 sm:gap-2">
+                  <Salad className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-8 lg:w-8 text-primary flex-shrink-0" />
+                  <span className="break-words sm:truncate">
                     {analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")
                       ? `${t("foodresults.manual.input")}: ${analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || ""}`
                       : analysis.dish || t("foodresults.title")}
@@ -1700,20 +1773,31 @@ export function FoodResultsClient() {
         <div className="grid lg:grid-cols-12 gap-4 sm:gap-6">
           {!(analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")) && (
             <div className="lg:col-span-4">
-              <Card className="overflow-hidden lg:sticky lg:top-4">
+              <Card
+                ref={imageCardRef}
+                className="overflow-hidden lg:sticky lg:top-4 flex flex-col"
+              >
                 {imageUrl ? (
-                  <div className="relative overflow-hidden" style={{ paddingBottom: 'calc(96% + 2px)' }}>
-                    <img src={imageUrl} alt={analysis.dish || "Food"} className="absolute inset-0 w-full h-full object-cover" />
+                  <div className="food-results-image-container relative overflow-hidden flex-1 min-h-0" style={{ paddingBottom: 'calc(96% + 2px)' }}>
+                    <img 
+                      src={imageUrl} 
+                      alt={analysis.dish || "Food"} 
+                      className="absolute inset-0 w-full h-full object-cover lg:relative lg:h-full" 
+                      onLoad={() => {
+                        // Sync heights after image loads
+                        setTimeout(() => syncCardHeights(), 100);
+                      }}
+                    />
                   </div>
                 ) : (
-                  <div className="relative flex items-center justify-center text-muted-foreground bg-muted" style={{ paddingBottom: 'calc(90% + 12px)' }}>
-                    <Salad className="absolute inset-0 m-auto h-16 w-16 opacity-30" />
+                  <div className="food-results-image-container relative flex items-center justify-center text-muted-foreground bg-muted flex-1 min-h-0" style={{ paddingBottom: 'calc(90% + 12px)' }}>
+                    <Salad className="absolute inset-0 m-auto h-16 w-16 opacity-30 lg:relative" />
                   </div>
                 )}
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between text-sm">
+                <CardContent className="p-3 sm:p-4 flex-shrink-0">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <span>{t("foodresults.confidence")}</span>
+                      <span className="whitespace-nowrap">{t("foodresults.confidence")}</span>
                       <TooltipProvider delayDuration={150}>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -1731,7 +1815,7 @@ export function FoodResultsClient() {
                         </Tooltip>
                       </TooltipProvider>
                     </div>
-                    <span className="font-semibold">{Math.round((analysis.confidence || 0) * 100)}%</span>
+                    <span className="font-semibold whitespace-nowrap ml-2">{Math.round((analysis.confidence || 0) * 100)}%</span>
                   </div>
                   <div className="h-2 bg-muted rounded-full mt-2 overflow-hidden">
                     <div
@@ -1750,7 +1834,10 @@ export function FoodResultsClient() {
           
 
           <div className={`${analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input") ? "lg:col-span-12" : "lg:col-span-8"} space-y-4 sm:space-y-6 lg:space-y-7`}>
-            <Card className="pb-[40px]">
+            <Card
+              ref={nutritionCardRef}
+              className="pb-[40px]"
+            >
               <CardHeader className="pb-3 pt-4 sm:pt-5">
                 <div className="space-y-2 sm:space-y-3">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-2">
@@ -1807,7 +1894,7 @@ export function FoodResultsClient() {
                       {isAuthenticated && servings !== savedServings && (
                         <Button
                           size="sm"
-                          className="text-xs sm:text-sm px-2 sm:px-3"
+                          className="text-xs sm:text-sm"
                           onClick={async () => {
                             if (!id) return;
                             try {
@@ -1892,7 +1979,7 @@ export function FoodResultsClient() {
                     </div>
                   </div>
                   {analysis.description && (
-                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed border-l-2 border-primary/30 pl-2 sm:pl-3 pt-1">
+                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed border-l-2 border-primary/30 pl-2 sm:pl-3 pt-1 break-words">
                       {analysis.description}
                     </p>
                   )}
@@ -1909,7 +1996,7 @@ export function FoodResultsClient() {
                         return (
                           <span
                             key={`${tag}-${index}`}
-                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize tracking-tight ${colors}`}
+                            className={`inline-flex items-center rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-semibold capitalize tracking-tight break-words ${colors}`}
                           >
                             {tag}
                           </span>
@@ -1921,18 +2008,18 @@ export function FoodResultsClient() {
               </CardHeader>
               <CardContent className="pt-3 sm:pt-4">
                 {analysis.servingGuidance && (
-                  <div className="mb-4 sm:mb-5 rounded-lg border border-primary/20 bg-primary/5 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-primary overflow-hidden" title={analysis.servingGuidance}>
-                    <div className="truncate">{truncateServingGuidance(analysis.servingGuidance, 100)}</div>
+                  <div className="mb-4 sm:mb-5 rounded-lg border border-primary/20 bg-primary/5 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-primary" title={analysis.servingGuidance}>
+                    <div className="break-words">{analysis.servingGuidance}</div>
                   </div>
                 )}
                 {!analysis.servingGuidance && servingApproximation && (
-                  <div className="mb-4 sm:mb-5 rounded-lg border border-muted/50 bg-muted/40 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-muted-foreground overflow-hidden">
-                    <div className="truncate">
+                  <div className="mb-4 sm:mb-5 rounded-lg border border-muted/50 bg-muted/40 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-muted-foreground">
+                    <div className="break-words">
                       <span className="font-medium text-foreground">{servingApproximation.label}</span> ≈ {servingApproximation.grams}g. Divide dish weight by {servingApproximation.grams}g for servings.
                     </div>
                   </div>
                 )}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                <div className="grid grid-cols-1 min-[375px]:grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                 {[
                     { icon: Flame, label: "Calories", value: isNonFood ? "N/A" : (scaled?.calories ?? "-"), suffix: "", style: "bg-orange-100/90 border-orange-200 text-orange-900" },
                     { icon: Beef, label: "Protein", value: isNonFood ? "N/A" : (scaled?.protein_g ?? "-"), suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
@@ -1943,14 +2030,14 @@ export function FoodResultsClient() {
                   ].map((item, index) => (
                     <div
                       key={index}
-                      className={`border rounded-xl px-2 sm:px-3 md:px-4 py-2.5 sm:py-3 md:py-3.5 flex items-center gap-2 sm:gap-3 shadow-sm ${item.style}`}
+                      className={`border rounded-xl px-2 sm:px-3 md:px-4 py-2.5 sm:py-3 md:py-3.5 flex items-center gap-2 sm:gap-3 shadow-sm min-w-0 ${item.style}`}
                     >
                       <div className="p-1.5 sm:p-2 flex-shrink-0">
                         <item.icon className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs sm:text-sm text-muted-foreground mb-0.5">{item.label}</div>
-                        <div className="text-base sm:text-lg md:text-xl font-semibold">
+                        <div className="text-xs sm:text-sm text-muted-foreground mb-0.5 break-words">{item.label}</div>
+                        <div className="text-base sm:text-lg md:text-xl font-semibold break-words">
                           {item.value}
                           {item.value !== "-" ? item.suffix : ""}
                         </div>
@@ -1960,7 +2047,7 @@ export function FoodResultsClient() {
                 </div>
               </CardContent>
               {analysisRefreshing && (
-                <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center">
+                <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-10">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               )}
@@ -2001,7 +2088,7 @@ export function FoodResultsClient() {
                     {analysis.ingredients?.map((ing, i) => (
                       <li key={i} className="flex items-start gap-2">
                         <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4 text-primary mt-0.5 sm:mt-1 flex-shrink-0" />
-                        <span className="text-xs sm:text-sm leading-relaxed">{ing}</span>
+                        <span className="text-xs sm:text-sm leading-relaxed break-words">{ing}</span>
                       </li>
                     ))}
                   </ul>
@@ -2061,11 +2148,11 @@ export function FoodResultsClient() {
                             </span>
                             <div className="flex-1 min-w-0">
                               {title && (
-                                <p className="text-xs sm:text-sm font-semibold text-foreground mb-1 sm:mb-1.5">
+                                <p className="text-xs sm:text-sm font-semibold text-foreground mb-1 sm:mb-1.5 break-words">
                                   {title}
                                 </p>
                             )}
-                            <p className="text-xs sm:text-sm leading-relaxed text-foreground/90">
+                            <p className="text-xs sm:text-sm leading-relaxed text-foreground/90 break-words">
                               {description}
                             </p>
                           </div>
@@ -2556,12 +2643,15 @@ export function FoodResultsClient() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Only load TinyAds script for non-premium users (free users and non-authenticated users) */}
+      {!checkingPremium && !hasPremiumAccess && (
       <Script
         src="https://cdn.apitiny.net/scripts/v2.0/main.js"
         data-site-id="68ec4452809989948ad4d6cc"
         data-test-mode="false"
         strategy="afterInteractive"
       />
+      )}
     </>
   );
 }

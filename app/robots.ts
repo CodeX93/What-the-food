@@ -10,8 +10,13 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: "*",
         allow: "/",
         disallow: [
+          // Block Next.js static files and build artifacts
+          "/_next/",
+          "/_next/image/",
+          "/_next/static/",
+
           // Auth / callbacks
-          "/auth",
+          
           "/auth/callback",
 
           // Private app area
@@ -19,7 +24,7 @@ export default function robots(): MetadataRoute.Robots {
           "/profile",
           "/settings",
           "/billing",
-          "/plans",
+          
           "/checkout",
           "/history",
           "/scan-histories",
@@ -28,21 +33,30 @@ export default function robots(): MetadataRoute.Robots {
           "/meal-planner",
           "/meal-plan",
           "/my-food-analytics",
-          "/analytics",
 
           // Widget private/admin dashboards
           "/widget/admin",
           "/widget/dashboard",
           "/widget/embed",
           "/widget/plans",
+          "/widget-results",
 
           // API routes
           "/api/",
+
+          // Note: Blog posts are hosted on blog.whatthefood.io subdomain.
+          // If any blog post URLs exist on root domain, they should be accessible
+          // for SEO purposes (either as redirects or actual pages).
+
+          // Block query parameters with tracking codes
+          "/*?utm_*",
+          "/*?fbclid=*",
+          "/*?gclid=*",
+          "/*?ref=*",
         ],
       },
     ],
     sitemap: `${siteUrl}/sitemap-index.xml`,
-    host: siteUrl,
   };
 }
 

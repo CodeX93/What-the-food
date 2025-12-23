@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
-import PricingPage from "@/views/Pricing";
+import KetoMealPlannerPage from "@/views/KetoMealPlanner";
 import { getPreviewImageUrlFromRequest, getRequestUrl, getCanonicalUrlFromRequest } from "@/lib/seo/siteUrl";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestUrl = await getRequestUrl();
-  const imageUrl = getPreviewImageUrlFromRequest("Pricing.png", requestUrl);
-  const canonicalUrl = await getCanonicalUrlFromRequest('/pricing');
+  const imageUrl = getPreviewImageUrlFromRequest("keto-meal-planner.jpeg", requestUrl);
+  const canonicalUrl = await getCanonicalUrlFromRequest('/keto-meal-planner');
 
-  const title = "What The Food Pricing & Packages | View Plans";
+  const title = "Keto Meal Planner | Personalize Your Diet With What The Food";
   const description =
-    "Compare our freemium plans to see how far personalized health context and account analytics can take you. Get started now for free - No signups required.";
+    "Get keto meal plans based on your diet, allergies, health goals, and preferences. Use What The Food's keto meal planner to track macros and stay low-carb.";
 
   return {
     title,
@@ -30,16 +30,15 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       images: [imageUrl],
     },
-};
+  };
 }
 
-export default function PricingRoute() {
+export default function KetoMealPlannerRoute() {
   return (
     <>
       {/* H1 for SEO - always visible to crawlers */}
-      <h1 className="sr-only">What The Food Pricing & Packages</h1>
-      <PricingPage />
+      <h1 className="sr-only">Keto Meal Planner | Personalized Meal Plans | What The Food</h1>
+      <KetoMealPlannerPage />
     </>
   );
 }
-

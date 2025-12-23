@@ -18,7 +18,11 @@ export async function GET() {
     return `  <sitemap>\n    <loc>${loc}</loc>\n  </sitemap>`;
   }).join("\n");
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapsXml}\n</sitemapindex>\n`;
+  // Include blog subdomain sitemap (WordPress)
+  // WordPress typically uses /sitemap.xml or /wp-sitemap.xml
+  const blogSitemap = `  <sitemap>\n    <loc>https://blog.whatthefood.io/sitemap.xml</loc>\n  </sitemap>`;
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapsXml}\n${blogSitemap}\n</sitemapindex>\n`;
 
   return new NextResponse(xml, {
     headers: {

@@ -58,11 +58,33 @@ const handler = async (req: Request): Promise<Response> => {
     }
     const posts: WPPost[] = await resp.json();
 
+    // Normalize blog URLs to always use blog subdomain
+    const normalizeBlogUrl = (url: string): string => {
+      try {
+        const urlObj = new URL(url);
+        // If URL is on root domain, convert to blog subdomain
+        if (urlObj.hostname === 'whatthefood.io' || urlObj.hostname === 'www.whatthefood.io') {
+          urlObj.hostname = 'blog.whatthefood.io';
+        }
+        // Ensure it's always blog subdomain
+        if (!urlObj.hostname.includes('blog.whatthefood.io')) {
+          urlObj.hostname = 'blog.whatthefood.io';
+        }
+        return urlObj.toString();
+      } catch {
+        // If URL parsing fails, try to fix it manually
+        if (url.includes('whatthefood.io') && !url.includes('blog.whatthefood.io')) {
+          return url.replace(/https?:\/\/(www\.)?whatthefood\.io/, 'https://blog.whatthefood.io');
+        }
+        return url;
+      }
+    };
+
     const data = posts.map((p) => ({
       id: p.id,
       title: p.title?.rendered ? sanitize(p.title.rendered) : "",
       excerpt: p.excerpt?.rendered ? sanitize(p.excerpt.rendered) : "",
-      url: p.link,
+      url: normalizeBlogUrl(p.link),
       publishedAt: p.date,
       image: getImageFromPost(p) || null,
     }));

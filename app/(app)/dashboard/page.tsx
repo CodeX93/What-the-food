@@ -4,26 +4,37 @@ import DashboardPage from "@/views/Dashboard";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { getPlatformSubscriptionServer } from "@/utils/subscription.server";
 import { fetchRecentScansServer } from "@/utils/foodScan.server";
-import { getPreviewImageUrlFromRequest, getRequestUrl } from "@/lib/seo/siteUrl";
+import { getPreviewImageUrlFromRequest, getRequestUrl, getCanonicalUrlFromRequest } from "@/lib/seo/siteUrl";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestUrl = await getRequestUrl();
   const imageUrl = getPreviewImageUrlFromRequest("Dashboard.png", requestUrl);
+  const canonicalUrl = await getCanonicalUrlFromRequest('/dashboard');
+
+  const title = "What The Food User Dashboard | Your Health Copilot";
+  const description = "Your health copilot that lets you track macros, scan history, save recipes, and plan meals. Manage your nutrition smarter with our What The Food.";
 
   return {
-    title: "What The Food User Dashboard | Your Health Copilot",
-    description: "Your health copilot that lets you track macros, scan history, save recipes, and plan meals. Manage your nutrition smarter with our What The Food.",
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     robots: {
       index: false,
       follow: false,
     },
     openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      type: "website",
       images: [imageUrl],
     },
     twitter: {
       card: "summary_large_image",
-      title: "What The Food User Dashboard | Your Health Copilot",
-      description: "Your health copilot that lets you track macros, scan history, save recipes, and plan meals. Manage your nutrition smarter with our What The Food.",
+      title,
+      description,
       images: [imageUrl],
     },
   };

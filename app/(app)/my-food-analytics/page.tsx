@@ -3,28 +3,39 @@ import { redirect } from "next/navigation";
 import MyFoodAnalyticsPage from "@/views/MyFoodAnalytics";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { getPlatformSubscriptionServer } from "@/utils/subscription.server";
-import { getPreviewImageUrlFromRequest, getRequestUrl } from "@/lib/seo/siteUrl";
+import { getPreviewImageUrlFromRequest, getRequestUrl, getCanonicalUrlFromRequest } from "@/lib/seo/siteUrl";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestUrl = await getRequestUrl();
   const imageUrl = getPreviewImageUrlFromRequest("My Food Analytics.png", requestUrl);
+  const canonicalUrl = await getCanonicalUrlFromRequest('/my-food-analytics');
+
+  const title = "Analytics | Track Macros and Nutrition with What The Food";
+  const description = "Analyze your daily, weekly, and monthly food intake. Our AI Food Scanner helps you track macros, calories, and nutrition trends for smarter eating habits.";
 
   return {
-    title: "Analytics | Track Macros and Nutrition with What The Food",
-    description: "Analyze your daily, weekly, and monthly food intake. Our AI Food Scanner helps you track macros, calories, and nutrition trends for smarter eating habits.",
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     robots: {
       index: false,
       follow: false,
     },
     openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      type: "website",
       images: [imageUrl],
     },
     twitter: {
       card: "summary_large_image",
-      title: "Analytics | Track Macros and Nutrition with What The Food",
-      description: "Analyze your daily, weekly, and monthly food intake. Our AI Food Scanner helps you track macros, calories, and nutrition trends for smarter eating habits.",
+      title,
+      description,
       images: [imageUrl],
     },
   };

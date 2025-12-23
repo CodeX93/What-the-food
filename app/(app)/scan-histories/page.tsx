@@ -3,26 +3,37 @@ import { redirect } from "next/navigation";
 import ScanHistoriesPage from "@/views/ScanHistories";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { getPlatformSubscriptionServer } from "@/utils/subscription.server";
-import { getPreviewImageUrlFromRequest, getRequestUrl } from "@/lib/seo/siteUrl";
+import { getPreviewImageUrlFromRequest, getRequestUrl, getCanonicalUrlFromRequest } from "@/lib/seo/siteUrl";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestUrl = await getRequestUrl();
   const imageUrl = getPreviewImageUrlFromRequest("Scan History.png", requestUrl);
+  const canonicalUrl = await getCanonicalUrlFromRequest('/scan-histories');
+
+  const title = "What The Food Scan History | Track Scanned Foods and Meals";
+  const description = "View all your scanned meals in one place. What The Food all-in-one food calorie finder helps you keep track of all your scanned food photos for smarter eating.";
 
   return {
-    title: "What The Food Scan History | Track Scanned Foods and Meals",
-    description: "View all your scanned meals in one place. What The Food all-in-one food calorie finder helps you keep track of all your scanned food photos for smarter eating.",
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     robots: {
       index: false,
       follow: false,
     },
     openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+      type: "website",
       images: [imageUrl],
     },
     twitter: {
       card: "summary_large_image",
-      title: "What The Food Scan History | Track Scanned Foods and Meals",
-      description: "View all your scanned meals in one place. What The Food all-in-one food calorie finder helps you keep track of all your scanned food photos for smarter eating.",
+      title,
+      description,
       images: [imageUrl],
     },
   };

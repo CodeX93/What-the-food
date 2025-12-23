@@ -581,7 +581,7 @@ export default function Hero() {
             {/* Left Section - Value Proposition (aligned with logo) */}
             <div ref={leftSectionRef} className="w-full text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start flex flex-col lg:mt-1.5 xl:mt-2">
               <div className="w-full">
-                <h1
+                <h2
                   className={`w-full text-3xl sm:text-4xl md:text-5xl ${language === "en" ? "lg:text-[3.1rem] xl:text-[3.35rem]" : "lg:text-[3.5rem]"} font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words`}
                   style={{ wordWrap: "break-word", overflowWrap: "break-word" }}
                 >
@@ -625,7 +625,7 @@ export default function Hero() {
                       </>
                     );
                   })()}
-              </h1>
+              </h2>
                 <p
                   className="w-full text-base sm:text-xl md:text-lg text-muted-foreground mb-6 sm:mb-7 leading-relaxed block"
                   style={{ width: "100%", maxWidth: "100%", lineHeight: "1.6", fontSize: "120%", wordWrap: "break-word", overflowWrap: "break-word", boxSizing: "border-box" }}

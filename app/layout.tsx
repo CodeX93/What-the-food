@@ -14,7 +14,7 @@ const getMetadataBase = (): URL => {
 
 export const metadata: Metadata = {
   metadataBase: getMetadataBase(),
-  title: "Free AI Food Detection & Calorie Counter App By Recipe",
+  title: "Free AI Food Scanner and Calorie Estimator | What The Food",
   description: "Get accurate nutritional analysis and recipe preparation instructions from any food image in seconds with our free AI food detection app; What The Food.",
   keywords: [
     "What The Food",
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
     canonical: "https://whatthefood.io",
   },
   icons: {
-    icon: "/images/favicon.png",
+    icon: "/favicon.ico",
   },
   other: {
     "fo-verify": "5e2b562c-d6e8-4a24-aef4-7c1bbdd4a97a",
@@ -107,6 +107,19 @@ export default async function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground">
+        {/* Google Analytics */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-XHDPX0CS7Y"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-XHDPX0CS7Y');
+          `}
+        </Script>
         <Script
           src="https://cloud.umami.is/script.js"
           data-website-id="ceebc044-5c92-4d48-b07c-65372c8cfbc8"

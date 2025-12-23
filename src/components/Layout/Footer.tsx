@@ -26,7 +26,7 @@ const Footer = () => {
                 <a
                   href="https://odehahwal.com"
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="noopener noreferrer nofollow"
                   className="hover:text-primary transition-colors"
                 >
                   About Founder
@@ -38,9 +38,14 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/analytics" className="hover:text-primary transition-colors">
+                <a
+                  href="https://cloud.umami.is/share/Ax6TpdslJdkistST"
+                  target="_blank"
+                  rel="noopener noreferrer nofollow"
+                  className="hover:text-primary transition-colors"
+                >
                   Analytics
-                </Link>
+                </a>
               </li>
               <li>
                 <Link href="/blog" className="hover:text-primary transition-colors">
@@ -63,6 +68,11 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
+                <a href="/sitemap.xml" className="hover:text-primary transition-colors">
+                  Sitemap
+                </a>
+              </li>
+              <li>
                 <Link href="/widget" className="hover:text-primary transition-colors">
                   Widget
                 </Link>
@@ -78,6 +88,11 @@ const Footer = () => {
           <div className="space-y-4">
             <h3 className="text-base font-semibold text-slate-900 dark:text-white">Resources</h3>
             <ul className="space-y-2 text-sm text-slate-500 dark:text-slate-400">
+              <li>
+                <Link href="/keto-meal-planner" className="hover:text-primary transition-colors">
+                  Keto Meal Planner
+                </Link>
+              </li>
               <li>
                 <a
                   href="https://blog.whatthefood.io/free-calorie-calculator"
@@ -102,13 +117,13 @@ const Footer = () => {
                 <a
                   href="https://aitoolsforthat.com"
                   target="_blank"
-                  rel="noopener"
+                  rel="noopener noreferrer nofollow"
                   className="hover:text-primary transition-colors"
                 >
                   AI Tools For That
                 </a>
               </li>
-              <li>
+              {/* <li>
                 <a
                   href="https://spanglishtranslator.net"
                   target="_blank"
@@ -117,7 +132,7 @@ const Footer = () => {
                 >
                   Spanglish Translator
                 </a>
-              </li>
+              </li> */}
             </ul>
           </div>
 
