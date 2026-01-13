@@ -1251,7 +1251,7 @@ export function ProfileClient({
                 <Button
                   variant={isPremium ? "outline" : "default"}
                   className="w-full h-12 font-semibold"
-                  onClick={() => router.push("/plans")}
+                  onClick={() => window.location.href = "/plans"}
                 >
                   {isPremium ? (
                     <>

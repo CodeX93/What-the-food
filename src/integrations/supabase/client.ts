@@ -1,9 +1,14 @@
+// integrations/supabase/client.ts
+
 "use client";
 
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import type { Database } from "./types";
+import { createBrowserClient } from '@supabase/ssr';
+import type { Database } from './types';
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
+export const supabase = createBrowserClient<Database>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
-export const supabase = createClientComponentClient<Database>();
+// For backwards compatibility if you're importing it elsewhere
+export const createClient = () => supabase;

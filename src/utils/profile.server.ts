@@ -4,7 +4,7 @@ import {
 } from "@/utils/subscription.server";
 
 export async function fetchProfileDataServer(userId: string) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")

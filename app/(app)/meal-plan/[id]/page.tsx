@@ -1,16 +1,38 @@
+import type { Metadata } from "next";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { redirect } from "next/navigation";
 import { MealPlanViewClient } from "@/components/MealPlanner/MealPlanViewClient";
 import TopBar from "@/components/Layout/TopBar";
 import Header from "@/components/Layout/Header";
 import Footer from "@/components/Layout/Footer";
+import { getPreviewImageUrlFromRequest, getRequestUrl, getCanonicalUrlFromRequest } from "@/lib/seo/siteUrl";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const requestUrl = await getRequestUrl();
+  const imageUrl = getPreviewImageUrlFromRequest("Homepage.png", requestUrl);
+  const canonicalUrl = await getCanonicalUrlFromRequest('/meal-plan');
+
+  return {
+    robots: {
+      index: false,
+      follow: false,
+    },
+    openGraph: {
+      images: [imageUrl],
+    },
+    twitter: {
+      card: "summary_large_image",
+      images: [imageUrl],
+    },
+  };
+}
 
 export default async function MealPlanPage({
   params,
 }: {
   params: { id: string };
 }) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();

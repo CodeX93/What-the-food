@@ -387,8 +387,8 @@ const PricingTable = () => {
       return;
     }
     
-    // Navigate to /plans for all cases
-    router.push("/plans");
+    // Navigate to /plans with full page reload
+    window.location.href = "/plans";
   };
 
   return (

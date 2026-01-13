@@ -4,7 +4,7 @@ import { getPreviewImageUrlFromRequest, getRequestUrl, getCanonicalUrlFromReques
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestUrl = await getRequestUrl();
-  const imageUrl = getPreviewImageUrlFromRequest("Settings.png", requestUrl);
+  const imageUrl = getPreviewImageUrlFromRequest("Homepage.png", requestUrl);
   const canonicalUrl = await getCanonicalUrlFromRequest('/settings');
 
   const title = "What The Food Account Settings | Edit Password and Language";

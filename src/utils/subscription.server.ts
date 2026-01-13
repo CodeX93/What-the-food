@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 
 export async function getPlatformSubscriptionServer(userId: string) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("platform_subscriptions")
     .select(
@@ -19,7 +19,7 @@ export async function getPlatformSubscriptionServer(userId: string) {
 }
 
 export async function getWidgetSubscriptionServer(userId: string) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("widget_subscriptions")
     .select(

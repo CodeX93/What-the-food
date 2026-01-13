@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 
 export async function fetchRecentScansServer(userId: string, limit: number = 10) {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
 
   const { data, error } = await supabase
     .from("food_scans")

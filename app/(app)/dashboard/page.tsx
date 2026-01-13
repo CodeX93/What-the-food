@@ -8,7 +8,7 @@ import { getPreviewImageUrlFromRequest, getRequestUrl, getCanonicalUrlFromReques
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestUrl = await getRequestUrl();
-  const imageUrl = getPreviewImageUrlFromRequest("Dashboard.png", requestUrl);
+  const imageUrl = getPreviewImageUrlFromRequest("Homepage.png", requestUrl);
   const canonicalUrl = await getCanonicalUrlFromRequest('/dashboard');
 
   const title = "What The Food User Dashboard | Your Health Copilot";
@@ -41,7 +41,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function DashboardRoute() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { session },
     error,

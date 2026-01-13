@@ -5,7 +5,7 @@ import { Logo } from "./Logo";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 
 export async function HeaderServer() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();

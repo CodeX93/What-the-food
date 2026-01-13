@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestUrl = await getRequestUrl();
-  const imageUrl = getPreviewImageUrlFromRequest("Meal Planner.png", requestUrl);
+  const imageUrl = getPreviewImageUrlFromRequest("Homepage.png", requestUrl);
   const canonicalUrl = await getCanonicalUrlFromRequest('/meal-planner');
 
   const title = "Meal Planner | Personalize Your Diets With What The Food";
@@ -42,7 +42,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function MealPlannerRoute() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { session },
     error,

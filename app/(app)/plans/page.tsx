@@ -4,16 +4,30 @@ import PlansPage from "@/views/Plans";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { getPlatformSubscriptionServer } from "@/utils/subscription.server";
 import { fetchActivePlatformPlansServer } from "@/utils/plans.server";
+import { getPreviewImageUrlFromRequest, getRequestUrl, getCanonicalUrlFromRequest } from "@/lib/seo/siteUrl";
 
-export const metadata: Metadata = {
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const requestUrl = await getRequestUrl();
+  const imageUrl = getPreviewImageUrlFromRequest("Homepage.png", requestUrl);
+  const canonicalUrl = await getCanonicalUrlFromRequest('/plans');
+
+  return {
+    robots: {
+      index: false,
+      follow: false,
+    },
+    openGraph: {
+      images: [imageUrl],
+    },
+    twitter: {
+      card: "summary_large_image",
+      images: [imageUrl],
+    },
+  };
+}
 
 export default async function PlansRoute() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { session },
     error,

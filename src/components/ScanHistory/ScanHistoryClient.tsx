@@ -54,7 +54,7 @@ export function ScanHistoryClient() {
 
         // Fetch fresh data from database
         const { data: scansData, error: scansError } = await supabase
-          .from("scans")
+          .from("food_scans")
           .select("*")
           .eq("user_id", session.user.id)
           .order("created_at", { ascending: false });
@@ -63,7 +63,23 @@ export function ScanHistoryClient() {
           throw scansError;
         }
 
-        const list = scansData || [];
+        // Map food_scans data to Scan format
+        const list: Scan[] = (scansData || []).map((scan: any) => {
+          const nutrients = scan.result_json?.nutrients || {};
+          const servingMultiplier = scan.serving || 1;
+          
+          return {
+            id: scan.id,
+            dish_name: scan.result_json?.dish || null,
+            image_url: scan.image_url,
+            calories: (nutrients.calories || null) ? (nutrients.calories * servingMultiplier) : null,
+            protein: (nutrients.protein_g || null) ? (nutrients.protein_g * servingMultiplier) : null,
+            carbs: (nutrients.carbohydrates_g || null) ? (nutrients.carbohydrates_g * servingMultiplier) : null,
+            fat: (nutrients.fat_g || null) ? (nutrients.fat_g * servingMultiplier) : null,
+            created_at: scan.created_at,
+          };
+        });
+        
         setScans(list);
         setFilteredScans(list);
         
@@ -100,7 +116,7 @@ export function ScanHistoryClient() {
 
   const handleDelete = async (scanId: string) => {
     try {
-      const { error } = await supabase.from("scans").delete().eq("id", scanId);
+      const { error } = await supabase.from("food_scans").delete().eq("id", scanId);
       if (error) throw error;
 
       const nextAll = scans.filter((scan) => scan.id !== scanId);

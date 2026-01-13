@@ -316,7 +316,7 @@ export function ScanHistoriesClient({ initialSubscription = null }: ScanHistorie
                 ))}
               </div>
               <div className="text-center">
-                <Button size="lg" className="px-8" onClick={() => router.push("/plans")}>
+                <Button size="lg" className="px-8" onClick={() => window.location.href = "/plans"}>
                   Upgrade to Premium <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
                 <p className="text-sm text-muted-foreground mt-3">

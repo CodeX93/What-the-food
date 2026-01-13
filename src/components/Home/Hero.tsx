@@ -9,13 +9,14 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { analyzeFood, saveScanHistory, uploadFoodImage } from "@/utils/foodScan";
-import { decrementFreeScan, hasFreeScanAvailable, getFreeScanStatus, getCachedScanStatusSync } from "@/utils/freeScanLimit";
+import { decrementFreeScan, hasFreeScanAvailable, getFreeScanStatus } from "@/utils/freeScanLimit";
 import { hasActivePremiumSubscription } from "@/utils/subscription";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Hero() {
   const [uploading, setUploading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [user, setUser] = useState<any>(null);
   
   // OPTIMIZATION: Initialize with cached data AFTER hydration to avoid mismatch
@@ -25,6 +26,9 @@ export default function Hero() {
   const [isPremium, setIsPremium] = useState<boolean>(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [uploadedImagePath, setUploadedImagePath] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(false);
   const [socialProofMargin, setSocialProofMargin] = useState<number>(0);
   const uploadContainerRef = useRef<HTMLDivElement>(null);
   const leftSectionRef = useRef<HTMLDivElement>(null);
@@ -68,7 +72,8 @@ export default function Hero() {
           // Only check scans if NOT premium
           if (!isPremiumUser) {
             try {
-              const status = await getFreeScanStatus(true); // Force refresh
+              const status = await getFreeScanStatus(); // Always fetches from database
+              console.log('[DEBUG] Free scan status:', status);
               setRemainingScans(status.remaining);
               setScanStatusType(status.type);
             } catch (error) {
@@ -83,7 +88,7 @@ export default function Hero() {
 
           // Fallback: check scans
           try {
-            const status = await getFreeScanStatus(true); // Force refresh
+            const status = await getFreeScanStatus(); // Always fetches from database
             setRemainingScans(status.remaining);
             setScanStatusType(status.type);
           } catch (err) {
@@ -95,9 +100,9 @@ export default function Hero() {
         setIsPremium(false);
         
         // Still check scan status for non-logged-in users (non-blocking)
-        // OPTIMIZATION: Always fetch fresh data on page load
+        // Always fetch fresh data from database
         try {
-          const status = await getFreeScanStatus(true); // Force refresh
+          const status = await getFreeScanStatus(); // Always fetches from database
           setRemainingScans(status.remaining);
           setScanStatusType(status.type);
         } catch (error) {
@@ -120,6 +125,26 @@ export default function Hero() {
         URL.revokeObjectURL(previewUrl);
       }
     };
+  }, [previewUrl]);
+
+  // Reset image loading state when preview URL changes
+  useEffect(() => {
+    if (previewUrl) {
+      setImageLoading(true);
+      // Check if image is already loaded (for blob URLs that load instantly)
+      const checkImageLoaded = () => {
+        const img = document.querySelector('img[alt="Food preview"]') as HTMLImageElement;
+        if (img && img.complete && img.naturalHeight !== 0) {
+          setImageLoading(false);
+        }
+      };
+      // Check immediately and after a short delay
+      checkImageLoaded();
+      const timer = setTimeout(checkImageLoaded, 100);
+      return () => clearTimeout(timer);
+    } else {
+      setImageLoading(false);
+    }
   }, [previewUrl]);
 
   // Align social proof with bottom of upload container
@@ -180,38 +205,169 @@ export default function Hero() {
   }, [previewUrl, user, isPremium, remainingScans]);
 
 
-  const onChooseFile = async () => {
-    // Check if user needs to register (no auth and no free scans)
-    const available = await hasFreeScanAvailable();
-    if (!user && !available) {
-      router.push("/auth");
-      return;
-    }
-
+  const onChooseFile = () => {
+    // Open file picker immediately (must be synchronous for browser security)
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = "image/png, image/jpeg, image/jpg, image/heic, image/heif";
-    input.onchange = async () => {
-      const file = input.files?.[0];
-      if (!file) return;
+    input.accept = "image/png,image/jpeg,image/jpg,image/heic,image/heif";
+    // Don't set capture attribute - let user choose between camera and gallery
+    input.style.display = "none"; // Hide but keep in DOM for mobile compatibility
+    
+    // Add to DOM temporarily for mobile browsers (especially iOS Safari)
+    document.body.appendChild(input);
+    
+    // Use both onchange property and addEventListener for maximum compatibility
+    const handleFileChange = async (e: Event) => {
+      try {
+        console.log('File change event triggered', e);
+        const target = e.target as HTMLInputElement;
+        const file = target.files?.[0];
+        
+        console.log('Selected file:', file ? { name: file.name, type: file.type, size: file.size } : 'No file');
+        
+        if (!file) {
+          // User cancelled or no file selected
+          console.log('No file selected, cleaning up');
+          cleanup();
+          return;
+        }
+        
+        // Validate file type - be more lenient for mobile cameras
+        const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/heic', 'image/heif', 'image/webp'];
+        const validExtensions = /\.(png|jpg|jpeg|heic|heif|webp)$/i;
+        const isValidType = validTypes.includes(file.type) || file.name.match(validExtensions);
+        
+        // On mobile, file.type might be empty, so rely on extension
+        if (!isValidType && file.type && file.type !== '') {
+          console.warn('File type validation failed:', file.type, file.name);
+          toast({
+            title: "Invalid File Type",
+            description: "Please select a valid image file (PNG, JPG, HEIC)",
+            variant: "destructive",
+          });
+          cleanup();
+          return;
+        }
+        
+        console.log('File validated, processing...');
+        
+        // Set selected file and show preview immediately
+        setSelectedFile(file);
+        
+        // Show preview immediately from file blob
+        const objectUrl = URL.createObjectURL(file);
+        console.log('Created object URL:', objectUrl);
+        setPreviewUrl(objectUrl);
+        setImageLoading(true); // Start loading state for image rendering
+        
+        // If user is authenticated, upload in the background
+        if (user?.id) {
+          try {
+            console.log('Starting upload for authenticated user...');
+            setUploading(true);
+            const { path, publicUrl, signedUrl } = await uploadFoodImage(file, user.id);
+            console.log('Upload successful:', { path, publicUrl });
+            setUploadedImageUrl(signedUrl || publicUrl);
+            setUploadedImagePath(path);
+          } catch (e: any) {
+            console.error("Upload error:", e);
+            toast({
+              title: "Upload Failed",
+              description: e?.message || "Failed to upload image. Please try again.",
+              variant: "destructive",
+            });
+            // Clear the file if upload fails
+            setSelectedFile(null);
+            setPreviewUrl((prevUrl) => {
+              if (prevUrl) {
+                URL.revokeObjectURL(prevUrl);
+              }
+              return null;
+            });
+          } finally {
+            setUploading(false);
+          }
+        } else {
+          // For non-authenticated users, check free scans availability
+          console.log('Checking free scans for non-authenticated user...');
+          const available = await hasFreeScanAvailable();
+          if (!available) {
+            toast({
+              title: t("common.dailylimitreached"),
+              description: "Please sign up to continue using the service.",
+              variant: "destructive",
+            });
+            setSelectedFile(null);
+            setPreviewUrl((prevUrl) => {
+              if (prevUrl) {
+                URL.revokeObjectURL(prevUrl);
+              }
+              return null;
+            });
+            router.push("/auth");
+            cleanup();
+            return;
+          }
+          console.log('Free scan available, preview shown');
+          // For non-authenticated users, preview is already shown above
+        }
+        
+        cleanup();
+      } catch (error: any) {
+        console.error("File processing error:", error);
+        toast({
+          title: "Error Processing File",
+          description: error?.message || "Failed to process the selected image. Please try again.",
+          variant: "destructive",
+        });
+        cleanup();
+      }
       
-      // Set selected file and create preview
-      setSelectedFile(file);
-      const objectUrl = URL.createObjectURL(file);
-      setPreviewUrl(objectUrl);
+      function cleanup() {
+        input.removeEventListener('change', handleFileChange);
+        input.value = '';
+        if (input.parentNode) {
+          input.parentNode.removeChild(input);
+        }
+      }
     };
-    input.click();
+    
+    // Use addEventListener only (onchange is redundant and causes double-firing)
+    input.addEventListener('change', handleFileChange, { once: true });
+    
+    // Trigger file picker
+    // Use setTimeout to ensure input is in DOM before clicking (mobile fix)
+    setTimeout(() => {
+      try {
+        input.click();
+        console.log('File picker triggered');
+      } catch (err) {
+        console.error('Error triggering file picker:', err);
+        toast({
+          title: "Error",
+          description: "Failed to open file picker. Please try again.",
+          variant: "destructive",
+        });
+        if (input.parentNode) {
+          input.parentNode.removeChild(input);
+        }
+      }
+    }, 10);
   };
 
   const handleAnalyze = async () => {
     if (!selectedFile) return;
 
     try {
-      setUploading(true);
+      setAnalyzing(true);
       
       // Get user session
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
+      
+      // If image was already uploaded (authenticated user), use the uploaded URL
+      let imageUrl = uploadedImageUrl;
+      let imagePath = uploadedImagePath;
       
       // If not authenticated, check free scan limit
       if (!userId) {
@@ -223,11 +379,15 @@ export default function Hero() {
         // For non-authenticated users, create a temporary user ID for storage
         const tempUserId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
-        // Upload to Storage with temp ID
-        const { path, publicUrl, signedUrl } = await uploadFoodImage(selectedFile, tempUserId);
+        // Upload to Storage with temp ID (only if not already uploaded)
+        if (!imageUrl || !imagePath) {
+          const uploadResult = await uploadFoodImage(selectedFile, tempUserId);
+          imagePath = uploadResult.path;
+          imageUrl = uploadResult.signedUrl || uploadResult.publicUrl;
+        }
         
         // Analyze via Edge Function (default serving 1)
-        const analysis = await analyzeFood(signedUrl || publicUrl, 1);
+        const analysis = await analyzeFood(imageUrl, 1);
         
         // Decrement free scan count
         const newCount = await decrementFreeScan();
@@ -237,8 +397,8 @@ export default function Hero() {
         // Save history with temp user (won't be retrievable later, just for current session)
         const scanId = await saveScanHistory({ 
           userId: tempUserId, 
-          imagePath: path, 
-          imageUrl: signedUrl || publicUrl, 
+          imagePath: imagePath!, 
+          imageUrl: imageUrl!, 
           serving: 1, 
           result: {
             ...analysis.analysis,
@@ -265,17 +425,21 @@ export default function Hero() {
         }
 
         // Authenticated user flow
-        // Upload to Storage
-        const { path, publicUrl, signedUrl } = await uploadFoodImage(selectedFile, userId);
+        // Upload to Storage (only if not already uploaded)
+        if (!imageUrl || !imagePath) {
+          const uploadResult = await uploadFoodImage(selectedFile, userId);
+          imagePath = uploadResult.path;
+          imageUrl = uploadResult.signedUrl || uploadResult.publicUrl;
+        }
         
         // Analyze via Edge Function (default serving 1)
-        const analysis = await analyzeFood(signedUrl || publicUrl, 1);
+        const analysis = await analyzeFood(imageUrl, 1);
         
         // Save history and open results page
         const scanId = await saveScanHistory({ 
           userId, 
-          imagePath: path, 
-          imageUrl: signedUrl || publicUrl, 
+          imagePath: imagePath!, 
+          imageUrl: imageUrl!, 
           serving: 1, 
           result: {
             ...analysis.analysis,
@@ -302,14 +466,17 @@ export default function Hero() {
         description: e?.message || t("common.failedanalyze"),
         variant: "destructive",
       });
+      setAnalyzing(false);
     } finally {
-      setUploading(false);
+      // Don't reset analyzing here - let it stay until redirect
       // Clean up preview URL
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
       }
       setSelectedFile(null);
       setPreviewUrl(null);
+      setUploadedImageUrl(null);
+      setUploadedImagePath(null);
     }
   };
   return (
@@ -462,24 +629,43 @@ export default function Hero() {
                   </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="relative rounded-lg overflow-hidden">
+                      <div className="relative rounded-lg overflow-hidden bg-muted/30">
+                        {imageLoading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-10">
+                            <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                          </div>
+                        )}
                         <img 
                           src={previewUrl} 
                           alt="Food preview" 
-                          className="w-full h-64 sm:h-72 md:h-80 object-cover rounded-lg"
+                          className={`w-full h-64 sm:h-72 md:h-80 object-cover rounded-lg transition-opacity duration-300 ${
+                            imageLoading ? "opacity-0" : "opacity-100"
+                          }`}
+                          onLoad={() => setImageLoading(false)}
+                          onError={() => setImageLoading(false)}
+                          ref={(img) => {
+                            // Check if image is already loaded when ref is set (for blob URLs)
+                            if (img && img.complete && img.naturalHeight !== 0) {
+                              setImageLoading(false);
+                            }
+                          }}
                         />
                       </div>
                       <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center w-full">
                         <Button 
                           size="lg" 
-                          className="bg-primary hover:bg-primary-hover text-sm sm:text-base w-full sm:w-auto" 
+                          className={`text-sm sm:text-base w-full sm:w-auto ${
+                            analyzing 
+                              ? "bg-green-400 hover:bg-green-400 cursor-not-allowed" 
+                              : "bg-primary hover:bg-primary-hover"
+                          }`}
                           onClick={handleAnalyze} 
-                          disabled={uploading}
+                          disabled={analyzing || uploading || (user?.id && !uploadedImageUrl)}
                         >
-                          {uploading ? (
+                          {analyzing ? (
                             <>
                               <Loader2 className="h-4 w-4 mr-2 animate-spin"/>
-                              Analyzing...
+                              Analyzing
                             </>
                           ) : (
                             "Analyze Food"
@@ -495,8 +681,12 @@ export default function Hero() {
                             }
                             setSelectedFile(null);
                             setPreviewUrl(null);
+                            setUploadedImageUrl(null);
+                            setUploadedImagePath(null);
+                            setImageLoading(false);
+                            setAnalyzing(false);
                           }}
-                          disabled={uploading}
+                          disabled={analyzing || uploading}
                         >
                           Change Photo
                         </Button>
@@ -684,7 +874,10 @@ export default function Hero() {
                   ) : remainingScans === null ? (
                     t("hero.checkingscans")
                   ) : remainingScans > 0 ? (
-                    `${remainingScans} ${t("hero.scansremaining")}`
+                    (() => {
+                      console.log('[DEBUG] Rendering remainingScans:', remainingScans);
+                      return `${remainingScans} ${t("hero.scansremaining")}`;
+                    })()
                   ) : (
                     t("hero.allscansused")
                   )
@@ -769,24 +962,43 @@ export default function Hero() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="relative rounded-lg overflow-hidden">
+                      <div className="relative rounded-lg overflow-hidden bg-muted/30">
+                        {imageLoading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-10">
+                            <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                          </div>
+                        )}
                         <img 
                           src={previewUrl} 
                           alt="Food preview" 
-                          className="w-full h-64 sm:h-72 md:h-80 object-cover rounded-lg"
+                          className={`w-full h-64 sm:h-72 md:h-80 object-cover rounded-lg transition-opacity duration-300 ${
+                            imageLoading ? "opacity-0" : "opacity-100"
+                          }`}
+                          onLoad={() => setImageLoading(false)}
+                          onError={() => setImageLoading(false)}
+                          ref={(img) => {
+                            // Check if image is already loaded when ref is set (for blob URLs)
+                            if (img && img.complete && img.naturalHeight !== 0) {
+                              setImageLoading(false);
+                            }
+                          }}
                         />
                       </div>
                       <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center w-full">
                         <Button 
                           size="lg" 
-                          className="bg-primary hover:bg-primary-hover text-sm sm:text-base w-full sm:w-auto" 
+                          className={`text-sm sm:text-base w-full sm:w-auto ${
+                            analyzing 
+                              ? "bg-green-400 hover:bg-green-400 cursor-not-allowed" 
+                              : "bg-primary hover:bg-primary-hover"
+                          }`}
                           onClick={handleAnalyze} 
-                          disabled={uploading}
+                          disabled={analyzing || uploading || (user?.id && !uploadedImageUrl)}
                         >
-                          {uploading ? (
+                          {analyzing ? (
                             <>
                               <Loader2 className="h-4 w-4 mr-2 animate-spin"/>
-                              {t("hero.analyzing")}
+                              Analyzing
                             </>
                           ) : (
                             t("hero.analyzefood")
@@ -802,8 +1014,12 @@ export default function Hero() {
                             }
                             setSelectedFile(null);
                             setPreviewUrl(null);
+                            setUploadedImageUrl(null);
+                            setUploadedImagePath(null);
+                            setImageLoading(false);
+                            setAnalyzing(false);
                           }}
-                          disabled={uploading}
+                          disabled={analyzing || uploading}
                         >
                           {t("hero.changephoto")}
                         </Button>

@@ -46,6 +46,7 @@ import {
   Activity,
   Scale,
   ChevronDown,
+  MessageSquare,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -65,6 +66,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { FeedbackDialog } from "@/components/Feedback/FeedbackDialog";
 export function FoodResultsClient() {
   const searchParams = useSearchParams();
   const id = searchParams?.get("id") ?? null;
@@ -239,6 +241,7 @@ export function FoodResultsClient() {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [savingRecipe, setSavingRecipe] = useState(false);
   const [isRecipeSaved, setIsRecipeSaved] = useState(false);
+  const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const reportRef = useRef<HTMLDivElement | null>(null);
   const imageCardRef = useRef<HTMLDivElement | null>(null);
   const nutritionCardRef = useRef<HTMLDivElement | null>(null);
@@ -1741,6 +1744,15 @@ export function FoodResultsClient() {
                   )}
                 </Tooltip>
               </TooltipProvider>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => setFeedbackDialogOpen(true)} 
+                className="text-xs sm:text-sm"
+              >
+                <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">{t("feedback.button")}</span>
+              </Button>
             </div>
           </div>
         </div>
@@ -2259,7 +2271,7 @@ export function FoodResultsClient() {
                             Sign In
                           </Button>
                         )}
-                        <Button className="bg-primary hover:bg-primary-hover text-xs sm:text-sm" size="sm" onClick={() => router.push("/plans")}>
+                        <Button className="bg-primary hover:bg-primary-hover text-xs sm:text-sm" size="sm" onClick={() => window.location.href = "/plans"}>
                           <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" /> <span className="hidden sm:inline">Explore Premium</span><span className="sm:hidden">Premium</span>
                         </Button>
                       </div>
@@ -2423,7 +2435,7 @@ export function FoodResultsClient() {
                             <p className="text-sm text-muted-foreground mb-3">
                               Upgrade to Premium to unlock personalized insights and smart substitutions tailored to your goals.
                             </p>
-                            <Button size="sm" onClick={() => router.push("/plans")}>
+                            <Button size="sm" onClick={() => window.location.href = "/plans"}>
                               <Sparkles className="h-4 w-4 mr-2" /> Upgrade Now
                             </Button>
                           </div>
@@ -2643,6 +2655,7 @@ export function FoodResultsClient() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <FeedbackDialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen} />
       {/* Only load TinyAds script for non-premium users (free users and non-authenticated users) */}
       {!checkingPremium && !hasPremiumAccess && (
       <Script

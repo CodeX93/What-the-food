@@ -48,21 +48,58 @@ export async function uploadFoodImage(file: File, userId: string): Promise<{ pat
   const filename = `${Date.now()}.${ext}`;
   const path = `${userId}/${filename}`;
 
+  // Ensure session is fresh before upload
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session) {
+    // Try to refresh session
+    const { error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError) {
+      throw new Error('Session expired. Please refresh the page and try again.');
+    }
+  }
+  
+  // Get fresh session after potential refresh
+  const { data: { session: currentSession } } = await supabase.auth.getSession();
+  if (!currentSession) {
+    throw new Error('No active session');
+  }
+
   const { error: upErr } = await supabase.storage.from("FoodScans").upload(path, file, {
     upsert: false,
     cacheControl: "3600",
   });
-  if (upErr) throw upErr;
+  
+  // If upload fails due to auth error, try refreshing session and retry once
+  if (upErr && (
+    upErr.message?.includes('JWT') ||
+    upErr.message?.includes('expired') ||
+    upErr.message?.includes('invalid') ||
+    upErr.message?.includes('access control')
+  )) {
+    console.log('Upload failed due to auth error, refreshing session...');
+    // Get current session and refresh it
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    const { error: refreshError } = await supabase.auth.refreshSession(currentSession || undefined);
+    if (refreshError) {
+      throw new Error('Session expired. Please refresh the page and try again.');
+    }
+    
+    // Retry upload after refresh
+    const { error: retryErr } = await supabase.storage.from("FoodScans").upload(path, file, {
+      upsert: false,
+      cacheControl: "3600",
+    });
+    if (retryErr) throw retryErr;
+  } else if (upErr) {
+    throw upErr;
+  }
 
   const { data: pub } = supabase.storage.from("FoodScans").getPublicUrl(path);
   const publicUrl = pub.publicUrl;
-  // Try to create a short-lived signed URL in case bucket is private
-  let signedUrl: string | undefined;
-  try {
-    const { data: signed } = await supabase.storage.from("FoodScans").createSignedUrl(path, 60 * 5);
-    signedUrl = signed?.signedUrl;
-  } catch {}
-  return { path, publicUrl, signedUrl };
+  // OPTIMIZATION: Skip createSignedUrl here to avoid auth checks that can delay uploads
+  // Signed URLs can be generated on-demand when needed using getFreshImageUrl()
+  // This makes uploads instant since we only do the essential upload operation
+  return { path, publicUrl };
 }
 
 export async function analyzeFood(

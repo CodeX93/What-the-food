@@ -7,7 +7,7 @@ import { getPreviewImageUrlFromRequest, getRequestUrl, getCanonicalUrlFromReques
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestUrl = await getRequestUrl();
-  const imageUrl = getPreviewImageUrlFromRequest("Scan History.png", requestUrl);
+  const imageUrl = getPreviewImageUrlFromRequest("Homepage.png", requestUrl);
   const canonicalUrl = await getCanonicalUrlFromRequest('/scan-histories');
 
   const title = "What The Food Scan History | Track Scanned Foods and Meals";
@@ -40,7 +40,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ScanHistoriesRoute() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { session },
     error,

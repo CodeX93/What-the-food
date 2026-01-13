@@ -49,7 +49,7 @@ export function DashboardClient({
   const router = useRouter();
   const { toast } = useToast();
   const t = useTranslation();
-  const { user: authUser, loading: authLoading, refreshSession } = useAuth();
+  const { user: authUser, loading: authLoading } = useAuth();
   // Use auth context user, fallback to initialUser
   const user = authUser || initialUser;
   
@@ -64,6 +64,7 @@ export function DashboardClient({
   // Only show loading if we truly have no user data
   const [loading, setLoading] = useState(!initialUser && authLoading);
   const [analyzing, setAnalyzing] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [servings, setServings] = useState(1);
   
   // OPTIMIZATION: Use cached scans for instant loading
@@ -75,6 +76,8 @@ export function DashboardClient({
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [uploadedImagePath, setUploadedImagePath] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(false);
   const [freeScanRemaining, setFreeScanRemaining] = useState<number | null>(null);
   const [userFullName, setUserFullName] = useState<string | null>(initialFullName);
   const [manualFoods, setManualFoods] = useState<Array<{ id: string; value: string }>>([
@@ -232,6 +235,35 @@ export function DashboardClient({
   // Track if we've loaded data to prevent duplicate fetches
   const hasLoadedRef = useRef(false);
 
+  // Cleanup preview URL on unmount or when preview changes
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  // Reset image loading state when preview URL changes
+  useEffect(() => {
+    if (previewUrl || uploadedImageUrl) {
+      setImageLoading(true);
+      // Check if image is already loaded (for blob URLs that load instantly)
+      const checkImageLoaded = () => {
+        const img = document.querySelector('img[alt="Uploaded food"]') as HTMLImageElement;
+        if (img && img.complete && img.naturalHeight !== 0) {
+          setImageLoading(false);
+        }
+      };
+      // Check immediately and after a short delay
+      checkImageLoaded();
+      const timer = setTimeout(checkImageLoaded, 100);
+      return () => clearTimeout(timer);
+    } else {
+      setImageLoading(false);
+    }
+  }, [previewUrl, uploadedImageUrl]);
+
   useEffect(() => {
     // Prevent duplicate loads
     if (hasLoadedRef.current) return;
@@ -318,7 +350,7 @@ export function DashboardClient({
 
       // Fetch free scan balance
       promises.push(
-        getRemainingFreeScans(true)
+        getRemainingFreeScans()
           .then((remaining) => {
             setFreeScanRemaining(remaining);
           })
@@ -357,14 +389,14 @@ export function DashboardClient({
     const updateIframeHeight = () => {
       const width = window.innerWidth;
       if (width < 640) {
-        // Extra small screens - add a bit more room (approx. one extra row)
-        setIframeHeight(1150);
+        // Extra small screens - enough to fit all cards
+        setIframeHeight(1350);
       } else if (width < 768) {
         // Small screens (mobile)
-        setIframeHeight(1050);
+        setIframeHeight(1250);
       } else {
         // Desktop
-        setIframeHeight(900);
+        setIframeHeight(1000);
       }
     };
     
@@ -389,29 +421,52 @@ export function DashboardClient({
       if (event.data && typeof event.data === 'object') {
         // Handle resize messages from tinyAds
         if (event.data.type === 'resize' && event.data.height) {
-          const newHeight = Math.max(event.data.height, 400);
+          const requestedHeight = Number(event.data.height) || 600;
+          // Add minimal buffer (4px) to prevent cutoff
+          const newHeight = Math.max(requestedHeight + 4, 600);
+          const currentHeight = parseInt(iframe.style.height || '0');
+          // Always update to larger heights to prevent cutoff
+          if (newHeight > currentHeight || Math.abs(newHeight - currentHeight) > 10) {
           iframe.style.height = `${newHeight}px`;
           setIframeHeight(newHeight);
+          }
         }
         // Handle height updates in various formats
         if (event.data.height && typeof event.data.height === 'number') {
-          const newHeight = Math.max(event.data.height, 400);
+          const requestedHeight = Number(event.data.height) || 600;
+          // Add minimal buffer (4px) to prevent cutoff
+          const newHeight = Math.max(requestedHeight + 4, 600);
+          const currentHeight = parseInt(iframe.style.height || '0');
+          // Always update to larger heights to prevent cutoff
+          if (newHeight > currentHeight || Math.abs(newHeight - currentHeight) > 10) {
           iframe.style.height = `${newHeight}px`;
           setIframeHeight(newHeight);
+          }
         }
         // Handle iframe-resize events
         if (event.data.type === 'iframe-resize' && event.data.height) {
-          const newHeight = Math.max(event.data.height, 400);
+          const requestedHeight = Number(event.data.height) || 600;
+          // Add minimal buffer (4px) to prevent cutoff
+          const newHeight = Math.max(requestedHeight + 4, 600);
+          const currentHeight = parseInt(iframe.style.height || '0');
+          // Always update to larger heights to prevent cutoff
+          if (newHeight > currentHeight || Math.abs(newHeight - currentHeight) > 10) {
           iframe.style.height = `${newHeight}px`;
           setIframeHeight(newHeight);
+          }
         }
         // Handle any message with a height property
         // TinyAds may send different shapes of messages; normalize to a safe height
         if (event.data.height) {
-          const requestedHeight = Number(event.data.height) || 400;
-          const newHeight = Math.max(requestedHeight, 400);
+          const requestedHeight = Number(event.data.height) || 600;
+          // Add minimal buffer (4px) to prevent cutoff
+          const newHeight = Math.max(requestedHeight + 4, 600);
+          const currentHeight = parseInt(iframe.style.height || '0');
+          // Always update to larger heights to prevent cutoff
+          if (newHeight > currentHeight || Math.abs(newHeight - currentHeight) > 10) {
           iframe.style.height = `${newHeight}px`;
           setIframeHeight(newHeight);
+          }
         }
       }
       
@@ -420,10 +475,15 @@ export function DashboardClient({
         try {
           const data = JSON.parse(event.data);
           if (data.height || data.type === "resize") {
-            const requestedHeight = Number(data.height) || 400;
-            const newHeight = Math.max(requestedHeight, 400);
+            const requestedHeight = Number(data.height) || 600;
+            // Add minimal buffer (4px) to prevent cutoff
+            const newHeight = Math.max(requestedHeight + 4, 600);
+            const currentHeight = parseInt(iframe.style.height || '0');
+            // Always update to larger heights to prevent cutoff
+            if (newHeight > currentHeight || Math.abs(newHeight - currentHeight) > 10) {
             iframe.style.height = `${newHeight}px`;
             setIframeHeight(newHeight);
+            }
           }
         } catch (e) {
           // Not JSON, ignore
@@ -448,11 +508,11 @@ export function DashboardClient({
             iframeDocument.documentElement?.clientHeight || 0
           );
           if (requestedHeight > 0) {
-            // Ensure at least a minimal height so the widget isn't cut off
-            const height = Math.max(requestedHeight, 400);
+            // Add minimal buffer (4px) to prevent cutoff
+            const height = Math.max(requestedHeight + 4, 600);
             const currentHeight = parseInt(iframe.style.height || '0');
-            // Update if height changed significantly (more than 10px difference)
-            if (Math.abs(height - currentHeight) > 10) {
+            // Always update to larger heights to prevent cutoff, or if height changed significantly
+            if (height > currentHeight || Math.abs(height - currentHeight) > 10) {
               iframe.style.height = `${height}px`;
               setIframeHeight(height);
             }
@@ -579,7 +639,7 @@ export function DashboardClient({
                 <span className="px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary border border-primary/20">
                   <Sparkles className="h-4 w-4 inline mr-1" /> {t("dashboard.premium")}
                 </span>
-                <Button variant="outline" size="sm" onClick={() => router.push("/plans")}>
+                <Button variant="outline" size="sm" onClick={() => window.location.href = "/plans"}>
                   {t("dashboard.manageplan")}
                 </Button>
               </div>
@@ -597,7 +657,7 @@ export function DashboardClient({
                       </div>
                     )}
                   </div>
-                  <Button size="sm" onClick={() => router.push("/plans")}>
+                  <Button size="sm" onClick={() => window.location.href = "/plans"}>
                     {t("dashboard.upgrade")} <ArrowRight className="h-4 w-4 ml-1" />
                   </Button>
                 </CardContent>
@@ -735,7 +795,7 @@ export function DashboardClient({
 
         <Script src="https://cdn.tinysnippet.net/scripts/v2.0/manager.js" strategy="lazyOnload" />
 
-        <div id="upload-section" className="grid md:grid-cols-2 gap-6 mb-2 md:items-start">
+        <div id="upload-section" className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-2 md:items-start">
           {/* Left Section: Upload & Analyze (first), then Log Foods manually (below) */}
           <div className="flex flex-col gap-0">
             {/* Upload and Analyze - First */}
@@ -747,38 +807,204 @@ export function DashboardClient({
               <CardContent className="flex flex-col p-4 mb-4 pb-4">
                 {!uploadedFile ? (
                   <div
-                    className="border-2 border-dashed border-primary/30 rounded-lg p-10 cursor-pointer bg-muted/30 text-center hover:border-primary/50 transition-colors flex-1 flex flex-col items-center justify-center"
+                    className={`border-2 border-dashed border-primary/30 rounded-lg p-10 text-center bg-muted/30 flex-1 flex flex-col items-center justify-center transition-colors ${
+                      authLoading || loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-primary/50"
+                    }`}
                     onClick={() => {
+                      if (authLoading || loading) {
+                        return;
+                      }
+                      
+                      if (!user) {
+                        toast({ 
+                          title: "Authentication Required", 
+                          description: "Please sign in to upload food images.", 
+                          variant: "destructive" 
+                        });
+                        router.push("/auth");
+                        return;
+                      }
+                      
                       const input = document.createElement("input");
                       input.type = "file";
-                      input.accept = "image/png, image/jpeg, image/jpg, image/heic, image/heif";
-                      input.onchange = async () => {
-                        const file = input.files?.[0];
-                        if (!file || !user) return;
-                        try {
-                          const { path, publicUrl, signedUrl } = await uploadFoodImage(file, user.id);
-                          setUploadedFile(file);
-                          setUploadedImageUrl(signedUrl || publicUrl);
-                          setUploadedImagePath(path);
-                        } catch (e) {
-                          console.error(e);
-                          toast({ title: "Error", description: "Failed to upload image.", variant: "destructive" });
+                      input.accept = "image/png,image/jpeg,image/jpg,image/heic,image/heif";
+                      // Don't set capture attribute - let user choose between camera and gallery
+                      input.style.display = "none"; // Hide but keep in DOM for mobile compatibility
+                      
+                      // Add to DOM temporarily for mobile browsers (especially iOS Safari)
+                      document.body.appendChild(input);
+                      
+                      // Define cleanup function first
+                      const cleanup = () => {
+                        input.removeEventListener('change', handleFileChange);
+                        input.value = '';
+                        if (input.parentNode) {
+                          input.parentNode.removeChild(input);
                         }
                       };
-                      input.click();
+                      
+                      const handleFileChange = async (e: Event) => {
+                        try {
+                          console.log('File change event triggered', e);
+                          const target = e.target as HTMLInputElement;
+                          const file = target.files?.[0];
+                          
+                          console.log('Selected file:', file ? { name: file.name, type: file.type, size: file.size } : 'No file');
+                          
+                          if (!file) {
+                            // User cancelled or no file selected
+                            console.log('No file selected, cleaning up');
+                            cleanup();
+                            return;
+                          }
+                          
+                          if (!user) {
+                            toast({ 
+                              title: "Authentication Required", 
+                              description: "Please sign in to upload food images.", 
+                              variant: "destructive" 
+                            });
+                            cleanup();
+                            return;
+                          }
+                          
+                          // Validate file type - be more lenient for mobile cameras
+                          const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/heic', 'image/heif', 'image/webp'];
+                          const validExtensions = /\.(png|jpg|jpeg|heic|heif|webp)$/i;
+                          const isValidType = validTypes.includes(file.type) || file.name.match(validExtensions);
+                          
+                          // On mobile, file.type might be empty, so rely on extension
+                          if (!isValidType && file.type && file.type !== '') {
+                            console.warn('File type validation failed:', file.type, file.name);
+                            toast({
+                              title: "Invalid File Type",
+                              description: "Please select a valid image file (PNG, JPG, HEIC)",
+                              variant: "destructive",
+                            });
+                            cleanup();
+                            return;
+                          }
+                          
+                          console.log('File validated, processing...');
+                          
+                          // Set file and show preview immediately
+                          setUploadedFile(file);
+                          
+                          // Show preview immediately from file blob
+                          const objectUrl = URL.createObjectURL(file);
+                          console.log('Created object URL:', objectUrl);
+                          setPreviewUrl(objectUrl);
+                          setImageLoading(true); // Start loading state for image rendering
+                          
+                          // Upload the image in the background
+                          try {
+                            console.log('Starting upload...');
+                            setUploading(true);
+                            const { path, publicUrl, signedUrl } = await uploadFoodImage(file, user.id);
+                            console.log('Upload successful:', { path, publicUrl });
+                            setUploadedImageUrl(signedUrl || publicUrl);
+                            setUploadedImagePath(path);
+                          } catch (e: any) {
+                            console.error("Upload error:", e);
+                            toast({ 
+                              title: "Upload Failed", 
+                              description: e?.message || "Failed to upload image. Please try again.", 
+                              variant: "destructive" 
+                            });
+                            // Clear file on error
+                            setUploadedFile(null);
+                            setPreviewUrl((prevUrl) => {
+                              if (prevUrl) {
+                                URL.revokeObjectURL(prevUrl);
+                              }
+                              return null;
+                            });
+                          } finally {
+                            setUploading(false);
+                          }
+                          
+                          cleanup();
+                        } catch (error: any) {
+                          console.error("File processing error:", error);
+                          toast({
+                            title: "Error Processing File",
+                            description: error?.message || "Failed to process the selected image. Please try again.",
+                            variant: "destructive",
+                          });
+                          cleanup();
+                        }
+                      };
+                      
+                      // Use both methods for maximum compatibility
+                      input.addEventListener('change', handleFileChange);
+                      input.onchange = handleFileChange;
+                      
+                      // Trigger file picker
+                      // Use setTimeout to ensure input is in DOM before clicking (mobile fix)
+                      setTimeout(() => {
+                        try {
+                          input.click();
+                          console.log('File picker triggered');
+                        } catch (err) {
+                          console.error('Error triggering file picker:', err);
+                          toast({
+                            title: "Error",
+                            description: "Failed to open file picker. Please try again.",
+                            variant: "destructive",
+                          });
+                          if (input.parentNode) {
+                            input.parentNode.removeChild(input);
+                          }
+                        }
+                      }, 10);
                     }}
                   >
-                    <Upload className="h-14 w-14 text-primary mx-auto mb-4" />
+                    <Upload className={`h-14 w-14 text-primary mx-auto mb-4 ${authLoading || loading ? "animate-pulse" : ""}`} />
                     <p className="text-lg font-medium mb-2">{t("dashboard.upload.photo")}</p>
                     <p className="text-sm text-muted-foreground mb-4">{t("dashboard.upload.drop")}</p>
-                    <Button>{t("dashboard.upload.choose")}</Button>
+                    <Button disabled={authLoading || loading}>{t("dashboard.upload.choose")}</Button>
                   </div>
                 ) : (
                   <div className="space-y-4 flex-1 flex flex-col">
                     <div className="relative rounded-lg overflow-hidden border-2 border-primary/20 bg-muted/30">
                       <div className="aspect-video relative">
-                        {uploadedImageUrl ? (
-                          <img src={uploadedImageUrl} alt="Uploaded food" className="w-full h-full object-cover" />
+                        {imageLoading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-10">
+                            <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                          </div>
+                        )}
+                        {previewUrl ? (
+                          <img 
+                            src={previewUrl} 
+                            alt="Uploaded food" 
+                            className={`w-full h-full object-cover transition-opacity duration-300 ${
+                              imageLoading ? "opacity-0" : "opacity-100"
+                            }`}
+                            onLoad={() => setImageLoading(false)}
+                            onError={() => setImageLoading(false)}
+                            ref={(img) => {
+                              // Check if image is already loaded when ref is set
+                              if (img && img.complete && img.naturalHeight !== 0) {
+                                setImageLoading(false);
+                              }
+                            }}
+                          />
+                        ) : uploadedImageUrl ? (
+                          <img 
+                            src={uploadedImageUrl} 
+                            alt="Uploaded food" 
+                            className={`w-full h-full object-cover transition-opacity duration-300 ${
+                              imageLoading ? "opacity-0" : "opacity-100"
+                            }`}
+                            onLoad={() => setImageLoading(false)}
+                            onError={() => setImageLoading(false)}
+                            ref={(img) => {
+                              // Check if image is already loaded when ref is set
+                              if (img && img.complete && img.naturalHeight !== 0) {
+                                setImageLoading(false);
+                              }
+                            }}
+                          />
                         ) : uploadedFile ? (
                           <div className="w-full h-full flex items-center justify-center bg-muted">
                             <Camera className="h-12 w-12 text-muted-foreground" />
@@ -788,24 +1014,162 @@ export function DashboardClient({
                           <Button
                             variant="secondary"
                             size="sm"
+                            disabled={uploading}
                             onClick={() => {
+                              if (!user) {
+                                toast({ 
+                                  title: "Authentication Required", 
+                                  description: "Please sign in to upload food images.", 
+                                  variant: "destructive" 
+                                });
+                                router.push("/auth");
+                                return;
+                              }
+                              
                               const input = document.createElement("input");
                               input.type = "file";
-                              input.accept = "image/png, image/jpeg, image/jpg, image/heic, image/heif";
-                              input.onchange = async () => {
-                                const file = input.files?.[0];
-                                if (!file || !user) return;
-                                try {
-                                  const { path, publicUrl, signedUrl } = await uploadFoodImage(file, user.id);
-                                  setUploadedFile(file);
-                                  setUploadedImageUrl(signedUrl || publicUrl);
-                                  setUploadedImagePath(path);
-                                } catch (e) {
-                                  console.error(e);
-                                  toast({ title: "Error", description: "Failed to upload image.", variant: "destructive" });
+                              input.accept = "image/png,image/jpeg,image/jpg,image/heic,image/heif";
+                              // Don't set capture attribute - let user choose between camera and gallery
+                              input.style.display = "none"; // Hide but keep in DOM for mobile compatibility
+                              
+                              // Add to DOM temporarily for mobile browsers (especially iOS Safari)
+                              document.body.appendChild(input);
+                              
+                              // Define cleanup function first
+                              const cleanup = () => {
+                                input.removeEventListener('change', handleFileChange);
+                                input.onchange = null;
+                                input.value = '';
+                                if (input.parentNode) {
+                                  input.parentNode.removeChild(input);
                                 }
                               };
-                              input.click();
+                              
+                              const handleFileChange = async (e: Event) => {
+                                try {
+                                  console.log('File change event triggered', e);
+                                  const target = e.target as HTMLInputElement;
+                                  const file = target.files?.[0];
+                                  
+                                  console.log('Selected file:', file ? { name: file.name, type: file.type, size: file.size } : 'No file');
+                                  
+                                  if (!file) {
+                                    // User cancelled or no file selected
+                                    console.log('No file selected, cleaning up');
+                                    cleanup();
+                                    return;
+                                  }
+                                  
+                                  if (!user) {
+                                    toast({ 
+                                      title: "Authentication Required", 
+                                      description: "Please sign in to upload food images.", 
+                                      variant: "destructive" 
+                                    });
+                                    cleanup();
+                                    return;
+                                  }
+                                  
+                                  // Validate file type - be more lenient for mobile cameras
+                                  const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/heic', 'image/heif', 'image/webp'];
+                                  const validExtensions = /\.(png|jpg|jpeg|heic|heif|webp)$/i;
+                                  const isValidType = validTypes.includes(file.type) || file.name.match(validExtensions);
+                                  
+                                  // On mobile, file.type might be empty, so rely on extension
+                                  if (!isValidType && file.type && file.type !== '') {
+                                    console.warn('File type validation failed:', file.type, file.name);
+                                    toast({
+                                      title: "Invalid File Type",
+                                      description: "Please select a valid image file (PNG, JPG, HEIC)",
+                                      variant: "destructive",
+                                    });
+                                    cleanup();
+                                    return;
+                                  }
+                                  
+                                  console.log('File validated, processing...');
+                                  
+                                  // Clean up previous preview if exists
+                                  if (previewUrl) {
+                                    URL.revokeObjectURL(previewUrl);
+                                  }
+                                  
+                                  // Set file and show preview immediately
+                                  setUploadedFile(file);
+                                  
+                                  // Show preview immediately from file blob
+                                  const objectUrl = URL.createObjectURL(file);
+                                  console.log('Created object URL:', objectUrl);
+                                  setPreviewUrl(objectUrl);
+                                  setImageLoading(true); // Start loading state for image rendering
+                                  
+                                  // Upload the image in the background
+                                  try {
+                                    console.log('Starting upload...');
+                                    setUploading(true);
+                                    
+                                    // Ensure we have a valid user (session might have refreshed)
+                                    const currentUser = authUser || user;
+                                    if (!currentUser?.id) {
+                                      throw new Error('Session expired. Please refresh the page.');
+                                    }
+                                    
+                                    const { path, publicUrl, signedUrl } = await uploadFoodImage(file, currentUser.id);
+                                    console.log('Upload successful:', { path, publicUrl });
+                                    setUploadedImageUrl(signedUrl || publicUrl);
+                                    setUploadedImagePath(path);
+                                  } catch (e: any) {
+                                    console.error("Upload error:", e);
+                                    toast({ 
+                                      title: "Upload Failed", 
+                                      description: e?.message || "Failed to upload image. Please try again.", 
+                                      variant: "destructive" 
+                                    });
+                                    // Clear file on error
+                                    setUploadedFile(null);
+                                    setPreviewUrl((prevUrl) => {
+                                      if (prevUrl) {
+                                        URL.revokeObjectURL(prevUrl);
+                                      }
+                                      return null;
+                                    });
+                                  } finally {
+                                    setUploading(false);
+                                  }
+                                  
+                                  cleanup();
+                                } catch (error: any) {
+                                  console.error("File processing error:", error);
+                                  toast({
+                                    title: "Error Processing File",
+                                    description: error?.message || "Failed to process the selected image. Please try again.",
+                                    variant: "destructive",
+                                  });
+                                  cleanup();
+                                }
+                              };
+                      
+                      // Use addEventListener only (onchange is redundant and causes double-firing)
+                      input.addEventListener('change', handleFileChange, { once: true });
+                      
+                      // Trigger file picker
+                      // Use setTimeout to ensure input is in DOM before clicking (mobile fix)
+                      setTimeout(() => {
+                        try {
+                          input.click();
+                          console.log('File picker triggered');
+                        } catch (err) {
+                          console.error('Error triggering file picker:', err);
+                          toast({
+                            title: "Error",
+                            description: "Failed to open file picker. Please try again.",
+                            variant: "destructive",
+                          });
+                          if (input.parentNode) {
+                            input.parentNode.removeChild(input);
+                          }
+                        }
+                      }, 10);
                             }}
                           >
                             {t("dashboard.upload.change")}
@@ -818,16 +1182,23 @@ export function DashboardClient({
                       <Button
                         variant="outline"
                         size="sm"
+                        disabled={analyzing || uploading}
                         onClick={() => {
+                          if (previewUrl) {
+                            URL.revokeObjectURL(previewUrl);
+                          }
                           setUploadedFile(null);
                           setUploadedImageUrl(null);
                           setUploadedImagePath(null);
+                          setPreviewUrl(null);
+                          setImageLoading(false);
+                          setAnalyzing(false);
                         }}
                       >
-                        {t("dashboard.upload.remove")}
+                        Change Photo
                       </Button>
                       <Button
-                        disabled={analyzing}
+                        disabled={analyzing || uploading || !uploadedImageUrl}
                         onClick={async () => {
                           if (!uploadedImageUrl || !user || !uploadedImagePath) return;
                           try {
@@ -854,32 +1225,53 @@ export function DashboardClient({
                                 ...(result.insights ? { insights: result.insights } : {}),
                               },
                             });
-                            if (!subscription || subscription.subscription_type !== "premium") {
-                              try {
-                                const newCount = await decrementFreeScan();
-                                setFreeScanRemaining(newCount);
-                              } catch (error) {
-                                console.error("Failed to decrement free scans", error);
-                              }
-                            }
+                            
+                            // Navigate immediately for instant feedback
                             router.push(`/food-results?id=${scanId}`);
+                            
+                            // Cleanup and decrement free scans in the background (non-blocking)
+                            if (previewUrl) {
+                              URL.revokeObjectURL(previewUrl);
+                            }
                             setUploadedFile(null);
                             setUploadedImageUrl(null);
                             setUploadedImagePath(null);
+                            setPreviewUrl(null);
+                            setImageLoading(false);
                             setServings(1);
+                            
+                            // Decrement free scans in background (don't await - let it happen after navigation)
+                            if (!subscription || subscription.subscription_type !== "premium") {
+                              decrementFreeScan()
+                                .then((newCount) => {
+                                  setFreeScanRemaining(newCount);
+                                })
+                                .catch((error) => {
+                                  console.error("Failed to decrement free scans", error);
+                                });
+                            }
                           } catch (e) {
                             console.error(e);
                             toast({ title: t("dashboard.upload.error"), description: t("dashboard.upload.error.analyze"), variant: "destructive" });
-                          } finally {
                             setAnalyzing(false);
                           }
+                          // Don't reset analyzing here - let it stay until redirect
                         }}
-                        className="flex-1"
+                        className={`flex-1 ${
+                          (analyzing || uploading)
+                            ? "bg-green-400 hover:bg-green-400 cursor-not-allowed" 
+                            : ""
+                        }`}
                       >
-                        {analyzing ? (
+                        {uploading ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            {t("dashboard.upload.analyzing")}
+                            Uploading...
+                          </>
+                        ) : analyzing ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Analyzing
                           </>
                         ) : (
                           t("dashboard.upload.analyze")
@@ -960,18 +1352,13 @@ export function DashboardClient({
           </div>
 
           {/* Right Section: Sponsored Section with TinyAds (for both free and premium) */}
-          <Card className="flex flex-col">
-            <CardHeader className="pb-1 px-8" style={{ minHeight: '80px' }}>
-              <CardTitle>{t("dashboard.sponsors.title")}</CardTitle>
-              <CardDescription>{t("dashboard.sponsors.description")}</CardDescription>
+          <Card className="flex flex-col w-full self-start">
+            <CardHeader className="pb-2 sm:pb-1 px-4 sm:px-6 md:px-8">
+              <CardTitle className="text-base sm:text-lg md:text-xl">{t("dashboard.sponsors.title")}</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">{t("dashboard.sponsors.description")}</CardDescription>
             </CardHeader>
-            <CardContent className="p-0 flex flex-col">
-              <div className="flex flex-col w-full">
-                <div
-                  className="w-full"
-                  id="sponsor-iframe-container"
-                  style={{ height: `${iframeHeight}px`, minHeight: `${iframeHeight}px` }}
-                >
+            <CardContent className="p-2 sm:p-4 pb-4">
+              <div className="w-full" id="sponsor-iframe-container">
                   <iframe
                     ref={iframeRef}
                     width="100%"
@@ -987,13 +1374,11 @@ export function DashboardClient({
                       minHeight: `${iframeHeight}px`,
                       margin: 0, 
                       padding: 0,
-                      overflow: "visible",
                     }}
                     title="Advertisements"
                     scrolling="yes"
                     allow="autoplay; encrypted-media"
                   />
-                </div>
               </div>
             </CardContent>
           </Card>

@@ -53,6 +53,14 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
+                <a
+                  href="mailto:hi@whatthefood.io"
+                  className="hover:text-primary transition-colors"
+                >
+                  {t("footer.contactsupport")}
+                </a>
+              </li>
+              <li>
                 <Link href="/features" className="hover:text-primary transition-colors">
                   Features
                 </Link>

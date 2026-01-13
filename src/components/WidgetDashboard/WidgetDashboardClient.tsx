@@ -1146,7 +1146,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           description: "To delete widgets, please upgrade to a premium plan.",
           variant: "destructive",
         });
-        router.push("/plans");
+        window.location.href = "/plans";
         return;
       }
     } catch (error) {
@@ -1900,7 +1900,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                     Free plan allows 1 widget. Upgrade to create unlimited widgets and access premium features.
                   </p>
                     </div>
-                <Button onClick={() => router.push("/plans")} className="text-sm px-6">
+                <Button onClick={() => window.location.href = "/plans"} className="text-sm px-6">
                   {t("widgetdashboard.premium.upgrade")} <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
               </div>
@@ -1918,7 +1918,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                         {t("widgetdashboard.premium.description")}
                       </p>
                     </div>
-                    <Button onClick={() => router.push("/plans")} className="text-sm px-6">
+                    <Button onClick={() => window.location.href = "/plans"} className="text-sm px-6">
                       {t("widgetdashboard.premium.upgrade")} <ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   </div>
@@ -2167,7 +2167,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                   <p className="text-muted-foreground mb-4">
                     You&apos;ve reached the free plan limit of 1 widget. Upgrade to create more widgets and access premium features.
                   </p>
-                  <Button onClick={() => router.push("/plans")} size="lg">
+                  <Button onClick={() => window.location.href = "/plans"} size="lg">
                     Upgrade to Premium <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </CardContent>

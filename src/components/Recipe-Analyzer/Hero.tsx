@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeFood, saveScanHistory, uploadFoodImage } from "@/utils/foodScan";
-import { decrementFreeScan, hasFreeScanAvailable, getFreeScanStatus, getCachedScanStatusSync } from "@/utils/freeScanLimit";
+import { decrementFreeScan, hasFreeScanAvailable, getFreeScanStatus } from "@/utils/freeScanLimit";
 import { hasActivePremiumSubscription } from "@/utils/subscription";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -54,7 +54,7 @@ export default function Hero() {
           // Only check scans if NOT premium
           if (!premium) {
             try {
-              const status = await getFreeScanStatus(true); // Force refresh
+              const status = await getFreeScanStatus(); // Always fetches from database
               setRemainingScans(status.remaining);
               setScanStatusType(status.type);
             } catch (error) {
@@ -69,7 +69,7 @@ export default function Hero() {
           
           // Fallback: check scans
           try {
-            const status = await getFreeScanStatus(true); // Force refresh
+            const status = await getFreeScanStatus(); // Always fetches from database
             setRemainingScans(status.remaining);
             setScanStatusType(status.type);
           } catch (err) {
@@ -82,7 +82,7 @@ export default function Hero() {
 
         // Check scans for non-logged-in users
       try {
-          const status = await getFreeScanStatus(true); // Force refresh
+          const status = await getFreeScanStatus(); // Always fetches from database
         setRemainingScans(status.remaining);
         setScanStatusType(status.type);
       } catch (error) {

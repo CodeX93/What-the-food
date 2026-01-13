@@ -63,7 +63,7 @@ export function BillingClient({
         setUser(session.user);
 
         const { data: subData } = await supabase
-          .from("subscriptions")
+          .from("platform_subscriptions")
           .select("*")
           .eq("user_id", session.user.id)
           .maybeSingle();
@@ -202,7 +202,7 @@ export function BillingClient({
                 </Button>
               )}
 
-              <Button variant="outline" onClick={() => router.push("/plans")}>
+              <Button variant="outline" onClick={() => window.location.href = "/plans"}>
                 View All Plans
               </Button>
             </div>

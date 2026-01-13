@@ -299,7 +299,7 @@ export function SavedRecipesClient({ initialSubscription = null }: SavedRecipesC
                   {t("savedrecipes.premium.upgrade")}
                 </p>
                 <Button
-                  onClick={() => router.push("/plans")}
+                  onClick={() => window.location.href = "/plans"}
                   className="w-full sm:w-auto"
                 >
                   <Sparkles className="h-4 w-4 mr-2" />

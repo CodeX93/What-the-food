@@ -43,7 +43,7 @@ export function CheckoutSuccessClient() {
           description: "No checkout session found.",
           variant: "destructive",
         });
-        router.push("/plans");
+        window.location.href = "/plans";
         return;
       }
 
@@ -57,7 +57,7 @@ export function CheckoutSuccessClient() {
           return;
         }
 
-        const tableName = "platform_subscriptions";
+        const tableName = "platform_subscriptions" as any;
         let attempts = 0;
         const maxAttempts = 10;
 
@@ -280,7 +280,7 @@ export function CheckoutSuccessClient() {
             <Button
               variant="outline"
               className="w-full"
-                onClick={() => router.push("/plans")}
+                onClick={() => window.location.href = "/plans"}
             >
               View Plans
             </Button>

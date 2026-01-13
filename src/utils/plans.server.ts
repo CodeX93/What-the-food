@@ -24,7 +24,7 @@ function parseFeatures(features: any): string[] {
 }
 
 export async function fetchActivePlatformPlansServer() {
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("platform_plans")
     .select("*")

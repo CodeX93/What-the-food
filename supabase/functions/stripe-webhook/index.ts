@@ -109,12 +109,27 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Log all headers for debugging (don't log sensitive values)
+    const allHeaders: Record<string, string> = {};
+    req.headers.forEach((value, key) => {
+      // Don't log sensitive headers
+      if (!key.toLowerCase().includes('authorization') && !key.toLowerCase().includes('cookie')) {
+        allHeaders[key] = value;
+      }
+    });
+    console.log('Request headers:', allHeaders);
+
     // Verify webhook signature first (before any other checks)
+    // Stripe webhooks don't use Authorization headers - they use stripe-signature
     const signature = req.headers.get('stripe-signature');
     if (!signature) {
-      console.error('Missing stripe-signature header');
+      console.error('Missing stripe-signature header - this is required for Stripe webhooks');
+      console.error('Note: Stripe webhooks do NOT require Authorization headers');
       return new Response(
-        JSON.stringify({ error: 'Missing stripe-signature header' }),
+        JSON.stringify({ 
+          error: 'Missing stripe-signature header',
+          message: 'This endpoint expects Stripe webhook events with stripe-signature header'
+        }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -158,9 +173,13 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Read body and verify webhook signature (async version for Deno)
+    // Note: Body may be raw text (from Stripe) or JSON (from Next.js proxy)
     const body = await req.text();
     
     try {
+      // Verify webhook signature
+      // If coming from Next.js proxy, the signature is already verified there
+      // but we verify again here for security
       const event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
 
       console.log(`Processing webhook event: ${event.type}`, {
@@ -221,18 +240,54 @@ Deno.serve(async (req) => {
           await handleSubscriptionDeleted(stripe, supabase, event.data.object);
           break;
 
+        // Handle invoice events (Stripe sends these automatically)
+        case 'invoice.paid':
+        case 'invoice.payment_succeeded':
+          console.log(`Processing ${event.type}:`, event.data.object.id);
+          // These are handled by subscription events, but we acknowledge them
+          break;
+
+        case 'invoice.payment_failed':
+          console.log(`Processing ${event.type}:`, event.data.object.id);
+          // Log but don't take action - subscription.updated will handle status changes
+          break;
+
+        // Handle payment intent events
+        case 'payment_intent.succeeded':
+        case 'payment_intent.payment_failed':
+          console.log(`Processing ${event.type}:`, event.data.object.id);
+          // Acknowledge but subscription events handle the actual updates
+          break;
+
+        // Handle customer events
+        case 'customer.created':
+        case 'customer.updated':
+        case 'customer.deleted':
+          console.log(`Processing ${event.type}:`, event.data.object.id);
+          // Acknowledge but subscription events handle the actual updates
+          break;
+
         default:
           console.log(`Unhandled event type: ${event.type}`);
+          // Still return 200 to acknowledge receipt and prevent retries
       }
 
-      return new Response(JSON.stringify({ received: true }), {
+      // Always return 200 to acknowledge receipt - Stripe will retry if we return error codes
+      return new Response(JSON.stringify({ received: true, eventType: event.type }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     } catch (sigError: any) {
-      console.error('Webhook signature verification failed:', sigError.message);
+      console.error('Webhook signature verification failed:', {
+        message: sigError.message,
+        stack: sigError.stack,
+      });
+      // Return 400 for signature errors (Stripe will retry, but won't spam)
       return new Response(
-        JSON.stringify({ error: 'Invalid webhook signature' }),
+        JSON.stringify({ 
+          error: 'Invalid webhook signature',
+          message: sigError.message 
+        }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -240,11 +295,25 @@ Deno.serve(async (req) => {
       );
     }
   } catch (error: any) {
-    console.error('Webhook error:', error);
+    console.error('Webhook error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    
+    // If it's a signature error, return 400
+    // Otherwise, return 200 to prevent Stripe from retrying non-signature errors
+    const isSignatureError = error.message?.includes('signature') || error.message?.includes('stripe-signature');
+    
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ 
+        error: error.message || 'Internal server error',
+        acknowledged: !isSignatureError // If not signature error, we acknowledge it
+      }),
       {
-        status: error.message?.includes('signature') ? 400 : 500,
+        // Return 200 for non-signature errors to prevent Stripe retries
+        // Return 400 only for signature errors
+        status: isSignatureError ? 400 : 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );

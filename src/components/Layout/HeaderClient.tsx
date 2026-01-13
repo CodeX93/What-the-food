@@ -39,41 +39,78 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { t } = useLanguage();
-  const { user, loading: authLoading, profile } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [open, setOpen] = useState(false);
-  const [fallbackProfile, setFallbackProfile] = useState<{ avatar_url: string | null; full_name: string | null } | null>(null);
+  const [profile, setProfile] = useState<{ avatar_url: string | null; full_name: string | null } | null>(null);
   const loading = authLoading && !initialUser;
 
-  // Use profile from auth context - it's fetched automatically and updates instantly
-  // Fallback to local state if we have initialUser but context hasn't loaded profile yet
   const currentUser = user || initialUser;
-  const profileAvatarUrl = profile?.avatar_url ?? fallbackProfile?.avatar_url ?? null;
-  const profileFullName = profile?.full_name ?? fallbackProfile?.full_name ?? null;
+  const profileAvatarUrl = profile?.avatar_url ?? null;
+  const profileFullName = profile?.full_name ?? null;
 
-  // Fallback: If we have initialUser but no profile from context, fetch it once
+  // Fetch profile when user is available
   useEffect(() => {
-    if (initialUser?.id && !profile && !fallbackProfile && !authLoading) {
-      // Quick fetch as fallback (should be rare)
-      (async () => {
+    const fetchProfile = async () => {
+      const userId = currentUser?.id;
+      if (!userId) {
+        setProfile(null);
+        return;
+      }
+
       try {
-          const { data: profileData } = await (supabase as any)
+        const { data: profileData, error: profileError } = await supabase
           .from("profiles")
           .select("avatar_url, full_name")
-            .eq("id", initialUser.id)
+          .eq("id", userId)
           .maybeSingle();
 
-          if (profileData) {
-            setFallbackProfile({
-              avatar_url: profileData.avatar_url || null,
-              full_name: profileData.full_name || null,
-            });
+        // If auth error, try refreshing session and retry
+        if (profileError && (
+          profileError.message?.includes('JWT') ||
+          profileError.message?.includes('expired') ||
+          profileError.message?.includes('invalid') ||
+          profileError.code === 'PGRST301' ||
+          profileError.code === '42501' ||
+          profileError.code === 'PGRST116'
+        )) {
+          console.log('HeaderClient: Auth error, refreshing session...');
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (!refreshError) {
+            // Retry after refresh
+            const { data: retryData } = await supabase
+              .from("profiles")
+              .select("avatar_url, full_name")
+              .eq("id", userId)
+              .maybeSingle();
+            
+            if (retryData) {
+              setProfile({
+                avatar_url: retryData.avatar_url || null,
+                full_name: retryData.full_name || null,
+              });
+            } else {
+              setProfile(null);
+            }
+            return;
+          }
+        }
+
+        if (profileData) {
+          setProfile({
+            avatar_url: profileData.avatar_url || null,
+            full_name: profileData.full_name || null,
+          });
+        } else {
+          setProfile(null);
         }
       } catch (error) {
-          console.error("HeaderClient: fallback profile fetch failed", error);
-        }
-      })();
-        }
-  }, [initialUser, profile, fallbackProfile, authLoading]);
+        console.error("HeaderClient: profile fetch failed", error);
+        setProfile(null);
+      }
+    };
+
+    fetchProfile();
+  }, [currentUser?.id, user?.id]); // Also depend on user.id to refetch when session refreshes
 
   const handleLogout = async () => {
     try {

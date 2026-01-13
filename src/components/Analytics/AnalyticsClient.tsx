@@ -86,7 +86,7 @@ export function AnalyticsClient() {
         }
 
         const { data: scansData, error: scansError } = await supabase
-          .from("scans")
+          .from("food_scans")
           .select("*")
           .eq("user_id", session.user.id);
 
@@ -94,7 +94,21 @@ export function AnalyticsClient() {
           throw scansError;
         }
 
-        const scans = (scansData as ScanRecord[] | null) || [];
+        // Map food_scans data to ScanRecord format
+        const scans: ScanRecord[] = (scansData || []).map((scan: any) => {
+          const nutrients = scan.result_json?.nutrients || {};
+          const servingMultiplier = scan.serving || 1;
+          
+          return {
+            id: scan.id,
+            user_id: scan.user_id,
+            created_at: scan.created_at,
+            calories: (nutrients.calories || 0) * servingMultiplier,
+            protein: (nutrients.protein_g || 0) * servingMultiplier,
+            carbs: (nutrients.carbohydrates_g || 0) * servingMultiplier,
+            fat: (nutrients.fat_g || 0) * servingMultiplier,
+          };
+        });
         const now = new Date();
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
         const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -199,7 +213,7 @@ export function AnalyticsClient() {
       const totals = manualData.totals || {};
       const dishName = `Manual Input: ${foods.join(", ")}`.slice(0, 200);
 
-      const { error: insertError } = await (supabase as any).from("scans").insert({
+      const { error: insertError } = await (supabase as any).from("food_scans").insert({
         user_id: session.user.id,
         dish_name: dishName,
         calories: Math.round(totals.calories ?? 0),
