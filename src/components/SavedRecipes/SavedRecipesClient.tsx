@@ -49,11 +49,7 @@ export function SavedRecipesClient({ initialSubscription = null }: SavedRecipesC
   const [activePreset, setActivePreset] = useState<string>("all");
 
   useEffect(() => {
-    if (!isPremium) {
-      setLoading(false);
-      return;
-    }
-
+    // Recipes page is free - no premium gate
     const fetchRecipes = async () => {
       try {
         const {
@@ -264,52 +260,6 @@ export function SavedRecipesClient({ initialSubscription = null }: SavedRecipesC
     return (
       <main className="flex-1 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-      </main>
-    );
-  }
-
-  if (!isPremium) {
-    return (
-      <main className="flex-1">
-        <div className="container mx-auto px-4 py-8">
-          <Button
-            variant="ghost"
-            onClick={() => router.push("/dashboard")}
-            className="mb-6"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            {t("savedrecipes.back")}
-          </Button>
-
-          <div className="max-w-2xl mx-auto">
-            <Card className="border-primary/20 bg-primary/5">
-              <CardHeader className="text-center pb-4">
-                <div className="flex justify-center mb-4">
-                  <div className="p-4 rounded-full bg-primary/10">
-                    <Lock className="h-12 w-12 text-primary" />
-                  </div>
-                </div>
-                <CardTitle className="text-2xl mb-2">{t("savedrecipes.premium.title")}</CardTitle>
-                <CardDescription className="text-base">
-                  {t("savedrecipes.premium.description")}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="text-center space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  {t("savedrecipes.premium.upgrade")}
-                </p>
-                <Button
-                  onClick={() => window.location.href = "/plans"}
-                  className="w-full sm:w-auto"
-                >
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  {t("savedrecipes.premium.button")}
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
       </main>
     );
   }

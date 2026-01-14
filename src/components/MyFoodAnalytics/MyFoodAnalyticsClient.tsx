@@ -30,6 +30,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/hooks/use-translation";
 import { useAuth } from "@/contexts/AuthContext";
 import { DataCache, CACHE_DURATION } from "@/utils/dataCache";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type ManualItem = {
   name?: string;
@@ -568,66 +569,29 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
   // Get daily requirements
   const dailyRequirements = useMemo(() => calculateDailyRequirements(profile), [profile]);
 
-  if (!isPremium) {
-    return (
-      <main className="flex-1 bg-gradient-to-b from-background via-background to-muted/30">
-        <div className="container mx-auto px-4 py-16">
-          <Card className="max-w-2xl mx-auto border-primary/30 bg-background/80 backdrop-blur">
-            <CardHeader className="text-center space-y-4">
-              <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                <Lock className="h-7 w-7 text-primary" />
-              </div>
-              <div className="space-y-2">
-                <CardTitle className="text-3xl">{t("analytics.premium.title")}</CardTitle>
-                <CardDescription className="text-base">
-                  {t("analytics.premium.description")}
-                </CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6 text-left">
-              <div className="grid sm:grid-cols-2 gap-4">
-                {[
-                  {
-                    icon: <ShieldCheck className="h-5 w-5 text-primary" />,
-                    title: t("analytics.premium.feature1.title"),
-                    body: t("analytics.premium.feature1.body"),
-                  },
-                  {
-                    icon: <Sparkles className="h-5 w-5 text-primary" />,
-                    title: t("analytics.premium.feature2.title"),
-                    body: t("analytics.premium.feature2.body"),
-                  },
-                ].map((feature) => (
-                  <div
-                    key={feature.title}
-                    className="p-4 rounded-xl border border-primary/20 bg-primary/5 flex flex-col gap-2"
-                  >
-                    <div className="flex items-center gap-2 font-semibold text-sm">
-                      {feature.icon}
-                      {feature.title}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{feature.body}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="text-center">
-                <Button size="lg" className="px-8" onClick={() => window.location.href = "/plans"}>
-                  {t("analytics.premium.upgrade")} <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-                <p className="text-sm text-muted-foreground mt-3">
-                  {t("analytics.premium.refresh")}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    );
-  }
-
   return (
     <main className="flex-1">
       <div className="container mx-auto px-4 py-8">
+        {/* Paywall Bar for Free Users */}
+        {!isPremium && (
+          <Alert className="mb-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
+            <TrendingUp className="h-4 w-4 text-primary flex-shrink-0" />
+            <AlertTitle className="font-semibold text-base sm:text-lg mb-2">Premium feature</AlertTitle>
+            <AlertDescription className="mt-1 text-sm sm:text-base">
+              <p className="mb-3">
+                Upgrade to a premium plan to view your complete food analytics.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-primary hover:bg-primary-hover text-white border-primary"
+                onClick={() => router.push("/plans")}
+              >
+                Upgrade to Premium
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <Button variant="ghost" onClick={() => router.push("/dashboard")} className="px-2">

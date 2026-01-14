@@ -18,7 +18,7 @@ export async function HeaderServer() {
           <Logo />
         </Link>
         <div className="hidden md:flex flex-1">
-          <NavigationLinks className="ml-6 flex items-center space-x-6" />
+          <NavigationLinks className="ml-6 flex items-center space-x-6" isLoggedIn={!!user} />
         </div>
         <div className="flex-1 md:flex-none flex justify-end">
           <HeaderClient initialUser={user} />

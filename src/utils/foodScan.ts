@@ -48,20 +48,26 @@ export async function uploadFoodImage(file: File, userId: string): Promise<{ pat
   const filename = `${Date.now()}.${ext}`;
   const path = `${userId}/${filename}`;
 
-  // Ensure session is fresh before upload
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError || !session) {
-    // Try to refresh session
-    const { error: refreshError } = await supabase.auth.refreshSession();
-    if (refreshError) {
-      throw new Error('Session expired. Please refresh the page and try again.');
-    }
-  }
+  // Check if this is a guest user (temp user ID)
+  const isGuestUser = userId.startsWith('temp_');
   
-  // Get fresh session after potential refresh
-  const { data: { session: currentSession } } = await supabase.auth.getSession();
-  if (!currentSession) {
-    throw new Error('No active session');
+  // Only check session for authenticated users
+  if (!isGuestUser) {
+    // Ensure session is fresh before upload
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !session) {
+      // Try to refresh session
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        throw new Error('Session expired. Please refresh the page and try again.');
+      }
+    }
+    
+    // Get fresh session after potential refresh
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+    if (!currentSession) {
+      throw new Error('No active session');
+    }
   }
 
   const { error: upErr } = await supabase.storage.from("FoodScans").upload(path, file, {
@@ -69,13 +75,19 @@ export async function uploadFoodImage(file: File, userId: string): Promise<{ pat
     cacheControl: "3600",
   });
   
-  // If upload fails due to auth error, try refreshing session and retry once
+  // If upload fails due to auth error, try refreshing session and retry once (only for authenticated users)
   if (upErr && (
     upErr.message?.includes('JWT') ||
     upErr.message?.includes('expired') ||
     upErr.message?.includes('invalid') ||
     upErr.message?.includes('access control')
   )) {
+    // For guest users, storage bucket might not allow anonymous uploads
+    // In that case, we should handle it differently or show a helpful error
+    if (isGuestUser) {
+      throw new Error('Unable to upload image. Please sign up to continue.');
+    }
+    
     console.log('Upload failed due to auth error, refreshing session...');
     // Get current session and refresh it
     const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -96,10 +108,30 @@ export async function uploadFoodImage(file: File, userId: string): Promise<{ pat
 
   const { data: pub } = supabase.storage.from("FoodScans").getPublicUrl(path);
   const publicUrl = pub.publicUrl;
-  // OPTIMIZATION: Skip createSignedUrl here to avoid auth checks that can delay uploads
-  // Signed URLs can be generated on-demand when needed using getFreshImageUrl()
-  // This makes uploads instant since we only do the essential upload operation
-  return { path, publicUrl };
+  
+  // We MUST create a signed URL for ALL users because the bucket is private
+  // and the edge function needs to fetch the image. Without a signed URL, the edge function
+  // will get a 400 error when trying to fetch the image.
+  // This applies to both guest users and registered users.
+  // The previous optimization of skipping signed URLs for registered users caused issues
+  // when the bucket is private, so we now always create signed URLs.
+  let signedUrl: string | undefined;
+  const { data: signed, error: signedError } = await supabase.storage
+    .from("FoodScans")
+    .createSignedUrl(path, 60 * 60); // 1 hour expiry
+  
+  if (signedError || !signed?.signedUrl) {
+    // Signed URL is required for the edge function to access the image
+    // Throw error for all users if we can't create it
+    throw new Error(
+      signedError?.message || 
+      'Failed to create signed URL for image. Please try again.'
+    );
+  }
+  
+  signedUrl = signed.signedUrl;
+  
+  return { path, publicUrl, signedUrl };
 }
 
 export async function analyzeFood(

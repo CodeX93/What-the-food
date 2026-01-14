@@ -1,8 +1,9 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Upload, Loader2, Sparkles, ShieldCheck, Timer } from "lucide-react";
+import { Upload, Loader2, Sparkles, ShieldCheck, Timer, AlertCircle, Lock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
@@ -24,6 +25,7 @@ export default function Hero() {
   const [scanStatusType, setScanStatusType] = useState<"registered" | "unregistered" | null>(null);
   // OPTIMIZATION: Start with false to avoid "Checking benefits..." blocking state
   const [isPremium, setIsPremium] = useState<boolean>(false);
+  const [freePeriodEndDate, setFreePeriodEndDate] = useState<Date | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
@@ -76,6 +78,23 @@ export default function Hero() {
               console.log('[DEBUG] Free scan status:', status);
               setRemainingScans(status.remaining);
               setScanStatusType(status.type);
+              
+              // Fetch profile to get account creation date for registered users
+              if (status.type === "registered") {
+                const { data: profile } = await supabase
+                  .from("profiles")
+                  .select("created_at")
+                  .eq("id", authUser.id)
+                  .maybeSingle();
+                
+                if (profile?.created_at) {
+                  // Calculate 3 days from account creation
+                  const accountCreatedAt = new Date(profile.created_at);
+                  const threeDaysLater = new Date(accountCreatedAt);
+                  threeDaysLater.setDate(threeDaysLater.getDate() + 3);
+                  setFreePeriodEndDate(threeDaysLater);
+                }
+              }
             } catch (error) {
               console.error("Failed to load free scan status", error);
               setRemainingScans(3);
@@ -91,6 +110,23 @@ export default function Hero() {
             const status = await getFreeScanStatus(); // Always fetches from database
             setRemainingScans(status.remaining);
             setScanStatusType(status.type);
+            
+            // Fetch profile to get account creation date for registered users
+            if (status.type === "registered") {
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("created_at")
+                .eq("id", authUser.id)
+                .maybeSingle();
+              
+              if (profile?.created_at) {
+                // Calculate 3 days from account creation
+                const accountCreatedAt = new Date(profile.created_at);
+                const threeDaysLater = new Date(accountCreatedAt);
+                threeDaysLater.setDate(threeDaysLater.getDate() + 3);
+                setFreePeriodEndDate(threeDaysLater);
+              }
+            }
           } catch (err) {
           setRemainingScans(3);
             setScanStatusType('registered');
@@ -599,7 +635,19 @@ export default function Hero() {
               ) : remainingScans === null ? (
                 t("hero.checkingscans")
               ) : remainingScans > 0 ? (
-                `${remainingScans} ${t("hero.scansremaining")}`
+                (() => {
+                  const scansText = `${remainingScans} ${t("hero.scansremaining")}`;
+                  // For registered free users, add the date
+                  if (scanStatusType === "registered" && freePeriodEndDate) {
+                    const formattedDate = freePeriodEndDate.toLocaleDateString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric',
+                      year: 'numeric'
+                    });
+                    return `${scansText} before ${formattedDate}`;
+                  }
+                  return scansText;
+                })()
               ) : (
                 t("hero.allscansused")
               )
@@ -876,7 +924,17 @@ export default function Hero() {
                   ) : remainingScans > 0 ? (
                     (() => {
                       console.log('[DEBUG] Rendering remainingScans:', remainingScans);
-                      return `${remainingScans} ${t("hero.scansremaining")}`;
+                      const scansText = `${remainingScans} ${t("hero.scansremaining")}`;
+                      // For registered free users, add the date
+                      if (scanStatusType === "registered" && freePeriodEndDate) {
+                        const formattedDate = freePeriodEndDate.toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric',
+                          year: 'numeric'
+                        });
+                        return `${scansText} before ${formattedDate}`;
+                      }
+                      return scansText;
                     })()
                   ) : (
                     t("hero.allscansused")
@@ -948,18 +1006,60 @@ export default function Hero() {
               <Card className="dark:border-white" ref={uploadContainerRef}>
                 <CardContent className="p-4 sm:p-6 md:p-8">
                   {!previewUrl ? (
-                    <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card hover:border-primary/50 transition-colors">
-                      <Upload className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
-                      <p className="text-base sm:text-lg font-medium mb-2 text-center">{t("hero.uploadfoodphoto")}</p>
-                      <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 text-center">
-                        {t("hero.dropimage")}
-                      </p>
-                      <div className="flex justify-center">
-                        <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" onClick={onChooseFile} disabled={uploading}>
-                          {t("hero.choosefile")}
-                        </Button>
+                    // Check if guest user has consumed their free scan
+                    !user && scanStatusType === "unregistered" && remainingScans === 0 ? (
+                      <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 bg-gradient-card">
+                        <AlertCircle className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
+                        <p className="text-base sm:text-lg font-medium mb-2 text-center">
+                          ⚠️ You already scanned a meal!
+                        </p>
+                        <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6 text-center">
+                          Continue with email to unlock 1 more scan and see how your meals add up.
+                        </p>
+                        <div className="flex justify-center">
+                          <Button 
+                            size="lg" 
+                            className="bg-primary hover:bg-primary-hover text-sm sm:text-base" 
+                            onClick={() => router.push("/auth")}
+                          >
+                            Continue with free account
+                          </Button>
+                        </div>
                       </div>
-                    </div>
+                    ) : // Check if free registered user has consumed their scans (3 scans OR 3 days, whichever comes first)
+                    user && !isPremium && scanStatusType === "registered" && remainingScans === 0 ? (
+                      <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 bg-gradient-card">
+                        <Lock className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
+                        <p className="text-base sm:text-lg font-medium mb-2 text-center">
+                          You've tracked 3 meals.
+                        </p>
+                        <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6 text-center">
+                          Patterns are starting to form. Unlock analytics to see them.
+                        </p>
+                        <div className="flex justify-center">
+                          <Button 
+                            size="lg" 
+                            className="bg-primary hover:bg-primary-hover text-sm sm:text-base" 
+                            onClick={() => router.push("/plans")}
+                          >
+                            Unlock analytics
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card hover:border-primary/50 transition-colors">
+                        <Upload className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
+                        <p className="text-base sm:text-lg font-medium mb-2 text-center">{t("hero.uploadfoodphoto")}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 text-center">
+                          {t("hero.dropimage")}
+                        </p>
+                        <div className="flex justify-center">
+                          <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" onClick={onChooseFile} disabled={uploading}>
+                            {t("hero.choosefile")}
+                          </Button>
+                        </div>
+                      </div>
+                    )
                   ) : (
                     <div className="space-y-4">
                       <div className="relative rounded-lg overflow-hidden bg-muted/30">

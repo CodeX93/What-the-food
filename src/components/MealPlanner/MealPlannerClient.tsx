@@ -21,7 +21,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/hooks/use-translation";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { ArrowLeft, Loader2, Lock, ShieldCheck, Sparkles, ArrowRight, Calendar, BookOpen, Trash2 } from "lucide-react";
+import { ArrowLeft, Loader2, Lock, ShieldCheck, Sparkles, ArrowRight, Calendar, BookOpen, Trash2, UtensilsCrossed } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { MealPlannerForm, MealPlannerFormData } from "./MealPlannerForm";
 import { MealPlanResults } from "./MealPlanResults";
 
@@ -124,6 +125,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [planToDelete, setPlanToDelete] = useState<string | null>(null);
   const [deletingPlan, setDeletingPlan] = useState(false);
+  const [showPaywallModal, setShowPaywallModal] = useState(false);
   const savedPlansRef = useRef<HTMLDivElement>(null);
 
   // Form state - keeping old state for backward compatibility with saved plans
@@ -905,63 +907,6 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
 
   const displayPlan = isEditingMeals && editablePlan ? editablePlan : mealPlan;
 
-  if (!isPremium) {
-    return (
-      <main className="flex-1 bg-white dark:bg-[#000000] min-h-screen">
-        <div className="container mx-auto px-4 py-16">
-          <Card className="max-w-2xl mx-auto border-primary/30 bg-background/80 backdrop-blur">
-            <CardHeader className="text-center space-y-4">
-              <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                <Lock className="h-7 w-7 text-primary" />
-              </div>
-              <div className="space-y-2">
-                <CardTitle className="text-3xl">{t("mealplanner.premium.title")}</CardTitle>
-                <CardDescription className="text-base">
-                  {t("mealplanner.premium.description")}
-                </CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6 text-left">
-              <div className="grid sm:grid-cols-2 gap-4">
-                {[
-                  {
-                    icon: <ShieldCheck className="h-5 w-5 text-primary" />,
-                    title: t("mealplanner.premium.feature1.title"),
-                    body: t("mealplanner.premium.feature1.body"),
-                  },
-                  {
-                    icon: <Sparkles className="h-5 w-5 text-primary" />,
-                    title: t("mealplanner.premium.feature2.title"),
-                    body: t("mealplanner.premium.feature2.body"),
-                  },
-                ].map((feature) => (
-                  <div
-                    key={feature.title}
-                    className="p-4 rounded-xl border border-primary/20 bg-primary/5 flex flex-col gap-2"
-                  >
-                    <div className="flex items-center gap-2 font-semibold text-sm">
-                      {feature.icon}
-                      {feature.title}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{feature.body}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="text-center">
-                <Button size="lg" className="px-8" onClick={() => window.location.href = "/plans"}>
-                  {t("mealplanner.premium.upgrade")} <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-                <p className="text-sm text-muted-foreground mt-3">
-                  {t("mealplanner.premium.refresh")}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    );
-  }
-
   if (loading) {
     return (
       <main className="flex-1 flex items-center justify-center bg-white dark:bg-[#000000] min-h-screen">
@@ -973,6 +918,26 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
   return (
     <main className="flex-1 bg-green-50 dark:bg-background min-h-screen">
       <div className="container mx-auto px-4 py-8">
+        {/* Paywall Bar for Free Users */}
+        {!isPremium && (
+          <Alert className="mb-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
+            <UtensilsCrossed className="h-4 w-4 text-primary flex-shrink-0" />
+            <AlertTitle className="font-semibold text-base sm:text-lg mb-2">Start eating smarter.</AlertTitle>
+            <AlertDescription className="mt-1 text-sm sm:text-base">
+              <p className="mb-3">
+                Your meal planner adapts to what you actually eat, not generic plans. Go premium to unlock planning based on your special diet preferences and health goals.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-primary hover:bg-primary-hover text-white border-primary"
+                onClick={() => router.push("/plans")}
+              >
+                Create Your 1st Meal Plan
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="flex items-center gap-3 mb-8">
           <Button variant="ghost" onClick={() => handleNavigation("/dashboard")} className="px-2">
             <ArrowLeft className="h-5 w-5" />
@@ -993,7 +958,13 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
                   <Button
                     size="lg"
-                    onClick={() => setIsModalOpen(true)}
+                    onClick={() => {
+                      if (!isPremium) {
+                        setShowPaywallModal(true);
+                      } else {
+                        setIsModalOpen(true);
+                      }
+                    }}
                     className="w-full sm:w-auto min-w-[200px] bg-primary hover:bg-primary/90"
                   >
                     <Calendar className="h-5 w-5 mr-2" />
@@ -1139,6 +1110,47 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
             </div>
           </div>
         )}
+
+        {/* Paywall Modal for Free Users */}
+        <Dialog 
+          open={showPaywallModal} 
+          onOpenChange={() => {
+            // Prevent closing by clicking outside - require explicit action via buttons
+          }}
+        >
+          <DialogContent 
+            className="max-w-md" 
+            onPointerDownOutside={(e) => e.preventDefault()} 
+            onInteractOutside={(e) => e.preventDefault()}
+            onEscapeKeyDown={(e) => e.preventDefault()}
+          >
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold">Plan meals based on your preferences.</DialogTitle>
+              <DialogDescription className="text-base mt-2">
+                Unlock meal plans tailored to your fitness goals and dietary needs.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-3 mt-4">
+              <Button
+                onClick={() => {
+                  setShowPaywallModal(false);
+                  router.push("/plans");
+                }}
+                className="w-full bg-primary hover:bg-primary-hover text-white"
+                size="lg"
+              >
+                Unlock Meal Planning
+              </Button>
+              <Button
+                onClick={() => setShowPaywallModal(false)}
+                variant="outline"
+                className="w-full"
+              >
+                Cancel
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Modal for Meal Planner Form */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

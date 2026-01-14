@@ -5,21 +5,27 @@ import Link from "next/link";
 import type { Route } from "next";
 import { LanguageContext } from "@/contexts/LanguageContext";
 
-const navigationLinks: Array<{ href: Route; translationKey: string; defaultLabel: string; external?: boolean; showIndicator?: boolean }> = [
+const allNavigationLinks: Array<{ href: Route; translationKey: string; defaultLabel: string; external?: boolean; showIndicator?: boolean }> = [
   { href: "/features", translationKey: "nav.features", defaultLabel: "Features" },
   { href: "/how-it-works", translationKey: "nav.howitworks", defaultLabel: "How It Works" },
   { href: "/pricing", translationKey: "nav.pricing", defaultLabel: "Pricing" },
   { href: "/widget", translationKey: "nav.widget", defaultLabel: "Widget" },
   { href: "/blog", translationKey: "nav.blog", defaultLabel: "Blog" },
-  { href: "https://cloud.umami.is/share/Ax6TpdslJdkistST" as Route, translationKey: "nav.analytics", defaultLabel: "Analytics", external: true, showIndicator: true },
+];
+
+const loggedInNavigationLinks: Array<{ href: Route; translationKey: string; defaultLabel: string; external?: boolean; showIndicator?: boolean }> = [
+  { href: "/dashboard", translationKey: "nav.dashboard", defaultLabel: "Dashboard" },
+  { href: "/blog", translationKey: "nav.blog", defaultLabel: "Blog" },
+  { href: "/widget", translationKey: "nav.widget", defaultLabel: "Widget" },
 ];
 
 type NavigationLinksProps = {
   className?: string;
   onLinkClick?: () => void;
+  isLoggedIn?: boolean;
 };
 
-export function NavigationLinks({ className, onLinkClick }: NavigationLinksProps) {
+export function NavigationLinks({ className, onLinkClick, isLoggedIn = false }: NavigationLinksProps) {
   const [mounted, setMounted] = useState(false);
   const languageContext = useContext(LanguageContext);
   
@@ -28,12 +34,14 @@ export function NavigationLinks({ className, onLinkClick }: NavigationLinksProps
   }, []);
 
   // Get translation function if context is available, otherwise use default labels
-  const getLabel = (link: typeof navigationLinks[0]) => {
+  const getLabel = (link: typeof allNavigationLinks[0]) => {
     if (mounted && languageContext) {
       return languageContext.t(link.translationKey);
     }
     return link.defaultLabel;
   };
+
+  const navigationLinks = isLoggedIn ? loggedInNavigationLinks : allNavigationLinks;
 
   return (
     <nav className={className}>

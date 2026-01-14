@@ -42,11 +42,11 @@ export default function TermsPage() {
             <h3 className="text-xl font-semibold mt-6 mb-3">1.2. Freemium Access</h3>
             <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
               <li>
-                <strong>Initial Access:</strong> Users can perform 10 food scans without any obligation, sign-up, or
+                <strong>Initial Access:</strong> Users can perform 1 food scan without any obligation, sign-up, or
                 payment.
               </li>
               <li>
-                <strong>Continued Access:</strong> Once the 10-scan limit is reached, users must sign up for a totally
+                <strong>Continued Access:</strong> Once the 1-scan limit is reached, users must sign up for a totally
                 free account to continue using the Service.
               </li>
             </ul>
@@ -75,7 +75,7 @@ export default function TermsPage() {
                   <tbody className="[&_tr:last-child]:border-0">
                     <tr className="border-b border-slate-200 dark:border-slate-800">
                       <td className="p-4 align-middle font-medium">Usage Limit</td>
-                      <td className="p-4 align-middle text-muted-foreground">3 free scans per day.</td>
+                      <td className="p-4 align-middle text-muted-foreground">3 free scans lifetime (or 3 days, whichever comes first).</td>
                     </tr>
                     <tr className="border-b border-slate-200 dark:border-slate-800">
                       <td className="p-4 align-middle font-medium">Widget Access</td>

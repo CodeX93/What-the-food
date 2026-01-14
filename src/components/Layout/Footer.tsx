@@ -38,16 +38,6 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <a
-                  href="https://cloud.umami.is/share/Ax6TpdslJdkistST"
-                  target="_blank"
-                  rel="noopener noreferrer nofollow"
-                  className="hover:text-primary transition-colors"
-                >
-                  Analytics
-                </a>
-              </li>
-              <li>
                 <Link href="/blog" className="hover:text-primary transition-colors">
                   Blog
                 </Link>

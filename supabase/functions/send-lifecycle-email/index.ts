@@ -591,7 +591,7 @@ function generateSignupWelcomeEmailHTML(data: {
               </p>
               
               <p class="mobile-text" style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
-                Your free account is now active, granting you 3 complimentary food scans every day. This is a fantastic way to get started and experience the core functionality of WhatTheFood.
+                Your free account is now active, granting you 3 complimentary food scans lifetime (or 3 days, whichever comes first). This is a fantastic way to get started and experience the core functionality of WhatTheFood.
               </p>
               
               <p class="mobile-text" style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
@@ -746,7 +746,7 @@ function generateDowngradeEmailHTML(data: {
               </p>
               
               <p class="mobile-text" style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.6;">
-                After this date, your account will automatically revert to our free plan. You will still be able to use WhatTheFood, but your daily usage will be limited to 3 free scans per day.
+                After this date, your account will automatically revert to our free plan. You will still be able to use WhatTheFood, but your usage will be limited to 3 free scans lifetime (or 3 days, whichever comes first).
               </p>
               
               <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 30px 0; border-radius: 4px;">

@@ -13,8 +13,9 @@ const adminClient = createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_K
   },
 });
 
-const UNREGISTERED_LIMIT = 10;
-const REGISTERED_DAILY_LIMIT = 3;
+const UNREGISTERED_LIMIT = 1; // Guest users: 1 scan lifetime
+const REGISTERED_LIFETIME_LIMIT = 3; // Free users: 3 scans lifetime
+const REGISTERED_FREE_DAYS = 3; // Free users: 3 days from account creation
 const PREMIUM_UNLIMITED = -1; // -1 indicates unlimited scans for premium users
 const SESSION_COOKIE = "wtf_free_scan_session";
 const SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
@@ -30,15 +31,14 @@ function createJsonResponse(data: FreeScanResponse, init?: Parameters<typeof Nex
   return NextResponse.json(data, init);
 }
 
-function needsDailyReset(lastReset: string | null) {
-  if (!lastReset) return true;
-  const last = new Date(lastReset);
+/**
+ * Check if 3 days have passed since account creation
+ */
+function hasFreePeriodExpired(accountCreatedAt: string): boolean {
+  const created = new Date(accountCreatedAt);
   const now = new Date();
-  return (
-    last.getUTCFullYear() !== now.getUTCFullYear() ||
-    last.getUTCMonth() !== now.getUTCMonth() ||
-    last.getUTCDate() !== now.getUTCDate()
-  );
+  const daysDiff = (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24);
+  return daysDiff >= REGISTERED_FREE_DAYS;
 }
 
 /**
@@ -97,6 +97,27 @@ async function getUnregisteredRecord(sessionId: string): Promise<FreeScanRecord>
 }
 
 async function getRegisteredRecord(userId: string): Promise<FreeScanRecord> {
+  // First, get the user's account creation date from profiles table
+  const { data: profile, error: profileError } = await adminClient
+    .from("profiles")
+    .select("created_at")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileError) {
+    throw new Error(profileError.message);
+  }
+
+  if (!profile) {
+    throw new Error("User profile not found");
+  }
+
+  const accountCreatedAt = profile.created_at;
+
+  // Check if free period (3 days) has expired
+  const freePeriodExpired = hasFreePeriodExpired(accountCreatedAt);
+
+  // Get or create the free scan session record
   const { data, error } = await adminClient
     .from("free_scan_sessions")
     .select("*")
@@ -107,46 +128,45 @@ async function getRegisteredRecord(userId: string): Promise<FreeScanRecord> {
     throw new Error(error.message);
   }
 
-  const now = new Date().toISOString();
-
   if (!data) {
+    // Initialize new record with lifetime limit
     const { data: inserted, error: insertError } = await adminClient
       .from("free_scan_sessions")
       .insert({
         user_id: userId,
-        daily_remaining: REGISTERED_DAILY_LIMIT,
-        daily_limit: REGISTERED_DAILY_LIMIT,
-        last_reset_at: now,
+        total_remaining: freePeriodExpired ? 0 : REGISTERED_LIFETIME_LIMIT,
+        total_limit: REGISTERED_LIFETIME_LIMIT,
       })
       .select()
       .single();
 
     if (insertError || !inserted) {
-      throw new Error(insertError?.message ?? "Failed to initialize daily free scans");
+      throw new Error(insertError?.message ?? "Failed to initialize free scans");
     }
 
     return inserted;
   }
 
-  if (needsDailyReset(data.last_reset_at)) {
-    const { data: updated, error: updateError } = await adminClient
-      .from("free_scan_sessions")
-      .update({
-        daily_remaining: REGISTERED_DAILY_LIMIT,
-        daily_limit: REGISTERED_DAILY_LIMIT,
-        last_reset_at: now,
-      })
-      .eq("id", data.id)
-      .select()
-      .single();
+  // If free period expired, ensure remaining is 0
+  if (freePeriodExpired) {
+    if (data.total_remaining && data.total_remaining > 0) {
+      const { data: updated, error: updateError } = await adminClient
+        .from("free_scan_sessions")
+        .update({ total_remaining: 0 })
+        .eq("id", data.id)
+        .select()
+        .single();
 
-    if (updateError || !updated) {
-      throw new Error(updateError?.message ?? "Failed to reset daily free scans");
+      if (updateError || !updated) {
+        throw new Error(updateError?.message ?? "Failed to update free scans");
+      }
+
+      return updated;
     }
-
-    return updated;
+    return data;
   }
 
+  // Free period hasn't expired, return the record as-is
   return data;
 }
 
@@ -206,12 +226,13 @@ export async function GET(request: NextRequest) {
         return createJsonResponse({ type: "registered", remaining: PREMIUM_UNLIMITED });
       }
 
-      // Regular registered users have 3 scans per day
+      // Regular registered users have 3 scans lifetime OR 3 days (whichever comes first)
       const record = await getRegisteredRecord(userId);
-      return createJsonResponse({ type: "registered", remaining: record.daily_remaining ?? REGISTERED_DAILY_LIMIT });
+      const remaining = record.total_remaining ?? REGISTERED_LIFETIME_LIMIT;
+      return createJsonResponse({ type: "registered", remaining });
     }
 
-    // Unregistered users have 10 scans total
+    // Unregistered users have 1 scan lifetime
     if (!sessionId) {
       sessionId = crypto.randomUUID();
       shouldSetCookie = true;
@@ -286,25 +307,25 @@ export async function POST(request: NextRequest) {
         return createJsonResponse({ type: "registered", remaining: PREMIUM_UNLIMITED });
       }
 
-      // Regular registered users: decrement daily scans
+      // Regular registered users: decrement lifetime scans
       const record = await getRegisteredRecord(userId);
-      const remaining = record.daily_remaining ?? REGISTERED_DAILY_LIMIT;
+      const remaining = record.total_remaining ?? REGISTERED_LIFETIME_LIMIT;
       if (remaining <= 0) {
         return NextResponse.json({ error: "No free scans remaining" }, { status: 429 });
       }
 
       const { data: updated, error: updateError } = await adminClient
         .from("free_scan_sessions")
-        .update({ daily_remaining: remaining - 1 })
+        .update({ total_remaining: remaining - 1 })
         .eq("id", record.id)
         .select()
         .single();
 
       if (updateError || !updated) {
-        throw new Error(updateError?.message ?? "Failed to decrement daily scans");
+        throw new Error(updateError?.message ?? "Failed to decrement free scans");
       }
 
-      return createJsonResponse({ type: "registered", remaining: updated.daily_remaining ?? 0 });
+      return createJsonResponse({ type: "registered", remaining: updated.total_remaining ?? 0 });
     }
 
     // Unregistered users: decrement total scans
@@ -400,16 +421,28 @@ export async function PATCH(request: NextRequest) {
         return createJsonResponse({ type: "registered", remaining: PREMIUM_UNLIMITED });
       }
 
-      // Regular registered users: reset daily scans
-      const now = new Date().toISOString();
+      // Regular registered users: reset lifetime scans (only if free period hasn't expired)
+      const record = await getRegisteredRecord(userId);
+      const { data: profile } = await adminClient
+        .from("profiles")
+        .select("created_at")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (!profile) {
+        throw new Error("User profile not found");
+      }
+
+      const freePeriodExpired = hasFreePeriodExpired(profile.created_at);
+      const resetRemaining = freePeriodExpired ? 0 : REGISTERED_LIFETIME_LIMIT;
+
       const { data: updated, error: updateError } = await adminClient
         .from("free_scan_sessions")
         .upsert(
           {
             user_id: userId,
-            daily_remaining: REGISTERED_DAILY_LIMIT,
-            daily_limit: REGISTERED_DAILY_LIMIT,
-            last_reset_at: now,
+            total_remaining: resetRemaining,
+            total_limit: REGISTERED_LIFETIME_LIMIT,
           },
           { onConflict: "user_id" }
         )
@@ -417,10 +450,10 @@ export async function PATCH(request: NextRequest) {
         .single();
 
       if (updateError || !updated) {
-        throw new Error(updateError?.message ?? "Failed to reset daily scans");
+        throw new Error(updateError?.message ?? "Failed to reset free scans");
       }
 
-      return createJsonResponse({ type: "registered", remaining: updated.daily_remaining ?? REGISTERED_DAILY_LIMIT });
+      return createJsonResponse({ type: "registered", remaining: updated.total_remaining ?? resetRemaining });
     }
 
     // Unregistered users: reset total scans

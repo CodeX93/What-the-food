@@ -92,7 +92,7 @@ export default function AboutPage() {
                         Get informed eating with limited features &amp; usage.
                       </td>
                       <td className="p-4 align-middle text-muted-foreground">
-                        3 free scans per day, limited customizable widget, basic email support.
+                        3 free scans lifetime (or 3 days), limited customizable widget, basic email support.
                       </td>
                     </tr>
                     <tr className="border-b border-slate-200 dark:border-slate-800">

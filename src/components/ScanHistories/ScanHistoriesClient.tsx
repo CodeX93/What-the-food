@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -88,12 +89,7 @@ export function ScanHistoriesClient({ initialSubscription = null }: ScanHistorie
   const [deletingScan, setDeletingScan] = useState(false);
 
   useEffect(() => {
-    if (!isPremium) {
-      setItems([]);
-      setLoading(false);
-      return;
-    }
-
+    // Allow loading for all users
     let cancelled = false;
 
     const load = async () => {
@@ -272,63 +268,6 @@ export function ScanHistoriesClient({ initialSubscription = null }: ScanHistorie
     }
   };
 
-  if (!isPremium) {
-    return (
-      <main className="flex-1 bg-gradient-to-b from-background via-background to-muted/30">
-        <div className="container mx-auto px-4 py-16">
-          <Card className="max-w-2xl mx-auto border-primary/30 bg-background/80 backdrop-blur">
-            <CardHeader className="text-center space-y-4">
-              <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                <Lock className="h-7 w-7 text-primary" />
-              </div>
-              <div className="space-y-2">
-                <CardTitle className="text-3xl">Scan History is Premium</CardTitle>
-                <CardDescription className="text-base">
-                  Upgrade to unlock unlimited access to all of your past scans, saved nutrition breakdowns, and AI
-                  insights in one place.
-                </CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6 text-left">
-              <div className="grid sm:grid-cols-2 gap-4">
-                {[
-                  {
-                    icon: <ShieldCheck className="h-5 w-5 text-primary" />,
-                    title: "Full timeline",
-                    body: "Browse every scan you’ve ever completed without limits.",
-                  },
-                  {
-                    icon: <Sparkles className="h-5 w-5 text-primary" />,
-                    title: "Rich insights",
-                    body: "Revisit AI-generated nutrition guidance and personal context.",
-                  },
-                ].map((feature) => (
-                  <div
-                    key={feature.title}
-                    className="p-4 rounded-xl border border-primary/20 bg-primary/5 flex flex-col gap-2"
-                  >
-                    <div className="flex items-center gap-2 font-semibold text-sm">
-                      {feature.icon}
-                      {feature.title}
-                    </div>
-                    <p className="text-sm text-muted-foreground">{feature.body}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="text-center">
-                <Button size="lg" className="px-8" onClick={() => window.location.href = "/plans"}>
-                  Upgrade to Premium <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-                <p className="text-sm text-muted-foreground mt-3">
-                  Already upgraded? Refresh the page or revisit once your plan is active.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-    );
-  }
 
   if (loading) {
     return (
@@ -342,6 +281,26 @@ export function ScanHistoriesClient({ initialSubscription = null }: ScanHistorie
     <>
       <main className="flex-1">
         <div className="container mx-auto px-4 py-8">
+          {/* Paywall Bar for Free Users */}
+          {!isPremium && (
+            <Alert className="mb-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
+              <Camera className="h-4 w-4 text-primary flex-shrink-0" />
+              <AlertTitle className="font-semibold text-base sm:text-lg mb-2">You're scanning a lot. Want to track this properly?</AlertTitle>
+              <AlertDescription className="mt-1 text-sm sm:text-base">
+                <p className="mb-3">
+                  Keep track of what you eat and its impact on your health.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-primary hover:bg-primary-hover text-white border-primary"
+                  onClick={() => router.push("/plans")}
+                >
+                  Unlock nutrition tracking
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
             <Button variant="ghost" onClick={() => router.push("/dashboard")} className="px-2">

@@ -1,32 +1,28 @@
 "use client";
 
-import { Upload, Sparkles, TrendingUp } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const HowItWorks = () => {
   const { t } = useLanguage();
   
-  const steps = [
-    {
-      icon: Upload,
-      title: t("howitworks.step1.title"),
-      description: t("howitworks.step1.description"),
-      number: "01",
-    },
-    {
-      icon: Sparkles,
-      title: t("howitworks.step2.title"),
-      description: t("howitworks.step2.description"),
-      number: "02",
-    },
-    {
-      icon: TrendingUp,
-      title: t("howitworks.step3.title"),
-      description: t("howitworks.step3.description"),
-      number: "03",
-    },
-  ];
+  // YouTube video URL - can be changed later
+  const youtubeUrl = "https://youtu.be/ZK-rNEhJIDs?si=-O_rsYGPsitOh5DZ";
+  
+  // Extract video ID from YouTube URL
+  const getVideoId = (url: string) => {
+    if (url.includes("youtube.com/watch?v=")) {
+      return url.split("watch?v=")[1]?.split("&")[0] || "";
+    } else if (url.includes("youtu.be/")) {
+      return url.split("youtu.be/")[1]?.split("?")[0] || "";
+    } else if (url.includes("youtube.com/embed/")) {
+      return url.split("embed/")[1]?.split("?")[0] || "";
+    }
+    return "";
+  };
+
+  const videoId = getVideoId(youtubeUrl);
+  const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}` : "";
+
   return (
     <section
       id="how-it-works"
@@ -71,37 +67,19 @@ const HowItWorks = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8 lg:gap-10 w-full">
-          {steps.map((step, index) => {
-            const IconComponent = step.icon;
-            return (
-              <div key={index} className="relative z-10 flex flex-col">
-                <Card className="relative overflow-hidden border-2 border-input bg-card/50 backdrop-blur-sm h-full flex flex-col">
-                  {/* Step Number as watermark */}
-                  <div className="absolute top-4 sm:top-6 left-4 sm:left-6 z-0 pointer-events-none select-none">
-                    <span className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary dark:text-white">
-                      {index + 1}
-                    </span>
-                  </div>
-                  
-                  <CardHeader className="pt-10 sm:pt-12 md:pt-14 pb-0">
-                    <div className="bg-gradient-hero w-14 h-14 sm:w-16 sm:h-16 md:w-[4.5rem] md:h-[4.5rem] lg:w-20 lg:h-20 rounded-xl sm:rounded-2xl flex items-center justify-center mb-4 sm:mb-6 mx-auto shadow-lg">
-                      <IconComponent className="h-7 w-7 sm:h-8 sm:w-8 md:h-10 md:w-10 lg:h-10 lg:w-10 text-white" />
-                    </div>
-                    <CardTitle className="text-xl sm:text-2xl md:text-2xl lg:text-3xl text-center font-bold mb-0 min-h-[4rem] sm:min-h-[4.5rem] md:min-h-[5rem] flex items-start justify-center">
-                      {step.title}
-                    </CardTitle>
-              </CardHeader>
-                  <CardContent className="px-4 sm:px-6 md:px-8 pb-6 sm:pb-8 md:pb-10 pt-0 -mt-2 sm:-mt-3">
-                    <p className="text-sm sm:text-base md:text-lg text-muted-foreground text-center leading-relaxed">
-                      {step.description}
-                    </p>
-              </CardContent>
-            </Card>
-              </div>
-            );
-          })}
-        </div>
+        {embedUrl && (
+          <div className="max-w-4xl mx-auto">
+            <div className="relative w-full" style={{ paddingBottom: "56.25%" }}>
+              <iframe
+                src={embedUrl}
+                className="absolute top-0 left-0 w-full h-full rounded-lg"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                title="How What The Food Works"
+              />
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

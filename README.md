@@ -38,7 +38,7 @@ WhatTheFood is a full-stack Next.js application that blends AI analysis with ric
 
 - **Meal Scanning**: Upload an image to generate calories, macros, and ingredients with sanitized numeric responses.
 - **Serving Size Intelligence**: Auto-suggest average servings (e.g., “1 cup ≈ 250 g”) and allow decimal servings up to 3 places.
-- **Daily Free Limits**: Anonymous users get 10 lifetime scans; registered free users get 10 per day, enforced server-side via `free_scan_sessions`.
+- **Daily Free Limits**: Anonymous users get 1 lifetime scan; registered free users get 3 scans lifetime (or 3 days, whichever comes first), enforced server-side via `free_scan_sessions`.
 - **Widget Dashboard**: Separate create/edit forms, branded toggles, embed code previews, and per-widget URLs for easy distribution.
 - **Marketing UX**: Single scrollbar layout, redesigned hero + footer, responsive blog cards with consistent framing, and accessible mobile navigation.
 - **Account Area**: Dashboard insights, scan history, saved widgets, billing management, and upgrade prompts tied into Stripe products.

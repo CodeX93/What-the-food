@@ -21,6 +21,7 @@ export default function Hero() {
   const [remainingScans, setRemainingScans] = useState<number | null>(null);
   const [scanStatusType, setScanStatusType] = useState<"registered" | "unregistered" | null>(null);
   const [isPremium, setIsPremium] = useState<boolean | null>(null);
+  const [freePeriodEndDate, setFreePeriodEndDate] = useState<Date | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [socialProofMargin, setSocialProofMargin] = useState<number>(0);
@@ -57,6 +58,23 @@ export default function Hero() {
               const status = await getFreeScanStatus(); // Always fetches from database
               setRemainingScans(status.remaining);
               setScanStatusType(status.type);
+              
+              // Fetch profile to get account creation date for registered users
+              if (status.type === "registered") {
+                const { data: profile } = await supabase
+                  .from("profiles")
+                  .select("created_at")
+                  .eq("id", authUser.id)
+                  .maybeSingle();
+                
+                if (profile?.created_at) {
+                  // Calculate 3 days from account creation
+                  const accountCreatedAt = new Date(profile.created_at);
+                  const threeDaysLater = new Date(accountCreatedAt);
+                  threeDaysLater.setDate(threeDaysLater.getDate() + 3);
+                  setFreePeriodEndDate(threeDaysLater);
+                }
+              }
             } catch (error) {
               console.error("Failed to load free scan status", error);
               setRemainingScans(3);
@@ -72,6 +90,23 @@ export default function Hero() {
             const status = await getFreeScanStatus(); // Always fetches from database
             setRemainingScans(status.remaining);
             setScanStatusType(status.type);
+            
+            // Fetch profile to get account creation date for registered users
+            if (status.type === "registered") {
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("created_at")
+                .eq("id", authUser.id)
+                .maybeSingle();
+              
+              if (profile?.created_at) {
+                // Calculate 3 days from account creation
+                const accountCreatedAt = new Date(profile.created_at);
+                const threeDaysLater = new Date(accountCreatedAt);
+                threeDaysLater.setDate(threeDaysLater.getDate() + 3);
+                setFreePeriodEndDate(threeDaysLater);
+              }
+            }
           } catch (err) {
             setRemainingScans(3);
             setScanStatusType('registered');
@@ -387,9 +422,21 @@ export default function Hero() {
                 t("hero.unlimitedscans")
               ) : remainingScans === null ? (
                 t("hero.checkingscans")
-              ) : remainingScans > 0 ? (
-                `${remainingScans} ${t("hero.scansremaining")}`
-              ) : (
+                  ) : remainingScans > 0 ? (
+                    (() => {
+                      const scansText = `${remainingScans} ${t("hero.scansremaining")}`;
+                      // For registered free users, add the date
+                      if (scanStatusType === "registered" && freePeriodEndDate) {
+                        const formattedDate = freePeriodEndDate.toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric',
+                          year: 'numeric'
+                        });
+                        return `${scansText} before ${formattedDate}`;
+                      }
+                      return scansText;
+                    })()
+                  ) : (
                 t("hero.allscansused")
               )
             ) : remainingScans === null ? (
@@ -608,7 +655,19 @@ export default function Hero() {
                   ) : remainingScans === null ? (
                     t("hero.checkingscans")
                   ) : remainingScans > 0 ? (
-                    `${remainingScans} ${t("hero.scansremaining")}`
+                    (() => {
+                      const scansText = `${remainingScans} ${t("hero.scansremaining")}`;
+                      // For registered free users, add the date
+                      if (scanStatusType === "registered" && freePeriodEndDate) {
+                        const formattedDate = freePeriodEndDate.toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric',
+                          year: 'numeric'
+                        });
+                        return `${scansText} before ${formattedDate}`;
+                      }
+                      return scansText;
+                    })()
                   ) : (
                     t("hero.allscansused")
                   )

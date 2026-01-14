@@ -2,10 +2,99 @@ import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import SharedFoodResultsPage from "@/views/SharedFoodResults";
 import type { Database } from "@/integrations/supabase/types";
+import type { Metadata } from "next";
+import { getRequestUrl, getCanonicalUrlFromRequest, getPreviewImageUrlFromRequest } from "@/lib/seo/siteUrl";
 
 export const dynamic = "force-dynamic";
 export const dynamicParams = true;
 export const revalidate = 0;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { id: string };
+}): Promise<Metadata> {
+  const requestUrl = await getRequestUrl();
+  const rawId = params?.id || "";
+  const uuidPattern = /^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
+  const match = rawId.match(uuidPattern);
+  const scanId = match ? match[1] : rawId.split(/[%?\s]/)[0];
+
+  if (!scanId || scanId.length < 36) {
+    return {
+      title: "Food Analysis Results | What The Food",
+      description: "Check out this food analysis on What The Food",
+    };
+  }
+
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return {
+        title: "Food Analysis Results | What The Food",
+        description: "Check out this food analysis on What The Food",
+      };
+    }
+
+    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false },
+    });
+
+    const { data: scanData } = await (supabase as any)
+      .from("food_scans")
+      .select("result_json, image_url")
+      .eq("id", scanId)
+      .maybeSingle();
+
+    if (!scanData?.result_json) {
+      return {
+        title: "Food Analysis Results | What The Food",
+        description: "Check out this food analysis on What The Food",
+      };
+    }
+
+    const analysis = scanData.result_json as any;
+    const dishDisplay = analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")
+      ? `Manual Input: ${analysis.dish?.replace(/^Manual( Input)?:\s*/i, "") || ""}`
+      : analysis.dish || "Food Analysis";
+    
+    const title = `${dishDisplay} - Food Analysis | What The Food`;
+    const description = `Check out this food analysis: ${dishDisplay}. View detailed nutrition information, recipe instructions, and more.`;
+    const canonicalUrl = await getCanonicalUrlFromRequest(`/shared/${scanId}`);
+    const imageUrl = scanData.image_url 
+      ? scanData.image_url 
+      : getPreviewImageUrlFromRequest("Homepage.png", requestUrl);
+
+    return {
+      title,
+      description,
+      alternates: {
+        canonical: canonicalUrl,
+      },
+      openGraph: {
+        title,
+        description,
+        url: canonicalUrl,
+        type: "website",
+        images: imageUrl ? [{ url: imageUrl }] : [getPreviewImageUrlFromRequest("Homepage.png", requestUrl)],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+        images: imageUrl ? [imageUrl] : [getPreviewImageUrlFromRequest("Homepage.png", requestUrl)],
+      },
+    };
+  } catch (error) {
+    console.error("Error generating metadata:", error);
+    return {
+      title: "Food Analysis Results | What The Food",
+      description: "Check out this food analysis on What The Food",
+    };
+  }
+}
 
 export default async function SharedFoodResultsRoute({
   params,

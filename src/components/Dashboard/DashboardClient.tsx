@@ -23,6 +23,7 @@ import {
   Plus,
   X,
   BookOpen,
+  Lock,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "@/hooks/use-translation";
@@ -80,12 +81,12 @@ export function DashboardClient({
   const [imageLoading, setImageLoading] = useState(false);
   const [freeScanRemaining, setFreeScanRemaining] = useState<number | null>(null);
   const [userFullName, setUserFullName] = useState<string | null>(initialFullName);
+  const [daysLeft, setDaysLeft] = useState<number | null>(null);
+  const [mealsTracked, setMealsTracked] = useState<number>(0);
   const [manualFoods, setManualFoods] = useState<Array<{ id: string; value: string }>>([
     { id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`, value: "" },
   ]);
   const [manualLoading, setManualLoading] = useState(false);
-  // Default iframe height; tinyAds will dynamically resize this up/down based on content
-  const [iframeHeight, setIframeHeight] = useState(900);
   const isPremium = subscription?.subscription_type === "premium";
 
   const manualPlaceholders = ["2 boiled eggs", "Greek yogurt (1 cup)", "1 banana", "Protein shake with almond milk"];
@@ -220,6 +221,8 @@ export function DashboardClient({
       // Reload recent scans
       const scans = await fetchRecentScans(session.user.id, 6);
       setRecentScans(scans);
+      // Update meals tracked
+      setMealsTracked(prev => prev + 1);
     } catch (error: any) {
       console.error("Manual entry error:", error);
       toast({
@@ -359,6 +362,42 @@ export function DashboardClient({
           })
       );
 
+      // Calculate days left and meals tracked for free users
+      if (!isPremium && currentUser) {
+        promises.push(
+          Promise.all([
+            // Get profile to calculate days left
+            (supabase as any)
+              .from("profiles")
+              .select("created_at")
+              .eq("id", currentUser.id)
+              .maybeSingle(),
+            // Get food_scans count for meals tracked
+            (supabase as any)
+              .from("food_scans")
+              .select("id", { count: "exact", head: true })
+              .eq("user_id", currentUser.id)
+          ]).then(([profileResult, scansResult]) => {
+            // Calculate days left (3 days from account creation)
+            if (profileResult?.data?.created_at) {
+              const accountCreatedAt = new Date(profileResult.data.created_at);
+              const threeDaysLater = new Date(accountCreatedAt);
+              threeDaysLater.setDate(threeDaysLater.getDate() + 3);
+              const now = new Date();
+              const diffTime = threeDaysLater.getTime() - now.getTime();
+              const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+              setDaysLeft(Math.max(0, diffDays));
+            }
+            // Set meals tracked
+            if (scansResult?.count !== undefined) {
+              setMealsTracked(scansResult.count);
+            }
+          }).catch((error) => {
+            console.error("Failed to load days left and meals tracked", error);
+          })
+        );
+      }
+
       // Wait for all promises to complete, then set loading to false
       try {
         await Promise.all(promises);
@@ -378,234 +417,6 @@ export function DashboardClient({
     fetchMissingData();
 
   }, [authUser, authLoading, initialUser]); // CRITICAL: Minimal dependencies
-
-  // Handle iframe resizing for tinyAds widget - dynamic height based on content
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  // Set an initial height large enough for multiple cards; real height is driven dynamically when possible
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    
-    const updateIframeHeight = () => {
-      const width = window.innerWidth;
-      if (width < 640) {
-        // Extra small screens - enough to fit all cards
-        setIframeHeight(1350);
-      } else if (width < 768) {
-        // Small screens (mobile)
-        setIframeHeight(1250);
-      } else {
-        // Desktop
-        setIframeHeight(1000);
-      }
-    };
-    
-    updateIframeHeight();
-    window.addEventListener("resize", updateIframeHeight);
-    
-    return () => {
-      window.removeEventListener("resize", updateIframeHeight);
-    };
-  }, []);
-
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-
-    // Listen for messages from tinyAds iframe (if they support it)
-    const handleMessage = (event: MessageEvent) => {
-      // Accept messages from tinyAds domain (with or without trailing slash)
-      const allowedOrigins = ['https://app.tinyadz.com', 'https://app.tinyadz.com/', 'https://tinyadz.com', 'https://tinyadz.com/'];
-      if (!allowedOrigins.includes(event.origin)) return;
-      
-      if (event.data && typeof event.data === 'object') {
-        // Handle resize messages from tinyAds
-        if (event.data.type === 'resize' && event.data.height) {
-          const requestedHeight = Number(event.data.height) || 600;
-          // Add minimal buffer (4px) to prevent cutoff
-          const newHeight = Math.max(requestedHeight + 4, 600);
-          const currentHeight = parseInt(iframe.style.height || '0');
-          // Always update to larger heights to prevent cutoff
-          if (newHeight > currentHeight || Math.abs(newHeight - currentHeight) > 10) {
-          iframe.style.height = `${newHeight}px`;
-          setIframeHeight(newHeight);
-          }
-        }
-        // Handle height updates in various formats
-        if (event.data.height && typeof event.data.height === 'number') {
-          const requestedHeight = Number(event.data.height) || 600;
-          // Add minimal buffer (4px) to prevent cutoff
-          const newHeight = Math.max(requestedHeight + 4, 600);
-          const currentHeight = parseInt(iframe.style.height || '0');
-          // Always update to larger heights to prevent cutoff
-          if (newHeight > currentHeight || Math.abs(newHeight - currentHeight) > 10) {
-          iframe.style.height = `${newHeight}px`;
-          setIframeHeight(newHeight);
-          }
-        }
-        // Handle iframe-resize events
-        if (event.data.type === 'iframe-resize' && event.data.height) {
-          const requestedHeight = Number(event.data.height) || 600;
-          // Add minimal buffer (4px) to prevent cutoff
-          const newHeight = Math.max(requestedHeight + 4, 600);
-          const currentHeight = parseInt(iframe.style.height || '0');
-          // Always update to larger heights to prevent cutoff
-          if (newHeight > currentHeight || Math.abs(newHeight - currentHeight) > 10) {
-          iframe.style.height = `${newHeight}px`;
-          setIframeHeight(newHeight);
-          }
-        }
-        // Handle any message with a height property
-        // TinyAds may send different shapes of messages; normalize to a safe height
-        if (event.data.height) {
-          const requestedHeight = Number(event.data.height) || 600;
-          // Add minimal buffer (4px) to prevent cutoff
-          const newHeight = Math.max(requestedHeight + 4, 600);
-          const currentHeight = parseInt(iframe.style.height || '0');
-          // Always update to larger heights to prevent cutoff
-          if (newHeight > currentHeight || Math.abs(newHeight - currentHeight) > 10) {
-          iframe.style.height = `${newHeight}px`;
-          setIframeHeight(newHeight);
-          }
-        }
-      }
-      
-      // Also check for string messages
-      if (typeof event.data === 'string') {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.height || data.type === "resize") {
-            const requestedHeight = Number(data.height) || 600;
-            // Add minimal buffer (4px) to prevent cutoff
-            const newHeight = Math.max(requestedHeight + 4, 600);
-            const currentHeight = parseInt(iframe.style.height || '0');
-            // Always update to larger heights to prevent cutoff
-            if (newHeight > currentHeight || Math.abs(newHeight - currentHeight) > 10) {
-            iframe.style.height = `${newHeight}px`;
-            setIframeHeight(newHeight);
-            }
-          }
-        } catch (e) {
-          // Not JSON, ignore
-        }
-      }
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('message', handleMessage);
-    }
-
-    // Function to check and update iframe height
-    const checkHeight = () => {
-      try {
-        const iframeDocument = iframe.contentDocument || iframe.contentWindow?.document;
-        if (iframeDocument) {
-          const requestedHeight = Math.max(
-            iframeDocument.body?.scrollHeight || 0,
-            iframeDocument.body?.offsetHeight || 0,
-            iframeDocument.documentElement?.scrollHeight || 0,
-            iframeDocument.documentElement?.offsetHeight || 0,
-            iframeDocument.documentElement?.clientHeight || 0
-          );
-          if (requestedHeight > 0) {
-            // Add minimal buffer (4px) to prevent cutoff
-            const height = Math.max(requestedHeight + 4, 600);
-            const currentHeight = parseInt(iframe.style.height || '0');
-            // Always update to larger heights to prevent cutoff, or if height changed significantly
-            if (height > currentHeight || Math.abs(height - currentHeight) > 10) {
-              iframe.style.height = `${height}px`;
-              setIframeHeight(height);
-            }
-          }
-        }
-      } catch (e) {
-        // Cross-origin restrictions - this is expected, use postMessage instead
-        // Try to request height from iframe via postMessage
-        if (iframe.contentWindow) {
-          iframe.contentWindow.postMessage({ type: 'requestHeight' }, 'https://app.tinyadz.com');
-        }
-      }
-    };
-
-    // Handle window resize and zoom changes
-    const handleResize = () => {
-      if (typeof window === 'undefined') return;
-      // Re-check height when viewport changes (zoom, resize, etc.)
-      setTimeout(() => {
-        checkHeight();
-        if (iframe.contentWindow) {
-          iframe.contentWindow.postMessage({ type: 'requestHeight' }, 'https://app.tinyadz.com');
-        }
-      }, 100);
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('resize', handleResize);
-    }
-
-    // Check height after iframe loads
-    const handleLoad = () => {
-      // Request height from tinyAds via postMessage
-      if (iframe.contentWindow) {
-        iframe.contentWindow.postMessage({ type: 'requestHeight' }, 'https://app.tinyadz.com');
-      }
-      
-      // Wait for content to render, then set initial height based on content
-      setTimeout(() => {
-        checkHeight();
-        if (iframe.contentWindow) {
-          iframe.contentWindow.postMessage({ type: 'requestHeight' }, 'https://app.tinyadz.com');
-        }
-      }, 500);
-      setTimeout(() => {
-        checkHeight();
-        if (iframe.contentWindow) {
-          iframe.contentWindow.postMessage({ type: 'requestHeight' }, 'https://app.tinyadz.com');
-        }
-      }, 1500);
-      setTimeout(() => {
-        checkHeight();
-        if (iframe.contentWindow) {
-          iframe.contentWindow.postMessage({ type: 'requestHeight' }, 'https://app.tinyadz.com');
-        }
-      }, 3000);
-    };
-
-    iframe.addEventListener('load', handleLoad);
-
-    // Periodic checks to catch dynamic content changes when new cards are added
-    const interval = setInterval(() => {
-      checkHeight();
-      // Also request height via postMessage periodically with multiple message formats
-      if (iframe.contentWindow) {
-        iframe.contentWindow.postMessage({ type: 'requestHeight' }, 'https://app.tinyadz.com');
-        iframe.contentWindow.postMessage({ action: 'getHeight', source: 'parent' }, 'https://app.tinyadz.com');
-        // Try to trigger a resize event
-        iframe.contentWindow.postMessage({ type: 'resize', action: 'update' }, 'https://app.tinyadz.com');
-      }
-    }, 2000);
-
-    // Also use ResizeObserver if available (for the container)
-    let resizeObserver: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(() => {
-        checkHeight();
-      });
-      resizeObserver.observe(iframe);
-    }
-
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('message', handleMessage);
-        window.removeEventListener('resize', handleResize);
-      }
-      clearInterval(interval);
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
-      iframe.removeEventListener('load', handleLoad);
-    };
-  }, []);
 
   if (loading) {
     return (
@@ -649,16 +460,16 @@ export function DashboardClient({
                   <ShieldCheck className="h-5 w-5 text-primary flex-shrink-0" />
                   <div className="text-sm flex-1">
                     <div>{t("dashboard.unlock")}</div>
-                    {freeScanRemaining !== null && (
+                    {(daysLeft !== null || mealsTracked > 0) && (
                       <div className="text-xs text-primary/80 mt-1">
-                        {t("dashboard.freescans.remaining")
-                          .replace("{count}", freeScanRemaining.toString())
-                          .replace(/{plural}/g, freeScanRemaining === 1 ? "" : "s")}
+                        {daysLeft !== null && `🕒 ${daysLeft} day${daysLeft !== 1 ? 's' : ''} left`}
+                        {daysLeft !== null && mealsTracked > 0 && ' | '}
+                        {mealsTracked > 0 && `🍽 Meals tracked: ${mealsTracked}/3`}
                       </div>
                     )}
                   </div>
                   <Button size="sm" onClick={() => window.location.href = "/plans"}>
-                    {t("dashboard.upgrade")} <ArrowRight className="h-4 w-4 ml-1" />
+                    Unlock insights <ArrowRight className="h-4 w-4 ml-1" />
                   </Button>
                 </CardContent>
               </Card>
@@ -670,17 +481,8 @@ export function DashboardClient({
       <div className="container mx-auto px-4 pb-10">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card
-            className={`cursor-pointer hover:shadow-lg transition-shadow ${!isPremium ? "opacity-80" : ""}`}
-            title={!isPremium ? "Upgrade to Premium to access saved recipes" : undefined}
+            className="cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => {
-              if (!isPremium) {
-                toast({
-                  title: t("dashboard.premium.feature"),
-                  description: "Upgrade to a premium plan to access your saved recipes.",
-                  variant: "warning",
-                });
-                return;
-              }
               router.push("/saved-recipes");
             }}
           >
@@ -701,14 +503,6 @@ export function DashboardClient({
             className={`cursor-pointer hover:shadow-lg transition-shadow ${!isPremium ? "opacity-80" : ""}`}
             title={!isPremium ? "Upgrade to Premium to unlock deep analytics" : undefined}
             onClick={() => {
-              if (!isPremium) {
-                toast({
-                  title: t("dashboard.premium.feature"),
-                  description: t("dashboard.premium.analytics"),
-                  variant: "warning",
-                });
-                return;
-              }
               router.push("/my-food-analytics");
             }}
           >
@@ -719,8 +513,8 @@ export function DashboardClient({
                 </div>
                 <div>
                   <CardTitle className="text-lg">{t("dashboard.card.analytics.title")}</CardTitle>
-                  <CardDescription>
-                    {isPremium ? t("dashboard.card.analytics.description") : t("dashboard.card.analytics.premium")}
+                  <CardDescription className="whitespace-nowrap">
+                    {t("dashboard.card.analytics.description")}
                   </CardDescription>
                 </div>
               </div>
@@ -728,19 +522,8 @@ export function DashboardClient({
           </Card>
 
           <Card
-            className={`cursor-pointer hover:shadow-lg transition-shadow ${
-              !isPremium ? "opacity-80" : ""
-            }`}
-            title={!isPremium ? "Upgrade to Premium to unlock your full scan history" : undefined}
+            className="cursor-pointer hover:shadow-lg transition-shadow"
             onClick={() => {
-              if (!isPremium) {
-                toast({
-                  title: t("dashboard.premium.feature"),
-                  description: t("dashboard.premium.history"),
-                  variant: "warning",
-                });
-                return;
-              }
               router.push("/scan-histories");
             }}
           >
@@ -760,17 +543,8 @@ export function DashboardClient({
           </Card>
 
           <Card
-            className={`cursor-pointer hover:shadow-lg transition-shadow relative ${!isPremium ? "opacity-80" : ""}`}
-            title={!isPremium ? "Upgrade to generate personalized meal plans" : undefined}
+            className="cursor-pointer hover:shadow-lg transition-shadow relative"
             onClick={() => {
-              if (!isPremium) {
-                toast({
-                  title: t("dashboard.premium.feature"),
-                  description: t("dashboard.premium.mealplanner"),
-                  variant: "warning",
-                });
-                return;
-              }
               router.push("/meal-planner");
             }}
           >
@@ -785,7 +559,7 @@ export function DashboardClient({
                 <div>
                   <CardTitle className="text-lg whitespace-nowrap">{t("dashboard.card.mealplanner.title")}</CardTitle>
                   <CardDescription className="whitespace-nowrap">
-                    {isPremium ? t("dashboard.card.mealplanner.description") : t("dashboard.card.mealplanner.premium")}
+                    {t("dashboard.card.mealplanner.description")}
                   </CardDescription>
                 </div>
               </div>
@@ -795,17 +569,38 @@ export function DashboardClient({
 
         <Script src="https://cdn.tinysnippet.net/scripts/v2.0/manager.js" strategy="lazyOnload" />
 
-        <div id="upload-section" className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-2 md:items-start">
+        <div id="upload-section" className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-2 md:items-stretch">
           {/* Left Section: Upload & Analyze (first), then Log Foods manually (below) */}
           <div className="flex flex-col gap-0">
             {/* Upload and Analyze - First */}
-            <Card className="flex flex-col">
+            <Card className="flex flex-col h-full">
               <CardHeader className="pb-0" style={{ minHeight: '80px' }}>
                 <CardTitle>{t("dashboard.upload.title")}</CardTitle>
                 <CardDescription>{t("dashboard.upload.formats")}</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col p-4 mb-4 pb-4">
                 {!uploadedFile ? (
+                  // Check if free registered user has consumed their scans (3 scans OR 3 days, whichever comes first)
+                  user && !isPremium && freeScanRemaining === 0 ? (
+                    <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 bg-gradient-card flex-1 flex flex-col items-center justify-center">
+                      <Lock className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
+                      <p className="text-base sm:text-lg font-medium mb-2 text-center">
+                        You've tracked 3 meals.
+                      </p>
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6 text-center">
+                        Patterns are starting to form. Unlock analytics to see them.
+                      </p>
+                      <div className="flex justify-center">
+                        <Button 
+                          size="lg" 
+                          className="bg-primary hover:bg-primary-hover text-sm sm:text-base" 
+                          onClick={() => router.push("/plans")}
+                        >
+                          Unlock analytics
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
                   <div
                     className={`border-2 border-dashed border-primary/30 rounded-lg p-10 text-center bg-muted/30 flex-1 flex flex-col items-center justify-center transition-colors ${
                       authLoading || loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-primary/50"
@@ -964,6 +759,7 @@ export function DashboardClient({
                     <p className="text-sm text-muted-foreground mb-4">{t("dashboard.upload.drop")}</p>
                     <Button disabled={authLoading || loading}>{t("dashboard.upload.choose")}</Button>
                   </div>
+                  )
                 ) : (
                   <div className="space-y-4 flex-1 flex flex-col">
                     <div className="relative rounded-lg overflow-hidden border-2 border-primary/20 bg-muted/30">
@@ -1245,6 +1041,8 @@ export function DashboardClient({
                               decrementFreeScan()
                                 .then((newCount) => {
                                   setFreeScanRemaining(newCount);
+                                  // Update meals tracked
+                                  setMealsTracked(prev => prev + 1);
                                 })
                                 .catch((error) => {
                                   console.error("Failed to decrement free scans", error);
@@ -1283,102 +1081,67 @@ export function DashboardClient({
               </CardContent>
             </Card>
 
-            {/* Log Foods manually - Below Upload & Analyze (Premium only) */}
-            {subscription && subscription.subscription_type === "premium" && (
-              <Card className="flex flex-col mt-8">
-                <CardHeader className="pb-0" style={{ minHeight: '80px' }}>
-                  <CardTitle>{t("dashboard.manual.title")}</CardTitle>
-                  <CardDescription>{t("dashboard.manual.description")}</CardDescription>
-                </CardHeader>
-                <CardContent className="p-4 space-y-5 flex flex-col">
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      {t("dashboard.manual.instruction")}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {quickAddOptions.map((item) => (
-                        <button
-                          key={item}
-                          type="button"
-                          onClick={() => quickAddFood(item)}
-                          className="px-3 py-1 rounded-full border text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors"
-                        >
-                          {item}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 flex-1">
-                    {manualFoods.map((food, index) => (
-                      <div className="flex gap-2" key={food.id}>
-                        <Input
-                          value={food.value}
-                          onChange={(event) => updateManualFood(food.id, event.target.value)}
-                          placeholder={manualPlaceholders[index % manualPlaceholders.length]}
-                        />
-                        {manualFoods.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="shrink-0"
-                            onClick={() => removeManualFood(food.id)}
-                            aria-label="Remove food"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Button variant="outline" size="sm" onClick={addManualFoodField} className="w-full sm:w-auto">
-                        <Plus className="h-4 w-4 mr-2" /> {t("dashboard.manual.add")}
-                      </Button>
-                      <Button onClick={handleManualEntry} disabled={manualLoading} className="w-full sm:w-auto">
-                        {manualLoading ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t("dashboard.manual.logging")}
-                          </>
-                        ) : (
-                          t("dashboard.manual.addtoanalytics")
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
 
-          {/* Right Section: Sponsored Section with TinyAds (for both free and premium) */}
-          <Card className="flex flex-col w-full self-start">
-            <CardHeader className="pb-2 sm:pb-1 px-4 sm:px-6 md:px-8">
-              <CardTitle className="text-base sm:text-lg md:text-xl">{t("dashboard.sponsors.title")}</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">{t("dashboard.sponsors.description")}</CardDescription>
+          {/* Right Section: Manual Food Logging */}
+          <Card className="flex flex-col w-full h-full">
+            <CardHeader className="pb-0" style={{ minHeight: '80px' }}>
+              <CardTitle>{t("dashboard.manual.title")}</CardTitle>
+              <CardDescription>{t("dashboard.manual.description")}</CardDescription>
             </CardHeader>
-            <CardContent className="p-2 sm:p-4 pb-4">
-              <div className="w-full" id="sponsor-iframe-container">
-                  <iframe
-                    ref={iframeRef}
-                    width="100%"
-                    frameBorder="0"
-                    className="ta-widget w-full"
-                    id="widget68ee566289b6c5ef70269ca8"
-                    src="https://app.tinyadz.com/widgets/68ee566289b6c5ef70269ca8?previewMode=false&showInPopup=false&theme=light&layout=grid&maxItems=8"
-                    style={{ 
-                      border: "none",
-                      display: "block",
-                      width: "100%",
-                      height: `${iframeHeight}px`, 
-                      minHeight: `${iframeHeight}px`,
-                      margin: 0, 
-                      padding: 0,
-                    }}
-                    title="Advertisements"
-                    scrolling="yes"
-                    allow="autoplay; encrypted-media"
-                  />
+            <CardContent className="flex flex-col p-4 mb-4 pb-4">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs text-muted-foreground">{t("dashboard.manual.quickadd")}:</span>
+                  {quickAddOptions.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => quickAddFood(item)}
+                      className="px-3 py-1 rounded-full border text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-3 flex-1">
+                  {manualFoods.map((food, index) => (
+                    <div className="flex gap-2" key={food.id}>
+                      <Input
+                        value={food.value}
+                        onChange={(event) => updateManualFood(food.id, event.target.value)}
+                        placeholder={manualPlaceholders[index % manualPlaceholders.length]}
+                      />
+                      {manualFoods.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="shrink-0"
+                          onClick={() => removeManualFood(food.id)}
+                          aria-label="Remove food"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button variant="outline" size="sm" onClick={addManualFoodField} className="w-full sm:w-auto">
+                      <Plus className="h-4 w-4 mr-2" /> {t("dashboard.manual.add")}
+                    </Button>
+                    <Button onClick={handleManualEntry} disabled={manualLoading} className="w-full sm:w-auto">
+                      {manualLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t("dashboard.manual.logging")}
+                        </>
+                      ) : (
+                        t("dashboard.manual.addtoanalytics")
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -272,7 +272,7 @@ export function HeaderClient({ initialUser = null }: HeaderClientProps) {
             </div>
           </DrawerHeader>
           <div className="px-4 pb-4 space-y-4">
-            <NavigationLinks onLinkClick={() => setOpen(false)} />
+            <NavigationLinks onLinkClick={() => setOpen(false)} isLoggedIn={!!currentUser} />
             <div className="flex flex-col space-y-2 pt-4 border-t">
               <div className="flex items-center justify-between px-4 py-3 mb-2 border-b">
                 <span className="text-base font-medium">{t("nav.language")}</span>
