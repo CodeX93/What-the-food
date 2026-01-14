@@ -1031,7 +1031,7 @@ export default function Hero() {
                       <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 bg-gradient-card">
                         <Lock className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
                         <p className="text-base sm:text-lg font-medium mb-2 text-center">
-                          You've tracked 3 meals.
+                          You&apos;ve tracked 3 meals.
                         </p>
                         <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6 text-center">
                           Patterns are starting to form. Unlock analytics to see them.

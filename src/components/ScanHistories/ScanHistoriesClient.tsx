@@ -285,7 +285,7 @@ export function ScanHistoriesClient({ initialSubscription = null }: ScanHistorie
           {!isPremium && (
             <Alert className="mb-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
               <Camera className="h-4 w-4 text-primary flex-shrink-0" />
-              <AlertTitle className="font-semibold text-base sm:text-lg mb-2">You're scanning a lot. Want to track this properly?</AlertTitle>
+              <AlertTitle className="font-semibold text-base sm:text-lg mb-2">You&apos;re scanning a lot. Want to track this properly?</AlertTitle>
               <AlertDescription className="mt-1 text-sm sm:text-base">
                 <p className="mb-3">
                   Keep track of what you eat and its impact on your health.

@@ -2048,14 +2048,14 @@ export function FoodResultsClient() {
             </AlertTitle>
             <AlertDescription className="text-orange-800 dark:text-orange-200 mt-2">
               <p className="mb-3">
-                You won't be able to track its impact on your macros or eating habits.
+                You won&apos;t be able to track its impact on your macros or eating habits.
               </p>
               <Button
                 onClick={() => router.push("/auth")}
                 className="bg-orange-600 hover:bg-orange-700 text-white"
                 size="sm"
               >
-                Track Meal's Macros
+                Track Meal&apos;s Macros
               </Button>
             </AlertDescription>
           </Alert>
@@ -2211,7 +2211,7 @@ export function FoodResultsClient() {
           <Alert className="mb-4 sm:mb-6 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
             <AlertCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
             <AlertTitle className="text-green-900 dark:text-green-100 font-semibold">
-              You've started tracking your meals
+              You&apos;ve started tracking your meals
             </AlertTitle>
             <AlertDescription className="text-green-800 dark:text-green-200">
               <p className="mb-2">
@@ -2830,10 +2830,10 @@ export function FoodResultsClient() {
                     {/* Heading and Description */}
                     <div className="space-y-3 text-center max-w-2xl">
                       <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-                        Numbers don't change habits. Context does.
+                        Numbers don&apos;t change habits. Context does.
                       </h3>
                       <p className="text-sm sm:text-base text-muted-foreground leading-relaxed px-4">
-                        Right now, you can see what's in this meal, but not what it means for your goals over time. Personalized Health Context connects your meals, patterns, and targets to help you understand what to adjust and why. No generic advice. No guessing.
+                        Right now, you can see what&apos;s in this meal, but not what it means for your goals over time. Personalized Health Context connects your meals, patterns, and targets to help you understand what to adjust and why. No generic advice. No guessing.
                       </p>
                     </div>
                     
@@ -2893,7 +2893,7 @@ export function FoodResultsClient() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="text-sm sm:text-base font-semibold mb-2 text-foreground">
-                            Know if you're on track
+                            Know if you&apos;re on track
                           </h4>
                           <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                             Understand whether your eating supports your goal, before weeks go by with no progress.
@@ -3263,7 +3263,7 @@ export function FoodResultsClient() {
           <DialogHeader>
             <DialogTitle>Correct Dish Name</DialogTitle>
             <DialogDescription>
-              Please enter the correct name for this dish. We'll generate a new analysis based on your correction.
+              Please enter the correct name for this dish. We&apos;ll generate a new analysis based on your correction.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
