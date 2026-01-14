@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import Script from "next/script";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,8 @@ import {
 } from "@/utils/foodScan";
 import { hasActivePremiumSubscription } from "@/utils/subscription";
 import { calculateBMI, getBMICategory } from "@/utils/bmi";
+import { tagToSlug } from "@/utils/tagSlug";
+import { calculateNutritionScore, getNutritionScoreColor, getNutritionScoreBarColor } from "@/utils/nutritionScore";
 import {
   Loader2,
   Salad,
@@ -719,9 +722,19 @@ export function FoodResultsClient() {
     const servingLabel = servingApproximation
       ? `Approx. ${servingApproximation.grams}g`
       : analysis.servingSize || "1 serving";
-    const confidence = typeof analysis.confidence === "number"
-      ? `${Math.round((analysis.confidence || 0) * 100)}%`
-      : "—";
+    
+    // Use nutrition score from state (Gemini or fallback), or calculate if not available
+    const pdfNutritionScore = nutritionScore !== null
+      ? nutritionScore
+      : scaled
+      ? calculateNutritionScore(scaled)
+      : analysis.nutrients
+      ? calculateNutritionScore(analysis.nutrients)
+      : null;
+    const nutritionScoreLabel = pdfNutritionScore !== null
+      ? `Nutrition Score: ${pdfNutritionScore}/100`
+      : "Nutrition Score: —";
+    
     return `
       <!DOCTYPE html>
       <html>
@@ -752,7 +765,7 @@ export function FoodResultsClient() {
                 <div class="meta-row">
                   <span class="pill">Servings: ${formatNumber(servings, 2)}</span>
                   <span class="pill">Serving Size: ${escapeHtml(servingLabel)}</span>
-                  <span class="pill">Confidence: ${confidence}</span>
+                  <span class="pill">${nutritionScoreLabel}</span>
                 </div>
                 <div class="tags">${tagsHtml}</div>
                 <div class="callout">
@@ -1837,6 +1850,54 @@ export function FoodResultsClient() {
     () => (analysis ? scaleNutrients(analysis.nutrients, servings) : null),
     [analysis, servings]
   );
+  
+  // Calculate nutrition score using Gemini API (with formula fallback)
+  const [nutritionScore, setNutritionScore] = useState<number | null>(null);
+  const [nutritionScoreLoading, setNutritionScoreLoading] = useState(false);
+
+  useEffect(() => {
+    if (!scaled) {
+      setNutritionScore(null);
+      return;
+    }
+
+    // Calculate fallback score immediately
+    const fallbackScore = calculateNutritionScore(scaled);
+    setNutritionScore(fallbackScore);
+
+    // Try to get Gemini score
+    const fetchGeminiScore = async () => {
+      setNutritionScoreLoading(true);
+      try {
+        const response = await fetch("/api/nutrition-score", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            nutrients: scaled,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.score !== null && data.score !== undefined) {
+            setNutritionScore(data.score);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch Gemini nutrition score:", error);
+        // Keep fallback score
+      } finally {
+        setNutritionScoreLoading(false);
+      }
+    };
+
+    // Small delay to avoid blocking UI
+    const timeoutId = setTimeout(fetchGeminiScore, 100);
+    return () => clearTimeout(timeoutId);
+  }, [scaled]);
+  
   const isNonFood = analysis?.foodDetected === false;
   const parsedInsights = useMemo(() => {
     if (!insightsText) return null;
@@ -2265,30 +2326,46 @@ export function FoodResultsClient() {
                 <CardContent className="p-3 sm:p-4 flex-shrink-0">
                   <div className="flex items-center justify-between text-xs sm:text-sm">
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <span className="whitespace-nowrap">{t("foodresults.confidence")}</span>
+                      <span className="whitespace-nowrap">Nutrition Score</span>
                       <TooltipProvider delayDuration={150}>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <span
                               role="button"
-                              aria-label="Confidence info"
+                              aria-label="Nutrition Score info"
                               className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-muted-foreground/40 text-[10px] text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary"
                             >
                               <Info className="h-3 w-3" strokeWidth={2} />
                             </span>
                           </TooltipTrigger>
                           <TooltipContent side="top" align="start" className="max-w-xs text-xs leading-relaxed">
-                            {t("foodresults.confidence.tooltip")}
+                            A score (0-100) evaluating nutritional quality based on macro balance (ideal 40% carbs, 30% protein, 30% fat), fiber content, sugar levels, and calorie density. Higher scores indicate a more balanced and nutritious meal.
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     </div>
-                    <span className="font-semibold whitespace-nowrap ml-2">{Math.round((analysis.confidence || 0) * 100)}%</span>
+                    <span className={`font-semibold whitespace-nowrap ml-2 ${
+                      nutritionScore !== null
+                        ? nutritionScore >= 70
+                          ? "text-green-600"
+                          : nutritionScore >= 50
+                          ? "text-yellow-600"
+                          : nutritionScore >= 30
+                          ? "text-orange-600"
+                          : "text-red-600"
+                        : "text-muted-foreground"
+                    }`}>
+                      {nutritionScore !== null ? `${nutritionScore}/100` : "—"}
+                    </span>
                   </div>
                   <div className="h-2 bg-muted rounded-full mt-2 overflow-hidden">
                     <div
-                      className="h-full bg-primary transition-all"
-                      style={{ width: `${Math.round((analysis.confidence || 0) * 100)}%` }}
+                      className={`h-full transition-all ${
+                        nutritionScore !== null
+                          ? getNutritionScoreBarColor(nutritionScore)
+                          : "bg-muted"
+                      }`}
+                      style={{ width: `${nutritionScore !== null ? nutritionScore : 0}%` }}
                     />
                   </div>
                 </CardContent>
@@ -2461,13 +2538,15 @@ export function FoodResultsClient() {
                           "bg-amber-50 text-amber-700 border border-amber-200 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.4)] hover:bg-amber-500 hover:text-white hover:border-amber-600 transition-colors",
                         ];
                         const colors = palette[index % palette.length];
+                        const tagSlug = tagToSlug(tag);
                         return (
-                          <span
+                          <Link
                             key={`${tag}-${index}`}
-                            className={`inline-flex items-center rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-semibold capitalize tracking-tight break-words ${colors}`}
+                            href={`/${tagSlug}`}
+                            className={`inline-flex items-center rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-semibold capitalize tracking-tight break-words cursor-pointer ${colors}`}
                           >
                             {tag}
-                          </span>
+                          </Link>
                         );
                       })}
                     </div>

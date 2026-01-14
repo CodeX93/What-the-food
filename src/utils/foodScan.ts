@@ -226,6 +226,21 @@ export async function saveScanHistory(params: {
     language: 'en', // All new scans are generated in English
   }).select("id").single();
   if (error) throw error;
+
+  // Record scan for streak tracking (only for authenticated users, not temp users)
+  if (params.userId && !params.userId.startsWith('temp_')) {
+    try {
+      await fetch("/api/streaks/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "scan" }),
+      });
+    } catch (error) {
+      // Silently fail - streak tracking shouldn't break the scan save
+      console.error("Error recording scan streak:", error);
+    }
+  }
+
   return data.id as string;
 }
 

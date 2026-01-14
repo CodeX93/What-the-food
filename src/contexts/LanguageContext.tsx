@@ -82,8 +82,8 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.submit.description": "Failed to submit feedback. Please try again.",
     
     // Hero Section
-    "hero.title": "Free AI Food Scanner and Calorie Estimator",
-    "hero.description": "Upload a meal photo and get instant AI nutrition insights. Track calories, macros, and make healthier choices with our smart calorie estimator. <strong>It's like Shazam, but for your food!</strong>",
+    "hero.title": "A Macro Tracker Built For Daily Eating Habits",
+    "hero.description": "If you've once asked yourself: \"AM I actually eating right?\" This macro tracker might be for you. It's built for people who want to track food and calories without manual logging.",
     "hero.uploadphoto": "Upload Photo",
     "hero.remaining": "remaining",
     "hero.scans": "scans",
@@ -115,7 +115,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Features Section
     "features.title": "Why Use Our AI Food Scanner?",
-    "features.subtitle": "Some features that make our food calorie finder stand out",
+    "features.subtitle": "Some core values that make our food calorie finder stand out",
     "features.ai.title": "Instant Food Detection",
     "features.ai.description": "Get detailed nutritional information from any food image within seconds with our advanced calorie estimator.",
     "features.nutrition.title": "AI Calorie Estimator",
@@ -334,13 +334,13 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.italian": "Italian",
     
     // Pricing Section
-    "pricing.title": "Smart Food Calorie Finder, Simple Pricing",
-    "pricing.subtitle": "Compare our food calorie finder freemium plans to see how far personalized health context and account analytics can take you.",
+    "pricing.title": "Smart Macro Tracker, Transparent Pricing",
+    "pricing.subtitle": "Built for people who want to track food without manual logging.",
     "pricing.free.name": "Free",
     "pricing.free.price": "$0",
     "pricing.free.period": "/month",
-    "pricing.free.description": "Try out WhatTheFood",
-    "pricing.free.cta": "Get Started",
+    "pricing.free.description": "Best for: Casual tracking and curiosity",
+    "pricing.free.cta": "Start Free",
     "pricing.free.feature1": "3 scans lifetime (or 3 days)",
     "pricing.free.feature2": "No scan history",
     "pricing.free.feature3": "Ads included",
@@ -352,8 +352,8 @@ const translations: Record<Language, Record<string, string>> = {
     "pricing.premium.price": "$9.99",
     "pricing.premium.period": "/month",
     "pricing.premium.yearly": "$49.99/year",
-    "pricing.premium.description": "Everything you need",
-    "pricing.premium.cta": "Upgrade Now",
+    "pricing.premium.description": "Best for: People serious about health, weight, or fitness",
+    "pricing.premium.cta": "Unlock insights",
     "pricing.premium.feature1": "Unlimited scans",
     "pricing.premium.feature2": "Complete scan history",
     "pricing.premium.feature3": "Ad-free experience",
@@ -373,7 +373,7 @@ const translations: Record<Language, Record<string, string>> = {
     "reviews.subtitle": "Hungry for proof? See why everyone's screaming WTF (in a good way)",
     
     // Footer Section
-    "footer.description": "What The Food is your all-in-one AI food scanner, calorie estimator, and recipe generator. Snap any food photo to unlock accurate calories, macros, and recipe breakdowns, in seconds.",
+    "footer.description": "Your macro tracking companion that helps you understand what you eat. Scan meals, track macros, and spot patterns that shape your eating habits and fitness goals.",
     "footer.product": "Product",
     "footer.company": "Company",
     "footer.legal": "Legal",
@@ -384,7 +384,7 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.terms": "Terms & Conditions",
     "footer.refundpolicy": "Refund Policy",
     "footer.analytics": "Analytics",
-    "footer.contactsupport": "Contact Support",
+    "footer.contactsupport": "Support",
     "footer.rights": "All rights reserved.",
     
     // Blog Section
@@ -1351,8 +1351,8 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.submit.description": "Error al enviar comentarios. Por favor, inténtalo de nuevo.",
     
     // Hero Section
-    "hero.title": "Escáner de Alimentos con IA Gratis y Estimador de Calorías",
-    "hero.description": "Sube una foto de comida y obtén información nutricional instantánea con IA. Rastrea calorías, macros y toma decisiones más saludables con nuestro inteligente estimador de calorías. <strong>Es como Shazam, pero para tu comida!</strong>",
+    "hero.title": "Un Rastreador de Macros Construido Para Hábitos Alimentarios Diarios",
+    "hero.description": "Si alguna vez te has preguntado: \"¿Estoy comiendo bien realmente?\" Este rastreador de macros podría ser para ti. Está diseñado para personas que quieren rastrear alimentos y calorías sin registro manual.",
     "hero.uploadphoto": "Subir Foto",
     "hero.remaining": "restantes",
     "hero.scans": "escaneos",
@@ -1597,8 +1597,8 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.italian": "Italiano",
     
     // Pricing Section
-    "pricing.title": "Buscador Inteligente de Calorías, Precios Simples",
-    "pricing.subtitle": "Compara nuestros planes freemium de buscador de calorías para ver qué tan lejos pueden llevarte el contexto de salud personalizado y el análisis de cuenta.",
+    "pricing.title": "Rastreador de Macros Inteligente, Precios Transparentes",
+    "pricing.subtitle": "Diseñado para personas que quieren rastrear alimentos sin registro manual.",
     "pricing.free.name": "Gratis",
     "pricing.free.price": "$0",
     "pricing.free.period": "/mes",
@@ -1636,7 +1636,7 @@ const translations: Record<Language, Record<string, string>> = {
     "reviews.subtitle": "¿Hambriento de pruebas? Ve por qué todos están gritando WTF (de buena manera)",
     
     // Footer Section
-    "footer.description": "Análisis de alimentos con IA para una vida más saludable. Escanea, analiza y comprende tus comidas al instante.",
+    "footer.description": "Tu compañero de seguimiento de macros que te ayuda a entender lo que comes. Escanea comidas, rastrea macros y detecta patrones que dan forma a tus hábitos alimentarios y objetivos de fitness.",
     "footer.product": "Producto",
     "footer.company": "Empresa",
     "footer.legal": "Legal",
@@ -1647,7 +1647,7 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.terms": "Términos y Condiciones",
     "footer.refundpolicy": "Política de Reembolso",
     "footer.analytics": "Analíticas",
-    "footer.contactsupport": "Contactar Soporte",
+    "footer.contactsupport": "Soporte",
     "footer.rights": "Todos los derechos reservados.",
     
     // Blog Section
@@ -2601,8 +2601,8 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.submit.description": "Échec de l'envoi des commentaires. Veuillez réessayer.",
     
     // Hero Section
-    "hero.title": "Scanner alimentaire IA gratuit et estimateur de calories",
-    "hero.description": "Téléchargez une photo de repas et obtenez des informations nutritionnelles instantanées avec l'IA. Suivez les calories, les macros et faites des choix plus sains avec notre intelligent estimateur de calories. <strong>C'est comme Shazam, mais pour votre nourriture!</strong>",
+    "hero.title": "Un Suivi de Macros Conçu Pour les Habitudes Alimentaires Quotidiennes",
+    "hero.description": "Si vous vous êtes déjà demandé : \"Est-ce que je mange vraiment bien ?\" Ce suivi de macros pourrait être fait pour vous. Il est conçu pour les personnes qui veulent suivre leur alimentation et leurs calories sans saisie manuelle.",
     "hero.uploadphoto": "Télécharger une photo",
     "hero.remaining": "restants",
     "hero.scans": "scans",
@@ -2848,8 +2848,8 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.italian": "Italien",
     
     // Pricing Section
-    "pricing.title": "Calculateur de Calories Intelligent, Prix Simples",
-    "pricing.subtitle": "Comparez nos plans freemium de calculateur de calories pour voir jusqu'où le contexte de santé personnalisé et l'analyse de compte peuvent vous mener.",
+    "pricing.title": "Suivi de Macros Intelligent, Prix Transparents",
+    "pricing.subtitle": "Conçu pour les personnes qui veulent suivre leur alimentation sans saisie manuelle.",
     "pricing.free.name": "Gratuit",
     "pricing.free.price": "$0",
     "pricing.free.period": "/mois",
@@ -2887,7 +2887,7 @@ const translations: Record<Language, Record<string, string>> = {
     "reviews.subtitle": "Affamé de preuves ? Découvrez pourquoi tout le monde crie WTF (dans le bon sens)",
     
     // Footer Section
-    "footer.description": "What The Food est votre scanner alimentaire IA tout-en-un, estimateur de calories et générateur de recettes. Prenez une photo de n'importe quel aliment pour débloquer des calories précises, des macros et des décompositions de recettes, en quelques secondes.",
+    "footer.description": "Votre compagnon de suivi de macros qui vous aide à comprendre ce que vous mangez. Scannez les repas, suivez les macros et repérez les modèles qui façonnent vos habitudes alimentaires et vos objectifs de fitness.",
     "footer.product": "Produit",
     "footer.company": "Entreprise",
     "footer.legal": "Légal",
@@ -2898,7 +2898,7 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.terms": "Termes et conditions",
     "footer.refundpolicy": "Politique de remboursement",
     "footer.analytics": "Analytiques",
-    "footer.contactsupport": "Contacter le Support",
+    "footer.contactsupport": "Support",
     "footer.rights": "Tous droits réservés.",
     
     // Blog Section
@@ -3844,8 +3844,8 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.submit.description": "Fehler beim Senden des Feedbacks. Bitte versuchen Sie es erneut.",
     
     // Hero Section
-    "hero.title": "Kostenloser KI-Essenscanner und Kalorienschätzer",
-    "hero.description": "Laden Sie ein Foto von einer Mahlzeit hoch und erhalten Sie sofortige KI-Ernährungseinblicke. Verfolgen Sie Kalorien, Makros und treffen Sie gesündere Entscheidungen mit unserem intelligenten Kalorienrechner. <strong>Wie Shazam – nur für dein Essen!</strong>",
+    "hero.title": "Ein Makro-Tracker Für Tägliche Essgewohnheiten",
+    "hero.description": "Wenn Sie sich jemals gefragt haben: \"Ernähre ich mich eigentlich richtig?\" Dieser Makro-Tracker könnte das Richtige für Sie sein. Er wurde für Menschen entwickelt, die Lebensmittel und Kalorien ohne manuelle Eingabe verfolgen möchten.",
     "hero.uploadphoto": "Foto hochladen",
     "hero.remaining": "verbleibend",
     "hero.scans": "Scans",
@@ -4091,8 +4091,8 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.italian": "Italienisch",
     
     // Pricing Section
-    "pricing.title": "Intelligenter Kalorienfinder, Einfache Preise",
-    "pricing.subtitle": "Vergleichen Sie unsere Freemium-Pläne für Kalorienfinder, um zu sehen, wie weit personalisierter Gesundheitskontext und Kontenanalysen Sie bringen können.",
+    "pricing.title": "Intelligenter Makro-Tracker, Transparente Preise",
+    "pricing.subtitle": "Erstellt für Menschen, die Lebensmittel ohne manuelle Eingabe verfolgen möchten.",
     "pricing.free.name": "Kostenlos",
     "pricing.free.price": "$0",
     "pricing.free.period": "/Monat",
@@ -4130,7 +4130,7 @@ const translations: Record<Language, Record<string, string>> = {
     "reviews.subtitle": "Hungrig nach Beweisen? Sehen Sie, warum alle WTF schreien (im positiven Sinne)",
     
     // Footer Section
-    "footer.description": "What The Food ist Ihr All-in-One-KI-Lebensmittelscanner, Kalorienschätzer und Rezeptgenerator. Machen Sie ein Foto von jedem Essen, um genaue Kalorien, Makros und Rezeptaufschlüsselungen in Sekunden zu erhalten.",
+    "footer.description": "Ihr Makro-Tracking-Begleiter, der Ihnen hilft zu verstehen, was Sie essen. Scannen Sie Mahlzeiten, verfolgen Sie Makros und erkennen Sie Muster, die Ihre Essgewohnheiten und Fitnessziele prägen.",
     "footer.product": "Produkt",
     "footer.company": "Unternehmen",
     "footer.legal": "Rechtliches",
@@ -4141,7 +4141,7 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.terms": "Allgemeine Geschäftsbedingungen",
     "footer.refundpolicy": "Rückerstattungsrichtlinie",
     "footer.analytics": "Analytik",
-    "footer.contactsupport": "Support Kontaktieren",
+    "footer.contactsupport": "Support",
     "footer.rights": "Alle Rechte vorbehalten.",
     
     // Blog Section
@@ -5050,8 +5050,8 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.submit.description": "Invio del feedback fallito. Riprova.",
     
     // Hero Section
-    "hero.title": "Scanner alimentare IA gratuito e stimatore di calorie",
-    "hero.description": "Carica una foto di un pasto e ottieni informazioni nutrizionali istantanee con l'IA. Traccia calorie, macro e fai scelte più sane con il nostro intelligente stimatore di calorie. <strong>È come Shazam, ma per il tuo cibo!</strong>",
+    "hero.title": "Un Tracker di Macro Costruito Per Abitudini Alimentari Quotidiane",
+    "hero.description": "Se ti sei mai chiesto: \"Sto mangiando davvero bene?\" Questo tracker di macro potrebbe fare al caso tuo. È pensato per persone che vogliono tracciare cibo e calorie senza registrazione manuale.",
     "hero.uploadphoto": "Carica foto",
     "hero.remaining": "rimanenti",
     "hero.scans": "scansioni",
@@ -5296,8 +5296,8 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.italian": "Italiano",
     
     // Pricing Section
-    "pricing.title": "Calcolatore di Calorie Intelligente, Prezzi Semplici",
-    "pricing.subtitle": "Confronta i nostri piani freemium del calcolatore di calorie per vedere quanto lontano possono portarti il contesto sanitario personalizzato e l'analisi dell'account.",
+    "pricing.title": "Tracker di Macro Intelligente, Prezzi Trasparenti",
+    "pricing.subtitle": "Creato per persone che vogliono tracciare il cibo senza registrazione manuale.",
     "pricing.free.name": "Gratuito",
     "pricing.free.price": "$0",
     "pricing.free.period": "/mese",
@@ -5335,7 +5335,7 @@ const translations: Record<Language, Record<string, string>> = {
     "reviews.subtitle": "Affamato di prove? Scopri perché tutti gridano WTF (in senso positivo)",
     
     // Footer Section
-    "footer.description": "Analisi alimentare alimentata dall'IA per una vita più sana. Scansiona, analizza e comprendi i tuoi pasti istantaneamente.",
+    "footer.description": "Il tuo compagno di tracciamento macro che ti aiuta a capire cosa mangi. Scansiona i pasti, traccia i macro e individua i modelli che danno forma alle tue abitudini alimentari e ai tuoi obiettivi di fitness.",
     "footer.product": "Prodotto",
     "footer.company": "Azienda",
     "footer.legal": "Legale",
@@ -5346,7 +5346,7 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.terms": "Termini e condizioni",
     "footer.refundpolicy": "Politica di rimborso",
     "footer.analytics": "Analitiche",
-    "footer.contactsupport": "Contatta il Supporto",
+    "footer.contactsupport": "Supporto",
     "footer.rights": "Tutti i diritti riservati.",
     
     // Blog Section
@@ -6254,8 +6254,8 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.submit.description": "Falha ao enviar feedback. Por favor, tente novamente.",
     
     // Hero Section
-    "hero.title": "Scanner de alimentos com IA grátis e estimador de calorias",
-    "hero.description": "Envie uma foto de uma refeição e obtenha informações nutricionais instantâneas com IA. Rastreie calorias, macros e faça escolhas mais saudáveis com nosso inteligente estimador de calorias. <strong>É como o Shazam, mas para a sua comida!</strong>",
+    "hero.title": "Um Rastreador de Macros Construído Para Hábitos Alimentares Diários",
+    "hero.description": "Se você já se perguntou: \"Estou realmente comendo certo?\" Este rastreador de macros pode ser para você. Foi criado para pessoas que querem rastrear alimentos e calorias sem registro manual.",
     "hero.uploadphoto": "Enviar foto",
     "hero.remaining": "restantes",
     "hero.scans": "escaneamentos",
@@ -6500,8 +6500,8 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.italian": "Italiano",
     
     // Pricing Section
-    "pricing.title": "Calculadora de Calorias Inteligente, Preços Simples",
-    "pricing.subtitle": "Compare nossos planos freemium de calculadora de calorias para ver até onde o contexto de saúde personalizado e a análise de conta podem levá-lo.",
+    "pricing.title": "Rastreador de Macros Inteligente, Preços Transparentes",
+    "pricing.subtitle": "Criado para pessoas que querem rastrear alimentos sem registro manual.",
     "pricing.free.name": "Grátis",
     "pricing.free.price": "$0",
     "pricing.free.period": "/mês",
@@ -6539,7 +6539,7 @@ const translations: Record<Language, Record<string, string>> = {
     "reviews.subtitle": "Com fome de provas? Veja por que todos estão gritando WTF (de um jeito bom)",
     
     // Footer Section
-    "footer.description": "What The Food é o seu scanner de alimentos IA tudo-em-um, estimador de calorias e gerador de receitas. Tire uma foto de qualquer comida para desbloquear calorias precisas, macros e detalhamentos de receitas, em segundos.",
+    "footer.description": "Seu companheiro de rastreamento de macros que ajuda você a entender o que come. Escaneie refeições, rastreie macros e identifique padrões que moldam seus hábitos alimentares e objetivos de fitness.",
     "footer.product": "Produto",
     "footer.company": "Empresa",
     "footer.legal": "Legal",
@@ -6550,7 +6550,7 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.terms": "Termos e condições",
     "footer.refundpolicy": "Política de reembolso",
     "footer.analytics": "Analíticas",
-    "footer.contactsupport": "Contatar Suporte",
+    "footer.contactsupport": "Suporte",
     "footer.rights": "Todos os direitos reservados.",
     
     // Blog Section
@@ -7466,8 +7466,8 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.submit.description": "提交反馈失败。请重试。",
     
     // Hero Section
-    "hero.title": "免费AI食物扫描器和卡路里估算器",
-    "hero.description": "上传餐食照片，立即获得AI营养洞察。追踪卡路里、宏量营养素，使用我们智能的卡路里估算器做出更健康的选择。 <strong>就像 Shazam，但用于你的食物!</strong>",
+    "hero.title": "为日常饮食习惯打造的宏量营养素追踪器",
+    "hero.description": "如果你曾经问过自己：\"我真的吃对了吗？\" 这个宏量营养素追踪器可能适合你。它为想要追踪食物和卡路里而无需手动记录的人而设计。",
     "hero.uploadphoto": "上传照片",
     "hero.remaining": "剩余",
     "hero.scans": "次扫描",
@@ -7712,8 +7712,8 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.italian": "意大利",
     
     // Pricing Section
-    "pricing.title": "智能食物卡路里查找器，简单定价",
-    "pricing.subtitle": "比较我们的食物卡路里查找器免费增值计划，看看个性化健康背景和账户分析能带您走多远。",
+    "pricing.title": "智能宏量营养素追踪器，透明定价",
+    "pricing.subtitle": "为想要追踪食物而无需手动记录的人而设计。",
     "pricing.free.name": "免费",
     "pricing.free.price": "$0",
     "pricing.free.period": "/月",
@@ -7751,7 +7751,7 @@ const translations: Record<Language, Record<string, string>> = {
     "reviews.subtitle": "渴望证明？看看为什么每个人都在尖叫WTF（以好的方式）",
     
     // Footer Section
-    "footer.description": "What The Food是您的一体化AI食物扫描器、卡路里估算器和食谱生成器。拍摄任何食物照片，即可在几秒钟内解锁准确的卡路里、宏量营养素和食谱分解。",
+    "footer.description": "您的宏量营养素追踪伙伴，帮助您了解所吃的食物。扫描餐食，追踪宏量营养素，发现塑造您饮食习惯和健身目标的模式。",
     "footer.product": "产品",
     "footer.company": "公司",
     "footer.legal": "法律",
@@ -7762,7 +7762,7 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.terms": "条款和条件",
     "footer.refundpolicy": "退款政策",
     "footer.analytics": "分析",
-    "footer.contactsupport": "联系支持",
+    "footer.contactsupport": "支持",
     "footer.rights": "版权所有。",
     
     // Blog Section
@@ -8671,8 +8671,8 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.submit.description": "フィードバックの送信に失敗しました。もう一度お試しください。",
     
     // Hero Section
-    "hero.title": "無料AIフードスキャナーとカロリー推定ツール",
-    "hero.description": "食事の写真をアップロードして、即座にAI栄養インサイトを取得。カロリー、マクロを追跡し、スマートなカロリー推定ツールでより健康的な選択をしましょう。 <strong>Shazamの食べ物版!</strong>",
+    "hero.title": "日常の食習慣のためのマクロトラッカー",
+    "hero.description": "「本当に正しく食べているのか？」と自分に問いかけたことがあるなら、このマクロトラッカーがあなたにぴったりかもしれません。手動で記録することなく、食べ物とカロリーを追跡したい人のために作られています。",
     "hero.uploadphoto": "写真をアップロード",
     "hero.remaining": "残り",
     "hero.scans": "スキャン",
@@ -8917,8 +8917,8 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.italian": "イタリアン",
     
     // Pricing Section
-    "pricing.title": "スマート食品カロリー検索ツール、シンプルな価格",
-    "pricing.subtitle": "食品カロリー検索ツールのフリーミアムプランを比較して、パーソナライズされた健康コンテキストとアカウント分析がどこまで進められるかを確認してください。",
+    "pricing.title": "スマートマクロトラッカー、透明な価格",
+    "pricing.subtitle": "手動で記録することなく食べ物を追跡したい人のために作られています。",
     "pricing.free.name": "無料",
     "pricing.free.price": "$0",
     "pricing.free.period": "/月",
@@ -8956,7 +8956,7 @@ const translations: Record<Language, Record<string, string>> = {
     "reviews.subtitle": "証明に飢えていますか？なぜ誰もがWTF（良い意味で）と叫んでいるのかを見てください",
     
     // Footer Section
-    "footer.description": "What The Foodは、オールインワンのAI食品スキャナー、カロリー推定器、レシピジェネレーターです。あらゆる食品の写真を撮影して、正確なカロリー、マクロ、レシピの内訳を数秒で取得できます。",
+    "footer.description": "あなたが食べるものを理解するのに役立つマクロトラッキングのパートナー。食事をスキャンし、マクロを追跡し、あなたの食習慣とフィットネス目標を形作るパターンを見つけます。",
     "footer.product": "製品",
     "footer.company": "会社",
     "footer.legal": "法的",
@@ -8967,7 +8967,7 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.terms": "利用規約",
     "footer.refundpolicy": "返金ポリシー",
     "footer.analytics": "分析",
-    "footer.contactsupport": "サポートに連絡",
+    "footer.contactsupport": "サポート",
     "footer.rights": "全著作権所有。",
     
     // Blog Section
@@ -9884,8 +9884,8 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.submit.description": "فشل إرسال الملاحظات. يرجى المحاولة مرة أخرى.",
     
     // Hero Section
-    "hero.title": "ماسح طعام بالذكاء الاصطناعي مجاني ومقدر السعرات الحرارية",
-    "hero.description": "قم بتحميل صورة لوجبة واحصل على رؤى غذائية فورية مدعومة بالذكاء الاصطناعي. تتبع السعرات الحرارية والماكرو واتخذ خيارات أكثر صحة باستخدام مقدر السعرات الحرارية الذكي. <strong>!مثل  Shazam، ولكن لطعامك/strong>",
+    "hero.title": "متتبع الماكرو المصمم لعادات الأكل اليومية",
+    "hero.description": "إذا سألت نفسك مرة: \"هل أتناول الطعام بشكل صحيح حقًا؟\" قد يكون متتبع الماكرو هذا مناسبًا لك. إنه مصمم للأشخاص الذين يريدون تتبع الطعام والسعرات الحرارية دون تسجيل يدوي.",
     "hero.uploadphoto": "تحميل صورة",
     "hero.remaining": "متبقي",
     "hero.scans": "مسح",
@@ -10130,8 +10130,8 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.italian": "إيطالي",
     
     // Pricing Section
-    "pricing.title": "باحث السعرات الحرارية الذكي، أسعار بسيطة",
-    "pricing.subtitle": "قارن خططنا المجانية لباحث السعرات الحرارية لمعرفة مدى تقدمك مع سياق الصحة الشخصية وتحليل الحساب.",
+    "pricing.title": "متتبع الماكرو الذكي، أسعار شفافة",
+    "pricing.subtitle": "مصمم للأشخاص الذين يريدون تتبع الطعام دون تسجيل يدوي.",
     "pricing.free.name": "مجاني",
     "pricing.free.price": "$0",
     "pricing.free.period": "/شهر",
@@ -10169,7 +10169,7 @@ const translations: Record<Language, Record<string, string>> = {
     "reviews.subtitle": "جائع للإثبات؟ شاهد لماذا الجميع يصرخون WTF (بمعنى جيد)",
     
     // Footer Section
-    "footer.description": "What The Food هو ماسح الطعام بالذكاء الاصطناعي الشامل، ومقدر السعرات الحرارية، ومولد الوصفات. التقط صورة لأي طعام لفتح السعرات الحرارية الدقيقة والماكرو وتفاصيل الوصفات، في ثوانٍ.",
+    "footer.description": "رفيقك في تتبع الماكرو الذي يساعدك على فهم ما تأكله. امسح الوجبات، وتتبع الماكرو، واكتشف الأنماط التي تشكل عاداتك الغذائية وأهداف اللياقة البدنية.",
     "footer.product": "المنتج",
     "footer.company": "الشركة",
     "footer.legal": "قانوني",
@@ -10180,7 +10180,7 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.terms": "الشروط والأحكام",
     "footer.refundpolicy": "سياسة الاسترداد",
     "footer.analytics": "التحليلات",
-    "footer.contactsupport": "اتصل بالدعم",
+    "footer.contactsupport": "الدعم",
     "footer.rights": "جميع الحقوق محفوظة.",
     
     // Blog Section

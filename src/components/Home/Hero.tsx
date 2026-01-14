@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Upload, Loader2, Sparkles, ShieldCheck, Timer, AlertCircle, Lock } from "lucide-react";
+import { Upload, Loader2, AlertCircle, Lock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
@@ -31,7 +31,7 @@ export default function Hero() {
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [uploadedImagePath, setUploadedImagePath] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
-  const [socialProofMargin, setSocialProofMargin] = useState<number>(0);
+  const [userCount, setUserCount] = useState<number | null>(null);
   const uploadContainerRef = useRef<HTMLDivElement>(null);
   const leftSectionRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -49,6 +49,28 @@ export default function Hero() {
   const { user: authUser } = useAuth();
   const hasCheckedRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
+
+  // Fetch user count on mount
+  useEffect(() => {
+    const fetchUserCount = async () => {
+      try {
+        const response = await fetch("/api/user-count");
+        if (response.ok) {
+          const data = await response.json();
+          console.log("User count fetched:", data.count);
+          setUserCount(data.count || 0);
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.error("Failed to fetch user count:", response.status, errorData);
+          // Fallback to showing translation if API fails
+        }
+      } catch (error) {
+        console.error("Failed to fetch user count:", error);
+        // Fallback to showing translation if fetch fails
+      }
+    };
+    fetchUserCount();
+  }, []);
 
   useEffect(() => {
     // Use user from auth context
@@ -183,62 +205,6 @@ export default function Hero() {
     }
   }, [previewUrl]);
 
-  // Align social proof with bottom of upload container
-  useEffect(() => {
-    const alignSocialProof = () => {
-      if (uploadContainerRef.current && leftSectionRef.current) {
-        const socialProofElement = leftSectionRef.current.querySelector('[data-social-proof]') as HTMLElement;
-        
-        if (socialProofElement) {
-          // Get the Card's bottom position
-          const cardRect = uploadContainerRef.current.getBoundingClientRect();
-          const cardBottom = cardRect.bottom;
-          
-          // Get the left section's top position
-          const leftSectionRect = leftSectionRef.current.getBoundingClientRect();
-          const leftSectionTop = leftSectionRect.top;
-          
-          // Calculate the Card's height from the left section's top
-          const cardHeightFromLeftTop = cardBottom - leftSectionTop;
-          
-          // Get all content above social proof (including margins)
-          let contentAboveHeight = 0;
-          const children = Array.from(leftSectionRef.current.children);
-          const socialProofIndex = children.indexOf(socialProofElement);
-          
-          for (let i = 0; i < socialProofIndex; i++) {
-            const child = children[i] as HTMLElement;
-            const childRect = child.getBoundingClientRect();
-            const computedStyle = window.getComputedStyle(child);
-            const marginBottom = parseFloat(computedStyle.marginBottom) || 0;
-            contentAboveHeight += childRect.height + marginBottom;
-          }
-          
-          // Get social proof height
-          const socialProofHeight = socialProofElement.getBoundingClientRect().height;
-          
-          // Calculate margin needed: card bottom should align with social proof bottom
-          // cardHeightFromLeftTop = contentAboveHeight + margin + socialProofHeight
-          const marginNeeded = cardHeightFromLeftTop - contentAboveHeight - socialProofHeight;
-          
-          if (marginNeeded > 0) {
-            setSocialProofMargin(marginNeeded);
-          } else {
-            setSocialProofMargin(0);
-          }
-        }
-      }
-    };
-
-    // Use setTimeout to ensure DOM is fully rendered
-    const timeoutId = setTimeout(alignSocialProof, 100);
-    window.addEventListener('resize', alignSocialProof);
-    
-    return () => {
-      clearTimeout(timeoutId);
-      window.removeEventListener('resize', alignSocialProof);
-    };
-  }, [previewUrl, user, isPremium, remainingScans]);
 
 
   const onChooseFile = () => {
@@ -535,6 +501,18 @@ export default function Hero() {
               >
                 {(() => {
                   const title = t("hero.title");
+                  if (title.includes("A Macro Tracker Built")) {
+                    return (
+                      <>
+                        <span className="text-black dark:text-white whitespace-normal lg:whitespace-nowrap block">
+                          A Macro Tracker Built
+                        </span>
+                        <span className="text-black dark:text-white whitespace-normal lg:whitespace-nowrap block">
+                          <span className="text-primary whitespace-normal lg:whitespace-nowrap">For Daily Eating Habits</span>
+                        </span>
+                      </>
+                    );
+                  }
                   if (title.includes("Free AI Food Scanner")) {
                     return (
                       <>
@@ -583,48 +561,36 @@ export default function Hero() {
             </div>
           </div>
 
-          {/* Buttons */}
+          {/* App Store and Play Store Banners */}
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center w-full">
-            {!user ? (
-              <>
-                <Button
-                  size="lg"
-                  className="bg-primary hover:bg-primary-hover text-sm sm:text-base w-full sm:w-auto"
-                  onClick={handleGetStarted}
-                >
-                  {t("common.getstartedforfree")}
-                </Button>
-                <Button size="lg" variant="outline" className="text-sm sm:text-base w-full sm:w-auto" asChild>
-                  <Link href="/how-it-works">{t("common.howitworks")}</Link>
-                </Button>
-              </>
-            ) : isPremium ? (
-              <>
-                <Button
-                  size="lg"
-                  className="bg-primary hover:bg-primary-hover text-sm sm:text-base w-full sm:w-auto"
-                  asChild
-                >
-                  <Link href="/my-food-analytics">{t("common.macroanalytics")}</Link>
-                </Button>
-                <Button size="lg" variant="outline" className="text-sm sm:text-base w-full sm:w-auto" asChild>
-                  <Link href="/scan-histories">{t("common.scanhistory")}</Link>
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  size="lg"
-                  className="bg-primary hover:bg-primary-hover text-sm sm:text-base w-full sm:w-auto"
-                  asChild
-                >
-                  <Link href="/pricing">{t("common.gopremium")}</Link>
-                </Button>
-                <Button size="lg" variant="outline" className="text-sm sm:text-base w-full sm:w-auto" asChild>
-                  <Link href="/pricing">{t("common.unlockfeatures")}</Link>
-                </Button>
-              </>
-            )}
+            <div 
+              onClick={() => {
+                toast({
+                  title: "Coming Soon",
+                  description: "The app will be available on the App Store soon!",
+                });
+              }}
+              className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
+            >
+              <img 
+                src="/appstore-banner.png" 
+                alt="Download on the App Store" 
+              />
+            </div>
+            <div 
+              onClick={() => {
+                toast({
+                  title: "Coming Soon",
+                  description: "The app will be available on Google Play soon!",
+                });
+              }}
+              className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
+            >
+              <img 
+                src="/playstore-banner.png" 
+                alt="Get it on Google Play" 
+              />
+            </div>
           </div>
 
           {/* Free scans text */}
@@ -699,10 +665,10 @@ export default function Hero() {
                           }}
                         />
                       </div>
-                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center w-full">
+                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full">
                         <Button 
                           size="lg" 
-                          className={`text-sm sm:text-base w-full sm:w-auto ${
+                          className={`text-sm sm:text-base w-full ${
                             analyzing 
                               ? "bg-green-400 hover:bg-green-400 cursor-not-allowed" 
                               : "bg-primary hover:bg-primary-hover"
@@ -722,7 +688,7 @@ export default function Hero() {
                         <Button 
                           size="lg" 
                           variant="outline" 
-                          className="text-sm sm:text-base w-full sm:w-auto" 
+                          className="text-sm sm:text-base w-full" 
                           onClick={() => {
                             if (previewUrl) {
                               URL.revokeObjectURL(previewUrl);
@@ -784,33 +750,14 @@ export default function Hero() {
                 className="h-10 w-10 rounded-full border-2 border-background object-cover"
               />
             </div>
-            <p className="text-sm text-muted-foreground text-center whitespace-nowrap">{t("hero.lovedby")}</p>
+            <p className="text-sm text-muted-foreground text-center whitespace-nowrap">
+              {userCount !== null 
+                ? `Loved by ${userCount.toLocaleString()} Food Detectives`
+                : t("hero.lovedby")
+              }
+            </p>
           </div>
 
-          {/* Feature boxes - after upload card on mobile */}
-          <div className="grid grid-cols-1 gap-3 sm:gap-4 mt-6 w-full">
-            <div className="flex items-center gap-3 rounded-xl border border-input dark:border-white bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-              <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />
-              <div className="text-left">
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.aiaccuracy")}</p>
-                <p className="text-xs text-muted-foreground">{t("hero.understands10k")}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-xl border border-input dark:border-white bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-              <Timer className="h-5 w-5 text-primary flex-shrink-0" />
-              <div className="text-left">
-                <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.instantresults")}</p>
-                <p className="text-xs text-muted-foreground">{t("hero.nutritionseconds")}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-xl border border-input dark:border-white bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-              <ShieldCheck className="h-5 w-5 text-primary flex-shrink-0" />
-              <div className="text-left">
-                <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.healthfocused")}</p>
-                <p className="text-xs text-muted-foreground">{t("hero.macrosmicronutrients")}</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Desktop Layout - Two Column */}
@@ -825,6 +772,18 @@ export default function Hero() {
                 >
                   {(() => {
                     const title = t("hero.title");
+                  if (title.includes("A Macro Tracker Built")) {
+                    return (
+                      <>
+                        <span className="text-black dark:text-white whitespace-normal lg:whitespace-nowrap block">
+                          A Macro Tracker Built
+                        </span>
+                        <span className="text-black dark:text-white whitespace-normal lg:whitespace-nowrap block">
+                          <span className="text-primary whitespace-normal lg:whitespace-nowrap">For Daily Eating Habits</span>
+                        </span>
+                      </>
+                    );
+                  }
                   if (title.includes("Free AI Food Scanner")) {
                     return (
                       <>
@@ -871,47 +830,36 @@ export default function Hero() {
                 >
               </p>
               </div>
+              {/* App Store and Play Store Banners */}
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-start">
-                {!user ? (
-                  <>
-                    <Button
-                      size="lg"
-                      className="bg-primary hover:bg-primary-hover text-sm sm:text-base"
-                      onClick={handleGetStarted}
-                    >
-                      {t("common.getstartedforfree")}
-                    </Button>
-                    <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
-                      <Link href="/how-it-works">{t("common.howitworks")}</Link>
-                    </Button>
-                  </>
-                ) : isPremium ? (
-                  <>
-                    <Button
-                      size="lg"
-                      className="bg-primary hover:bg-primary-hover text-sm sm:text-base"
-                      asChild
-                    >
-                      <Link href="/my-food-analytics">{t("common.macroanalytics")}</Link>
-                    </Button>
-                    <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
-                      <Link href="/scan-histories">{t("common.scanhistory")}</Link>
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      size="lg"
-                      className="bg-primary hover:bg-primary-hover text-sm sm:text-base"
-                      asChild
-                    >
-                      <Link href="/pricing">{t("common.gopremium")}</Link>
-                    </Button>
-                    <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
-                      <Link href="/pricing">{t("common.unlockfeatures")}</Link>
-                    </Button>
-                  </>
-                )}
+                <div 
+                  onClick={() => {
+                    toast({
+                      title: "Coming Soon",
+                      description: "The app will be available on the App Store soon!",
+                    });
+                  }}
+                  className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
+                >
+                  <img 
+                    src="/appstore-banner.png" 
+                    alt="Download on the App Store" 
+                  />
+                </div>
+                <div 
+                  onClick={() => {
+                    toast({
+                      title: "Coming Soon",
+                      description: "The app will be available on Google Play soon!",
+                    });
+                  }}
+                  className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
+                >
+                  <img 
+                    src="/playstore-banner.png" 
+                    alt="Get it on Google Play" 
+                  />
+                </div>
               </div>
 
               {/* Free scans text for desktop - after CTAs */}
@@ -954,7 +902,7 @@ export default function Hero() {
 
 
               {/* Social proof row for desktop - below free scans text */}
-              <div data-social-proof className="flex items-center gap-3" style={{ marginTop: `${socialProofMargin}px` }}>
+              <div data-social-proof className="flex items-center gap-3 mt-6">
                 <div className="flex -space-x-2">
                   <img 
                     src="https://cdn.senja.io/public/media/2Gy86pCPjyR9b6zUwJjDPws2.jpeg?width=63&height=63&format=webp" 
@@ -997,7 +945,12 @@ export default function Hero() {
                     className="h-10 w-10 rounded-full border-2 border-background object-cover"
                   />
                 </div>
-                <p className="text-sm text-muted-foreground">{t("hero.lovedby")}</p>
+                <p className="text-sm text-muted-foreground">
+                  {userCount !== null 
+                    ? `Loved by ${userCount.toLocaleString()} Food Detectives`
+                    : t("hero.lovedby")
+                  }
+                </p>
               </div>
             </div>
 
@@ -1084,10 +1037,10 @@ export default function Hero() {
                           }}
                         />
                       </div>
-                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center w-full">
+                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full">
                         <Button 
                           size="lg" 
-                          className={`text-sm sm:text-base w-full sm:w-auto ${
+                          className={`text-sm sm:text-base w-full ${
                             analyzing 
                               ? "bg-green-400 hover:bg-green-400 cursor-not-allowed" 
                               : "bg-primary hover:bg-primary-hover"
@@ -1107,7 +1060,7 @@ export default function Hero() {
                         <Button 
                           size="lg" 
                           variant="outline" 
-                          className="text-sm sm:text-base w-full sm:w-auto" 
+                          className="text-sm sm:text-base w-full" 
                           onClick={() => {
                             if (previewUrl) {
                               URL.revokeObjectURL(previewUrl);
@@ -1129,30 +1082,6 @@ export default function Hero() {
             </CardContent>
           </Card>
               
-              {/* Feature boxes for desktop - below upload container */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6">
-                <div className="flex items-center gap-3 rounded-xl border border-input dark:border-white bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.aiaccuracy")}</p>
-                    <p className="text-xs text-muted-foreground">{t("hero.understands10k")}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-xl border border-input dark:border-white bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-                  <Timer className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.instantresults")}</p>
-                    <p className="text-xs text-muted-foreground">{t("hero.nutritionseconds")}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-xl border border-input dark:border-white bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-                  <ShieldCheck className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.healthfocused")}</p>
-                    <p className="text-xs text-muted-foreground">{t("hero.macrosmicronutrients")}</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 declare global {
@@ -16,6 +16,27 @@ const SENJA_SCRIPT_ID = "senja-platform-script";
 
 const Reviews = () => {
   const { t } = useLanguage();
+  const [userCount, setUserCount] = useState<number | null>(null);
+
+  // Fetch user count on mount
+  useEffect(() => {
+    const fetchUserCount = async () => {
+      try {
+        const response = await fetch("/api/user-count");
+        if (response.ok) {
+          const data = await response.json();
+          console.log("User count fetched for reviews:", data.count);
+          setUserCount(data.count || 0);
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          console.error("Failed to fetch user count:", response.status, errorData);
+        }
+      } catch (error) {
+        console.error("Failed to fetch user count:", error);
+      }
+    };
+    fetchUserCount();
+  }, []);
   
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -44,6 +65,20 @@ const Reviews = () => {
         <div className="text-center max-w-4xl mx-auto mb-8 sm:mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4 whitespace-normal md:whitespace-nowrap">
             {(() => {
+              if (userCount !== null) {
+                // Show dynamic count
+                const baseText = "Loved and Tested by";
+                const countText = userCount.toLocaleString();
+                const suffixText = "Food Lovers";
+                return (
+                  <>
+                    {baseText}{" "}
+                    <span className="text-primary whitespace-nowrap">{countText}</span>{" "}
+                    <span className="whitespace-nowrap">{suffixText}</span>
+                  </>
+                );
+              }
+              // Fallback to translation while loading
               const title = t("reviews.title");
               const highlightMatch = title.match(/(10[., ]?000)\s+(Food Lovers)/i);
               if (highlightMatch) {

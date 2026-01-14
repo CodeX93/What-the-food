@@ -51,6 +51,9 @@ import {
 } from "lucide-react";
 import { getPlatformSubscription } from "@/utils/subscription";
 import type { User } from "@supabase/supabase-js";
+import type { UserStreak, UserAchievement } from "@/utils/streaks.metadata";
+import { StreaksDisplay } from "@/components/Streaks/StreaksDisplay";
+import { AchievementsDisplay } from "@/components/Achievements/AchievementsDisplay";
 import { calculateBMI, getBMICategory, getIdealWeightRange } from "@/utils/bmi";
 import { useTranslation } from "@/hooks/use-translation";
 import { cn } from "@/lib/utils";
@@ -259,6 +262,8 @@ export type ProfileClientProps = {
   initialProfile?: any;
   initialSubscription?: any;
   initialPlanName?: string | null;
+  initialStreaks?: UserStreak[];
+  initialAchievements?: UserAchievement[];
 };
 
 export function ProfileClient({
@@ -266,6 +271,8 @@ export function ProfileClient({
   initialProfile = null,
   initialSubscription = null,
   initialPlanName = null,
+  initialStreaks = [],
+  initialAchievements = [],
 }: ProfileClientProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -1266,7 +1273,17 @@ export function ProfileClient({
               </div>
             </CardContent>
           </Card>
+
+          {/* Streaks Card - Next to Subscription */}
+          <StreaksDisplay streaks={initialStreaks} compact={true} />
         </div>
+
+        {/* Achievements Section - Below the grid */}
+        {initialAchievements && initialAchievements.length > 0 && (
+          <div className="mt-8">
+            <AchievementsDisplay achievements={initialAchievements} />
+          </div>
+        )}
       </div>
     </main>
   );

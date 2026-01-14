@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import ProfilePage from "@/views/Profile";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { fetchProfileDataServer } from "@/utils/profile.server";
+import { getUserStreaks, getUserAchievements, type UserStreak, type UserAchievement } from "@/utils/streaks.server";
 import { getPreviewImageUrlFromRequest, getRequestUrl, getCanonicalUrlFromRequest } from "@/lib/seo/siteUrl";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -53,12 +54,26 @@ export default async function ProfileRoute() {
   const user = session.user;
   const profileData = await fetchProfileDataServer(user.id);
 
+  // Fetch streaks and achievements
+  let initialStreaks: UserStreak[] = [];
+  let initialAchievements: UserAchievement[] = [];
+  try {
+    [initialStreaks, initialAchievements] = await Promise.all([
+      getUserStreaks(user.id),
+      getUserAchievements(user.id),
+    ]);
+  } catch (error) {
+    console.error("Server: failed to load streaks/achievements", error);
+  }
+
   return (
     <ProfilePage
       initialUser={user}
       initialProfile={profileData.profile}
       initialSubscription={profileData.subscription}
       initialPlanName={profileData.planName}
+      initialStreaks={initialStreaks}
+      initialAchievements={initialAchievements}
     />
   );
 }

@@ -295,14 +295,14 @@ const PricingTable = () => {
         // Fallback if billing cycle is not set
         return "Change to another plan";
       }
-      return "Upgrade Now";
+      return t("pricing.premium.cta");
     }
       // For free plan - if user is on free plan, show "Current Plan"
       if (isFree) {
         return t("pricing.current");
       }
-      // If user is on premium, they can't cancel to free from here, just show "Get Started"
-      return "Get Started";
+      // If user is on premium, they can't cancel to free from here, just show "Start Free"
+      return t("pricing.free.cta");
   };
 
   const isCurrentPlan = (planType: "free" | "premium", planName: string) => {
@@ -398,7 +398,7 @@ const PricingTable = () => {
           <h1 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">
             {(() => {
               const title = t("pricing.title");
-              const match = title.match(/(Simple Pricing)/i);
+              const match = title.match(/(Transparent Pricing)/i);
               if (!match) return title;
               const parts = title.split(match[0]);
               return (
@@ -499,7 +499,7 @@ const PricingTable = () => {
                   </TabsContent>
                 </Tabs>
               </CardContent>
-              <CardFooter className="p-4 sm:p-6 pt-0">
+              <CardFooter className="p-4 sm:p-6 pt-0 flex flex-col gap-2">
                 <Button 
                   className={`w-full text-sm sm:text-base ${plan.popular && !isCurrentPlan(plan.type, plan.name) ? 'bg-primary hover:bg-primary-hover' : ''}`}
                   variant={plan.popular ? 'default' : 'outline'}
@@ -508,6 +508,9 @@ const PricingTable = () => {
                 >
                   {loading || cancelling ? t("common.loading") : getPlanCTA(plan.type, plan.name)}
                 </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  No commitments . Cancel anytime
+                </p>
               </CardFooter>
             </Card>
           ))}

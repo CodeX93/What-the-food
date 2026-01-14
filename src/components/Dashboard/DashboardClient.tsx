@@ -33,12 +33,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { queryWithRetry } from "@/utils/supabaseQuery";
 import { DataCache, CACHE_KEYS, CACHE_DURATION } from "@/utils/dataCache";
 import type { User } from "@supabase/supabase-js";
+import type { UserStreak, UserAchievement } from "@/utils/streaks.metadata";
+import { StreaksAndAchievementsClient } from "@/components/Streaks/StreaksAndAchievementsClient";
 
 export type DashboardClientProps = {
   initialUser?: User | null;
   initialSubscription?: any;
   initialScans?: any[];
   initialFullName?: string | null;
+  initialStreaks?: UserStreak[];
+  initialAchievements?: UserAchievement[];
 };
 
 export function DashboardClient({
@@ -46,6 +50,8 @@ export function DashboardClient({
   initialSubscription = null,
   initialScans = [],
   initialFullName = null,
+  initialStreaks = [],
+  initialAchievements = [],
 }: DashboardClientProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -223,6 +229,17 @@ export function DashboardClient({
       setRecentScans(scans);
       // Update meals tracked
       setMealsTracked(prev => prev + 1);
+
+      // Record scan for streak tracking
+      try {
+        await fetch("/api/streaks/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "scan" }),
+        });
+      } catch (error) {
+        console.error("Error recording scan streak:", error);
+      }
     } catch (error: any) {
       console.error("Manual entry error:", error);
       toast({
@@ -568,6 +585,15 @@ export function DashboardClient({
         </div>
 
         <Script src="https://cdn.tinysnippet.net/scripts/v2.0/manager.js" strategy="lazyOnload" />
+
+        {/* Streaks Section - Above Upload and Analyze */}
+        <div className="mb-6">
+          <StreaksAndAchievementsClient
+            initialStreaks={initialStreaks}
+            initialAchievements={initialAchievements}
+            showAchievements={false}
+          />
+        </div>
 
         <div id="upload-section" className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-2 md:items-stretch">
           {/* Left Section: Upload & Analyze (first), then Log Foods manually (below) */}

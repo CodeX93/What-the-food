@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { unstable_cache } from "next/cache";
 import { getSiteUrl, toAbsoluteUrl } from "@/lib/seo/siteUrl";
+import { getAllTags } from "@/utils/tagScans.server";
+import { tagToSlug } from "@/utils/tagSlug";
 
 export const SITEMAP_CHUNK_SIZE = 45_000; // below 50,000 URL limit (headroom)
 
@@ -61,6 +63,21 @@ export const getAllSitemapEntries = unstable_cache(
     //
     // Keep this section fast: use lightweight "id+updated_at" queries and cache results.
     const dynamicEntries: MetadataRoute.Sitemap = [];
+    
+    // Add tag pages dynamically
+    try {
+      const tags = await getAllTags();
+      const tagEntries: MetadataRoute.Sitemap = tags.map((tag) => ({
+        url: toAbsoluteUrl(`/${tagToSlug(tag)}`),
+        lastModified,
+        changeFrequency: "daily" as const, // Tags update frequently as new scans are added
+        priority: 0.7, // High priority for tag pages
+      }));
+      dynamicEntries.push(...tagEntries);
+    } catch (error) {
+      console.error("Error fetching tags for sitemap:", error);
+      // Continue without tag pages if there's an error
+    }
 
     return dedupeByUrl([...staticEntries, ...dynamicEntries]).sort((a, b) =>
       a.url.localeCompare(b.url)

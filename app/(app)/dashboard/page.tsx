@@ -4,6 +4,7 @@ import DashboardPage from "@/views/Dashboard";
 import { createServerSupabaseClient } from "@/integrations/supabase/server";
 import { getPlatformSubscriptionServer } from "@/utils/subscription.server";
 import { fetchRecentScansServer } from "@/utils/foodScan.server";
+import { getUserStreaks, getUserAchievements, type UserStreak, type UserAchievement } from "@/utils/streaks.server";
 import { getPreviewImageUrlFromRequest, getRequestUrl, getCanonicalUrlFromRequest } from "@/lib/seo/siteUrl";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -78,12 +79,26 @@ export default async function DashboardRoute() {
     console.error("Server: failed to load user profile", error);
   }
 
+  // Fetch streaks and achievements
+  let initialStreaks: UserStreak[] = [];
+  let initialAchievements: UserAchievement[] = [];
+  try {
+    [initialStreaks, initialAchievements] = await Promise.all([
+      getUserStreaks(user.id),
+      getUserAchievements(user.id),
+    ]);
+  } catch (error) {
+    console.error("Server: failed to load streaks/achievements", error);
+  }
+
   return (
     <DashboardPage
       initialUser={user}
       initialSubscription={subscription}
       initialScans={recentScans}
       initialFullName={userFullName}
+      initialStreaks={initialStreaks}
+      initialAchievements={initialAchievements}
     />
   );
 }

@@ -238,6 +238,17 @@ export function AnalyticsClient() {
       });
       setManualFoods([{ id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`, value: "" }]);
 
+      // Record scan for streak tracking
+      try {
+        await fetch("/api/streaks/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "scan" }),
+        });
+      } catch (error) {
+        console.error("Error recording scan streak:", error);
+      }
+
       toast({
         title: "Manual foods logged",
         description: "We added these foods to your analytics.",

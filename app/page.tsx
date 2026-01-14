@@ -7,7 +7,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const canonicalUrl = await getCanonicalUrlFromRequest('/');
   const title = "Free AI Food Scanner and Calorie Estimator | What the Food";
   const description =
-    "Get accurate nutritional analysis and recipe preparation instructions from any food image with our free AI food scanner and calorie estimator; What The Food.";
+    "What The Food is a macro tracker and food calorie finder that helps you track meals, understand macros, and spot eating patterns to build healthier habits.";
   return {
     title,
     description,
