@@ -12,22 +12,22 @@ const Features = () => {
     {
       headline: "AI Food Detection From Any Meal Photo",
       subheading: "Upload a food photo and let our AI food scanner detect the meal, estimate portions, and break down calories, protein, carbs, and fat in seconds.",
-      image: "/preview-images/Dashboard.png", // Results page / macro breakdown image
+      image: "/home-hiw/1.png",
     },
     {
       headline: "Smart Macro Tracker for Better Eating Habits",
       subheading: "Our AI calorie estimator allows you to track calories and macros automatically across days and meals. Spot trends, understand balance, and build better eating habits and macro tracking without manual logging.",
-      image: "/preview-images/My Food Analytics.png", // Analytics page image
+      image: "/home-hiw/2.png",
     },
     {
       headline: "Diet Keto Meal Plan That Fits Your Diet",
       subheading: "Create meal plans based on your health goals, allergies, and diet preferences, including keto, low-carb, balanced eating, and more.",
-      image: "/preview-images/Meal Planner.png", // Personalized meal plan image
+      image: "/home-hiw/3.png",
     },
     {
       headline: "Cook Like Gordon Ramsay Without The Drama",
       subheading: "Turn any meal into step-by-step instructions with our AI recipe generator and recipe analyzer app. Break down ingredients, cooking steps, and portions without guesswork.",
-      image: "/preview-images/Saved Recipes.png", // Recipe section image
+      image: "/home-hiw/4.png",
     },
   ];
 
@@ -64,35 +64,27 @@ const Features = () => {
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row items-stretch justify-center gap-12 lg:gap-16 max-w-7xl mx-auto mb-20 lg:mb-24">
+        <div className="flex flex-col lg:flex-row items-stretch justify-center gap-12 lg:gap-16 max-w-7xl mx-auto mb-15 lg:mb-18">
           {/* Phone Mockup on Left */}
           {/* Max-width constraint prevents overlap. shrink-0 ensures it doesn't collapse. */}
-          <div className="hidden lg:block relative h-auto flex-none w-full max-w-[340px]">
-            {/* Phone Frame */}
-            <div className="relative h-full w-auto aspect-[9/19.5]">
-              <div className="relative h-full bg-black rounded-[2.5rem] p-3 shadow-2xl">
-                <div className="bg-white dark:bg-black rounded-[2rem] overflow-hidden h-full w-full">
-                  <div className="relative w-full h-full bg-white dark:bg-black overflow-hidden">
-                    <Image
-                      src={features[activeIndex].image}
-                      alt={features[activeIndex].headline}
-                      fill
-                      className="object-cover"
-                      priority={activeIndex === 0}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Phone Mockup on Left */}
+          {/* Fixed width constraint to define the height of the section (~565px) */}
+          <div className="hidden lg:block relative h-auto flex-none w-full max-w-[350px]">
+            {/* Phone Image - standard img, width-driven height */}
+            <img
+              src={features[activeIndex].image}
+              alt={features[activeIndex].headline}
+              className="h-full w-auto rounded-[2rem] object-contain block max-h-[80vh]"
+            />
 
             {/* Pagination Dots - Absolute positioned below the phone */}
-            <div className="absolute -bottom-16 left-0 right-0 flex justify-center gap-2">
+            <div className="absolute -bottom-12 left-0 right-0 flex justify-center gap-2">
               {features.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => setActiveIndex(index)}
                   className={`w-2.5 h-2.5 rounded-full transition-all ${activeIndex === index
-                    ? "bg-black dark:bg-white"
+                    ? "bg-primary"
                     : "bg-slate-300 dark:bg-slate-700 hover:bg-slate-400"
                     }`}
                   aria-label={`Go to slide ${index + 1}`}
@@ -104,21 +96,17 @@ const Features = () => {
           {/* Mobile View Phone */}
           <div className="lg:hidden w-full flex flex-col items-center">
             <div className="relative w-full max-w-[280px]">
-              <div className="relative bg-black rounded-[2.5rem] p-2 shadow-2xl">
-                <div className="bg-white dark:bg-black rounded-[2rem] overflow-hidden">
-                  <div className="relative aspect-[9/19.5] bg-white dark:bg-black overflow-hidden">
-                    <Image
-                      src={features[activeIndex].image}
-                      alt={features[activeIndex].headline}
-                      fill
-                      className="object-cover"
-                      priority={activeIndex === 0}
-                    />
-                  </div>
-                </div>
+              <div className="relative aspect-[9/19.5] w-full">
+                <Image
+                  src={features[activeIndex].image}
+                  alt={features[activeIndex].headline}
+                  fill
+                  className="object-contain"
+                  priority={activeIndex === 0}
+                />
               </div>
               {/* Mobile Dots */}
-              <div className="flex justify-center gap-2 mt-6">
+              <div className="flex justify-center gap-2 mt-4">
                 {features.map((_, index) => (
                   <button
                     key={index}
@@ -135,22 +123,22 @@ const Features = () => {
           </div>
 
           {/* Feature Cards on Right */}
-          <div className="w-full flex-1 flex flex-col justify-between">
+          <div className="w-full flex-1 lg:max-w-xl flex flex-col justify-between">
             {features.map((feature, index) => (
               <div
                 key={index}
                 onClick={() => setActiveIndex(index)}
-                className={`p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${activeIndex === index
-                  ? "bg-primary/10 border-primary shadow-sm"
+                className={`p-5 rounded-xl border transition-all duration-300 cursor-pointer ${activeIndex === index
+                  ? "bg-primary/5 border-primary shadow-sm"
                   : "bg-white dark:bg-transparent border-slate-200 dark:border-slate-800 hover:border-slate-300"
                   }`}
               >
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-3">
                   <div className="flex-1">
-                    <h3 className="text-lg sm:text-xl font-bold mb-2 text-slate-900 dark:text-white">
+                    <h3 className="text-lg font-semibold mb-1 text-slate-900 dark:text-white">
                       {feature.headline}
                     </h3>
-                    <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+                    <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 leading-snug">
                       {feature.subheading}
                     </p>
                   </div>

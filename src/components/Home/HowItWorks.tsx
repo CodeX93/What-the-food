@@ -6,7 +6,7 @@ const HowItWorks = () => {
   const { t } = useLanguage();
 
   // YouTube video URL - can be changed later
-  const youtubeUrl = "https://youtu.be/ZK-rNEhJIDs?si=-O_rsYGPsitOh5DZ";
+  const youtubeUrl = "https://www.youtube.com/watch?v=MzEFeIRJ0eQ";
 
   // Extract video ID from YouTube URL
   const getVideoId = (url: string) => {

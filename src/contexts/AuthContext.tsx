@@ -79,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('Error in session refresh interval:', error);
       }
-    }, 2 * 60 * 1000); // 2 minutes - check frequently to prevent expiration
+    }, 1 * 60 * 1000); // 1 minutes - check frequently to prevent expiration
 
     // Also check session when user returns to the tab or focuses the window
     const handleVisibilityChange = async () => {

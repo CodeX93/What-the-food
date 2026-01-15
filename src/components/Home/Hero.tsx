@@ -637,7 +637,7 @@ export default function Hero() {
             <p className="text-sm text-muted-foreground text-center whitespace-nowrap">
               {userCount !== null
                 ? `Loved by ${userCount.toLocaleString()} Food Detectives`
-                : t("hero.lovedby")
+                : ("")
               }
             </p>
           </div>
@@ -887,7 +887,7 @@ export default function Hero() {
                 <p className="text-sm text-muted-foreground">
                   {userCount !== null
                     ? `Loved by ${userCount.toLocaleString()} Food Detectives`
-                    : t("hero.lovedby")
+                    : ("")
                   }
                 </p>
               </div>
