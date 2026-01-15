@@ -42,13 +42,13 @@ const Features = () => {
             {(() => {
               const title = t("features.title");
               // Split on "AI Food Scanner?" to make it green
-              const scannerMatch = title.match(/(AI Food Scanner\?)/i);
+              const scannerMatch = title.match(/(Smart Macro Tracker \?)/i);
               if (scannerMatch) {
-                const parts = title.split(/(AI Food Scanner\?)/i);
+                const parts = title.split(/(Smart Macro Tracker \?)/i);
                 return (
                   <>
                     {parts.map((part, index) => {
-                      if (part.match(/(AI Food Scanner\?)/i)) {
+                      if (part.match(/(Smart Macro Tracker \?)/i)) {
                         return <span key={index} className="text-primary whitespace-normal">{part}</span>;
                       }
                       return <span key={index} className="text-black dark:text-white whitespace-normal">{part}</span>;
@@ -64,14 +64,48 @@ const Features = () => {
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-16 max-w-7xl mx-auto">
+        <div className="flex flex-col lg:flex-row items-stretch justify-center gap-12 lg:gap-16 max-w-7xl mx-auto mb-20 lg:mb-24">
           {/* Phone Mockup on Left */}
-          <div className="w-full lg:w-1/2 flex flex-col items-center">
-            <div className="relative w-full max-w-sm">
-              {/* Phone Frame */}
+          {/* Max-width constraint prevents overlap. shrink-0 ensures it doesn't collapse. */}
+          <div className="hidden lg:block relative h-auto flex-none w-full max-w-[340px]">
+            {/* Phone Frame */}
+            <div className="relative h-full w-auto aspect-[9/19.5]">
+              <div className="relative h-full bg-black rounded-[2.5rem] p-3 shadow-2xl">
+                <div className="bg-white dark:bg-black rounded-[2rem] overflow-hidden h-full w-full">
+                  <div className="relative w-full h-full bg-white dark:bg-black overflow-hidden">
+                    <Image
+                      src={features[activeIndex].image}
+                      alt={features[activeIndex].headline}
+                      fill
+                      className="object-cover"
+                      priority={activeIndex === 0}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pagination Dots - Absolute positioned below the phone */}
+            <div className="absolute -bottom-16 left-0 right-0 flex justify-center gap-2">
+              {features.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setActiveIndex(index)}
+                  className={`w-2.5 h-2.5 rounded-full transition-all ${activeIndex === index
+                    ? "bg-black dark:bg-white"
+                    : "bg-slate-300 dark:bg-slate-700 hover:bg-slate-400"
+                    }`}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Mobile View Phone */}
+          <div className="lg:hidden w-full flex flex-col items-center">
+            <div className="relative w-full max-w-[280px]">
               <div className="relative bg-black rounded-[2.5rem] p-2 shadow-2xl">
                 <div className="bg-white dark:bg-black rounded-[2rem] overflow-hidden">
-                  {/* Phone Screen Content */}
                   <div className="relative aspect-[9/19.5] bg-white dark:bg-black overflow-hidden">
                     <Image
                       src={features[activeIndex].image}
@@ -83,16 +117,15 @@ const Features = () => {
                   </div>
                 </div>
               </div>
-
-              {/* Pagination Dots */}
+              {/* Mobile Dots */}
               <div className="flex justify-center gap-2 mt-6">
                 {features.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setActiveIndex(index)}
                     className={`w-2 h-2 rounded-full transition-all ${activeIndex === index
-                        ? "bg-primary w-8"
-                        : "bg-slate-300 dark:bg-slate-600"
+                      ? "bg-primary w-8"
+                      : "bg-slate-300 dark:bg-slate-600"
                       }`}
                     aria-label={`Go to slide ${index + 1}`}
                   />
@@ -102,22 +135,22 @@ const Features = () => {
           </div>
 
           {/* Feature Cards on Right */}
-          <div className="w-full lg:w-1/2 space-y-4">
+          <div className="w-full flex-1 flex flex-col justify-between">
             {features.map((feature, index) => (
               <div
                 key={index}
                 onClick={() => setActiveIndex(index)}
-                className={`p-6 rounded-xl border-2 cursor-pointer transition-all duration-300 ${activeIndex === index
-                    ? "border-primary bg-primary/5 dark:bg-primary/10 shadow-lg"
-                    : "border-slate-200/60 dark:border-slate-700/60 bg-white dark:bg-slate-900/80 hover:border-slate-300/80 dark:hover:border-slate-600/80"
+                className={`p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${activeIndex === index
+                  ? "bg-primary/10 border-primary shadow-sm"
+                  : "bg-white dark:bg-transparent border-slate-200 dark:border-slate-800 hover:border-slate-300"
                   }`}
               >
                 <div className="flex items-start gap-4">
                   <div className="flex-1">
-                    <h3 className="text-xl font-bold mb-3 text-slate-800 dark:text-white">
+                    <h3 className="text-lg sm:text-xl font-bold mb-2 text-slate-900 dark:text-white">
                       {feature.headline}
                     </h3>
-                    <p className="text-base text-muted-foreground leading-relaxed">
+                    <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
                       {feature.subheading}
                     </p>
                   </div>

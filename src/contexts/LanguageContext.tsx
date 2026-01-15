@@ -34,7 +34,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.widget": "Widget",
     "nav.analytics": "Analytics",
     "nav.user": "User",
-    
+
     // Common
     "common.loading": "Loading...",
     "common.error": "Error",
@@ -60,7 +60,7 @@ const translations: Record<Language, Record<string, string>> = {
     "common.scancomplete": "Scan complete!",
     "common.dailylimitreached": "Daily limit reached",
     "common.failedanalyze": "Failed to analyze image. Please try again.",
-    
+
     // Feedback Section
     "feedback.title": "Send Feedback",
     "feedback.subtitle": "We'd love to hear from you",
@@ -80,7 +80,7 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.empty.description": "Please enter your feedback message.",
     "feedback.error.submit.title": "Error",
     "feedback.error.submit.description": "Failed to submit feedback. Please try again.",
-    
+
     // Hero Section
     "hero.title": "A Macro Tracker Built For Daily Eating Habits",
     "hero.description": "If you've once asked yourself: \"AM I actually eating right?\" This macro tracker might be for you. It's built for people who want to track food and calories without manual logging.",
@@ -112,9 +112,9 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.healthfocused": "Health Focused",
     "hero.macrosmicronutrients": "Macros & micronutrients",
     "hero.lovedby": "Loved by 10,000+ Food Detectives",
-    
+
     // Features Section
-    "features.title": "Why Use Our AI Food Scanner?",
+    "features.title": "Why Use Our Smart Macro Tracker ?",
     "features.subtitle": "Some core values that make our food calorie finder stand out",
     "features.ai.title": "Instant Food Detection",
     "features.ai.description": "Get detailed nutritional information from any food image within seconds with our advanced calorie estimator.",
@@ -172,7 +172,7 @@ const translations: Record<Language, Record<string, string>> = {
     "features.macro.detail2": "Daily nutrition goals",
     "features.macro.detail3": "Meal planning assistance",
     "features.macro.detail4": "On-the-go nutritional checks",
-    
+
     // Features Hero Section
     "featureshero.title": "Powerful Features for Healthy Living",
     "featureshero.description": "Snap your meal and let our calorie cal do its magic. What The Food turns your food photos into smart calorie insights, macro tracking, and shareable data on the go.",
@@ -189,7 +189,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featureshero.testimonialname": "Gemma Ray, RDN",
     "featureshero.testimonialrole": "Sports Nutrition Partner",
     "featureshero.testimonialtext": "The accuracy and clarity help our athletes understand what fuels their performance. It's like having a dietitian assistant available 24/7.",
-    
+
     // Features Page Section
     "featurespage.ready": "Ready to Get Started?",
     "featurespage.readydescription": "Start with 1 free scan to explore the platform, then sign up for 3 free scans (or 3 days, whichever comes first) and premium coaching tools designed for lasting change.",
@@ -207,7 +207,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.userrating": "User Rating",
     "featurespage.mealsanalyzed": "Meals analyzed",
     "featurespage.aisupport": "AI nutrition support",
-    
+
     // FAQ Section
     "faq.title": "Frequently Asked Questions",
     "faq.subtitle": "Everything you need to know about our all-in-one calorie counter & food analyzer",
@@ -249,7 +249,7 @@ const translations: Record<Language, Record<string, string>> = {
     "faq.q18.answer": "Yes. What The Food processes all images securely and doesn't require personal information. It's safe, private, and free to use.",
     "faq.q19.question": "What is the best free AI food scanner in 2026?",
     "faq.q19.answer": "What The Food is among the best free AI food scanners in 2026, offering fast, accurate, and ad-free calorie and macro estimation directly in your browser, with too many great features for optimizing your healthy habits.",
-    
+
     // How It Works Section
     "howitworks.title": "How Does What The Food Calorie Cal Work?",
     "howitworks.subtitle": "Get nutritional insights with our food calorie calculator in three simple steps",
@@ -273,7 +273,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworks.step3.detail4": "Track trends and progress",
     "howitworks.section.title": "Decode your meals in 3 easy steps",
     "howitworks.section.description": "Capture, analyze, and get informed. Each scan moves from photo to insights in seconds.",
-    
+
     // How It Works CTA Section
     "howitworkscta.joincommunity": "Join the WhatTheFood community",
     "howitworkscta.title": "Ready for your most informed meal yet?",
@@ -299,7 +299,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan2": "Balanced Vegan",
     "howitworkscta.card2.plan3": "Diabetic Friendly",
     "howitworkscta.card2.plan4": "Athlete Fuel",
-    
+
     // How It Works Hero
     "howitworkshero.title": "How Does Our Food Analyzer Work?",
     "howitworkshero.description": "Skip the manual tracking. The WhatTheFood food analyzer recognizes your meal, estimates portions, and surfaces accurate nutrition instantly.",
@@ -332,7 +332,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.tomatoSauce": "Tomato Sauce",
     "howitworkshero.nutrition.tags.seafood": "Seafood",
     "howitworkshero.nutrition.tags.italian": "Italian",
-    
+
     // Pricing Section
     "pricing.title": "Smart Macro Tracker, Transparent Pricing",
     "pricing.subtitle": "Built for people who want to track food without manual logging.",
@@ -367,11 +367,11 @@ const translations: Record<Language, Record<string, string>> = {
     "pricing.canceldialog.description": "Are you sure you want to cancel your Premium subscription? You'll lose access to all Premium features at the end of your billing period.",
     "pricing.canceldialog.confirm": "Yes, Cancel",
     "pricing.canceldialog.keep": "Keep Subscription",
-    
+
     // Reviews Section
     "reviews.title": "Loved and Tested by 10,000 Food Lovers",
     "reviews.subtitle": "Hungry for proof? See why everyone's screaming WTF (in a good way)",
-    
+
     // Footer Section
     "footer.description": "Your macro tracking companion that helps you understand what you eat. Scan meals, track macros, and spot patterns that shape your eating habits and fitness goals.",
     "footer.product": "Product",
@@ -386,15 +386,15 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.analytics": "Analytics",
     "footer.contactsupport": "Support",
     "footer.rights": "All rights reserved.",
-    
+
     // Blog Section
     "blog.latest": "Latest from Our Blog",
     "blog.subtitle": "Tips, guides, and insights for healthier eating",
     "blog.viewall": "View All Posts",
-    
+
     // TopBar Promotional Banner
     "topbar.promo": "🎉 50% Early Bird Discount - Limited Time Only!",
-    
+
     // Widget Section
     "widgethero.title": "Embeddable Widget included in your plan",
     "widgethero.description": "Add WhatTheFood's AI-powered food scanning to your blog or website. Perfect for food bloggers, nutrition sites, and health platforms—without an extra subscription.",
@@ -483,7 +483,7 @@ const translations: Record<Language, Record<string, string>> = {
     "widgetpricing.viewplatform": "View platform pricing",
     "widgetpricing.managesubscription": "Manage subscription",
     "widgetpricing.or": "or",
-    
+
     // Keto Meal Planner Section
     "ketomealplanner.hero.title": "Keto Meal Planner",
     "ketomealplanner.hero.subtitle": "for Your Goals",
@@ -537,7 +537,7 @@ const translations: Record<Language, Record<string, string>> = {
     "ketomealplanner.premium.signup": "Sign Up Free",
     "ketomealplanner.premium.alreadyhaveaccount": "Already have an account?",
     "ketomealplanner.premium.signin": "Sign in",
-    
+
     // Auth Page Section
     "auth.hero.title": "Start Your Journey to Better Nutrition",
     "auth.hero.description": "Join thousands of users making healthier choices with AI-powered food analysis, personalized insights, and actionable nutrition guidance.",
@@ -598,7 +598,7 @@ const translations: Record<Language, Record<string, string>> = {
     "auth.toast.useridnotfound": "User ID not found. Please start over.",
     "auth.toast.error": "Error",
     "auth.toast.googleauthdesc": "An error occurred with Google authentication.",
-    
+
     // Terms Page Section
     "terms.title": "Terms & Conditions",
     "terms.lastupdated": "Last updated:",
@@ -614,7 +614,7 @@ const translations: Record<Language, Record<string, string>> = {
     "terms.section5.content": "Premium subscriptions are billed monthly or annually. You may cancel your subscription at any time, and cancellation will take effect at the end of your current billing period.",
     "terms.section6.title": "6. Modifications",
     "terms.section6.content": "WhatTheFood reserves the right to modify or replace these Terms at any time. Continued use of the service after any changes constitutes acceptance of the new Terms.",
-    
+
     // Privacy Page Section
     "privacy.title": "Privacy Policy",
     "privacy.lastupdated": "Last updated:",
@@ -630,7 +630,7 @@ const translations: Record<Language, Record<string, string>> = {
     "privacy.section5.content": "We use cookies and similar technologies to enhance your experience, analyze usage, and assist in our marketing efforts.",
     "privacy.section6.title": "6. Contact Us",
     "privacy.section6.content": "If you have questions about this Privacy Policy, please contact us at privacy@whatthefood.io",
-    
+
     // Profile Page Section
     "profile.loading": "Loading your profile...",
     "profile.complete.title": "Complete Your Profile",
@@ -716,7 +716,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.height": "Height",
     "profile.field.goal": "Goal",
     "profile.field.activity": "Activity Level",
-    
+
     // Settings Page Section
     "settings.title": "Settings",
     "settings.description": "Manage your account preferences",
@@ -764,7 +764,7 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.success.description": "Settings saved successfully.",
     "settings.error": "Error",
     "settings.error.description": "Failed to save settings.",
-    
+
     // Dashboard Page Section
     "dashboard.welcome": "Welcome back",
     "dashboard.welcome.description": "Unlock insights, macro tracking, and meal planning to optimize your health and build healthy eating habits.",
@@ -872,7 +872,7 @@ const translations: Record<Language, Record<string, string>> = {
     "dashboard.sponsors.description": "Reach health-conscious users interested in nutrition tracking, food, and cooking.",
     "dashboard.error.title": "Error",
     "dashboard.error.description": "Failed to load dashboard data.",
-    
+
     // Plans Page Section
     "plans.title": "Choose Your Plan",
     "plans.description": "Select a plan that works best for you. You can upgrade or downgrade at any time.",
@@ -911,7 +911,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.success.free.description": "You're now on the Free plan. Enjoy 3 scans lifetime (or 3 days)!",
     "plans.error.profile.fk": "Profile foreign key constraint error. Please run the migration: 20250105000000_fix_profiles_fk_constraint.sql",
     "plans.error.profile.create": "Failed to create profile: {message}",
-    
+
     // Plan Features
     "plans.feature.unlimitedscans": "Unlimited scans",
     "plans.feature.advancednutritional": "Advanced nutritional analysis",
@@ -923,7 +923,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.feature.basicnutritional": "Basic nutritional information",
     "plans.feature.scanhistory": "Scan history",
     "plans.feature.emailsupport": "Email support",
-    
+
     // Plan Descriptions
     "plans.description.free": "Perfect for trying out our service",
     "plans.description.premium.monthly": "Unlimited access to all features",
@@ -935,7 +935,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.notincluded.free2": "Priority support",
     "plans.notincluded.premium1": "Dedicated account manager",
     "plans.notincluded.premium2": "Custom SLA",
-    
+
     // Analytics Page Section
     "analytics.title": "My Food Analytics",
     "analytics.description": "Insights from your scan history",
@@ -983,7 +983,7 @@ const translations: Record<Language, Record<string, string>> = {
     "analytics.manual.success.description": "Manual foods have been logged successfully.",
     "analytics.manual.error.title": "Failed to log foods",
     "analytics.manual.error.description": "Unable to estimate these foods.",
-    
+
     // Food Results Page Section
     "foodresults.title": "Food Result",
     "foodresults.manual.input": "Manual Input",
@@ -1029,7 +1029,7 @@ const translations: Record<Language, Record<string, string>> = {
     "foodresults.share.error.description": "Unable to share. Please copy the URL manually.",
     "foodresults.pdf.ready": "PDF ready",
     "foodresults.pdf.ready.description": "We saved a share-ready report to your downloads.",
-    
+
     // Meal Planner Page Section
     "mealplanner.title": "Meal Planner",
     "mealplanner.description": "Get a personalized meal plan tailored to your goals",
@@ -1186,7 +1186,7 @@ const translations: Record<Language, Record<string, string>> = {
     "mealplanner.results.save": "Save changes",
     "mealplanner.results.updated.title": "Meals updated",
     "mealplanner.results.updated.description": "Ingredient changes have been applied.",
-    
+
     // Widget Dashboard Section
     "widgetdashboard.title": "Widget Dashboard",
     "widgetdashboard.description": "Manage your widget customization, sites, and track usage",
@@ -1303,7 +1303,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.widget": "Widget",
     "nav.analytics": "Analíticas",
     "nav.user": "Usuario",
-    
+
     // Common
     "common.loading": "Cargando...",
     "common.error": "Error",
@@ -1329,7 +1329,7 @@ const translations: Record<Language, Record<string, string>> = {
     "common.scancomplete": "¡Escaneo completo!",
     "common.dailylimitreached": "Límite diario alcanzado",
     "common.failedanalyze": "Error al analizar la imagen. Por favor, inténtalo de nuevo.",
-    
+
     // Feedback Section
     "feedback.title": "Enviar Comentarios",
     "feedback.subtitle": "Nos encantaría saber de ti",
@@ -1349,7 +1349,7 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.empty.description": "Por favor ingresa tu mensaje de comentarios.",
     "feedback.error.submit.title": "Error",
     "feedback.error.submit.description": "Error al enviar comentarios. Por favor, inténtalo de nuevo.",
-    
+
     // Hero Section
     "hero.title": "Un Rastreador de Macros Construido Para Hábitos Alimentarios Diarios",
     "hero.description": "Si alguna vez te has preguntado: \"¿Estoy comiendo bien realmente?\" Este rastreador de macros podría ser para ti. Está diseñado para personas que quieren rastrear alimentos y calorías sin registro manual.",
@@ -1381,7 +1381,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.healthfocused": "Enfocado en la Salud",
     "hero.macrosmicronutrients": "Macros y micronutrientes",
     "hero.lovedby": "Amado por más de 10,000 Detectives de Alimentos",
-    
+
     // Features Section
     "features.title": "¿Por Qué Usar Nuestro Escáner de Alimentos con IA?",
     "features.subtitle": "Algunas características que hacen destacar nuestro buscador de calorías",
@@ -1472,7 +1472,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.userrating": "Calificación de Usuario",
     "featurespage.mealsanalyzed": "Comidas analizadas",
     "featurespage.aisupport": "Soporte de nutrición con IA",
-    
+
     // FAQ Section
     "faq.title": "Preguntas Frecuentes",
     "faq.subtitle": "Todo lo que necesitas saber sobre nuestro contador de calorías y analizador de alimentos todo en uno",
@@ -1514,7 +1514,7 @@ const translations: Record<Language, Record<string, string>> = {
     "faq.q18.answer": "Sí. What The Food procesa todas las imágenes de forma segura y no requiere información personal. Es seguro, privado y gratis de usar.",
     "faq.q19.question": "¿Cuál es el mejor escáner de alimentos con IA gratuito en 2026?",
     "faq.q19.answer": "What The Food está entre los mejores escáneres de alimentos con IA gratuitos en 2026, ofreciendo estimación de calorías y macros rápida, precisa y sin anuncios directamente en tu navegador, con demasiadas características excelentes para optimizar tus hábitos saludables.",
-    
+
     // How It Works Section
     "howitworks.title": "¿Cómo Funciona What The Food Calorie Cal?",
     "howitworks.subtitle": "Obtén información nutricional con nuestra calculadora de calorías en tres pasos simples",
@@ -1562,7 +1562,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan2": "Vegano Equilibrado",
     "howitworkscta.card2.plan3": "Apto para Diabéticos",
     "howitworkscta.card2.plan4": "Combustible para Atletas",
-    
+
     // How It Works Hero
     "howitworkshero.title": "¿Cómo Funciona Nuestro Analizador de Alimentos?",
     "howitworkshero.description": "Omite el seguimiento manual. El analizador de alimentos WhatTheFood reconoce tu comida, estima las porciones y muestra la nutrición precisa instantáneamente.",
@@ -1595,7 +1595,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.tomatoSauce": "Salsa de Tomate",
     "howitworkshero.nutrition.tags.seafood": "Mariscos",
     "howitworkshero.nutrition.tags.italian": "Italiano",
-    
+
     // Pricing Section
     "pricing.title": "Rastreador de Macros Inteligente, Precios Transparentes",
     "pricing.subtitle": "Diseñado para personas que quieren rastrear alimentos sin registro manual.",
@@ -1630,11 +1630,11 @@ const translations: Record<Language, Record<string, string>> = {
     "pricing.canceldialog.description": "¿Estás seguro de que quieres cancelar tu suscripción Premium? Perderás el acceso a todas las funciones Premium al final de tu período de facturación.",
     "pricing.canceldialog.confirm": "Sí, Cancelar",
     "pricing.canceldialog.keep": "Mantener Suscripción",
-    
+
     // Reviews Section
     "reviews.title": "Amado y Probado por 10,000 Amantes de la Comida",
     "reviews.subtitle": "¿Hambriento de pruebas? Ve por qué todos están gritando WTF (de buena manera)",
-    
+
     // Footer Section
     "footer.description": "Tu compañero de seguimiento de macros que te ayuda a entender lo que comes. Escanea comidas, rastrea macros y detecta patrones que dan forma a tus hábitos alimentarios y objetivos de fitness.",
     "footer.product": "Producto",
@@ -1649,15 +1649,15 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.analytics": "Analíticas",
     "footer.contactsupport": "Soporte",
     "footer.rights": "Todos los derechos reservados.",
-    
+
     // Blog Section
     "blog.latest": "Últimas Entradas de Nuestro Blog",
     "blog.subtitle": "Consejos, guías e información para una alimentación más saludable",
     "blog.viewall": "Ver Todas las Entradas",
-    
+
     // TopBar Promotional Banner
     "topbar.promo": "🎉 50% de descuento por reserva anticipada – ¡Por tiempo limitado!",
-    
+
     // Widget Section
     "widgethero.title": "Widget integrable incluido en tu plan",
     "widgethero.description": "Añade el escaneo de alimentos con IA de WhatTheFood a tu blog o sitio web. Perfecto para blogueros de comida, sitios de nutrición y plataformas de salud—sin suscripción adicional.",
@@ -1746,7 +1746,7 @@ const translations: Record<Language, Record<string, string>> = {
     "widgetpricing.viewplatform": "Ver precios de la plataforma",
     "widgetpricing.managesubscription": "Administrar suscripción",
     "widgetpricing.or": "o",
-    
+
     // Keto Meal Planner Section
     "ketomealplanner.hero.title": "Planificador de Comidas Keto",
     "ketomealplanner.hero.subtitle": "para Tus Objetivos",
@@ -1800,7 +1800,7 @@ const translations: Record<Language, Record<string, string>> = {
     "ketomealplanner.premium.signup": "Regístrate Gratis",
     "ketomealplanner.premium.alreadyhaveaccount": "¿Ya tienes una cuenta?",
     "ketomealplanner.premium.signin": "Iniciar sesión",
-    
+
     // Auth Page Section
     "auth.hero.title": "Comienza Tu Viaje hacia una Mejor Nutrición",
     "auth.hero.description": "Únete a miles de usuarios que toman decisiones más saludables con análisis de alimentos con IA, información personalizada y orientación nutricional práctica.",
@@ -1861,7 +1861,7 @@ const translations: Record<Language, Record<string, string>> = {
     "auth.toast.useridnotfound": "ID de usuario no encontrado. Por favor, comienza de nuevo.",
     "auth.toast.error": "Error",
     "auth.toast.googleauthdesc": "Ocurrió un error con la autenticación de Google.",
-    
+
     // Terms Page Section
     "terms.title": "Términos y Condiciones",
     "terms.lastupdated": "Última actualización:",
@@ -1877,7 +1877,7 @@ const translations: Record<Language, Record<string, string>> = {
     "terms.section5.content": "Las suscripciones Premium se facturan mensual o anualmente. Puede cancelar su suscripción en cualquier momento, y la cancelación tendrá efecto al final de su período de facturación actual.",
     "terms.section6.title": "6. Modificaciones",
     "terms.section6.content": "WhatTheFood se reserva el derecho de modificar o reemplazar estos Términos en cualquier momento. El uso continuo del servicio después de cualquier cambio constituye la aceptación de los nuevos Términos.",
-    
+
     // Privacy Page Section
     "privacy.title": "Política de Privacidad",
     "privacy.lastupdated": "Última actualización:",
@@ -1893,7 +1893,7 @@ const translations: Record<Language, Record<string, string>> = {
     "privacy.section5.content": "Usamos cookies y tecnologías similares para mejorar su experiencia, analizar el uso y ayudar en nuestros esfuerzos de marketing.",
     "privacy.section6.title": "6. Contáctenos",
     "privacy.section6.content": "Si tiene preguntas sobre esta Política de Privacidad, contáctenos en privacy@whatthefood.io",
-    
+
     // Profile Page Section
     "profile.loading": "Cargando su perfil...",
     "profile.complete.title": "Complete Su Perfil",
@@ -1979,7 +1979,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.height": "Altura",
     "profile.field.goal": "Objetivo",
     "profile.field.activity": "Nivel de Actividad",
-    
+
     // Settings Page Section
     "settings.title": "Configuración",
     "settings.description": "Administre las preferencias de su cuenta",
@@ -2027,7 +2027,7 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.success.description": "Configuración guardada exitosamente.",
     "settings.error": "Error",
     "settings.error.description": "Error al guardar la configuración.",
-    
+
     // Dashboard Page Section
     "dashboard.welcome": "Bienvenido de nuevo",
     "dashboard.welcome.description": "Escanea comidas, obtén nutrición instantánea y rastrea tu progreso.",
@@ -2127,7 +2127,7 @@ const translations: Record<Language, Record<string, string>> = {
     "dashboard.sponsors.description": "Llega a usuarios conscientes de la salud interesados en seguimiento nutricional, comida y cocina.",
     "dashboard.error.title": "Error",
     "dashboard.error.description": "Error al cargar los datos del panel.",
-    
+
     // Plans Page Section
     "plans.title": "Elige Tu Plan",
     "plans.description": "Selecciona un plan que funcione mejor para ti. Puedes actualizar o degradar en cualquier momento.",
@@ -2166,7 +2166,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.success.free.description": "Ahora estás en el plan Gratis. ¡Disfruta de 3 escaneos por día!",
     "plans.error.profile.fk": "Error de restricción de clave foránea del perfil. Por favor ejecuta la migración: 20250105000000_fix_profiles_fk_constraint.sql",
     "plans.error.profile.create": "Error al crear el perfil: {message}",
-    
+
     // Plan Features
     "plans.feature.unlimitedscans": "Escaneos ilimitados",
     "plans.feature.advancednutritional": "Análisis nutricional avanzado",
@@ -2178,7 +2178,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.feature.basicnutritional": "Información nutricional básica",
     "plans.feature.scanhistory": "Historial de escaneos",
     "plans.feature.emailsupport": "Soporte por correo",
-    
+
     // Plan Descriptions
     "plans.description.free": "Perfecto para probar nuestro servicio",
     "plans.description.premium.monthly": "Acceso ilimitado a todas las funciones",
@@ -2190,7 +2190,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.notincluded.free2": "Soporte prioritario",
     "plans.notincluded.premium1": "Gestor de cuenta dedicado",
     "plans.notincluded.premium2": "SLA personalizado",
-    
+
     // Analytics Page Section
     "analytics.title": "Mis Analíticas de Comida",
     "analytics.description": "Información de tu historial de escaneos",
@@ -2238,7 +2238,7 @@ const translations: Record<Language, Record<string, string>> = {
     "analytics.manual.success.description": "Los alimentos manuales se han registrado exitosamente.",
     "analytics.manual.error.title": "Error al registrar alimentos",
     "analytics.manual.error.description": "No se pueden estimar estos alimentos.",
-    
+
     // Food Results Page Section
     "foodresults.title": "Resultado de Comida",
     "foodresults.manual.input": "Entrada Manual",
@@ -2284,7 +2284,7 @@ const translations: Record<Language, Record<string, string>> = {
     "foodresults.share.error.description": "No se pudo compartir. Por favor, copia la URL manualmente.",
     "foodresults.pdf.ready": "PDF listo",
     "foodresults.pdf.ready.description": "Hemos guardado un informe listo para compartir en tus descargas.",
-    
+
     // Meal Planner Page Section
     "mealplanner.title": "Planificador de Comidas",
     "mealplanner.description": "Obtén un plan de comidas personalizado adaptado a tus objetivos",
@@ -2437,7 +2437,7 @@ const translations: Record<Language, Record<string, string>> = {
     "mealplanner.results.save": "Guardar cambios",
     "mealplanner.results.updated.title": "Comidas actualizadas",
     "mealplanner.results.updated.description": "Los cambios de ingredientes se han aplicado.",
-    
+
     // Widget Dashboard Section
     "widgetdashboard.title": "Panel de Widgets",
     "widgetdashboard.description": "Administra la personalización de tus widgets, sitios y rastrea el uso",
@@ -2553,7 +2553,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.howitworks": "Comment ça marche",
     "nav.widget": "Widget",
     "nav.user": "Utilisateur",
-    
+
     // Common
     "common.loading": "Chargement...",
     "common.error": "Erreur",
@@ -2579,7 +2579,7 @@ const translations: Record<Language, Record<string, string>> = {
     "common.scancomplete": "Scan terminé !",
     "common.dailylimitreached": "Limite quotidienne atteinte",
     "common.failedanalyze": "Échec de l'analyse de l'image. Veuillez réessayer.",
-    
+
     // Feedback Section
     "feedback.title": "Envoyer des commentaires",
     "feedback.subtitle": "Nous aimerions avoir de vos nouvelles",
@@ -2599,7 +2599,7 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.empty.description": "Veuillez saisir votre message de commentaires.",
     "feedback.error.submit.title": "Erreur",
     "feedback.error.submit.description": "Échec de l'envoi des commentaires. Veuillez réessayer.",
-    
+
     // Hero Section
     "hero.title": "Un Suivi de Macros Conçu Pour les Habitudes Alimentaires Quotidiennes",
     "hero.description": "Si vous vous êtes déjà demandé : \"Est-ce que je mange vraiment bien ?\" Ce suivi de macros pourrait être fait pour vous. Il est conçu pour les personnes qui veulent suivre leur alimentation et leurs calories sans saisie manuelle.",
@@ -2631,7 +2631,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.healthfocused": "Axé sur la santé",
     "hero.macrosmicronutrients": "Macros et micronutriments",
     "hero.lovedby": "Aimé par plus de 10 000 Détectives Alimentaires",
-    
+
     // Features Section
     "features.title": "Pourquoi Utiliser Notre Scanner Alimentaire IA?",
     "features.subtitle": "Quelques fonctionnalités qui font ressortir notre calculateur de calories",
@@ -2722,7 +2722,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.userrating": "Note des utilisateurs",
     "featurespage.mealsanalyzed": "Repas analysés",
     "featurespage.aisupport": "Support nutritionnel IA",
-    
+
     // FAQ Section
     "faq.title": "Questions fréquemment posées",
     "faq.subtitle": "Tout ce que vous devez savoir sur notre compteur de calories et analyseur d'aliments tout-en-un",
@@ -2765,7 +2765,7 @@ const translations: Record<Language, Record<string, string>> = {
     "faq.q19.question": "Quel est le meilleur scanner alimentaire IA gratuit en 2026 ?",
     "faq.q19.answer": "What The Food est parmi les meilleurs scanners alimentaires IA gratuits en 2026, offrant une estimation rapide, précise et sans publicité des calories et des macros directement dans votre navigateur, avec trop de fonctionnalités excellentes pour optimiser vos habitudes saines.",
     "faq.security.answer": "Oui, nous prenons la confidentialité au sérieux. Vos scans alimentaires et vos données sont cryptés et jamais partagés avec des tiers. Lisez notre politique de confidentialité complète pour plus de détails.",
-    
+
     // How It Works Section
     "howitworks.title": "Comment Fonctionne What The Food Calorie Cal?",
     "howitworks.subtitle": "Obtenez des informations nutritionnelles avec notre calculateur de calories en trois étapes simples",
@@ -2813,7 +2813,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan2": "Végétalien équilibré",
     "howitworkscta.card2.plan3": "Adapté aux diabétiques",
     "howitworkscta.card2.plan4": "Carburant pour athlètes",
-    
+
     // How It Works Hero
     "howitworkshero.title": "Comment Fonctionne Notre Analyseur d'Aliments?",
     "howitworkshero.description": "Oubliez le suivi manuel. L'analyseur d'aliments WhatTheFood reconnaît votre repas, estime les portions et affiche une nutrition précise instantanément.",
@@ -2846,7 +2846,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.tomatoSauce": "Sauce Tomate",
     "howitworkshero.nutrition.tags.seafood": "Fruits de Mer",
     "howitworkshero.nutrition.tags.italian": "Italien",
-    
+
     // Pricing Section
     "pricing.title": "Suivi de Macros Intelligent, Prix Transparents",
     "pricing.subtitle": "Conçu pour les personnes qui veulent suivre leur alimentation sans saisie manuelle.",
@@ -2881,11 +2881,11 @@ const translations: Record<Language, Record<string, string>> = {
     "pricing.canceldialog.description": "Êtes-vous sûr de vouloir annuler votre abonnement Premium ? Vous perdrez l'accès à toutes les fonctionnalités Premium à la fin de votre période de facturation.",
     "pricing.canceldialog.confirm": "Oui, annuler",
     "pricing.canceldialog.keep": "Garder l'abonnement",
-    
+
     // Reviews Section
     "reviews.title": "Aimé et Testé par 10 000 Amateurs de Nourriture",
     "reviews.subtitle": "Affamé de preuves ? Découvrez pourquoi tout le monde crie WTF (dans le bon sens)",
-    
+
     // Footer Section
     "footer.description": "Votre compagnon de suivi de macros qui vous aide à comprendre ce que vous mangez. Scannez les repas, suivez les macros et repérez les modèles qui façonnent vos habitudes alimentaires et vos objectifs de fitness.",
     "footer.product": "Produit",
@@ -2900,15 +2900,15 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.analytics": "Analytiques",
     "footer.contactsupport": "Support",
     "footer.rights": "Tous droits réservés.",
-    
+
     // Blog Section
     "blog.latest": "Derniers articles de notre blog",
     "blog.subtitle": "Conseils, guides et informations pour une alimentation plus saine",
     "blog.viewall": "Voir tous les articles",
-    
+
     // TopBar Promotional Banner
     "topbar.promo": "🎉 50 % de réduction Early Bird – Offre à durée limitée !",
-    
+
     // Widget Section
     "widgethero.title": "Widget intégrable inclus dans votre plan",
     "widgethero.description": "Ajoutez le scan alimentaire alimenté par l'IA de WhatTheFood à votre blog ou site web. Parfait pour les blogueurs culinaires, les sites de nutrition et les plateformes de santé—sans abonnement supplémentaire.",
@@ -2997,7 +2997,7 @@ const translations: Record<Language, Record<string, string>> = {
     "widgetpricing.viewplatform": "Voir les tarifs de la plateforme",
     "widgetpricing.managesubscription": "Gérer l'abonnement",
     "widgetpricing.or": "ou",
-    
+
     // Keto Meal Planner Section
     "ketomealplanner.hero.title": "Planificateur de Repas Keto",
     "ketomealplanner.hero.subtitle": "pour Vos Objectifs",
@@ -3051,7 +3051,7 @@ const translations: Record<Language, Record<string, string>> = {
     "ketomealplanner.premium.signup": "S'inscrire Gratuitement",
     "ketomealplanner.premium.alreadyhaveaccount": "Vous avez déjà un compte?",
     "ketomealplanner.premium.signin": "Se connecter",
-    
+
     // Auth Page Section
     "auth.hero.title": "Commencez votre voyage vers une meilleure nutrition",
     "auth.hero.description": "Rejoignez des milliers d'utilisateurs qui font des choix plus sains avec l'analyse alimentaire alimentée par l'IA, des informations personnalisées et des conseils nutritionnels exploitables.",
@@ -3112,7 +3112,7 @@ const translations: Record<Language, Record<string, string>> = {
     "auth.toast.useridnotfound": "ID utilisateur non trouvé. Veuillez recommencer.",
     "auth.toast.error": "Erreur",
     "auth.toast.googleauthdesc": "Une erreur s'est produite avec l'authentification Google.",
-    
+
     // Terms Page Section
     "terms.title": "Conditions Générales",
     "terms.lastupdated": "Dernière mise à jour :",
@@ -3128,7 +3128,7 @@ const translations: Record<Language, Record<string, string>> = {
     "terms.section5.content": "Les abonnements Premium sont facturés mensuellement ou annuellement. Vous pouvez annuler votre abonnement à tout moment, et l'annulation prendra effet à la fin de votre période de facturation actuelle.",
     "terms.section6.title": "6. Modifications",
     "terms.section6.content": "WhatTheFood se réserve le droit de modifier ou de remplacer ces Conditions à tout moment. L'utilisation continue du service après tout changement constitue l'acceptation des nouvelles Conditions.",
-    
+
     // Privacy Page Section
     "privacy.title": "Politique de Confidentialité",
     "privacy.lastupdated": "Dernière mise à jour :",
@@ -3144,7 +3144,7 @@ const translations: Record<Language, Record<string, string>> = {
     "privacy.section5.content": "Nous utilisons des cookies et des technologies similaires pour améliorer votre expérience, analyser l'utilisation et aider nos efforts de marketing.",
     "privacy.section6.title": "6. Contactez-Nous",
     "privacy.section6.content": "Si vous avez des questions sur cette Politique de Confidentialité, veuillez nous contacter à privacy@whatthefood.io",
-    
+
     // Profile Page Section
     "profile.loading": "Chargement de votre profil...",
     "profile.complete.title": "Complétez Votre Profil",
@@ -3230,7 +3230,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.height": "Taille",
     "profile.field.goal": "Objectif",
     "profile.field.activity": "Niveau d'Activité",
-    
+
     // Settings Page Section
     "settings.title": "Paramètres",
     "settings.description": "Gérez vos préférences de compte",
@@ -3278,7 +3278,7 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.success.description": "Paramètres enregistrés avec succès.",
     "settings.error": "Erreur",
     "settings.error.description": "Échec de l'enregistrement des paramètres.",
-    
+
     // Dashboard Page Section
     "dashboard.welcome": "Bon retour",
     "dashboard.welcome.description": "Scannez les repas, obtenez une nutrition instantanée et suivez vos progrès.",
@@ -3369,7 +3369,7 @@ const translations: Record<Language, Record<string, string>> = {
     "dashboard.sponsors.description": "Touchez des utilisateurs soucieux de leur santé intéressés par le suivi nutritionnel, la nourriture et la cuisine.",
     "dashboard.error.title": "Erreur",
     "dashboard.error.description": "Échec du chargement des données du tableau de bord.",
-    
+
     // Plans Page Section
     "plans.title": "Choisissez Votre Plan",
     "plans.description": "Sélectionnez un plan qui vous convient le mieux. Vous pouvez mettre à niveau ou rétrograder à tout moment.",
@@ -3408,7 +3408,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.success.free.description": "Vous êtes maintenant sur le plan Gratuit. Profitez de 3 scans à vie (ou 3 jours) !",
     "plans.error.profile.fk": "Erreur de contrainte de clé étrangère du profil. Veuillez exécuter la migration : 20250105000000_fix_profiles_fk_constraint.sql",
     "plans.error.profile.create": "Échec de la création du profil : {message}",
-    
+
     // Plan Features
     "plans.feature.unlimitedscans": "Scans illimités",
     "plans.feature.advancednutritional": "Analyse nutritionnelle avancée",
@@ -3420,7 +3420,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.feature.basicnutritional": "Informations nutritionnelles de base",
     "plans.feature.scanhistory": "Historique des scans",
     "plans.feature.emailsupport": "Support par e-mail",
-    
+
     // Plan Descriptions
     "plans.description.free": "Parfait pour essayer notre service",
     "plans.description.premium.monthly": "Accès illimité à toutes les fonctionnalités",
@@ -3432,7 +3432,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.notincluded.free2": "Support prioritaire",
     "plans.notincluded.premium1": "Gestionnaire de compte dédié",
     "plans.notincluded.premium2": "SLA personnalisé",
-    
+
     // Analytics Page Section
     "analytics.title": "Mes Analyses Alimentaires",
     "analytics.description": "Informations de votre historique de scans",
@@ -3480,7 +3480,7 @@ const translations: Record<Language, Record<string, string>> = {
     "analytics.manual.success.description": "Les aliments manuels ont été enregistrés avec succès.",
     "analytics.manual.error.title": "Échec de l'enregistrement des aliments",
     "analytics.manual.error.description": "Impossible d'estimer ces aliments.",
-    
+
     // Food Results Page Section
     "foodresults.title": "Résultat Alimentaire",
     "foodresults.manual.input": "Saisie Manuelle",
@@ -3526,7 +3526,7 @@ const translations: Record<Language, Record<string, string>> = {
     "foodresults.share.error.description": "Impossible de partager. Veuillez copier l'URL manuellement.",
     "foodresults.pdf.ready": "PDF prêt",
     "foodresults.pdf.ready.description": "Nous avons enregistré un rapport prêt à partager dans vos téléchargements.",
-    
+
     // Meal Planner Page Section
     "mealplanner.title": "Planificateur de Repas",
     "mealplanner.description": "Obtenez un plan de repas personnalisé adapté à vos objectifs",
@@ -3679,7 +3679,7 @@ const translations: Record<Language, Record<string, string>> = {
     "mealplanner.results.save": "Enregistrer les modifications",
     "mealplanner.results.updated.title": "Repas mis à jour",
     "mealplanner.results.updated.description": "Les modifications d'ingrédients ont été appliquées.",
-    
+
     // Widget Dashboard Section
     "widgetdashboard.title": "Tableau de Bord des Widgets",
     "widgetdashboard.description": "Gérez la personnalisation de vos widgets, sites et suivez l'utilisation",
@@ -3796,7 +3796,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.widget": "Widget",
     "nav.analytics": "Analysen",
     "nav.user": "Benutzer",
-    
+
     // Common
     "common.loading": "Laden...",
     "common.error": "Fehler",
@@ -3822,7 +3822,7 @@ const translations: Record<Language, Record<string, string>> = {
     "common.scancomplete": "Scan abgeschlossen!",
     "common.dailylimitreached": "Tageslimit erreicht",
     "common.failedanalyze": "Bildanalyse fehlgeschlagen. Bitte versuchen Sie es erneut.",
-    
+
     // Feedback Section
     "feedback.title": "Feedback senden",
     "feedback.subtitle": "Wir würden gerne von Ihnen hören",
@@ -3842,7 +3842,7 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.empty.description": "Bitte geben Sie Ihre Feedback-Nachricht ein.",
     "feedback.error.submit.title": "Fehler",
     "feedback.error.submit.description": "Fehler beim Senden des Feedbacks. Bitte versuchen Sie es erneut.",
-    
+
     // Hero Section
     "hero.title": "Ein Makro-Tracker Für Tägliche Essgewohnheiten",
     "hero.description": "Wenn Sie sich jemals gefragt haben: \"Ernähre ich mich eigentlich richtig?\" Dieser Makro-Tracker könnte das Richtige für Sie sein. Er wurde für Menschen entwickelt, die Lebensmittel und Kalorien ohne manuelle Eingabe verfolgen möchten.",
@@ -3874,7 +3874,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.healthfocused": "Gesundheitsorientiert",
     "hero.macrosmicronutrients": "Makros & Mikronährstoffe",
     "hero.lovedby": "Geliebt von über 10.000 Lebensmittel-Detektiven",
-    
+
     // Features Section
     "features.title": "Warum Unseren KI-Lebensmittelscanner Verwenden?",
     "features.subtitle": "Einige Funktionen, die unseren Kalorienfinder hervorheben",
@@ -3965,7 +3965,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.userrating": "Benutzerbewertung",
     "featurespage.mealsanalyzed": "Analysierte Mahlzeiten",
     "featurespage.aisupport": "KI-Ernährungsunterstützung",
-    
+
     // FAQ Section
     "faq.title": "Häufig gestellte Fragen",
     "faq.subtitle": "Alles, was Sie über unseren All-in-One-Kalorienzähler & Lebensmittelanalysator wissen müssen",
@@ -4008,7 +4008,7 @@ const translations: Record<Language, Record<string, string>> = {
     "faq.q19.question": "Was ist der beste kostenlose KI-Lebensmittelscanner im Jahr 2026?",
     "faq.q19.answer": "What The Food gehört zu den besten kostenlosen KI-Lebensmittelscannern im Jahr 2026 und bietet schnelle, genaue und werbefreie Kalorien- und Makro-Schätzung direkt in Ihrem Browser mit zu vielen großartigen Funktionen zur Optimierung Ihrer gesunden Gewohnheiten.",
     "faq.security.answer": "Ja, wir nehmen den Datenschutz ernst. Ihre Lebensmittel-Scans und Daten sind verschlüsselt und werden niemals an Dritte weitergegeben. Lesen Sie unsere vollständige Datenschutzrichtlinie für Details.",
-    
+
     // How It Works Section
     "howitworks.title": "Wie Funktioniert der What The Food Kalorienrechner?",
     "howitworks.subtitle": "Erhalten Sie Nährwertinformationen mit unserem Kalorienrechner in drei einfachen Schritten",
@@ -4056,7 +4056,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan2": "Ausgewogenes Vegan",
     "howitworkscta.card2.plan3": "Diabetikerfreundlich",
     "howitworkscta.card2.plan4": "Athleten-Kraftstoff",
-    
+
     // How It Works Hero
     "howitworkshero.title": "Wie Funktioniert Unser Lebensmittelanalysator?",
     "howitworkshero.description": "Überspringen Sie die manuelle Verfolgung. Der WhatTheFood Lebensmittelanalysator erkennt Ihre Mahlzeit, schätzt Portionen und zeigt sofort genaue Nährwerte an.",
@@ -4089,7 +4089,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.tomatoSauce": "Tomatensauce",
     "howitworkshero.nutrition.tags.seafood": "Meeresfrüchte",
     "howitworkshero.nutrition.tags.italian": "Italienisch",
-    
+
     // Pricing Section
     "pricing.title": "Intelligenter Makro-Tracker, Transparente Preise",
     "pricing.subtitle": "Erstellt für Menschen, die Lebensmittel ohne manuelle Eingabe verfolgen möchten.",
@@ -4124,11 +4124,11 @@ const translations: Record<Language, Record<string, string>> = {
     "pricing.canceldialog.description": "Sind Sie sicher, dass Sie Ihr Premium-Abonnement kündigen möchten? Sie verlieren den Zugriff auf alle Premium-Funktionen am Ende Ihres Abrechnungszeitraums.",
     "pricing.canceldialog.confirm": "Ja, kündigen",
     "pricing.canceldialog.keep": "Abonnement behalten",
-    
+
     // Reviews Section
     "reviews.title": "Von 10.000 Lebensmittelliebhabern Geliebt und Getestet",
     "reviews.subtitle": "Hungrig nach Beweisen? Sehen Sie, warum alle WTF schreien (im positiven Sinne)",
-    
+
     // Footer Section
     "footer.description": "Ihr Makro-Tracking-Begleiter, der Ihnen hilft zu verstehen, was Sie essen. Scannen Sie Mahlzeiten, verfolgen Sie Makros und erkennen Sie Muster, die Ihre Essgewohnheiten und Fitnessziele prägen.",
     "footer.product": "Produkt",
@@ -4143,15 +4143,15 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.analytics": "Analytik",
     "footer.contactsupport": "Support",
     "footer.rights": "Alle Rechte vorbehalten.",
-    
+
     // Blog Section
     "blog.latest": "Neueste aus unserem Blog",
     "blog.subtitle": "Tipps, Anleitungen und Einblicke für gesünderes Essen",
     "blog.viewall": "Alle Beiträge anzeigen",
-    
+
     // TopBar Promotional Banner
     "topbar.promo": "🎉 50 % Frühbucherrabatt – Nur für kurze Zeit!",
-    
+
     // Widget Section
     "widgethero.title": "Einbettbares Widget in Ihrem Plan enthalten",
     "widgethero.description": "Fügen Sie das KI-gestützte Lebensmittel-Scanning von WhatTheFood zu Ihrem Blog oder Ihrer Website hinzu. Perfekt für Food-Blogger, Ernährungsseiten und Gesundheitsplattformen—ohne zusätzliches Abonnement.",
@@ -4240,7 +4240,7 @@ const translations: Record<Language, Record<string, string>> = {
     "widgetpricing.viewplatform": "Plattformpreise ansehen",
     "widgetpricing.managesubscription": "Abonnement verwalten",
     "widgetpricing.or": "oder",
-    
+
     // Keto Meal Planner Section
     "ketomealplanner.hero.title": "Keto-Mahlzeitenplaner",
     "ketomealplanner.hero.subtitle": "für Ihre Ziele",
@@ -4294,7 +4294,7 @@ const translations: Record<Language, Record<string, string>> = {
     "ketomealplanner.premium.signup": "Kostenlos Registrieren",
     "ketomealplanner.premium.alreadyhaveaccount": "Haben Sie bereits ein Konto?",
     "ketomealplanner.premium.signin": "Anmelden",
-    
+
     // Auth Page Section
     "auth.hero.title": "Beginnen Sie Ihre Reise zu besserer Ernährung",
     "auth.hero.description": "Schließen Sie sich Tausenden von Benutzern an, die mit KI-gestützter Lebensmittelanalyse, personalisierten Erkenntnissen und umsetzbaren Ernährungsrichtlinien gesündere Entscheidungen treffen.",
@@ -4355,7 +4355,7 @@ const translations: Record<Language, Record<string, string>> = {
     "auth.toast.useridnotfound": "Benutzer-ID nicht gefunden. Bitte beginnen Sie von vorne.",
     "auth.toast.error": "Fehler",
     "auth.toast.googleauthdesc": "Bei der Google-Authentifizierung ist ein Fehler aufgetreten.",
-    
+
     // Terms Page Section
     "terms.title": "Allgemeine Geschäftsbedingungen",
     "terms.lastupdated": "Zuletzt aktualisiert:",
@@ -4371,7 +4371,7 @@ const translations: Record<Language, Record<string, string>> = {
     "terms.section5.content": "Premium-Abonnements werden monatlich oder jährlich abgerechnet. Sie können Ihr Abonnement jederzeit kündigen, und die Kündigung wird am Ende Ihres aktuellen Abrechnungszeitraums wirksam.",
     "terms.section6.title": "6. Änderungen",
     "terms.section6.content": "WhatTheFood behält sich das Recht vor, diese Bedingungen jederzeit zu ändern oder zu ersetzen. Die fortgesetzte Nutzung des Dienstes nach Änderungen stellt die Annahme der neuen Bedingungen dar.",
-    
+
     // Privacy Page Section
     "privacy.title": "Datenschutzrichtlinie",
     "privacy.lastupdated": "Zuletzt aktualisiert:",
@@ -4387,7 +4387,7 @@ const translations: Record<Language, Record<string, string>> = {
     "privacy.section5.content": "Wir verwenden Cookies und ähnliche Technologien, um Ihre Erfahrung zu verbessern, die Nutzung zu analysieren und unsere Marketingbemühungen zu unterstützen.",
     "privacy.section6.title": "6. Kontaktieren Sie Uns",
     "privacy.section6.content": "Wenn Sie Fragen zu dieser Datenschutzrichtlinie haben, kontaktieren Sie uns bitte unter privacy@whatthefood.io",
-    
+
     // Profile Page Section
     "profile.loading": "Ihr Profil wird geladen...",
     "profile.complete.title": "Vervollständigen Sie Ihr Profil",
@@ -4473,7 +4473,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.height": "Größe",
     "profile.field.goal": "Ziel",
     "profile.field.activity": "Aktivitätsniveau",
-    
+
     // Settings Page Section
     "settings.title": "Einstellungen",
     "settings.description": "Verwalten Sie Ihre Kontoeinstellungen",
@@ -4521,7 +4521,7 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.success.description": "Einstellungen erfolgreich gespeichert.",
     "settings.error": "Fehler",
     "settings.error.description": "Fehler beim Speichern der Einstellungen.",
-    
+
     // Dashboard Page Section
     "dashboard.welcome": "Willkommen zurück",
     "dashboard.welcome.description": "Scannen Sie Mahlzeiten, erhalten Sie sofortige Nährwertinformationen und verfolgen Sie Ihren Fortschritt.",
@@ -4621,7 +4621,7 @@ const translations: Record<Language, Record<string, string>> = {
     "dashboard.sponsors.description": "Erreichen Sie gesundheitsbewusste Benutzer, die sich für Ernährungstracking, Essen und Kochen interessieren.",
     "dashboard.error.title": "Fehler",
     "dashboard.error.description": "Fehler beim Laden der Dashboard-Daten.",
-    
+
     // Plans Page Section
     "plans.title": "Wählen Sie Ihren Plan",
     "plans.description": "Wählen Sie einen Plan, der am besten zu Ihnen passt. Sie können jederzeit upgraden oder downgraden.",
@@ -4660,7 +4660,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.success.free.description": "Sie sind jetzt im Kostenlosen Plan. Genießen Sie 3 Scans pro Tag!",
     "plans.error.profile.fk": "Profil-Fremdschlüssel-Einschränkungsfehler. Bitte führen Sie die Migration aus: 20250105000000_fix_profiles_fk_constraint.sql",
     "plans.error.profile.create": "Fehler beim Erstellen des Profils: {message}",
-    
+
     // Plan Features
     "plans.feature.unlimitedscans": "Unbegrenzte Scans",
     "plans.feature.advancednutritional": "Erweiterte Nährwertanalyse",
@@ -4672,7 +4672,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.feature.basicnutritional": "Grundlegende Nährwertinformationen",
     "plans.feature.scanhistory": "Scan-Verlauf",
     "plans.feature.emailsupport": "E-Mail-Support",
-    
+
     // Plan Descriptions
     "plans.description.free": "Perfekt zum Ausprobieren unseres Dienstes",
     "plans.description.premium.monthly": "Unbegrenzter Zugang zu allen Funktionen",
@@ -4684,7 +4684,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.notincluded.free2": "Prioritätssupport",
     "plans.notincluded.premium1": "Dedizierter Account-Manager",
     "plans.notincluded.premium2": "Individuelle SLA",
-    
+
     // Analytics Page Section
     "analytics.title": "Meine Lebensmittelanalysen",
     "analytics.description": "Einblicke aus Ihrem Scan-Verlauf",
@@ -4732,7 +4732,7 @@ const translations: Record<Language, Record<string, string>> = {
     "analytics.manual.success.description": "Manuelle Lebensmittel wurden erfolgreich protokolliert.",
     "analytics.manual.error.title": "Fehler beim Protokollieren von Lebensmitteln",
     "analytics.manual.error.description": "Diese Lebensmittel können nicht geschätzt werden.",
-    
+
     // Meal Planner Page Section
     "mealplanner.title": "Mahlzeitenplaner",
     "mealplanner.description": "Erhalten Sie einen personalisierten Mahlzeitenplan, der auf Ihre Ziele zugeschnitten ist",
@@ -4885,7 +4885,7 @@ const translations: Record<Language, Record<string, string>> = {
     "mealplanner.results.save": "Änderungen speichern",
     "mealplanner.results.updated.title": "Mahlzeiten aktualisiert",
     "mealplanner.results.updated.description": "Zutatenänderungen wurden angewendet.",
-    
+
     // Widget Dashboard Section
     "widgetdashboard.title": "Widget-Dashboard",
     "widgetdashboard.description": "Verwalten Sie Ihre Widget-Anpassung, Websites und verfolgen Sie die Nutzung",
@@ -5002,7 +5002,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.widget": "Widget",
     "nav.analytics": "Analisi",
     "nav.user": "Utente",
-    
+
     // Common
     "common.loading": "Caricamento...",
     "common.error": "Errore",
@@ -5028,7 +5028,7 @@ const translations: Record<Language, Record<string, string>> = {
     "common.scancomplete": "Scansione completata!",
     "common.dailylimitreached": "Limite giornaliero raggiunto",
     "common.failedanalyze": "Analisi dell'immagine fallita. Riprova.",
-    
+
     // Feedback Section
     "feedback.title": "Invia Feedback",
     "feedback.subtitle": "Ci piacerebbe sentire la tua opinione",
@@ -5048,7 +5048,7 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.empty.description": "Inserisci il tuo messaggio di feedback.",
     "feedback.error.submit.title": "Errore",
     "feedback.error.submit.description": "Invio del feedback fallito. Riprova.",
-    
+
     // Hero Section
     "hero.title": "Un Tracker di Macro Costruito Per Abitudini Alimentari Quotidiane",
     "hero.description": "Se ti sei mai chiesto: \"Sto mangiando davvero bene?\" Questo tracker di macro potrebbe fare al caso tuo. È pensato per persone che vogliono tracciare cibo e calorie senza registrazione manuale.",
@@ -5080,7 +5080,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.healthfocused": "Focalizzato sulla salute",
     "hero.macrosmicronutrients": "Macro e micronutrienti",
     "hero.lovedby": "Amato da oltre 10.000 Detective del Cibo",
-    
+
     // Features Section
     "features.title": "Perché Usare Il Nostro Scanner Alimentare IA?",
     "features.subtitle": "Alcune funzionalità che fanno risaltare il nostro calcolatore di calorie",
@@ -5171,7 +5171,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.userrating": "Valutazione Utente",
     "featurespage.mealsanalyzed": "Pasti analizzati",
     "featurespage.aisupport": "Supporto nutrizionale IA",
-    
+
     // FAQ Section
     "faq.title": "Domande frequenti",
     "faq.subtitle": "Tutto ciò che devi sapere sul nostro contatore di calorie e analizzatore di alimenti tutto-in-uno",
@@ -5213,7 +5213,7 @@ const translations: Record<Language, Record<string, string>> = {
     "faq.q18.answer": "Sì. What The Food elabora tutte le immagini in modo sicuro e non richiede informazioni personali. È sicuro, privato e gratuito da usare.",
     "faq.q19.question": "Qual è il migliore scanner alimentare IA gratuito nel 2026?",
     "faq.q19.answer": "What The Food è tra i migliori scanner alimentari IA gratuiti nel 2026, offrendo stima rapida, accurata e senza pubblicità di calorie e macro direttamente nel tuo browser, con troppe fantastiche funzionalità per ottimizzare le tue abitudini sane.",
-    
+
     // How It Works Section
     "howitworks.title": "Come Funziona What The Food Calorie Cal?",
     "howitworks.subtitle": "Ottieni informazioni nutrizionali con il nostro calcolatore di calorie in tre semplici passaggi",
@@ -5261,7 +5261,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan2": "Vegano Bilanciato",
     "howitworkscta.card2.plan3": "Adatto ai Diabetici",
     "howitworkscta.card2.plan4": "Carburante per Atleti",
-    
+
     // How It Works Hero
     "howitworkshero.title": "Come Funziona Il Nostro Analizzatore di Alimenti?",
     "howitworkshero.description": "Salta il monitoraggio manuale. L'analizzatore di alimenti WhatTheFood riconosce il tuo pasto, stima le porzioni e mostra una nutrizione accurata istantaneamente.",
@@ -5294,7 +5294,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.tomatoSauce": "Salsa di Pomodoro",
     "howitworkshero.nutrition.tags.seafood": "Frutti di Mare",
     "howitworkshero.nutrition.tags.italian": "Italiano",
-    
+
     // Pricing Section
     "pricing.title": "Tracker di Macro Intelligente, Prezzi Trasparenti",
     "pricing.subtitle": "Creato per persone che vogliono tracciare il cibo senza registrazione manuale.",
@@ -5329,11 +5329,11 @@ const translations: Record<Language, Record<string, string>> = {
     "pricing.canceldialog.description": "Sei sicuro di voler annullare il tuo abbonamento Premium? Perderai l'accesso a tutte le funzionalità Premium alla fine del periodo di fatturazione.",
     "pricing.canceldialog.confirm": "Sì, annulla",
     "pricing.canceldialog.keep": "Mantieni abbonamento",
-    
+
     // Reviews Section
     "reviews.title": "Amato e Testato da 10.000 Amanti del Cibo",
     "reviews.subtitle": "Affamato di prove? Scopri perché tutti gridano WTF (in senso positivo)",
-    
+
     // Footer Section
     "footer.description": "Il tuo compagno di tracciamento macro che ti aiuta a capire cosa mangi. Scansiona i pasti, traccia i macro e individua i modelli che danno forma alle tue abitudini alimentari e ai tuoi obiettivi di fitness.",
     "footer.product": "Prodotto",
@@ -5348,15 +5348,15 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.analytics": "Analitiche",
     "footer.contactsupport": "Supporto",
     "footer.rights": "Tutti i diritti riservati.",
-    
+
     // Blog Section
     "blog.latest": "Ultimi dal nostro blog",
     "blog.subtitle": "Consigli, guide e approfondimenti per un'alimentazione più sana",
     "blog.viewall": "Visualizza tutti i post",
-    
+
     // TopBar Promotional Banner
     "topbar.promo": "🎉 Sconto Early Bird del 50% – Solo per un periodo limitato!",
-    
+
     // Widget Section
     "widgethero.title": "Widget integrabile incluso nel tuo piano",
     "widgethero.description": "Aggiungi la scansione alimentare alimentata dall'IA di WhatTheFood al tuo blog o sito web. Perfetto per blogger di cibo, siti di nutrizione e piattaforme sanitarie—senza abbonamento aggiuntivo.",
@@ -5444,7 +5444,7 @@ const translations: Record<Language, Record<string, string>> = {
     "widgetpricing.viewplatform": "Visualizza prezzi della piattaforma",
     "widgetpricing.managesubscription": "Gestisci abbonamento",
     "widgetpricing.or": "o",
-    
+
     // Keto Meal Planner Section
     "ketomealplanner.hero.title": "Pianificatore di Pasti Keto",
     "ketomealplanner.hero.subtitle": "per I Tuoi Obiettivi",
@@ -5498,7 +5498,7 @@ const translations: Record<Language, Record<string, string>> = {
     "ketomealplanner.premium.signup": "Registrati Gratis",
     "ketomealplanner.premium.alreadyhaveaccount": "Hai già un account?",
     "ketomealplanner.premium.signin": "Accedi",
-    
+
     // Auth Page Section
     "auth.hero.title": "Inizia il Tuo Viaggio verso una Migliore Nutrizione",
     "auth.hero.description": "Unisciti a migliaia di utenti che fanno scelte più sane con l'analisi alimentare alimentata dall'IA, informazioni personalizzate e guida nutrizionale pratica.",
@@ -5559,7 +5559,7 @@ const translations: Record<Language, Record<string, string>> = {
     "auth.toast.useridnotfound": "ID utente non trovato. Per favore ricomincia.",
     "auth.toast.error": "Errore",
     "auth.toast.googleauthdesc": "Si è verificato un errore con l'autenticazione Google.",
-    
+
     // Terms Page Section
     "terms.title": "Termini e Condizioni",
     "terms.lastupdated": "Ultimo aggiornamento:",
@@ -5575,7 +5575,7 @@ const translations: Record<Language, Record<string, string>> = {
     "terms.section5.content": "Gli abbonamenti Premium vengono fatturati mensilmente o annualmente. Puoi cancellare il tuo abbonamento in qualsiasi momento e la cancellazione avrà effetto alla fine del tuo periodo di fatturazione corrente.",
     "terms.section6.title": "6. Modifiche",
     "terms.section6.content": "WhatTheFood si riserva il diritto di modificare o sostituire questi Termini in qualsiasi momento. L'uso continuato del servizio dopo eventuali modifiche costituisce l'accettazione dei nuovi Termini.",
-    
+
     // Privacy Page Section
     "privacy.title": "Politica sulla Privacy",
     "privacy.lastupdated": "Ultimo aggiornamento:",
@@ -5591,7 +5591,7 @@ const translations: Record<Language, Record<string, string>> = {
     "privacy.section5.content": "Utilizziamo cookie e tecnologie simili per migliorare la tua esperienza, analizzare l'utilizzo e supportare i nostri sforzi di marketing.",
     "privacy.section6.title": "6. Contattaci",
     "privacy.section6.content": "Se hai domande su questa Politica sulla Privacy, contattaci a privacy@whatthefood.io",
-    
+
     // Profile Page Section
     "profile.loading": "Caricamento del tuo profilo...",
     "profile.complete.title": "Completa il Tuo Profilo",
@@ -5677,7 +5677,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.height": "Altezza",
     "profile.field.goal": "Obiettivo",
     "profile.field.activity": "Livello di Attività",
-    
+
     // Settings Page Section
     "settings.title": "Impostazioni",
     "settings.description": "Gestisci le preferenze del tuo account",
@@ -5725,7 +5725,7 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.success.description": "Impostazioni salvate con successo.",
     "settings.error": "Errore",
     "settings.error.description": "Impossibile salvare le impostazioni.",
-    
+
     // Dashboard Page Section
     "dashboard.welcome": "Bentornato",
     "dashboard.welcome.description": "Scansiona i pasti, ottieni nutrizione istantanea e traccia i progressi.",
@@ -5825,7 +5825,7 @@ const translations: Record<Language, Record<string, string>> = {
     "dashboard.sponsors.description": "Raggiungi utenti attenti alla salute interessati al monitoraggio nutrizionale, al cibo e alla cucina.",
     "dashboard.error.title": "Errore",
     "dashboard.error.description": "Impossibile caricare i dati della dashboard.",
-    
+
     // Plans Page Section
     "plans.title": "Scegli Il Tuo Piano",
     "plans.description": "Seleziona un piano che funzioni meglio per te. Puoi aggiornare o degradare in qualsiasi momento.",
@@ -5864,7 +5864,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.success.free.description": "Ora sei nel piano Gratuito. Goditi 3 scansioni al giorno!",
     "plans.error.profile.fk": "Errore di vincolo di chiave esterna del profilo. Esegui la migrazione: 20250105000000_fix_profiles_fk_constraint.sql",
     "plans.error.profile.create": "Impossibile creare il profilo: {message}",
-    
+
     // Plan Features
     "plans.feature.unlimitedscans": "Scansioni illimitate",
     "plans.feature.advancednutritional": "Analisi nutrizionale avanzata",
@@ -5876,7 +5876,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.feature.basicnutritional": "Informazioni nutrizionali di base",
     "plans.feature.scanhistory": "Cronologia scansioni",
     "plans.feature.emailsupport": "Supporto e-mail",
-    
+
     // Plan Descriptions
     "plans.description.free": "Perfetto per provare il nostro servizio",
     "plans.description.premium.monthly": "Accesso illimitato a tutte le funzionalità",
@@ -5888,7 +5888,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.notincluded.free2": "Supporto prioritario",
     "plans.notincluded.premium1": "Account manager dedicato",
     "plans.notincluded.premium2": "SLA personalizzato",
-    
+
     // Analytics Page Section
     "analytics.title": "Le Mie Analisi Alimentari",
     "analytics.description": "Informazioni dalla cronologia delle scansioni",
@@ -5936,7 +5936,7 @@ const translations: Record<Language, Record<string, string>> = {
     "analytics.manual.success.description": "Gli alimenti manuali sono stati registrati con successo.",
     "analytics.manual.error.title": "Impossibile registrare gli alimenti",
     "analytics.manual.error.description": "Impossibile stimare questi alimenti.",
-    
+
     // Meal Planner Page Section
     "mealplanner.title": "Pianificatore di Pasti",
     "mealplanner.description": "Ottieni un piano pasto personalizzato su misura per i tuoi obiettivi",
@@ -6089,7 +6089,7 @@ const translations: Record<Language, Record<string, string>> = {
     "mealplanner.results.save": "Salva modifiche",
     "mealplanner.results.updated.title": "Pasti aggiornati",
     "mealplanner.results.updated.description": "Le modifiche agli ingredienti sono state applicate.",
-    
+
     // Widget Dashboard Section
     "widgetdashboard.title": "Dashboard Widget",
     "widgetdashboard.description": "Gestisci la personalizzazione dei tuoi widget, siti e monitora l'utilizzo",
@@ -6206,7 +6206,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.widget": "Widget",
     "nav.analytics": "Análises",
     "nav.user": "Usuário",
-    
+
     // Common
     "common.loading": "Carregando...",
     "common.error": "Erro",
@@ -6232,7 +6232,7 @@ const translations: Record<Language, Record<string, string>> = {
     "common.scancomplete": "Escaneamento concluído!",
     "common.dailylimitreached": "Limite diário atingido",
     "common.failedanalyze": "Falha ao analisar a imagem. Por favor, tente novamente.",
-    
+
     // Feedback Section
     "feedback.title": "Enviar Feedback",
     "feedback.subtitle": "Adoraríamos ouvir você",
@@ -6252,7 +6252,7 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.empty.description": "Por favor, insira sua mensagem de feedback.",
     "feedback.error.submit.title": "Erro",
     "feedback.error.submit.description": "Falha ao enviar feedback. Por favor, tente novamente.",
-    
+
     // Hero Section
     "hero.title": "Um Rastreador de Macros Construído Para Hábitos Alimentares Diários",
     "hero.description": "Se você já se perguntou: \"Estou realmente comendo certo?\" Este rastreador de macros pode ser para você. Foi criado para pessoas que querem rastrear alimentos e calorias sem registro manual.",
@@ -6284,7 +6284,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.healthfocused": "Focado na saúde",
     "hero.macrosmicronutrients": "Macros e micronutrientes",
     "hero.lovedby": "Amado por mais de 10.000 Detetives de Alimentos",
-    
+
     // Features Section
     "features.title": "Por Que Usar Nosso Scanner de Alimentos IA?",
     "features.subtitle": "Algumas funcionalidades que fazem nosso calculador de calorias se destacar",
@@ -6375,7 +6375,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.userrating": "Avaliação do Usuário",
     "featurespage.mealsanalyzed": "Refeições analisadas",
     "featurespage.aisupport": "Suporte de nutrição IA",
-    
+
     // FAQ Section
     "faq.title": "Perguntas frequentes",
     "faq.subtitle": "Tudo que você precisa saber sobre nosso contador de calorias e analisador de alimentos tudo-em-um",
@@ -6417,7 +6417,7 @@ const translations: Record<Language, Record<string, string>> = {
     "faq.q18.answer": "Sim. O What The Food processa todas as imagens com segurança e não requer informações pessoais. É seguro, privado e gratuito para usar.",
     "faq.q19.question": "Qual é o melhor scanner de alimentos IA gratuito em 2026?",
     "faq.q19.answer": "O What The Food está entre os melhores scanners de alimentos IA gratuitos em 2026, oferecendo estimativa rápida, precisa e sem anúncios de calorias e macros diretamente no seu navegador, com muitas funcionalidades excelentes para otimizar seus hábitos saudáveis.",
-    
+
     // How It Works Section
     "howitworks.title": "Como Funciona a Calculadora de Calorias What The Food?",
     "howitworks.subtitle": "Obtenha informações nutricionais com nossa calculadora de calorias em três passos simples",
@@ -6465,7 +6465,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan2": "Vegano Equilibrado",
     "howitworkscta.card2.plan3": "Adequado para Diabéticos",
     "howitworkscta.card2.plan4": "Combustível para Atletas",
-    
+
     // How It Works Hero
     "howitworkshero.title": "Como Funciona Nosso Analisador de Alimentos?",
     "howitworkshero.description": "Pule o rastreamento manual. O analisador de alimentos WhatTheFood reconhece sua refeição, estima porções e mostra nutrição precisa instantaneamente.",
@@ -6498,7 +6498,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.tomatoSauce": "Molho de Tomate",
     "howitworkshero.nutrition.tags.seafood": "Frutos do Mar",
     "howitworkshero.nutrition.tags.italian": "Italiano",
-    
+
     // Pricing Section
     "pricing.title": "Rastreador de Macros Inteligente, Preços Transparentes",
     "pricing.subtitle": "Criado para pessoas que querem rastrear alimentos sem registro manual.",
@@ -6533,11 +6533,11 @@ const translations: Record<Language, Record<string, string>> = {
     "pricing.canceldialog.description": "Tem certeza de que deseja cancelar sua assinatura Premium? Você perderá o acesso a todos os recursos Premium no final do período de faturamento.",
     "pricing.canceldialog.confirm": "Sim, cancelar",
     "pricing.canceldialog.keep": "Manter assinatura",
-    
+
     // Reviews Section
     "reviews.title": "Amado e Testado por 10.000 Amantes de Comida",
     "reviews.subtitle": "Com fome de provas? Veja por que todos estão gritando WTF (de um jeito bom)",
-    
+
     // Footer Section
     "footer.description": "Seu companheiro de rastreamento de macros que ajuda você a entender o que come. Escaneie refeições, rastreie macros e identifique padrões que moldam seus hábitos alimentares e objetivos de fitness.",
     "footer.product": "Produto",
@@ -6552,15 +6552,15 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.analytics": "Analíticas",
     "footer.contactsupport": "Suporte",
     "footer.rights": "Todos os direitos reservados.",
-    
+
     // Blog Section
     "blog.latest": "Últimas do nosso blog",
     "blog.subtitle": "Dicas, guias e insights para uma alimentação mais saudável",
     "blog.viewall": "Ver todas as postagens",
-    
+
     // TopBar Promotional Banner
     "topbar.promo": "🎉 50% de desconto Early Bird – Por tempo limitado!",
-    
+
     // Widget Section
     "widgethero.title": "Widget incorporável incluído no seu plano",
     "widgethero.description": "Adicione a varredura de alimentos alimentada por IA do WhatTheFood ao seu blog ou site. Perfeito para blogueiros de comida, sites de nutrição e plataformas de saúde—sem assinatura adicional.",
@@ -6649,7 +6649,7 @@ const translations: Record<Language, Record<string, string>> = {
     "widgetpricing.viewplatform": "Ver preços da plataforma",
     "widgetpricing.managesubscription": "Gerenciar assinatura",
     "widgetpricing.or": "ou",
-    
+
     // Keto Meal Planner Section
     "ketomealplanner.hero.title": "Planejador de Refeições Keto",
     "ketomealplanner.hero.subtitle": "para Seus Objetivos",
@@ -6703,7 +6703,7 @@ const translations: Record<Language, Record<string, string>> = {
     "ketomealplanner.premium.signup": "Cadastre-se Grátis",
     "ketomealplanner.premium.alreadyhaveaccount": "Já tem uma conta?",
     "ketomealplanner.premium.signin": "Entrar",
-    
+
     // Auth Page Section
     "auth.hero.title": "Comece Sua Jornada para uma Melhor Nutrição",
     "auth.hero.description": "Junte-se a milhares de usuários fazendo escolhas mais saudáveis com análise de alimentos alimentada por IA, insights personalizados e orientação nutricional prática.",
@@ -6764,7 +6764,7 @@ const translations: Record<Language, Record<string, string>> = {
     "auth.toast.useridnotfound": "ID do usuário não encontrado. Por favor, comece novamente.",
     "auth.toast.error": "Erro",
     "auth.toast.googleauthdesc": "Ocorreu um erro com a autenticação do Google.",
-    
+
     // Terms Page Section
     "terms.title": "Termos e Condições",
     "terms.lastupdated": "Última atualização:",
@@ -6780,7 +6780,7 @@ const translations: Record<Language, Record<string, string>> = {
     "terms.section5.content": "As assinaturas Premium são cobradas mensal ou anualmente. Você pode cancelar sua assinatura a qualquer momento, e o cancelamento entrará em vigor no final do seu período de faturamento atual.",
     "terms.section6.title": "6. Modificações",
     "terms.section6.content": "O WhatTheFood se reserva o direito de modificar ou substituir estes Termos a qualquer momento. O uso contínuo do serviço após quaisquer alterações constitui a aceitação dos novos Termos.",
-    
+
     // Privacy Page Section
     "privacy.title": "Política de Privacidade",
     "privacy.lastupdated": "Última atualização:",
@@ -6796,7 +6796,7 @@ const translations: Record<Language, Record<string, string>> = {
     "privacy.section5.content": "Usamos cookies e tecnologias similares para melhorar sua experiência, analisar o uso e auxiliar em nossos esforços de marketing.",
     "privacy.section6.title": "6. Entre em Contato",
     "privacy.section6.content": "Se você tiver dúvidas sobre esta Política de Privacidade, entre em contato conosco em privacy@whatthefood.io",
-    
+
     // Profile Page Section
     "profile.loading": "Carregando seu perfil...",
     "profile.complete.title": "Complete Seu Perfil",
@@ -6882,7 +6882,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.height": "Altura",
     "profile.field.goal": "Objetivo",
     "profile.field.activity": "Nível de Atividade",
-    
+
     // Settings Page Section
     "settings.title": "Configurações",
     "settings.description": "Gerencie as preferências da sua conta",
@@ -6930,7 +6930,7 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.success.description": "Configurações salvas com sucesso.",
     "settings.error": "Erro",
     "settings.error.description": "Falha ao salvar as configurações.",
-    
+
     // Dashboard Page Section
     "dashboard.welcome": "Bem-vindo de volta",
     "dashboard.welcome.description": "Escaneie refeições, obtenha nutrição instantânea e acompanhe o progresso.",
@@ -7038,7 +7038,7 @@ const translations: Record<Language, Record<string, string>> = {
     "dashboard.sponsors.description": "Alcance usuários conscientes da saúde interessados em rastreamento nutricional, comida e culinária.",
     "dashboard.error.title": "Erro",
     "dashboard.error.description": "Falha ao carregar os dados do painel.",
-    
+
     // Plans Page Section
     "plans.title": "Escolha Seu Plano",
     "plans.description": "Selecione um plano que funcione melhor para você. Você pode atualizar ou fazer downgrade a qualquer momento.",
@@ -7077,7 +7077,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.success.free.description": "Você está agora no plano Gratuito. Aproveite 3 scans por dia!",
     "plans.error.profile.fk": "Erro de restrição de chave estrangeira do perfil. Execute a migração: 20250105000000_fix_profiles_fk_constraint.sql",
     "plans.error.profile.create": "Falha ao criar o perfil: {message}",
-    
+
     // Plan Features
     "plans.feature.unlimitedscans": "Scans ilimitados",
     "plans.feature.advancednutritional": "Análise nutricional avançada",
@@ -7089,7 +7089,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.feature.basicnutritional": "Informações nutricionais básicas",
     "plans.feature.scanhistory": "Histórico de scans",
     "plans.feature.emailsupport": "Suporte por e-mail",
-    
+
     // Plan Descriptions
     "plans.description.free": "Perfeito para experimentar nosso serviço",
     "plans.description.premium.monthly": "Acesso ilimitado a todos os recursos",
@@ -7101,7 +7101,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.notincluded.free2": "Suporte prioritário",
     "plans.notincluded.premium1": "Gerente de conta dedicado",
     "plans.notincluded.premium2": "SLA personalizado",
-    
+
     // Analytics Page Section
     "analytics.title": "Minhas Análises de Alimentos",
     "analytics.description": "Informações do seu histórico de scans",
@@ -7149,7 +7149,7 @@ const translations: Record<Language, Record<string, string>> = {
     "analytics.manual.success.description": "Alimentos manuais foram registrados com sucesso.",
     "analytics.manual.error.title": "Falha ao registrar alimentos",
     "analytics.manual.error.description": "Não é possível estimar esses alimentos.",
-    
+
     // Meal Planner Page Section
     "mealplanner.title": "Planejador de Refeições",
     "mealplanner.description": "Obtenha um plano de refeições personalizado adaptado aos seus objetivos",
@@ -7302,7 +7302,7 @@ const translations: Record<Language, Record<string, string>> = {
     "mealplanner.results.save": "Salvar alterações",
     "mealplanner.results.updated.title": "Refeições atualizadas",
     "mealplanner.results.updated.description": "Alterações de ingredientes foram aplicadas.",
-    
+
     // Widget Dashboard Section
     "widgetdashboard.title": "Painel de Widgets",
     "widgetdashboard.description": "Gerencie a personalização dos seus widgets, sites e acompanhe o uso",
@@ -7418,7 +7418,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.howitworks": "工作原理",
     "nav.widget": "小部件",
     "nav.user": "用户",
-    
+
     // Common
     "common.loading": "加载中...",
     "common.error": "错误",
@@ -7444,7 +7444,7 @@ const translations: Record<Language, Record<string, string>> = {
     "common.scancomplete": "扫描完成！",
     "common.dailylimitreached": "已达到每日限制",
     "common.failedanalyze": "分析图像失败。请重试。",
-    
+
     // Feedback Section
     "feedback.title": "发送反馈",
     "feedback.subtitle": "我们很乐意听取您的意见",
@@ -7464,7 +7464,7 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.empty.description": "请输入您的反馈消息。",
     "feedback.error.submit.title": "错误",
     "feedback.error.submit.description": "提交反馈失败。请重试。",
-    
+
     // Hero Section
     "hero.title": "为日常饮食习惯打造的宏量营养素追踪器",
     "hero.description": "如果你曾经问过自己：\"我真的吃对了吗？\" 这个宏量营养素追踪器可能适合你。它为想要追踪食物和卡路里而无需手动记录的人而设计。",
@@ -7496,7 +7496,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.healthfocused": "健康导向",
     "hero.macrosmicronutrients": "宏量和微量营养素",
     "hero.lovedby": "受到10,000+位食物侦探喜爱",
-    
+
     // Features Section
     "features.title": "为什么使用我们的AI食物扫描器？",
     "features.subtitle": "让我们食物卡路里查找器脱颖而出的功能",
@@ -7587,7 +7587,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.userrating": "用户评分",
     "featurespage.mealsanalyzed": "已分析的餐食",
     "featurespage.aisupport": "AI营养支持",
-    
+
     // FAQ Section
     "faq.title": "常见问题",
     "faq.subtitle": "关于我们一体化卡路里计数器和食物分析器您需要了解的一切",
@@ -7629,7 +7629,7 @@ const translations: Record<Language, Record<string, string>> = {
     "faq.q18.answer": "安全。What The Food安全处理所有图像，不需要个人信息。它安全、私密且免费使用。",
     "faq.q19.question": "2026年最好的免费AI食物扫描器是什么？",
     "faq.q19.answer": "What The Food是2026年最好的免费AI食物扫描器之一，直接在您的浏览器中提供快速、准确且无广告的卡路里和宏量营养素估算，具有太多出色的功能来优化您的健康习惯。",
-    
+
     // How It Works Section
     "howitworks.title": "What The Food Calorie Cal如何工作？",
     "howitworks.subtitle": "通过三个简单步骤使用我们的食物卡路里计算器获得营养洞察",
@@ -7677,7 +7677,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan2": "均衡素食",
     "howitworkscta.card2.plan3": "适合糖尿病患者",
     "howitworkscta.card2.plan4": "运动员燃料",
-    
+
     // How It Works Hero
     "howitworkshero.title": "我们的食物分析器如何工作？",
     "howitworkshero.description": "跳过手动追踪。WhatTheFood食物分析器识别您的餐食，估算份量，并立即显示准确的营养信息。",
@@ -7710,7 +7710,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.tomatoSauce": "番茄酱",
     "howitworkshero.nutrition.tags.seafood": "海鲜",
     "howitworkshero.nutrition.tags.italian": "意大利",
-    
+
     // Pricing Section
     "pricing.title": "智能宏量营养素追踪器，透明定价",
     "pricing.subtitle": "为想要追踪食物而无需手动记录的人而设计。",
@@ -7745,11 +7745,11 @@ const translations: Record<Language, Record<string, string>> = {
     "pricing.canceldialog.description": "您确定要取消Premium订阅吗？您将在计费周期结束时失去对所有Premium功能的访问权限。",
     "pricing.canceldialog.confirm": "是的，取消",
     "pricing.canceldialog.keep": "保留订阅",
-    
+
     // Reviews Section
     "reviews.title": "受到10,000名美食爱好者的喜爱和测试",
     "reviews.subtitle": "渴望证明？看看为什么每个人都在尖叫WTF（以好的方式）",
-    
+
     // Footer Section
     "footer.description": "您的宏量营养素追踪伙伴，帮助您了解所吃的食物。扫描餐食，追踪宏量营养素，发现塑造您饮食习惯和健身目标的模式。",
     "footer.product": "产品",
@@ -7764,15 +7764,15 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.analytics": "分析",
     "footer.contactsupport": "支持",
     "footer.rights": "版权所有。",
-    
+
     // Blog Section
     "blog.latest": "博客最新文章",
     "blog.subtitle": "健康饮食的技巧、指南和见解",
     "blog.viewall": "查看所有文章",
-    
+
     // TopBar Promotional Banner
     "topbar.promo": "🎉 早鸟优惠 50% 折扣 – 限时优惠！",
-    
+
     // Widget Section
     "widgethero.title": "可嵌入小部件包含在您的计划中",
     "widgethero.description": "将WhatTheFood的AI驱动食物扫描添加到您的博客或网站。非常适合美食博主、营养网站和健康平台—无需额外订阅。",
@@ -7861,7 +7861,7 @@ const translations: Record<Language, Record<string, string>> = {
     "widgetpricing.viewplatform": "查看平台定价",
     "widgetpricing.managesubscription": "管理订阅",
     "widgetpricing.or": "或",
-    
+
     // Keto Meal Planner Section
     "ketomealplanner.hero.title": "生酮饮食计划器",
     "ketomealplanner.hero.subtitle": "为您的目标",
@@ -7915,7 +7915,7 @@ const translations: Record<Language, Record<string, string>> = {
     "ketomealplanner.premium.signup": "免费注册",
     "ketomealplanner.premium.alreadyhaveaccount": "已有账户？",
     "ketomealplanner.premium.signin": "登录",
-    
+
     // Auth Page Section
     "auth.hero.title": "开始您的营养之旅",
     "auth.hero.description": "加入数千名用户，通过AI驱动的食物分析、个性化见解和实用的营养指导做出更健康的选择。",
@@ -7976,7 +7976,7 @@ const translations: Record<Language, Record<string, string>> = {
     "auth.toast.useridnotfound": "未找到用户ID。请重新开始。",
     "auth.toast.error": "错误",
     "auth.toast.googleauthdesc": "Google身份验证时发生错误。",
-    
+
     // Terms Page Section
     "terms.title": "条款和条件",
     "terms.lastupdated": "最后更新：",
@@ -7992,7 +7992,7 @@ const translations: Record<Language, Record<string, string>> = {
     "terms.section5.content": "Premium订阅按月或按年计费。您可以随时取消订阅，取消将在当前计费周期结束时生效。",
     "terms.section6.title": "6. 修改",
     "terms.section6.content": "WhatTheFood保留随时修改或替换这些条款的权利。任何更改后继续使用服务即表示接受新条款。",
-    
+
     // Privacy Page Section
     "privacy.title": "隐私政策",
     "privacy.lastupdated": "最后更新：",
@@ -8008,7 +8008,7 @@ const translations: Record<Language, Record<string, string>> = {
     "privacy.section5.content": "我们使用cookie和类似技术来增强您的体验、分析使用情况并协助我们的营销工作。",
     "privacy.section6.title": "6. 联系我们",
     "privacy.section6.content": "如果您对此隐私政策有疑问，请通过privacy@whatthefood.io联系我们",
-    
+
     // Profile Page Section
     "profile.loading": "正在加载您的个人资料...",
     "profile.complete.title": "完成您的个人资料",
@@ -8094,7 +8094,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.height": "身高",
     "profile.field.goal": "目标",
     "profile.field.activity": "活动水平",
-    
+
     // Settings Page Section
     "settings.title": "设置",
     "settings.description": "管理您的账户偏好",
@@ -8142,7 +8142,7 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.success.description": "设置已成功保存。",
     "settings.error": "错误",
     "settings.error.description": "保存设置失败。",
-    
+
     // Dashboard Page Section
     "dashboard.welcome": "欢迎回来",
     "dashboard.welcome.description": "扫描餐食，获取即时营养信息，并跟踪进度。",
@@ -8242,7 +8242,7 @@ const translations: Record<Language, Record<string, string>> = {
     "dashboard.sponsors.description": "触达关注健康的用户，他们对营养跟踪、食物和烹饪感兴趣。",
     "dashboard.error.title": "错误",
     "dashboard.error.description": "加载仪表板数据失败。",
-    
+
     // Plans Page Section
     "plans.title": "选择您的计划",
     "plans.description": "选择最适合您的计划。您可以随时升级或降级。",
@@ -8281,7 +8281,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.success.free.description": "您现在使用的是免费计划。每天享受3次扫描！",
     "plans.error.profile.fk": "配置文件外键约束错误。请运行迁移：20250105000000_fix_profiles_fk_constraint.sql",
     "plans.error.profile.create": "创建配置文件失败：{message}",
-    
+
     // Plan Features
     "plans.feature.unlimitedscans": "无限扫描",
     "plans.feature.advancednutritional": "高级营养分析",
@@ -8293,7 +8293,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.feature.basicnutritional": "基本营养信息",
     "plans.feature.scanhistory": "扫描历史",
     "plans.feature.emailsupport": "电子邮件支持",
-    
+
     // Plan Descriptions
     "plans.description.free": "非常适合试用我们的服务",
     "plans.description.premium.monthly": "无限访问所有功能",
@@ -8305,7 +8305,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.notincluded.free2": "优先支持",
     "plans.notincluded.premium1": "专属客户经理",
     "plans.notincluded.premium2": "自定义 SLA",
-    
+
     // Analytics Page Section
     "analytics.title": "我的食物分析",
     "analytics.description": "来自您的扫描历史记录",
@@ -8353,7 +8353,7 @@ const translations: Record<Language, Record<string, string>> = {
     "analytics.manual.success.description": "手动食物已成功记录。",
     "analytics.manual.error.title": "记录食物失败",
     "analytics.manual.error.description": "无法估算这些食物。",
-    
+
     // Meal Planner Page Section
     "mealplanner.title": "膳食计划器",
     "mealplanner.description": "获得适合您目标的个性化膳食计划",
@@ -8506,7 +8506,7 @@ const translations: Record<Language, Record<string, string>> = {
     "mealplanner.results.save": "保存更改",
     "mealplanner.results.updated.title": "餐食已更新",
     "mealplanner.results.updated.description": "配料更改已应用。",
-    
+
     // Widget Dashboard Section
     "widgetdashboard.title": "小部件仪表板",
     "widgetdashboard.description": "管理您的小部件自定义、网站和跟踪使用情况",
@@ -8623,7 +8623,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.widget": "ウィジェット",
     "nav.analytics": "分析",
     "nav.user": "ユーザー",
-    
+
     // Common
     "common.loading": "読み込み中...",
     "common.error": "エラー",
@@ -8649,7 +8649,7 @@ const translations: Record<Language, Record<string, string>> = {
     "common.scancomplete": "スキャン完了！",
     "common.dailylimitreached": "1日の制限に達しました",
     "common.failedanalyze": "画像の分析に失敗しました。もう一度お試しください。",
-    
+
     // Feedback Section
     "feedback.title": "フィードバックを送信",
     "feedback.subtitle": "ご意見をお聞かせください",
@@ -8669,7 +8669,7 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.empty.description": "フィードバックメッセージを入力してください。",
     "feedback.error.submit.title": "エラー",
     "feedback.error.submit.description": "フィードバックの送信に失敗しました。もう一度お試しください。",
-    
+
     // Hero Section
     "hero.title": "日常の食習慣のためのマクロトラッカー",
     "hero.description": "「本当に正しく食べているのか？」と自分に問いかけたことがあるなら、このマクロトラッカーがあなたにぴったりかもしれません。手動で記録することなく、食べ物とカロリーを追跡したい人のために作られています。",
@@ -8701,7 +8701,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.healthfocused": "健康重視",
     "hero.macrosmicronutrients": "マクロとミクロ栄養素",
     "hero.lovedby": "10,000人以上のフード探偵に愛されています",
-    
+
     // Features Section
     "features.title": "なぜ当社のAI食品スキャナーを使用するのか？",
     "features.subtitle": "当社のカロリー検索ツールを際立たせる機能",
@@ -8792,7 +8792,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.userrating": "ユーザー評価",
     "featurespage.mealsanalyzed": "分析された食事",
     "featurespage.aisupport": "AI栄養サポート",
-    
+
     // FAQ Section
     "faq.title": "よくある質問",
     "faq.subtitle": "当社のオールインワンカロリーカウンター＆食品分析器について知っておくべきすべて",
@@ -8834,7 +8834,7 @@ const translations: Record<Language, Record<string, string>> = {
     "faq.q18.answer": "はい。What The Foodはすべての画像を安全に処理し、個人情報を必要としません。安全でプライベート、無料で使用できます。",
     "faq.q19.question": "2026年の最高の無料AI食品スキャナーは何ですか？",
     "faq.q19.answer": "What The Foodは、2026年の最高の無料AI食品スキャナーの1つで、ブラウザで直接、迅速で正確、広告なしのカロリーとマクロの推定を提供し、健康的な習慣を最適化するための優れた機能が多数あります。",
-    
+
     // How It Works Section
     "howitworks.title": "What The Food Calorie Calはどのように機能しますか？",
     "howitworks.subtitle": "3つの簡単なステップで当社の食品カロリー計算機を使用して栄養情報を取得",
@@ -8882,7 +8882,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan2": "バランスの取れたビーガン",
     "howitworkscta.card2.plan3": "糖尿病患者向け",
     "howitworkscta.card2.plan4": "アスリート燃料",
-    
+
     // How It Works Hero
     "howitworkshero.title": "当社の食品分析器はどのように機能しますか？",
     "howitworkshero.description": "手動追跡をスキップ。WhatTheFood食品分析器は食事を認識し、ポーションを推定し、即座に正確な栄養情報を表示します。",
@@ -8915,7 +8915,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.tomatoSauce": "トマトソース",
     "howitworkshero.nutrition.tags.seafood": "シーフード",
     "howitworkshero.nutrition.tags.italian": "イタリアン",
-    
+
     // Pricing Section
     "pricing.title": "スマートマクロトラッカー、透明な価格",
     "pricing.subtitle": "手動で記録することなく食べ物を追跡したい人のために作られています。",
@@ -8950,11 +8950,11 @@ const translations: Record<Language, Record<string, string>> = {
     "pricing.canceldialog.description": "プレミアムサブスクリプションをキャンセルしてもよろしいですか？請求期間の終了時にすべてのプレミアム機能へのアクセスを失います。",
     "pricing.canceldialog.confirm": "はい、キャンセル",
     "pricing.canceldialog.keep": "サブスクリプションを維持",
-    
+
     // Reviews Section
     "reviews.title": "10,000人のフード愛好者に愛され、テストされています",
     "reviews.subtitle": "証明に飢えていますか？なぜ誰もがWTF（良い意味で）と叫んでいるのかを見てください",
-    
+
     // Footer Section
     "footer.description": "あなたが食べるものを理解するのに役立つマクロトラッキングのパートナー。食事をスキャンし、マクロを追跡し、あなたの食習慣とフィットネス目標を形作るパターンを見つけます。",
     "footer.product": "製品",
@@ -8969,15 +8969,15 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.analytics": "分析",
     "footer.contactsupport": "サポート",
     "footer.rights": "全著作権所有。",
-    
+
     // Blog Section
     "blog.latest": "ブログの最新記事",
     "blog.subtitle": "健康的な食事のためのヒント、ガイド、洞察",
     "blog.viewall": "すべての投稿を表示",
-    
+
     // TopBar Promotional Banner
     "topbar.promo": "🎉 早割50％割引 – 期間限定！",
-    
+
     // Widget Section
     "widgethero.title": "プランに含まれる埋め込み可能なウィジェット",
     "widgethero.description": "WhatTheFoodのAI駆動の食品スキャンをブログやウェブサイトに追加。フードブロガー、栄養サイト、健康プラットフォームに最適—追加のサブスクリプション不要。",
@@ -9066,7 +9066,7 @@ const translations: Record<Language, Record<string, string>> = {
     "widgetpricing.viewplatform": "プラットフォーム価格を見る",
     "widgetpricing.managesubscription": "サブスクリプションを管理",
     "widgetpricing.or": "または",
-    
+
     // Keto Meal Planner Section
     "ketomealplanner.hero.title": "ケトミールプランナー",
     "ketomealplanner.hero.subtitle": "あなたの目標のために",
@@ -9120,7 +9120,7 @@ const translations: Record<Language, Record<string, string>> = {
     "ketomealplanner.premium.signup": "無料で登録",
     "ketomealplanner.premium.alreadyhaveaccount": "すでにアカウントをお持ちですか？",
     "ketomealplanner.premium.signin": "ログイン",
-    
+
     // Auth Page Section
     "auth.hero.title": "より良い栄養への旅を始めましょう",
     "auth.hero.description": "AI駆動の食品分析、パーソナライズされた洞察、実用的な栄養ガイダンスで、より健康的な選択をする何千人ものユーザーに参加してください。",
@@ -9181,7 +9181,7 @@ const translations: Record<Language, Record<string, string>> = {
     "auth.toast.useridnotfound": "ユーザーIDが見つかりません。最初からやり直してください。",
     "auth.toast.error": "エラー",
     "auth.toast.googleauthdesc": "Google認証中にエラーが発生しました。",
-    
+
     // Terms Page Section
     "terms.title": "利用規約",
     "terms.lastupdated": "最終更新：",
@@ -9197,7 +9197,7 @@ const translations: Record<Language, Record<string, string>> = {
     "terms.section5.content": "プレミアムサブスクリプションは月額または年額で請求されます。いつでもサブスクリプションをキャンセルでき、キャンセルは現在の請求期間の終了時に有効になります。",
     "terms.section6.title": "6. 変更",
     "terms.section6.content": "WhatTheFoodは、これらの規約をいつでも変更または置き換える権利を留保します。変更後のサービスの継続使用は、新しい規約の承認を構成します。",
-    
+
     // Privacy Page Section
     "privacy.title": "プライバシーポリシー",
     "privacy.lastupdated": "最終更新：",
@@ -9213,7 +9213,7 @@ const translations: Record<Language, Record<string, string>> = {
     "privacy.section5.content": "Cookieや類似のテクノロジーを使用して、体験を向上させ、使用状況を分析し、マーケティング活動を支援します。",
     "privacy.section6.title": "6. お問い合わせ",
     "privacy.section6.content": "このプライバシーポリシーに関するご質問は、privacy@whatthefood.ioまでお問い合わせください",
-    
+
     // Profile Page Section
     "profile.loading": "プロフィールを読み込み中...",
     "profile.complete.title": "プロフィールを完成させる",
@@ -9299,7 +9299,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.height": "身長",
     "profile.field.goal": "目標",
     "profile.field.activity": "活動レベル",
-    
+
     // Settings Page Section
     "settings.title": "設定",
     "settings.description": "アカウントの設定を管理",
@@ -9347,7 +9347,7 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.success.description": "設定が正常に保存されました。",
     "settings.error": "エラー",
     "settings.error.description": "設定の保存に失敗しました。",
-    
+
     // Dashboard Page Section
     "dashboard.welcome": "おかえりなさい",
     "dashboard.welcome.description": "食事をスキャンし、即座に栄養情報を取得し、進捗を追跡します。",
@@ -9455,7 +9455,7 @@ const translations: Record<Language, Record<string, string>> = {
     "dashboard.sponsors.description": "栄養追跡、食べ物、料理に興味のある健康意識の高いユーザーにリーチします。",
     "dashboard.error.title": "エラー",
     "dashboard.error.description": "ダッシュボードデータの読み込みに失敗しました。",
-    
+
     // Plans Page Section
     "plans.title": "プランを選択",
     "plans.description": "あなたに最適なプランを選択してください。いつでもアップグレードまたはダウングレードできます。",
@@ -9494,7 +9494,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.success.free.description": "無料プランになりました。1日3回のスキャンをお楽しみください！",
     "plans.error.profile.fk": "プロファイル外部キー制約エラー。マイグレーションを実行してください：20250105000000_fix_profiles_fk_constraint.sql",
     "plans.error.profile.create": "プロファイルの作成に失敗しました：{message}",
-    
+
     // Plan Features
     "plans.feature.unlimitedscans": "無制限スキャン",
     "plans.feature.advancednutritional": "高度な栄養分析",
@@ -9506,7 +9506,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.feature.basicnutritional": "基本的な栄養情報",
     "plans.feature.scanhistory": "スキャン履歴",
     "plans.feature.emailsupport": "メールサポート",
-    
+
     // Plan Descriptions
     "plans.description.free": "サービスを試すのに最適",
     "plans.description.premium.monthly": "すべての機能への無制限アクセス",
@@ -9518,7 +9518,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.notincluded.free2": "優先サポート",
     "plans.notincluded.premium1": "専任アカウントマネージャー",
     "plans.notincluded.premium2": "カスタムSLA",
-    
+
     // Analytics Page Section
     "analytics.title": "私の食事分析",
     "analytics.description": "スキャン履歴からの洞察",
@@ -9566,7 +9566,7 @@ const translations: Record<Language, Record<string, string>> = {
     "analytics.manual.success.description": "手動の食品が正常に記録されました。",
     "analytics.manual.error.title": "食品の記録に失敗",
     "analytics.manual.error.description": "これらの食品を推定できません。",
-    
+
     // Meal Planner Page Section
     "mealplanner.title": "食事プランナー",
     "mealplanner.description": "目標に合わせたパーソナライズされた食事プランを取得",
@@ -9719,7 +9719,7 @@ const translations: Record<Language, Record<string, string>> = {
     "mealplanner.results.save": "変更を保存",
     "mealplanner.results.updated.title": "食事が更新されました",
     "mealplanner.results.updated.description": "材料の変更が適用されました。",
-    
+
     // Widget Dashboard Section
     "widgetdashboard.title": "ウィジェットダッシュボード",
     "widgetdashboard.description": "ウィジェットのカスタマイズ、サイト、使用状況の管理",
@@ -9836,7 +9836,7 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.widget": "الودجت",
     "nav.analytics": "التحليلات",
     "nav.user": "المستخدم",
-    
+
     // Common
     "common.loading": "جاري التحميل...",
     "common.error": "خطأ",
@@ -9862,7 +9862,7 @@ const translations: Record<Language, Record<string, string>> = {
     "common.scancomplete": "اكتمل المسح!",
     "common.dailylimitreached": "تم الوصول إلى الحد اليومي",
     "common.failedanalyze": "فشل تحليل الصورة. يرجى المحاولة مرة أخرى.",
-    
+
     // Feedback Section
     "feedback.title": "إرسال الملاحظات",
     "feedback.subtitle": "نود أن نسمع منك",
@@ -9882,7 +9882,7 @@ const translations: Record<Language, Record<string, string>> = {
     "feedback.error.empty.description": "يرجى إدخال رسالة الملاحظات الخاصة بك.",
     "feedback.error.submit.title": "خطأ",
     "feedback.error.submit.description": "فشل إرسال الملاحظات. يرجى المحاولة مرة أخرى.",
-    
+
     // Hero Section
     "hero.title": "متتبع الماكرو المصمم لعادات الأكل اليومية",
     "hero.description": "إذا سألت نفسك مرة: \"هل أتناول الطعام بشكل صحيح حقًا؟\" قد يكون متتبع الماكرو هذا مناسبًا لك. إنه مصمم للأشخاص الذين يريدون تتبع الطعام والسعرات الحرارية دون تسجيل يدوي.",
@@ -9914,7 +9914,7 @@ const translations: Record<Language, Record<string, string>> = {
     "hero.healthfocused": "مركز على الصحة",
     "hero.macrosmicronutrients": "الماكرو والمايكرونutrients",
     "hero.lovedby": "محبوب من قبل أكثر من 10,000 من محققي الطعام",
-    
+
     // Features Section
     "features.title": "لماذا نستخدم ماسح الطعام بالذكاء الاصطناعي؟",
     "features.subtitle": "بعض الميزات التي تجعل باحث السعرات الحرارية لدينا مميزًا",
@@ -10005,7 +10005,7 @@ const translations: Record<Language, Record<string, string>> = {
     "featurespage.userrating": "تقييم المستخدم",
     "featurespage.mealsanalyzed": "الوجبات التي تم تحليلها",
     "featurespage.aisupport": "دعم التغذية بالذكاء الاصطناعي",
-    
+
     // FAQ Section
     "faq.title": "الأسئلة الشائعة",
     "faq.subtitle": "كل ما تحتاج لمعرفته حول عداد السعرات الحرارية ومحلل الطعام الشامل لدينا",
@@ -10047,7 +10047,7 @@ const translations: Record<Language, Record<string, string>> = {
     "faq.q18.answer": "نعم. يعالج What The Food جميع الصور بأمان ولا يتطلب معلومات شخصية. إنه آمن وخاص ومجاني للاستخدام.",
     "faq.q19.question": "ما هو أفضل ماسح طعام بالذكاء الاصطناعي مجاني في عام 2026؟",
     "faq.q19.answer": "What The Food هو من بين أفضل ماسحات الطعام بالذكاء الاصطناعي المجانية في عام 2026، حيث يقدم تقديراً سريعاً ودقيقاً وخالياً من الإعلانات للسعرات الحرارية والماكرو مباشرة في متصفحك، مع الكثير من الميزات الرائعة لتحسين عاداتك الصحية.",
-    
+
     // How It Works Section
     "howitworks.title": "كيف يعمل What The Food Calorie Cal؟",
     "howitworks.subtitle": "احصل على معلومات غذائية باستخدام حاسبة السعرات الحرارية لدينا في ثلاث خطوات بسيطة",
@@ -10095,7 +10095,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkscta.card2.plan2": "نباتي متوازن",
     "howitworkscta.card2.plan3": "مناسب لمرضى السكري",
     "howitworkscta.card2.plan4": "وقود للرياضيين",
-    
+
     // How It Works Hero
     "howitworkshero.title": "كيف يعمل محلل الطعام لدينا؟",
     "howitworkshero.description": "تخطى التتبع اليدوي. يتعرف محلل الطعام WhatTheFood على وجبتك، ويقدر الحصص، ويعرض معلومات غذائية دقيقة على الفور.",
@@ -10128,7 +10128,7 @@ const translations: Record<Language, Record<string, string>> = {
     "howitworkshero.nutrition.tags.tomatoSauce": "صلصة الطماطم",
     "howitworkshero.nutrition.tags.seafood": "المأكولات البحرية",
     "howitworkshero.nutrition.tags.italian": "إيطالي",
-    
+
     // Pricing Section
     "pricing.title": "متتبع الماكرو الذكي، أسعار شفافة",
     "pricing.subtitle": "مصمم للأشخاص الذين يريدون تتبع الطعام دون تسجيل يدوي.",
@@ -10163,11 +10163,11 @@ const translations: Record<Language, Record<string, string>> = {
     "pricing.canceldialog.description": "هل أنت متأكد أنك تريد إلغاء اشتراكك Premium؟ ستفقد الوصول إلى جميع ميزات Premium في نهاية فترة الفوترة الخاصة بك.",
     "pricing.canceldialog.confirm": "نعم، إلغاء",
     "pricing.canceldialog.keep": "الاحتفاظ بالاشتراك",
-    
+
     // Reviews Section
     "reviews.title": "محبوب ومختبر من قبل 10,000 عاشق للطعام",
     "reviews.subtitle": "جائع للإثبات؟ شاهد لماذا الجميع يصرخون WTF (بمعنى جيد)",
-    
+
     // Footer Section
     "footer.description": "رفيقك في تتبع الماكرو الذي يساعدك على فهم ما تأكله. امسح الوجبات، وتتبع الماكرو، واكتشف الأنماط التي تشكل عاداتك الغذائية وأهداف اللياقة البدنية.",
     "footer.product": "المنتج",
@@ -10182,15 +10182,15 @@ const translations: Record<Language, Record<string, string>> = {
     "footer.analytics": "التحليلات",
     "footer.contactsupport": "الدعم",
     "footer.rights": "جميع الحقوق محفوظة.",
-    
+
     // Blog Section
     "blog.latest": "أحدث من مدونتنا",
     "blog.subtitle": "نصائح ودلائل ورؤى لتناول طعام أكثر صحة",
     "blog.viewall": "عرض جميع المشاركات",
-    
+
     // TopBar Promotional Banner
     "topbar.promo": "🎉 خصم الحجز المبكر 50٪ – لفترة محدودة فقط!",
-    
+
     // Widget Section
     "widgethero.title": "ودجت قابل للتضمين مدرج في خطتك",
     "widgethero.description": "أضف مسح الطعام المدعوم بالذكاء الاصطناعي من WhatTheFood إلى مدونتك أو موقعك. مثالي لمدوني الطعام ومواقع التغذية ومنصات الصحة—بدون اشتراك إضافي.",
@@ -10279,7 +10279,7 @@ const translations: Record<Language, Record<string, string>> = {
     "widgetpricing.viewplatform": "عرض أسعار المنصة",
     "widgetpricing.managesubscription": "إدارة الاشتراك",
     "widgetpricing.or": "أو",
-    
+
     // Keto Meal Planner Section
     "ketomealplanner.hero.title": "مخطط وجبات الكيتو",
     "ketomealplanner.hero.subtitle": "لأهدافك",
@@ -10333,7 +10333,7 @@ const translations: Record<Language, Record<string, string>> = {
     "ketomealplanner.premium.signup": "سجل مجانًا",
     "ketomealplanner.premium.alreadyhaveaccount": "هل لديك حساب بالفعل؟",
     "ketomealplanner.premium.signin": "تسجيل الدخول",
-    
+
     // Auth Page Section
     "auth.hero.title": "ابدأ رحلتك نحو تغذية أفضل",
     "auth.hero.description": "انضم إلى آلاف المستخدمين الذين يتخذون خيارات أكثر صحة مع تحليل الطعام المدعوم بالذكاء الاصطناعي، والرؤى الشخصية، والتوجيه الغذائي القابل للتنفيذ.",
@@ -10394,7 +10394,7 @@ const translations: Record<Language, Record<string, string>> = {
     "auth.toast.useridnotfound": "لم يتم العثور على معرف المستخدم. يرجى البدء من جديد.",
     "auth.toast.error": "خطأ",
     "auth.toast.googleauthdesc": "حدث خطأ مع مصادقة Google.",
-    
+
     // Terms Page Section
     "terms.title": "الشروط والأحكام",
     "terms.lastupdated": "آخر تحديث:",
@@ -10410,7 +10410,7 @@ const translations: Record<Language, Record<string, string>> = {
     "terms.section5.content": "يتم فوترة الاشتراكات المميزة شهرياً أو سنوياً. يمكنك إلغاء اشتراكك في أي وقت، وسيبدأ الإلغاء في نهاية فترة الفوترة الحالية.",
     "terms.section6.title": "6. التعديلات",
     "terms.section6.content": "تحتفظ WhatTheFood بالحق في تعديل أو استبدال هذه الشروط في أي وقت. الاستمرار في استخدام الخدمة بعد أي تغييرات يشكل قبول الشروط الجديدة.",
-    
+
     // Privacy Page Section
     "privacy.title": "سياسة الخصوصية",
     "privacy.lastupdated": "آخر تحديث:",
@@ -10426,7 +10426,7 @@ const translations: Record<Language, Record<string, string>> = {
     "privacy.section5.content": "نستخدم ملفات تعريف الارتباط وتقنيات مماثلة لتحسين تجربتك وتحليل الاستخدام ومساعدة جهودنا التسويقية.",
     "privacy.section6.title": "6. اتصل بنا",
     "privacy.section6.content": "إذا كان لديك أسئلة حول سياسة الخصوصية هذه، يرجى الاتصال بنا على privacy@whatthefood.io",
-    
+
     // Profile Page Section
     "profile.loading": "جارٍ تحميل ملفك الشخصي...",
     "profile.complete.title": "أكمل ملفك الشخصي",
@@ -10512,7 +10512,7 @@ const translations: Record<Language, Record<string, string>> = {
     "profile.field.height": "الطول",
     "profile.field.goal": "الهدف",
     "profile.field.activity": "مستوى النشاط",
-    
+
     // Settings Page Section
     "settings.title": "الإعدادات",
     "settings.description": "إدارة تفضيلات حسابك",
@@ -10560,7 +10560,7 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.success.description": "تم حفظ الإعدادات بنجاح.",
     "settings.error": "خطأ",
     "settings.error.description": "فشل حفظ الإعدادات.",
-    
+
     // Dashboard Page Section
     "dashboard.welcome": "مرحباً بعودتك",
     "dashboard.welcome.description": "امسح الوجبات، واحصل على معلومات غذائية فورية، وتتبع التقدم.",
@@ -10668,7 +10668,7 @@ const translations: Record<Language, Record<string, string>> = {
     "dashboard.sponsors.description": "الوصول إلى المستخدمين المهتمين بالصحة المهتمين بتتبع التغذية والطعام والطبخ.",
     "dashboard.error.title": "خطأ",
     "dashboard.error.description": "فشل تحميل بيانات لوحة المعلومات.",
-    
+
     // Plans Page Section
     "plans.title": "اختر خطتك",
     "plans.description": "اختر خطة تناسبك. يمكنك الترقية أو التخفيض في أي وقت.",
@@ -10707,7 +10707,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.success.free.description": "أنت الآن في الخطة المجانية. استمتع بـ 3 عمليات مسح يومياً!",
     "plans.error.profile.fk": "خطأ في قيد المفتاح الخارجي للملف الشخصي. يرجى تشغيل الترحيل: 20250105000000_fix_profiles_fk_constraint.sql",
     "plans.error.profile.create": "فشل إنشاء الملف الشخصي: {message}",
-    
+
     // Plan Features
     "plans.feature.unlimitedscans": "عمليات مسح غير محدودة",
     "plans.feature.advancednutritional": "تحليل غذائي متقدم",
@@ -10719,7 +10719,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.feature.basicnutritional": "معلومات غذائية أساسية",
     "plans.feature.scanhistory": "سجل المسح",
     "plans.feature.emailsupport": "دعم عبر البريد الإلكتروني",
-    
+
     // Plan Descriptions
     "plans.description.free": "مثالي لتجربة خدمتنا",
     "plans.description.premium.monthly": "وصول غير محدود لجميع الميزات",
@@ -10731,7 +10731,7 @@ const translations: Record<Language, Record<string, string>> = {
     "plans.notincluded.free2": "دعم ذو أولوية",
     "plans.notincluded.premium1": "مدير حساب مخصص",
     "plans.notincluded.premium2": "اتفاقية مستوى خدمة مخصصة",
-    
+
     // Analytics Page Section
     "analytics.title": "تحليلات طعامي",
     "analytics.description": "رؤى من سجل المسح الخاص بك",
@@ -10779,7 +10779,7 @@ const translations: Record<Language, Record<string, string>> = {
     "analytics.manual.success.description": "تم تسجيل الأطعمة اليدوية بنجاح.",
     "analytics.manual.error.title": "فشل تسجيل الأطعمة",
     "analytics.manual.error.description": "تعذر تقدير هذه الأطعمة.",
-    
+
     // Meal Planner Page Section
     "mealplanner.title": "مخطط الوجبات",
     "mealplanner.description": "احصل على خطة وجبات مخصصة مصممة لأهدافك",
@@ -10932,7 +10932,7 @@ const translations: Record<Language, Record<string, string>> = {
     "mealplanner.results.save": "حفظ التغييرات",
     "mealplanner.results.updated.title": "تم تحديث الوجبات",
     "mealplanner.results.updated.description": "تم تطبيق تغييرات المكونات.",
-    
+
     // Widget Dashboard Section
     "widgetdashboard.title": "لوحة تحكم الودجات",
     "widgetdashboard.description": "إدارة تخصيص ودجاتك ومواقعك وتتبع الاستخدام",
@@ -11058,16 +11058,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
             .select("default_language")
             .eq("id", session.user.id)
             .maybeSingle();
-          
+
           if (profileError) {
             console.error("Error fetching profile for language:", profileError);
           }
-          
+
           if (profile?.default_language && translations[profile.default_language as Language]) {
             const profileLanguage = profile.default_language as Language;
             setLanguageState(profileLanguage);
             localStorage.setItem("language", profileLanguage);
-            
+
             // Update HTML lang and dir attributes
             if (typeof document !== "undefined") {
               document.documentElement.lang = profileLanguage;
@@ -11077,7 +11077,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
                 document.documentElement.dir = "ltr";
               }
             }
-            
+
             setMounted(true);
             return;
           }
@@ -11085,11 +11085,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error("Error loading language from profile:", error);
       }
-      
+
       // Fallback to localStorage or browser language
       const savedLanguage = localStorage.getItem("language") as Language;
       let initialLanguage: Language = "en";
-      
+
       if (savedLanguage && translations[savedLanguage]) {
         initialLanguage = savedLanguage;
       } else {
@@ -11099,9 +11099,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
           initialLanguage = browserLang;
         }
       }
-      
+
       setLanguageState(initialLanguage);
-      
+
       // Update HTML lang and dir attributes
       if (typeof document !== "undefined") {
         document.documentElement.lang = initialLanguage;
@@ -11111,10 +11111,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
           document.documentElement.dir = "ltr";
         }
       }
-      
+
       setMounted(true);
     };
-    
+
     void loadLanguage();
 
     // Listen for auth state changes to reload language when user logs in
@@ -11127,12 +11127,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
             .select("default_language")
             .eq("id", session.user.id)
             .maybeSingle();
-          
+
           if (profile?.default_language && translations[profile.default_language as Language]) {
             const profileLanguage = profile.default_language as Language;
             setLanguageState(profileLanguage);
             localStorage.setItem("language", profileLanguage);
-            
+
             if (typeof document !== "undefined") {
               document.documentElement.lang = profileLanguage;
               if (profileLanguage === "ar") {
@@ -11156,7 +11156,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const setLanguage = async (lang: Language) => {
     setLanguageState(lang);
     localStorage.setItem("language", lang);
-    
+
     // Update HTML lang attribute
     if (typeof document !== "undefined") {
       document.documentElement.lang = lang;
@@ -11167,7 +11167,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         document.documentElement.dir = "ltr";
       }
     }
-    
+
     // Save to user's profile if logged in
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -11210,7 +11210,7 @@ export function useLanguage() {
     // Return safe defaults when context is not available (during SSR or before mount)
     return {
       language: "en" as Language,
-      setLanguage: () => {},
+      setLanguage: () => { },
       t: getEnglishTranslation,
     };
   }
