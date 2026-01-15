@@ -2979,7 +2979,7 @@ export function FoodResultsClient() {
                           </AlertTitle>
                           <AlertDescription className="text-green-800 dark:text-green-200 sm:pr-48">
                             <p className="text-xs sm:text-sm">
-                              You've started tracking your meals! Unlock personalized insights to see how this fits into your goals.
+                              You&apos;ve started tracking your meals! Unlock personalized insights to see how this fits into your goals.
                             </p>
                           </AlertDescription>
                           <Button
