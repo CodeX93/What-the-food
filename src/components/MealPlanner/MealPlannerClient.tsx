@@ -109,7 +109,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
   const [profile, setProfile] = useState<any>(null);
   const [mealPlan, setMealPlan] = useState<MealPlan | null>(null);
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
-  
+
   const [userId, setUserId] = useState<string | null>(null);
   const [savedPlans, setSavedPlans] = useState<SavedMealPlanRecord[]>([]);
   const [savedPlansLoading, setSavedPlansLoading] = useState(false);
@@ -213,11 +213,11 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       .select("default_language")
       .eq("id", userId)
       .maybeSingle();
-    
+
     const targetLanguage = profileData?.default_language || userLanguage || 'en';
-    
+
     console.log("translateMealPlanIfNeeded - currentLanguage:", currentLanguage, "targetLanguage:", targetLanguage);
-    
+
     // If already in the correct language, return as-is
     if (currentLanguage === targetLanguage) {
       console.log("Languages match, returning original plan");
@@ -236,10 +236,10 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
         },
       });
 
-      console.log("Translation response:", { 
-        ok: translateData?.ok, 
+      console.log("Translation response:", {
+        ok: translateData?.ok,
         hasContent: !!translateData?.translatedContent,
-        error: translateError 
+        error: translateError
       });
 
       if (translateError || !translateData?.ok || !translateData.translatedContent) {
@@ -375,30 +375,30 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       if (!meal.foods[ingredientIndex]) {
         meal.foods[ingredientIndex] = { name: "", quantity: "", calories: 0 };
       }
-      
+
       const food = meal.foods[ingredientIndex];
-      
+
       if (field === "calories") {
         const parsed = Number(value);
         food.calories = Number.isFinite(parsed) ? parsed : 0;
       } else if (field === "quantity") {
         // Store the old quantity before updating
         const oldQuantity = food.quantity || "";
-        
+
         // Extract numeric value from quantity string (e.g., "200g" -> 200, "1 cup" -> 1, "2 eggs" -> 2)
         const extractNumber = (str: string): number => {
           if (!str) return 0;
           const match = str.match(/(\d+\.?\d*)/);
           return match ? parseFloat(match[1]) : 0;
         };
-        
+
         const oldQuantityNum = extractNumber(oldQuantity);
         const newQuantityNum = extractNumber(value);
         const currentCalories = food.calories || 0;
-        
+
         // Update the quantity field first
         food.quantity = value;
-        
+
         // Auto-calculate calories based on quantity change
         // If we have a valid quantity change and existing calories, recalculate proportionally
         if (newQuantityNum > 0 && oldQuantityNum > 0 && currentCalories > 0) {
@@ -413,14 +413,14 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       } else {
         (food as any)[field] = value;
       }
-      
+
       // Recalculate meal total calories
       if (Array.isArray(meal.foods)) {
         meal.totalCalories = meal.foods.reduce((sum, f) => sum + (f.calories || 0), 0);
       }
     });
   };
-  
+
   const handleMoveDayUp = (dayIndex: number) => {
     if (dayIndex === 0) return; // Can't move first day up
     updateEditablePlan((draft) => {
@@ -429,7 +429,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       draft.weeklyMealPlan.splice(dayIndex - 1, 0, movedDay);
     });
   };
-  
+
   const handleMoveDayDown = (dayIndex: number) => {
     updateEditablePlan((draft) => {
       if (!draft.weeklyMealPlan || dayIndex >= draft.weeklyMealPlan.length - 1) return;
@@ -452,7 +452,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       const fromDay = draft.weeklyMealPlan[fromDayIndex];
       const toDay = draft.weeklyMealPlan[toDayIndex];
       if (!fromDay || !toDay || !fromDay.meals || !toDay.meals) return;
-      
+
       const [movedMeal] = fromDay.meals.splice(fromMealIndex, 1);
       toDay.meals.splice(toMealIndex, 0, movedMeal);
     });
@@ -589,7 +589,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       }
 
       let generatedPlan = data.mealPlan;
-      
+
       // Translate the generated plan if user's language is not English
       // Get user's default language from profile
       const { data: profileData } = await (supabase as any)
@@ -597,9 +597,9 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
         .select("default_language")
         .eq("id", session.user.id)
         .maybeSingle();
-      
+
       const targetLanguage = profileData?.default_language || userLanguage || 'en';
-      
+
       // If user's language is not English, translate the plan before showing
       if (targetLanguage !== 'en') {
         try {
@@ -632,10 +632,10 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       setAdditionalNotes(formData.additionalInfo);
       setExercisePlan(formData.exercisePlan);
       setMealFrequency(formData.mealsPerDay.toString());
-      
+
       // Close modal after successful generation
       setIsModalOpen(false);
-      
+
       toast({
         title: t("mealplanner.generate.title"),
         description: t("mealplanner.generate.description"),
@@ -694,9 +694,9 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
         .select("default_language")
         .eq("id", userId)
         .maybeSingle();
-      
+
       const planLanguage = profileData?.default_language || userLanguage || 'en';
-      
+
       const { data, error } = await (supabase as any).from("meal_plans").insert({
         user_id: userId,
         title: titleToUse,
@@ -742,21 +742,21 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       // Translate plan if needed before loading
       const recordWithLang = record as any;
       const currentLanguage = recordWithLang.language || 'en';
-      
+
       console.log("Loading plan - Current language:", currentLanguage);
-      
+
       // Get user's default language
       const { data: profileData } = await (supabase as any)
         .from("profiles")
         .select("default_language")
         .eq("id", userId)
         .maybeSingle();
-      
+
       const targetLanguage = profileData?.default_language || userLanguage || 'en';
       console.log("Loading plan - Target language:", targetLanguage);
 
       let loadedPlan = record.plan;
-      
+
       // If language doesn't match, translate it
       if (currentLanguage !== targetLanguage) {
         console.log("Languages don't match, translating from", currentLanguage, "to", targetLanguage);
@@ -764,7 +764,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
           title: t("mealplanner.plan.loading.title") || "Loading plan...",
           description: t("mealplanner.plan.loading.translating") || "Translating to your preferred language...",
         });
-        
+
         const translatedPlan = await translateMealPlanIfNeeded(
           { plan: record.plan },
           record.id,
@@ -871,7 +871,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
   const handleConfirmNavigation = () => {
     setShowUnsavedWarning(false);
     setIsMealPlanSaved(false); // Reset saved state
-    
+
     if (pendingNavigation) {
       router.push(pendingNavigation as any);
     } else {
@@ -880,7 +880,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       setEditablePlan(null);
       setIsEditingMeals(false);
     }
-    
+
     setPendingNavigation(null);
   };
 
@@ -920,22 +920,21 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
       <div className="container mx-auto px-4 py-8">
         {/* Paywall Bar for Free Users */}
         {!isPremium && (
-          <Alert className="mb-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
+          <Alert className="mb-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 relative">
             <UtensilsCrossed className="h-4 w-4 text-primary flex-shrink-0" />
-            <AlertTitle className="font-semibold text-base sm:text-lg mb-2">Start eating smarter.</AlertTitle>
-            <AlertDescription className="mt-1 text-sm sm:text-base">
-              <p className="mb-3">
+            <AlertTitle className="font-semibold text-base sm:text-lg mb-2 sm:pr-48">Start eating smarter.</AlertTitle>
+            <AlertDescription className="mt-1 sm:pr-48">
+              <p className="text-xs sm:text-sm">
                 Your meal planner adapts to what you actually eat, not generic plans. Go premium to unlock planning based on your special diet preferences and health goals.
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-primary hover:bg-primary-hover text-white border-primary"
-                onClick={() => router.push("/plans")}
-              >
-                Create Your 1st Meal Plan
-              </Button>
             </AlertDescription>
+            <Button
+              size="sm"
+              className="mt-3 w-full sm:w-auto sm:mt-0 sm:absolute sm:top-4 sm:right-4 bg-primary hover:bg-primary/90 text-white border-primary whitespace-nowrap"
+              onClick={() => router.push("/plans")}
+            >
+              Create Your 1st Meal Plan
+            </Button>
           </Alert>
         )}
         <div className="flex items-center gap-3 mb-8">
@@ -1017,17 +1016,17 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleDeletePlan(plan.id)}
                           className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleNavigation(`/meal-plan/${plan.id}`)}
                         >
                           {t("mealplanner.saved.view")}
@@ -1112,17 +1111,12 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
         )}
 
         {/* Paywall Modal for Free Users */}
-        <Dialog 
-          open={showPaywallModal} 
-          onOpenChange={() => {
-            // Prevent closing by clicking outside - require explicit action via buttons
-          }}
+        <Dialog
+          open={showPaywallModal}
+          onOpenChange={setShowPaywallModal}
         >
-          <DialogContent 
-            className="max-w-md" 
-            onPointerDownOutside={(e) => e.preventDefault()} 
-            onInteractOutside={(e) => e.preventDefault()}
-            onEscapeKeyDown={(e) => e.preventDefault()}
+          <DialogContent
+            className="max-w-md"
           >
             <DialogHeader>
               <DialogTitle className="text-xl font-semibold">Plan meals based on your preferences.</DialogTitle>
@@ -1199,8 +1193,8 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
               <AlertDialogCancel onClick={cancelDeletePlan} disabled={deletingPlan}>
                 {t("mealplanner.plan.delete.cancel") || "Cancel"}
               </AlertDialogCancel>
-              <AlertDialogAction 
-                onClick={confirmDeletePlan} 
+              <AlertDialogAction
+                onClick={confirmDeletePlan}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 disabled={deletingPlan}
               >

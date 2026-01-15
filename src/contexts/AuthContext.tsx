@@ -13,7 +13,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  signOut: async () => {},
+  signOut: async () => { },
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -25,11 +25,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initializeAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           console.error('Error getting session:', error);
         }
-        
+
         setUser(session?.user ?? null);
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
-        
+
         // Update user state for all events (TOKEN_REFRESHED is handled automatically)
         setUser(session?.user ?? null);
         setLoading(false);
@@ -79,19 +79,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (error) {
         console.error('Error in session refresh interval:', error);
       }
-    }, 10 * 60 * 1000); // 10 minutes - refresh more frequently
+    }, 2 * 60 * 1000); // 2 minutes - check frequently to prevent expiration
 
-    // Also check session when user returns to the tab
+    // Also check session when user returns to the tab or focuses the window
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
         try {
+          // Force a session check when tab becomes visible
           const { data: { session }, error } = await supabase.auth.getSession();
-          if (error) {
-            // Try to refresh on visibility change if there's an error
+          if (error || !session) {
+            // Try to recover session
             await supabase.auth.refreshSession();
-          } else if (session) {
-            // Refresh session when user returns to ensure it's fresh
-            // Pass the session object to ensure we use the correct refresh token
+          } else {
+            // Session exists, ensure it's valid
             await supabase.auth.refreshSession(session);
           }
         } catch (error) {
@@ -100,12 +100,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
+    // Check on focus as well (more reliable than visibility change in some browsers)
+    const handleFocus = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await supabase.auth.refreshSession(session);
+        } else {
+          // Attempt recovery if no session found but we think we're logged in
+          await supabase.auth.refreshSession();
+        }
+      } catch (e) {
+        console.error("Focus refresh error", e);
+      }
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       subscription.unsubscribe();
       clearInterval(refreshInterval);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 

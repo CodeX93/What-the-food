@@ -4,10 +4,10 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 const HowItWorks = () => {
   const { t } = useLanguage();
-  
+
   // YouTube video URL - can be changed later
   const youtubeUrl = "https://youtu.be/ZK-rNEhJIDs?si=-O_rsYGPsitOh5DZ";
-  
+
   // Extract video ID from YouTube URL
   const getVideoId = (url: string) => {
     if (url.includes("youtube.com/watch?v=")) {
@@ -26,7 +26,7 @@ const HowItWorks = () => {
   return (
     <section
       id="how-it-works"
-      className="relative w-full bg-white dark:bg-[#000000] transition-colors duration-300 py-16 sm:py-20 lg:py-24"
+      className="relative w-full bg-white dark:bg-[#000000] transition-colors duration-300 py-16 sm:py-20 lg:py-24 pb-4 sm:pb-8 lg:pb-12"
     >
       <div className="container mx-auto px-4 w-full">
         <div className="text-center max-w-2xl md:max-w-5xl mx-auto mb-10 sm:mb-12 md:mb-16">

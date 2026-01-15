@@ -19,7 +19,7 @@ export default function Hero() {
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [user, setUser] = useState<any>(null);
-  
+
   // OPTIMIZATION: Initialize with cached data AFTER hydration to avoid mismatch
   const [remainingScans, setRemainingScans] = useState<number | null>(null);
   const [scanStatusType, setScanStatusType] = useState<"registered" | "unregistered" | null>(null);
@@ -81,7 +81,7 @@ export default function Hero() {
     if (lastUserIdRef.current === currentUserId && hasCheckedRef.current) {
       return;
     }
-    
+
     lastUserIdRef.current = currentUserId;
     hasCheckedRef.current = true;
 
@@ -100,7 +100,7 @@ export default function Hero() {
               console.log('[DEBUG] Free scan status:', status);
               setRemainingScans(status.remaining);
               setScanStatusType(status.type);
-              
+
               // Fetch profile to get account creation date for registered users
               if (status.type === "registered") {
                 const { data: profile } = await supabase
@@ -108,7 +108,7 @@ export default function Hero() {
                   .select("created_at")
                   .eq("id", authUser.id)
                   .maybeSingle();
-                
+
                 if (profile?.created_at) {
                   // Calculate 3 days from account creation
                   const accountCreatedAt = new Date(profile.created_at);
@@ -132,7 +132,7 @@ export default function Hero() {
             const status = await getFreeScanStatus(); // Always fetches from database
             setRemainingScans(status.remaining);
             setScanStatusType(status.type);
-            
+
             // Fetch profile to get account creation date for registered users
             if (status.type === "registered") {
               const { data: profile } = await supabase
@@ -140,7 +140,7 @@ export default function Hero() {
                 .select("created_at")
                 .eq("id", authUser.id)
                 .maybeSingle();
-              
+
               if (profile?.created_at) {
                 // Calculate 3 days from account creation
                 const accountCreatedAt = new Date(profile.created_at);
@@ -150,13 +150,13 @@ export default function Hero() {
               }
             }
           } catch (err) {
-          setRemainingScans(3);
+            setRemainingScans(3);
             setScanStatusType('registered');
           }
         }
       } else {
         setIsPremium(false);
-        
+
         // Still check scan status for non-logged-in users (non-blocking)
         // Always fetch fresh data from database
         try {
@@ -171,7 +171,7 @@ export default function Hero() {
         }
       }
     };
-    
+
     // Fire and forget - don't block UI
     checkPremiumAndScans();
   }, [authUser]);
@@ -214,31 +214,31 @@ export default function Hero() {
     input.accept = "image/png,image/jpeg,image/jpg,image/heic,image/heif";
     // Don't set capture attribute - let user choose between camera and gallery
     input.style.display = "none"; // Hide but keep in DOM for mobile compatibility
-    
+
     // Add to DOM temporarily for mobile browsers (especially iOS Safari)
     document.body.appendChild(input);
-    
+
     // Use both onchange property and addEventListener for maximum compatibility
     const handleFileChange = async (e: Event) => {
       try {
         console.log('File change event triggered', e);
         const target = e.target as HTMLInputElement;
         const file = target.files?.[0];
-        
+
         console.log('Selected file:', file ? { name: file.name, type: file.type, size: file.size } : 'No file');
-        
+
         if (!file) {
           // User cancelled or no file selected
           console.log('No file selected, cleaning up');
           cleanup();
           return;
         }
-        
+
         // Validate file type - be more lenient for mobile cameras
         const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/heic', 'image/heif', 'image/webp'];
         const validExtensions = /\.(png|jpg|jpeg|heic|heif|webp)$/i;
         const isValidType = validTypes.includes(file.type) || file.name.match(validExtensions);
-        
+
         // On mobile, file.type might be empty, so rely on extension
         if (!isValidType && file.type && file.type !== '') {
           console.warn('File type validation failed:', file.type, file.name);
@@ -250,18 +250,18 @@ export default function Hero() {
           cleanup();
           return;
         }
-        
+
         console.log('File validated, processing...');
-        
+
         // Set selected file and show preview immediately
         setSelectedFile(file);
-        
+
         // Show preview immediately from file blob
         const objectUrl = URL.createObjectURL(file);
         console.log('Created object URL:', objectUrl);
         setPreviewUrl(objectUrl);
         setImageLoading(true); // Start loading state for image rendering
-        
+
         // If user is authenticated, upload in the background
         if (user?.id) {
           try {
@@ -313,7 +313,7 @@ export default function Hero() {
           console.log('Free scan available, preview shown');
           // For non-authenticated users, preview is already shown above
         }
-        
+
         cleanup();
       } catch (error: any) {
         console.error("File processing error:", error);
@@ -324,7 +324,7 @@ export default function Hero() {
         });
         cleanup();
       }
-      
+
       function cleanup() {
         input.removeEventListener('change', handleFileChange);
         input.value = '';
@@ -333,10 +333,10 @@ export default function Hero() {
         }
       }
     };
-    
+
     // Use addEventListener only (onchange is redundant and causes double-firing)
     input.addEventListener('change', handleFileChange, { once: true });
-    
+
     // Trigger file picker
     // Use setTimeout to ensure input is in DOM before clicking (mobile fix)
     setTimeout(() => {
@@ -362,66 +362,66 @@ export default function Hero() {
 
     try {
       setAnalyzing(true);
-      
+
       // Get user session
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id;
-      
+
       // If image was already uploaded (authenticated user), use the uploaded URL
       let imageUrl = uploadedImageUrl;
       let imagePath = uploadedImagePath;
-      
+
       // If not authenticated, check free scan limit
       if (!userId) {
         if (!(await hasFreeScanAvailable())) {
           router.push("/auth");
           return;
         }
-        
+
         // For non-authenticated users, create a temporary user ID for storage
         const tempUserId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
+
         // Upload to Storage with temp ID (only if not already uploaded)
         if (!imageUrl || !imagePath) {
           const uploadResult = await uploadFoodImage(selectedFile, tempUserId);
           imagePath = uploadResult.path;
           imageUrl = uploadResult.signedUrl || uploadResult.publicUrl;
         }
-        
+
         // Analyze via Edge Function (default serving 1)
         const analysis = await analyzeFood(imageUrl, 1);
-        
+
         // Decrement free scan count
         const newCount = await decrementFreeScan();
         setRemainingScans(newCount);
         setScanStatusType("unregistered");
-        
+
         // Save history with temp user (won't be retrievable later, just for current session)
-        const scanId = await saveScanHistory({ 
-          userId: tempUserId, 
-          imagePath: imagePath!, 
-          imageUrl: imageUrl!, 
-          serving: 1, 
+        const scanId = await saveScanHistory({
+          userId: tempUserId,
+          imagePath: imagePath!,
+          imageUrl: imageUrl!,
+          serving: 1,
           result: {
             ...analysis.analysis,
             ...(analysis.insights ? { insights: analysis.insights } : {}),
           },
         });
-        
+
         toast({
           title: t("common.scancomplete"),
           description: `${newCount} ${t("hero.freescansleft")}`,
         });
-        
+
         router.push(`/food-results?id=${scanId}`);
       } else {
         if (!isPremium) {
           const available = await hasFreeScanAvailable();
           if (!available) {
-          toast({
-            title: t("common.dailylimitreached"),
-            description: t("hero.upgradeunlimited"),
-          });
+            toast({
+              title: t("common.dailylimitreached"),
+              description: t("hero.upgradeunlimited"),
+            });
             return;
           }
         }
@@ -433,22 +433,22 @@ export default function Hero() {
           imagePath = uploadResult.path;
           imageUrl = uploadResult.signedUrl || uploadResult.publicUrl;
         }
-        
+
         // Analyze via Edge Function (default serving 1)
         const analysis = await analyzeFood(imageUrl, 1);
-        
+
         // Save history and open results page
-        const scanId = await saveScanHistory({ 
-          userId, 
-          imagePath: imagePath!, 
-          imageUrl: imageUrl!, 
-          serving: 1, 
+        const scanId = await saveScanHistory({
+          userId,
+          imagePath: imagePath!,
+          imageUrl: imageUrl!,
+          serving: 1,
           result: {
             ...analysis.analysis,
             ...(analysis.insights ? { insights: analysis.insights } : {}),
           },
         });
-        
+
         if (!isPremium) {
           try {
             const newCount = await decrementFreeScan();
@@ -551,19 +551,19 @@ export default function Hero() {
                     </>
                   );
                 })()}
-          </h1>
+              </h1>
               <p
                 className="w-full text-base sm:text-lg text-muted-foreground mb-6 leading-relaxed block text-center sm:text-left"
                 style={{ width: "100%", maxWidth: "100%", fontSize: "125%", wordWrap: "break-word", overflowWrap: "break-word", boxSizing: "border-box" }}
                 dangerouslySetInnerHTML={{ __html: t("hero.description") }}
               >
-            </p>
+              </p>
             </div>
           </div>
 
           {/* App Store and Play Store Banners */}
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center w-full">
-            <div 
+            <div
               onClick={() => {
                 toast({
                   title: "Coming Soon",
@@ -572,12 +572,13 @@ export default function Hero() {
               }}
               className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
             >
-              <img 
-                src="/appstore-banner.png" 
-                alt="Download on the App Store" 
+              <img
+                src="/appstore-banner.png"
+                alt="Download on the App Store"
+                className="h-[40px] sm:h-[48px] w-auto"
               />
             </div>
-            <div 
+            <div
               onClick={() => {
                 toast({
                   title: "Coming Soon",
@@ -586,43 +587,60 @@ export default function Hero() {
               }}
               className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
             >
-              <img 
-                src="/playstore-banner.png" 
-                alt="Get it on Google Play" 
+              <img
+                src="/playstore-banner.png"
+                alt="Get it on Google Play"
+                className="h-[40px] sm:h-[48px] w-auto"
               />
             </div>
           </div>
 
-          {/* Free scans text */}
-          <p className="text-xs sm:text-sm text-muted-foreground text-center">
-            {user ? (
-              isPremium ? (
-                t("hero.unlimitedscans")
-              ) : remainingScans === null ? (
-                t("hero.checkingscans")
-              ) : remainingScans > 0 ? (
-                (() => {
-                  const scansText = `${remainingScans} ${t("hero.scansremaining")}`;
-                  // For registered free users, add the date
-                  if (scanStatusType === "registered" && freePeriodEndDate) {
-                    const formattedDate = freePeriodEndDate.toLocaleDateString('en-US', { 
-                      month: 'short', 
-                      day: 'numeric',
-                      year: 'numeric'
-                    });
-                    return `${scansText} before ${formattedDate}`;
-                  }
-                  return scansText;
-                })()
-              ) : (
-                t("hero.allscansused")
-              )
-            ) : remainingScans === null ? (
-              t("hero.checkingfree")
-            ) : (
-              `${remainingScans} ${t("hero.nosignup")}`
-            )}
-          </p>
+          {/* Social proof row for mobile - moved up */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="flex -space-x-2">
+              <img
+                src="https://cdn.senja.io/public/media/2Gy86pCPjyR9b6zUwJjDPws2.jpeg?width=63&height=63&format=webp"
+                alt="User"
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+              <img
+                src="https://cdn.senja.io/public/media/dN36G7tuWI2QNvUY3GvxqhHS.jpeg?width=63&height=63&format=webp"
+                alt="User"
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+              <img
+                src="https://cdn.senja.io/public/media/MuiigrWvcefNTcmrlhlLhbcD.jpeg?width=63&height=63&format=webp"
+                alt="User"
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+              <img
+                src="https://cdn.senja.io/public/media/s5QLCiQI0A7sPgfkroHekVgI.jpeg?width=63&height=63&format=webp"
+                alt="User"
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+              <img
+                src="https://cdn.senja.io/public/media/MieZXnLYNCXCycU6M5JBD9zL.jpeg?width=63&height=63&format=webp"
+                alt="User"
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+              <img
+                src="https://cdn.senja.io/public/media/dYNtwNMbfIVzHIYhO017e8VW.jpeg?width=63&height=63&format=webp"
+                alt="User"
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+              <img
+                src="https://cdn.senja.io/public/media/cxWlU3GytKVXfnpUIu2bLRnV.png?width=63&height=63&format=webp"
+                alt="User"
+                className="h-10 w-10 rounded-full border-2 border-background object-cover"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground text-center whitespace-nowrap">
+              {userCount !== null
+                ? `Loved by ${userCount.toLocaleString()} Food Detectives`
+                : t("hero.lovedby")
+              }
+            </p>
+          </div>
 
           {/* Upload Card */}
           <div className="w-full">
@@ -633,130 +651,82 @@ export default function Hero() {
                     <Upload className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
                     <p className="text-base sm:text-lg font-medium mb-2 text-center">{t("hero.uploadfoodphoto")}</p>
                     <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 text-center">
-                  {t("hero.dropimage")}
-                </p>
+                      {t("hero.dropimage")}
+                    </p>
                     <div className="flex justify-center">
                       <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" onClick={onChooseFile} disabled={uploading}>
-                  {t("hero.choosefile")}
+                        {t("hero.choosefile")}
                       </Button>
                     </div>
                   </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="relative rounded-lg overflow-hidden bg-muted/30">
-                        {imageLoading && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-10">
-                            <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                          </div>
-                        )}
-                        <img 
-                          src={previewUrl} 
-                          alt="Food preview" 
-                          className={`w-full h-64 sm:h-72 md:h-80 object-cover rounded-lg transition-opacity duration-300 ${
-                            imageLoading ? "opacity-0" : "opacity-100"
+                ) : (
+                  <div className="space-y-4">
+                    <div className="relative rounded-lg overflow-hidden bg-muted/30">
+                      {imageLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-muted/50 z-10">
+                          <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                        </div>
+                      )}
+                      <img
+                        src={previewUrl}
+                        alt="Food preview"
+                        className={`w-full h-64 sm:h-72 md:h-80 object-cover rounded-lg transition-opacity duration-300 ${imageLoading ? "opacity-0" : "opacity-100"
                           }`}
-                          onLoad={() => setImageLoading(false)}
-                          onError={() => setImageLoading(false)}
-                          ref={(img) => {
-                            // Check if image is already loaded when ref is set (for blob URLs)
-                            if (img && img.complete && img.naturalHeight !== 0) {
-                              setImageLoading(false);
-                            }
-                          }}
-                        />
-                      </div>
-                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full">
-                        <Button 
-                          size="lg" 
-                          className={`text-sm sm:text-base w-full ${
-                            analyzing 
-                              ? "bg-green-400 hover:bg-green-400 cursor-not-allowed" 
-                              : "bg-primary hover:bg-primary-hover"
-                          }`}
-                          onClick={handleAnalyze} 
-                          disabled={analyzing || uploading || (user?.id && !uploadedImageUrl)}
-                        >
-                          {analyzing ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin"/>
-                              Analyzing
-                            </>
-                          ) : (
-                            "Analyze Food"
-                          )}
-                        </Button>
-                        <Button 
-                          size="lg" 
-                          variant="outline" 
-                          className="text-sm sm:text-base w-full" 
-                          onClick={() => {
-                            if (previewUrl) {
-                              URL.revokeObjectURL(previewUrl);
-                            }
-                            setSelectedFile(null);
-                            setPreviewUrl(null);
-                            setUploadedImageUrl(null);
-                            setUploadedImagePath(null);
+                        onLoad={() => setImageLoading(false)}
+                        onError={() => setImageLoading(false)}
+                        ref={(img) => {
+                          // Check if image is already loaded when ref is set (for blob URLs)
+                          if (img && img.complete && img.naturalHeight !== 0) {
                             setImageLoading(false);
-                            setAnalyzing(false);
-                          }}
-                          disabled={analyzing || uploading}
-                        >
-                          Change Photo
-                        </Button>
-                      </div>
+                          }
+                        }}
+                      />
                     </div>
-                  )}
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full">
+                      <Button
+                        size="lg"
+                        className={`text-sm sm:text-base w-full ${analyzing
+                          ? "bg-green-400 hover:bg-green-400 cursor-not-allowed"
+                          : "bg-primary hover:bg-primary-hover"
+                          }`}
+                        onClick={handleAnalyze}
+                        disabled={analyzing || uploading || (user?.id && !uploadedImageUrl)}
+                      >
+                        {analyzing ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Analyzing
+                          </>
+                        ) : (
+                          "Analyze Food"
+                        )}
+                      </Button>
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="text-sm sm:text-base w-full"
+                        onClick={() => {
+                          if (previewUrl) {
+                            URL.revokeObjectURL(previewUrl);
+                          }
+                          setSelectedFile(null);
+                          setPreviewUrl(null);
+                          setUploadedImageUrl(null);
+                          setUploadedImagePath(null);
+                          setImageLoading(false);
+                          setAnalyzing(false);
+                        }}
+                        disabled={analyzing || uploading}
+                      >
+                        Change Photo
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
-          {/* Social proof row for mobile - below upload card */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-[15px]">
-            <div className="flex -space-x-2">
-              <img 
-                src="https://cdn.senja.io/public/media/2Gy86pCPjyR9b6zUwJjDPws2.jpeg?width=63&height=63&format=webp" 
-                alt="User" 
-                className="h-10 w-10 rounded-full border-2 border-background object-cover"
-              />
-              <img 
-                src="https://cdn.senja.io/public/media/dN36G7tuWI2QNvUY3GvxqhHS.jpeg?width=63&height=63&format=webp" 
-                alt="User" 
-                className="h-10 w-10 rounded-full border-2 border-background object-cover"
-              />
-              <img 
-                src="https://cdn.senja.io/public/media/MuiigrWvcefNTcmrlhlLhbcD.jpeg?width=63&height=63&format=webp" 
-                alt="User" 
-                className="h-10 w-10 rounded-full border-2 border-background object-cover"
-              />
-              <img 
-                src="https://cdn.senja.io/public/media/s5QLCiQI0A7sPgfkroHekVgI.jpeg?width=63&height=63&format=webp" 
-                alt="User" 
-                className="h-10 w-10 rounded-full border-2 border-background object-cover"
-              />
-              <img 
-                src="https://cdn.senja.io/public/media/MieZXnLYNCXCycU6M5JBD9zL.jpeg?width=63&height=63&format=webp" 
-                alt="User" 
-                className="h-10 w-10 rounded-full border-2 border-background object-cover"
-              />
-              <img 
-                src="https://cdn.senja.io/public/media/dYNtwNMbfIVzHIYhO017e8VW.jpeg?width=63&height=63&format=webp" 
-                alt="User" 
-                className="h-10 w-10 rounded-full border-2 border-background object-cover"
-              />
-              <img 
-                src="https://cdn.senja.io/public/media/cxWlU3GytKVXfnpUIu2bLRnV.png?width=63&height=63&format=webp" 
-                alt="User" 
-                className="h-10 w-10 rounded-full border-2 border-background object-cover"
-              />
-            </div>
-            <p className="text-sm text-muted-foreground text-center whitespace-nowrap">
-              {userCount !== null 
-                ? `Loved by ${userCount.toLocaleString()} Food Detectives`
-                : t("hero.lovedby")
-              }
-            </p>
-          </div>
 
         </div>
 
@@ -772,30 +742,30 @@ export default function Hero() {
                 >
                   {(() => {
                     const title = t("hero.title");
-                  if (title.includes("A Macro Tracker Built")) {
-                    return (
-                      <>
-                        <span className="text-black dark:text-white whitespace-normal lg:whitespace-nowrap block">
-                          A Macro Tracker Built
-                        </span>
-                        <span className="text-black dark:text-white whitespace-normal lg:whitespace-nowrap block">
-                          <span className="text-primary whitespace-normal lg:whitespace-nowrap">For Daily Eating Habits</span>
-                        </span>
-                      </>
-                    );
-                  }
-                  if (title.includes("Free AI Food Scanner")) {
-                    return (
-                      <>
-                        <span className="text-black dark:text-white whitespace-normal lg:whitespace-nowrap block">
-                          Free AI Food Scanner
-                        </span>
-                        <span className="text-black dark:text-white whitespace-normal lg:whitespace-nowrap block">
-                          and <span className="text-primary whitespace-normal lg:whitespace-nowrap">Calorie Estimator</span>
-                        </span>
-                      </>
-                    );
-                  }
+                    if (title.includes("A Macro Tracker Built")) {
+                      return (
+                        <>
+                          <span className="text-black dark:text-white whitespace-normal lg:whitespace-nowrap block">
+                            A Macro Tracker Built
+                          </span>
+                          <span className="text-black dark:text-white whitespace-normal lg:whitespace-nowrap block">
+                            <span className="text-primary whitespace-normal lg:whitespace-nowrap">For Daily Eating Habits</span>
+                          </span>
+                        </>
+                      );
+                    }
+                    if (title.includes("Free AI Food Scanner")) {
+                      return (
+                        <>
+                          <span className="text-black dark:text-white whitespace-normal lg:whitespace-nowrap block">
+                            Free AI Food Scanner
+                          </span>
+                          <span className="text-black dark:text-white whitespace-normal lg:whitespace-nowrap block">
+                            and <span className="text-primary whitespace-normal lg:whitespace-nowrap">Calorie Estimator</span>
+                          </span>
+                        </>
+                      );
+                    }
                     if (title.includes("Free Calorie Estimator")) {
                       const shazamMatch = title.match(/\(It's Shazam For Food\)/);
                       return (
@@ -822,17 +792,17 @@ export default function Hero() {
                       </>
                     );
                   })()}
-              </h2>
+                </h2>
                 <p
                   className="w-full text-base sm:text-xl md:text-lg text-muted-foreground mb-6 sm:mb-7 leading-relaxed block"
                   style={{ width: "100%", maxWidth: "100%", lineHeight: "1.6", fontSize: "120%", wordWrap: "break-word", overflowWrap: "break-word", boxSizing: "border-box" }}
                   dangerouslySetInnerHTML={{ __html: t("hero.description") }}
                 >
-              </p>
+                </p>
               </div>
               {/* App Store and Play Store Banners */}
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-start">
-                <div 
+                <div
                   onClick={() => {
                     toast({
                       title: "Coming Soon",
@@ -841,12 +811,13 @@ export default function Hero() {
                   }}
                   className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
                 >
-                  <img 
-                    src="/appstore-banner.png" 
-                    alt="Download on the App Store" 
+                  <img
+                    src="/appstore-banner.png"
+                    alt="Download on the App Store"
+                    className="h-[40px] sm:h-[48px] lg:h-[54px] w-auto"
                   />
                 </div>
-                <div 
+                <div
                   onClick={() => {
                     toast({
                       title: "Coming Soon",
@@ -855,45 +826,13 @@ export default function Hero() {
                   }}
                   className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
                 >
-                  <img 
-                    src="/playstore-banner.png" 
-                    alt="Get it on Google Play" 
+                  <img
+                    src="/playstore-banner.png"
+                    alt="Get it on Google Play"
+                    className="h-[40px] sm:h-[48px] lg:h-[54px] w-auto"
                   />
                 </div>
               </div>
-
-              {/* Free scans text for desktop - after CTAs */}
-              <p className="text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6 mb-8">
-                {user ? (
-                  isPremium ? (
-                    t("hero.unlimitedscans")
-                  ) : remainingScans === null ? (
-                    t("hero.checkingscans")
-                  ) : remainingScans > 0 ? (
-                    (() => {
-                      console.log('[DEBUG] Rendering remainingScans:', remainingScans);
-                      const scansText = `${remainingScans} ${t("hero.scansremaining")}`;
-                      // For registered free users, add the date
-                      if (scanStatusType === "registered" && freePeriodEndDate) {
-                        const formattedDate = freePeriodEndDate.toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric',
-                          year: 'numeric'
-                        });
-                        return `${scansText} before ${formattedDate}`;
-                      }
-                      return scansText;
-                    })()
-                  ) : (
-                    t("hero.allscansused")
-                  )
-                ) : remainingScans === null ? (
-                  t("hero.checkingfree")
-                ) : (
-                  `${remainingScans} ${t("hero.nosignup")}`
-                )}
-              </p>
-              
 
 
 
@@ -904,49 +843,49 @@ export default function Hero() {
               {/* Social proof row for desktop - below free scans text */}
               <div data-social-proof className="flex items-center gap-3 mt-6">
                 <div className="flex -space-x-2">
-                  <img 
-                    src="https://cdn.senja.io/public/media/2Gy86pCPjyR9b6zUwJjDPws2.jpeg?width=63&height=63&format=webp" 
-                    alt="User" 
+                  <img
+                    src="https://cdn.senja.io/public/media/2Gy86pCPjyR9b6zUwJjDPws2.jpeg?width=63&height=63&format=webp"
+                    alt="User"
                     className="h-10 w-10 rounded-full border-2 border-background object-cover"
                   />
-                  <img 
-                    src="https://cdn.senja.io/public/media/dN36G7tuWI2QNvUY3GvxqhHS.jpeg?width=63&height=63&format=webp" 
-                    alt="User" 
+                  <img
+                    src="https://cdn.senja.io/public/media/dN36G7tuWI2QNvUY3GvxqhHS.jpeg?width=63&height=63&format=webp"
+                    alt="User"
                     className="h-10 w-10 rounded-full border-2 border-background object-cover"
                   />
-                  <img 
-                    src="https://cdn.senja.io/public/media/MuiigrWvcefNTcmrlhlLhbcD.jpeg?width=63&height=63&format=webp" 
-                    alt="User" 
+                  <img
+                    src="https://cdn.senja.io/public/media/MuiigrWvcefNTcmrlhlLhbcD.jpeg?width=63&height=63&format=webp"
+                    alt="User"
                     className="h-10 w-10 rounded-full border-2 border-background object-cover"
                   />
-                  <img 
-                    src="https://cdn.senja.io/public/media/s5QLCiQI0A7sPgfkroHekVgI.jpeg?width=63&height=63&format=webp" 
-                    alt="User" 
+                  <img
+                    src="https://cdn.senja.io/public/media/s5QLCiQI0A7sPgfkroHekVgI.jpeg?width=63&height=63&format=webp"
+                    alt="User"
                     className="h-10 w-10 rounded-full border-2 border-background object-cover"
                   />
-                  <img 
-                    src="https://cdn.senja.io/public/media/MieZXnLYNCXCycU6M5JBD9zL.jpeg?width=63&height=63&format=webp" 
-                    alt="User" 
+                  <img
+                    src="https://cdn.senja.io/public/media/MieZXnLYNCXCycU6M5JBD9zL.jpeg?width=63&height=63&format=webp"
+                    alt="User"
                     className="h-10 w-10 rounded-full border-2 border-background object-cover"
                   />
-                  <img 
-                    src="https://cdn.senja.io/public/media/dYNtwNMbfIVzHIYhO017e8VW.jpeg?width=63&height=63&format=webp" 
-                    alt="User" 
+                  <img
+                    src="https://cdn.senja.io/public/media/dYNtwNMbfIVzHIYhO017e8VW.jpeg?width=63&height=63&format=webp"
+                    alt="User"
                     className="h-10 w-10 rounded-full border-2 border-background object-cover"
                   />
-                  <img 
-                    src="https://cdn.senja.io/public/media/cxWlU3GytKVXfnpUIu2bLRnV.png?width=63&height=63&format=webp" 
-                    alt="User" 
+                  <img
+                    src="https://cdn.senja.io/public/media/cxWlU3GytKVXfnpUIu2bLRnV.png?width=63&height=63&format=webp"
+                    alt="User"
                     className="h-10 w-10 rounded-full border-2 border-background object-cover"
                   />
-                  <img 
-                    src="https://cdn.senja.io/public/media/LhMjqn20ib2xiNbIRDKUTWiu.jpeg?width=63&height=63&format=webp" 
-                    alt="User" 
+                  <img
+                    src="https://cdn.senja.io/public/media/LhMjqn20ib2xiNbIRDKUTWiu.jpeg?width=63&height=63&format=webp"
+                    alt="User"
                     className="h-10 w-10 rounded-full border-2 border-background object-cover"
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {userCount !== null 
+                  {userCount !== null
                     ? `Loved by ${userCount.toLocaleString()} Food Detectives`
                     : t("hero.lovedby")
                   }
@@ -955,7 +894,8 @@ export default function Hero() {
             </div>
 
             {/* Right Section - Upload Placeholder (aligned with profile) */}
-            <div className="w-full max-w-lg lg:max-w-[32rem] xl:max-w-[36rem] self-start lg:ml-auto lg:mt-1.5 xl:mt-2 flex flex-col">
+            {/* Right Section - Upload Placeholder (aligned with profile) */}
+            <div className="w-full max-w-[34rem] lg:max-w-[35rem] xl:max-w-[40rem] self-start lg:ml-auto lg:mt-1.5 xl:mt-2 flex flex-col">
               <Card className="dark:border-white" ref={uploadContainerRef}>
                 <CardContent className="p-4 sm:p-6 md:p-8">
                   {!previewUrl ? (
@@ -964,15 +904,15 @@ export default function Hero() {
                       <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 bg-gradient-card">
                         <AlertCircle className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
                         <p className="text-base sm:text-lg font-medium mb-2 text-center">
-                          ⚠️ You already scanned a meal!
+                          ⚠️ You already decoded a meal!
                         </p>
                         <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6 text-center">
-                          Continue with email to unlock 1 more scan and see how your meals add up.
+                          Want to know what this meal actually means for your body, and what to change next?
                         </p>
                         <div className="flex justify-center">
-                          <Button 
-                            size="lg" 
-                            className="bg-primary hover:bg-primary-hover text-sm sm:text-base" 
+                          <Button
+                            size="lg"
+                            className="bg-primary hover:bg-primary-hover text-sm sm:text-base"
                             onClick={() => router.push("/auth")}
                           >
                             Continue with free account
@@ -980,39 +920,39 @@ export default function Hero() {
                         </div>
                       </div>
                     ) : // Check if free registered user has consumed their scans (3 scans OR 3 days, whichever comes first)
-                    user && !isPremium && scanStatusType === "registered" && remainingScans === 0 ? (
-                      <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 bg-gradient-card">
-                        <Lock className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
-                        <p className="text-base sm:text-lg font-medium mb-2 text-center">
-                          You&apos;ve tracked 3 meals.
-                        </p>
-                        <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6 text-center">
-                          Patterns are starting to form. Unlock analytics to see them.
-                        </p>
-                        <div className="flex justify-center">
-                          <Button 
-                            size="lg" 
-                            className="bg-primary hover:bg-primary-hover text-sm sm:text-base" 
-                            onClick={() => router.push("/plans")}
-                          >
-                            Unlock analytics
-                          </Button>
+                      user && !isPremium && scanStatusType === "registered" && remainingScans === 0 ? (
+                        <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 bg-gradient-card">
+                          <Lock className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
+                          <p className="text-base sm:text-lg font-medium mb-2 text-center">
+                            You&apos;ve tracked 3 meals.
+                          </p>
+                          <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6 text-center">
+                            Patterns are starting to form. Unlock analytics to see them.
+                          </p>
+                          <div className="flex justify-center">
+                            <Button
+                              size="lg"
+                              className="bg-primary hover:bg-primary-hover text-sm sm:text-base"
+                              onClick={() => router.push("/plans")}
+                            >
+                              Unlock analytics
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card hover:border-primary/50 transition-colors">
-                        <Upload className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
-                        <p className="text-base sm:text-lg font-medium mb-2 text-center">{t("hero.uploadfoodphoto")}</p>
-                        <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 text-center">
-                          {t("hero.dropimage")}
-                        </p>
-                        <div className="flex justify-center">
-                          <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" onClick={onChooseFile} disabled={uploading}>
-                            {t("hero.choosefile")}
-                          </Button>
+                      ) : (
+                        <div className="border-2 border-dashed border-primary/30 rounded-lg p-8 sm:p-10 md:p-12 cursor-pointer bg-gradient-card hover:border-primary/50 transition-colors">
+                          <Upload className="h-12 w-12 sm:h-14 sm:w-14 md:h-16 md:w-16 text-primary mx-auto mb-3 sm:mb-4" />
+                          <p className="text-base sm:text-lg font-medium mb-2 text-center">{t("hero.uploadfoodphoto")}</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4 text-center">
+                            {t("hero.dropimage")}
+                          </p>
+                          <div className="flex justify-center">
+                            <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" onClick={onChooseFile} disabled={uploading}>
+                              {t("hero.choosefile")}
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    )
+                      )
                   ) : (
                     <div className="space-y-4">
                       <div className="relative rounded-lg overflow-hidden bg-muted/30">
@@ -1021,12 +961,11 @@ export default function Hero() {
                             <Loader2 className="h-8 w-8 text-primary animate-spin" />
                           </div>
                         )}
-                        <img 
-                          src={previewUrl} 
-                          alt="Food preview" 
-                          className={`w-full h-64 sm:h-72 md:h-80 object-cover rounded-lg transition-opacity duration-300 ${
-                            imageLoading ? "opacity-0" : "opacity-100"
-                          }`}
+                        <img
+                          src={previewUrl}
+                          alt="Food preview"
+                          className={`w-full h-64 sm:h-72 md:h-80 object-cover rounded-lg transition-opacity duration-300 ${imageLoading ? "opacity-0" : "opacity-100"
+                            }`}
                           onLoad={() => setImageLoading(false)}
                           onError={() => setImageLoading(false)}
                           ref={(img) => {
@@ -1038,29 +977,28 @@ export default function Hero() {
                         />
                       </div>
                       <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full">
-                        <Button 
-                          size="lg" 
-                          className={`text-sm sm:text-base w-full ${
-                            analyzing 
-                              ? "bg-green-400 hover:bg-green-400 cursor-not-allowed" 
-                              : "bg-primary hover:bg-primary-hover"
-                          }`}
-                          onClick={handleAnalyze} 
+                        <Button
+                          size="lg"
+                          className={`text-sm sm:text-base w-full ${analyzing
+                            ? "bg-green-400 hover:bg-green-400 cursor-not-allowed"
+                            : "bg-primary hover:bg-primary-hover"
+                            }`}
+                          onClick={handleAnalyze}
                           disabled={analyzing || uploading || (user?.id && !uploadedImageUrl)}
                         >
                           {analyzing ? (
                             <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin"/>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                               Analyzing
                             </>
                           ) : (
                             t("hero.analyzefood")
                           )}
                         </Button>
-                        <Button 
-                          size="lg" 
-                          variant="outline" 
-                          className="text-sm sm:text-base w-full" 
+                        <Button
+                          size="lg"
+                          variant="outline"
+                          className="text-sm sm:text-base w-full"
                           onClick={() => {
                             if (previewUrl) {
                               URL.revokeObjectURL(previewUrl);
@@ -1079,9 +1017,9 @@ export default function Hero() {
                       </div>
                     </div>
                   )}
-            </CardContent>
-          </Card>
-              
+                </CardContent>
+              </Card>
+
             </div>
           </div>
         </div>

@@ -34,7 +34,7 @@ import { queryWithRetry } from "@/utils/supabaseQuery";
 import { DataCache, CACHE_KEYS, CACHE_DURATION } from "@/utils/dataCache";
 import type { User } from "@supabase/supabase-js";
 import type { UserStreak, UserAchievement } from "@/utils/streaks.metadata";
-import { StreaksAndAchievementsClient } from "@/components/Streaks/StreaksAndAchievementsClient";
+
 
 export type DashboardClientProps = {
   initialUser?: User | null;
@@ -59,21 +59,21 @@ export function DashboardClient({
   const { user: authUser, loading: authLoading } = useAuth();
   // Use auth context user, fallback to initialUser
   const user = authUser || initialUser;
-  
+
   // OPTIMIZATION: Use cached data for instant loading
   const [subscription, setSubscription] = useState<any>(() => {
     if (initialSubscription) return initialSubscription;
     if (user?.id) return DataCache.get(CACHE_KEYS.SUBSCRIPTION(user.id));
     return null;
   });
-  
+
   // OPTIMIZATION: Start with loading=false if we have initialUser
   // Only show loading if we truly have no user data
   const [loading, setLoading] = useState(!initialUser && authLoading);
   const [analyzing, setAnalyzing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [servings, setServings] = useState(1);
-  
+
   // OPTIMIZATION: Use cached scans for instant loading
   const [recentScans, setRecentScans] = useState<any[]>(() => {
     if (initialScans && initialScans.length > 0) return initialScans;
@@ -198,7 +198,7 @@ export function DashboardClient({
             },
           },
         });
-        
+
         if (!analyzeError && analyzeData?.ok && analyzeData?.analysis) {
           // Update the scan with generated additionalInfo and insights
           const updatedResult = {
@@ -206,7 +206,7 @@ export function DashboardClient({
             additionalInfo: analyzeData.analysis.additionalInfo || manualResult.additionalInfo,
             insights: analyzeData.insights || undefined,
           };
-          
+
           await (supabase as any)
             .from("food_scans")
             .update({ result_json: updatedResult })
@@ -586,14 +586,7 @@ export function DashboardClient({
 
         <Script src="https://cdn.tinysnippet.net/scripts/v2.0/manager.js" strategy="lazyOnload" />
 
-        {/* Streaks Section - Above Upload and Analyze */}
-        <div className="mb-6">
-          <StreaksAndAchievementsClient
-            initialStreaks={initialStreaks}
-            initialAchievements={initialAchievements}
-            showAchievements={false}
-          />
-        </div>
+
 
         <div id="upload-section" className="grid md:grid-cols-2 gap-4 sm:gap-6 mb-2 md:items-stretch">
           {/* Left Section: Upload & Analyze (first), then Log Foods manually (below) */}
@@ -617,9 +610,9 @@ export function DashboardClient({
                         Patterns are starting to form. Unlock analytics to see them.
                       </p>
                       <div className="flex justify-center">
-                        <Button 
-                          size="lg" 
-                          className="bg-primary hover:bg-primary-hover text-sm sm:text-base" 
+                        <Button
+                          size="lg"
+                          className="bg-primary hover:bg-primary-hover text-sm sm:text-base"
                           onClick={() => router.push("/plans")}
                         >
                           Unlock analytics
@@ -627,164 +620,179 @@ export function DashboardClient({
                       </div>
                     </div>
                   ) : (
-                  <div
-                    className={`border-2 border-dashed border-primary/30 rounded-lg p-10 text-center bg-muted/30 flex-1 flex flex-col items-center justify-center transition-colors ${
-                      authLoading || loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-primary/50"
-                    }`}
-                    onClick={() => {
-                      if (authLoading || loading) {
-                        return;
-                      }
-                      
-                      if (!user) {
-                        toast({ 
-                          title: "Authentication Required", 
-                          description: "Please sign in to upload food images.", 
-                          variant: "destructive" 
-                        });
-                        router.push("/auth");
-                        return;
-                      }
-                      
-                      const input = document.createElement("input");
-                      input.type = "file";
-                      input.accept = "image/png,image/jpeg,image/jpg,image/heic,image/heif";
-                      // Don't set capture attribute - let user choose between camera and gallery
-                      input.style.display = "none"; // Hide but keep in DOM for mobile compatibility
-                      
-                      // Add to DOM temporarily for mobile browsers (especially iOS Safari)
-                      document.body.appendChild(input);
-                      
-                      // Define cleanup function first
-                      const cleanup = () => {
-                        input.removeEventListener('change', handleFileChange);
-                        input.value = '';
-                        if (input.parentNode) {
-                          input.parentNode.removeChild(input);
+                    <div
+                      className={`border-2 border-dashed border-primary/30 rounded-lg p-10 text-center bg-muted/30 flex-1 flex flex-col items-center justify-center transition-colors ${authLoading || loading ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-primary/50"
+                        }`}
+                      onClick={() => {
+                        if (authLoading || loading) {
+                          return;
                         }
-                      };
-                      
-                      const handleFileChange = async (e: Event) => {
-                        try {
-                          console.log('File change event triggered', e);
-                          const target = e.target as HTMLInputElement;
-                          const file = target.files?.[0];
-                          
-                          console.log('Selected file:', file ? { name: file.name, type: file.type, size: file.size } : 'No file');
-                          
-                          if (!file) {
-                            // User cancelled or no file selected
-                            console.log('No file selected, cleaning up');
-                            cleanup();
-                            return;
-                          }
-                          
-                          if (!user) {
-                            toast({ 
-                              title: "Authentication Required", 
-                              description: "Please sign in to upload food images.", 
-                              variant: "destructive" 
-                            });
-                            cleanup();
-                            return;
-                          }
-                          
-                          // Validate file type - be more lenient for mobile cameras
-                          const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/heic', 'image/heif', 'image/webp'];
-                          const validExtensions = /\.(png|jpg|jpeg|heic|heif|webp)$/i;
-                          const isValidType = validTypes.includes(file.type) || file.name.match(validExtensions);
-                          
-                          // On mobile, file.type might be empty, so rely on extension
-                          if (!isValidType && file.type && file.type !== '') {
-                            console.warn('File type validation failed:', file.type, file.name);
-                            toast({
-                              title: "Invalid File Type",
-                              description: "Please select a valid image file (PNG, JPG, HEIC)",
-                              variant: "destructive",
-                            });
-                            cleanup();
-                            return;
-                          }
-                          
-                          console.log('File validated, processing...');
-                          
-                          // Set file and show preview immediately
-                          setUploadedFile(file);
-                          
-                          // Show preview immediately from file blob
-                          const objectUrl = URL.createObjectURL(file);
-                          console.log('Created object URL:', objectUrl);
-                          setPreviewUrl(objectUrl);
-                          setImageLoading(true); // Start loading state for image rendering
-                          
-                          // Upload the image in the background
-                          try {
-                            console.log('Starting upload...');
-                            setUploading(true);
-                            const { path, publicUrl, signedUrl } = await uploadFoodImage(file, user.id);
-                            console.log('Upload successful:', { path, publicUrl });
-                            setUploadedImageUrl(signedUrl || publicUrl);
-                            setUploadedImagePath(path);
-                          } catch (e: any) {
-                            console.error("Upload error:", e);
-                            toast({ 
-                              title: "Upload Failed", 
-                              description: e?.message || "Failed to upload image. Please try again.", 
-                              variant: "destructive" 
-                            });
-                            // Clear file on error
-                            setUploadedFile(null);
-                            setPreviewUrl((prevUrl) => {
-                              if (prevUrl) {
-                                URL.revokeObjectURL(prevUrl);
-                              }
-                              return null;
-                            });
-                          } finally {
-                            setUploading(false);
-                          }
-                          
-                          cleanup();
-                        } catch (error: any) {
-                          console.error("File processing error:", error);
+
+                        if (!user) {
                           toast({
-                            title: "Error Processing File",
-                            description: error?.message || "Failed to process the selected image. Please try again.",
-                            variant: "destructive",
+                            title: "Authentication Required",
+                            description: "Please sign in to upload food images.",
+                            variant: "destructive"
                           });
-                          cleanup();
+                          router.push("/auth");
+                          return;
                         }
-                      };
-                      
-                      // Use both methods for maximum compatibility
-                      input.addEventListener('change', handleFileChange);
-                      input.onchange = handleFileChange;
-                      
-                      // Trigger file picker
-                      // Use setTimeout to ensure input is in DOM before clicking (mobile fix)
-                      setTimeout(() => {
-                        try {
-                          input.click();
-                          console.log('File picker triggered');
-                        } catch (err) {
-                          console.error('Error triggering file picker:', err);
-                          toast({
-                            title: "Error",
-                            description: "Failed to open file picker. Please try again.",
-                            variant: "destructive",
-                          });
+
+                        const input = document.createElement("input");
+                        input.type = "file";
+                        input.accept = "image/png,image/jpeg,image/jpg,image/heic,image/heif";
+                        // Don't set capture attribute - let user choose between camera and gallery
+                        input.style.display = "none"; // Hide but keep in DOM for mobile compatibility
+
+                        // Add to DOM temporarily for mobile browsers (especially iOS Safari)
+                        document.body.appendChild(input);
+
+                        // Define cleanup function first
+                        const cleanup = () => {
+                          input.removeEventListener('change', handleFileChange);
+                          input.value = '';
                           if (input.parentNode) {
                             input.parentNode.removeChild(input);
                           }
-                        }
-                      }, 10);
-                    }}
-                  >
-                    <Upload className={`h-14 w-14 text-primary mx-auto mb-4 ${authLoading || loading ? "animate-pulse" : ""}`} />
-                    <p className="text-lg font-medium mb-2">{t("dashboard.upload.photo")}</p>
-                    <p className="text-sm text-muted-foreground mb-4">{t("dashboard.upload.drop")}</p>
-                    <Button disabled={authLoading || loading}>{t("dashboard.upload.choose")}</Button>
-                  </div>
+                        };
+
+                        const handleFileChange = async (e: Event) => {
+                          try {
+                            console.log('File change event triggered', e);
+                            const target = e.target as HTMLInputElement;
+                            const file = target.files?.[0];
+
+                            console.log('Selected file:', file ? { name: file.name, type: file.type, size: file.size } : 'No file');
+
+                            if (!file) {
+                              // User cancelled or no file selected
+                              console.log('No file selected, cleaning up');
+                              cleanup();
+                              return;
+                            }
+
+                            if (!user) {
+                              toast({
+                                title: "Authentication Required",
+                                description: "Please sign in to upload food images.",
+                                variant: "destructive"
+                              });
+                              cleanup();
+                              return;
+                            }
+
+                            // Validate file type - be more lenient for mobile cameras
+                            const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/heic', 'image/heif', 'image/webp'];
+                            const validExtensions = /\.(png|jpg|jpeg|heic|heif|webp)$/i;
+                            const isValidType = validTypes.includes(file.type) || file.name.match(validExtensions);
+
+                            // On mobile, file.type might be empty, so rely on extension
+                            if (!isValidType && file.type && file.type !== '') {
+                              console.warn('File type validation failed:', file.type, file.name);
+                              toast({
+                                title: "Invalid File Type",
+                                description: "Please select a valid image file (PNG, JPG, HEIC)",
+                                variant: "destructive",
+                              });
+                              cleanup();
+                              return;
+                            }
+
+                            console.log('File validated, processing...');
+
+                            // Set file and show preview immediately
+                            setUploadedFile(file);
+
+                            // Show preview immediately from file blob
+                            const objectUrl = URL.createObjectURL(file);
+                            console.log('Created object URL:', objectUrl);
+                            setPreviewUrl(objectUrl);
+                            setImageLoading(true); // Start loading state for image rendering
+
+                            // Upload the image in the background
+                            try {
+                              console.log('Starting upload...');
+                              setUploading(true);
+
+                              // Force a session refresh before upload to prevent stale token issues
+                              // This fixes the "stuck uploading" issue after inactivity
+                              const { error: refreshError } = await supabase.auth.refreshSession();
+                              if (refreshError) {
+                                console.warn("Session refresh before upload failed", refreshError);
+                                // Continue anyway, uploadFoodImage has its own retry logic
+                              }
+
+                              // Add a timeout to the upload to prevent infinite hanging
+                              const uploadPromise = uploadFoodImage(file, user.id);
+                              const timeoutPromise = new Promise<{ path: string; publicUrl: string; signedUrl?: string }>((_, reject) => {
+                                setTimeout(() => reject(new Error("Upload timed out. Please check your connection and try again.")), 45000);
+                              });
+
+                              const { path, publicUrl, signedUrl } = await Promise.race([uploadPromise, timeoutPromise]);
+
+                              console.log('Upload successful:', { path, publicUrl });
+                              setUploadedImageUrl(signedUrl || publicUrl);
+                              setUploadedImagePath(path);
+                            } catch (e: any) {
+                              console.error("Upload error:", e);
+                              toast({
+                                title: "Upload Failed",
+                                description: e?.message || "Failed to upload image. Please try again.",
+                                variant: "destructive"
+                              });
+                              // Clear file on error
+                              setUploadedFile(null);
+                              setPreviewUrl((prevUrl) => {
+                                if (prevUrl) {
+                                  URL.revokeObjectURL(prevUrl);
+                                }
+                                return null;
+                              });
+                            } finally {
+                              setUploading(false);
+                            }
+
+                            cleanup();
+                          } catch (error: any) {
+                            console.error("File processing error:", error);
+                            toast({
+                              title: "Error Processing File",
+                              description: error?.message || "Failed to process the selected image. Please try again.",
+                              variant: "destructive",
+                            });
+                            cleanup();
+                          }
+                        };
+
+                        // Use both methods for maximum compatibility
+                        input.addEventListener('change', handleFileChange);
+                        input.onchange = handleFileChange;
+
+                        // Trigger file picker
+                        // Use setTimeout to ensure input is in DOM before clicking (mobile fix)
+                        setTimeout(() => {
+                          try {
+                            input.click();
+                            console.log('File picker triggered');
+                          } catch (err) {
+                            console.error('Error triggering file picker:', err);
+                            toast({
+                              title: "Error",
+                              description: "Failed to open file picker. Please try again.",
+                              variant: "destructive",
+                            });
+                            if (input.parentNode) {
+                              input.parentNode.removeChild(input);
+                            }
+                          }
+                        }, 10);
+                      }}
+                    >
+                      <Upload className={`h-14 w-14 text-primary mx-auto mb-4 ${authLoading || loading ? "animate-pulse" : ""}`} />
+                      <p className="text-lg font-medium mb-2">{t("dashboard.upload.photo")}</p>
+                      <p className="text-sm text-muted-foreground mb-4">{t("dashboard.upload.drop")}</p>
+                      <Button disabled={authLoading || loading}>{t("dashboard.upload.choose")}</Button>
+                    </div>
                   )
                 ) : (
                   <div className="space-y-4 flex-1 flex flex-col">
@@ -796,12 +804,11 @@ export function DashboardClient({
                           </div>
                         )}
                         {previewUrl ? (
-                          <img 
-                            src={previewUrl} 
-                            alt="Uploaded food" 
-                            className={`w-full h-full object-cover transition-opacity duration-300 ${
-                              imageLoading ? "opacity-0" : "opacity-100"
-                            }`}
+                          <img
+                            src={previewUrl}
+                            alt="Uploaded food"
+                            className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoading ? "opacity-0" : "opacity-100"
+                              }`}
                             onLoad={() => setImageLoading(false)}
                             onError={() => setImageLoading(false)}
                             ref={(img) => {
@@ -812,12 +819,11 @@ export function DashboardClient({
                             }}
                           />
                         ) : uploadedImageUrl ? (
-                          <img 
-                            src={uploadedImageUrl} 
-                            alt="Uploaded food" 
-                            className={`w-full h-full object-cover transition-opacity duration-300 ${
-                              imageLoading ? "opacity-0" : "opacity-100"
-                            }`}
+                          <img
+                            src={uploadedImageUrl}
+                            alt="Uploaded food"
+                            className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoading ? "opacity-0" : "opacity-100"
+                              }`}
                             onLoad={() => setImageLoading(false)}
                             onError={() => setImageLoading(false)}
                             ref={(img) => {
@@ -839,24 +845,24 @@ export function DashboardClient({
                             disabled={uploading}
                             onClick={() => {
                               if (!user) {
-                                toast({ 
-                                  title: "Authentication Required", 
-                                  description: "Please sign in to upload food images.", 
-                                  variant: "destructive" 
+                                toast({
+                                  title: "Authentication Required",
+                                  description: "Please sign in to upload food images.",
+                                  variant: "destructive"
                                 });
                                 router.push("/auth");
                                 return;
                               }
-                              
+
                               const input = document.createElement("input");
                               input.type = "file";
                               input.accept = "image/png,image/jpeg,image/jpg,image/heic,image/heif";
                               // Don't set capture attribute - let user choose between camera and gallery
                               input.style.display = "none"; // Hide but keep in DOM for mobile compatibility
-                              
+
                               // Add to DOM temporarily for mobile browsers (especially iOS Safari)
                               document.body.appendChild(input);
-                              
+
                               // Define cleanup function first
                               const cleanup = () => {
                                 input.removeEventListener('change', handleFileChange);
@@ -866,37 +872,37 @@ export function DashboardClient({
                                   input.parentNode.removeChild(input);
                                 }
                               };
-                              
+
                               const handleFileChange = async (e: Event) => {
                                 try {
                                   console.log('File change event triggered', e);
                                   const target = e.target as HTMLInputElement;
                                   const file = target.files?.[0];
-                                  
+
                                   console.log('Selected file:', file ? { name: file.name, type: file.type, size: file.size } : 'No file');
-                                  
+
                                   if (!file) {
                                     // User cancelled or no file selected
                                     console.log('No file selected, cleaning up');
                                     cleanup();
                                     return;
                                   }
-                                  
+
                                   if (!user) {
-                                    toast({ 
-                                      title: "Authentication Required", 
-                                      description: "Please sign in to upload food images.", 
-                                      variant: "destructive" 
+                                    toast({
+                                      title: "Authentication Required",
+                                      description: "Please sign in to upload food images.",
+                                      variant: "destructive"
                                     });
                                     cleanup();
                                     return;
                                   }
-                                  
+
                                   // Validate file type - be more lenient for mobile cameras
                                   const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/heic', 'image/heif', 'image/webp'];
                                   const validExtensions = /\.(png|jpg|jpeg|heic|heif|webp)$/i;
                                   const isValidType = validTypes.includes(file.type) || file.name.match(validExtensions);
-                                  
+
                                   // On mobile, file.type might be empty, so rely on extension
                                   if (!isValidType && file.type && file.type !== '') {
                                     console.warn('File type validation failed:', file.type, file.name);
@@ -908,44 +914,44 @@ export function DashboardClient({
                                     cleanup();
                                     return;
                                   }
-                                  
+
                                   console.log('File validated, processing...');
-                                  
+
                                   // Clean up previous preview if exists
                                   if (previewUrl) {
                                     URL.revokeObjectURL(previewUrl);
                                   }
-                                  
+
                                   // Set file and show preview immediately
                                   setUploadedFile(file);
-                                  
+
                                   // Show preview immediately from file blob
                                   const objectUrl = URL.createObjectURL(file);
                                   console.log('Created object URL:', objectUrl);
                                   setPreviewUrl(objectUrl);
                                   setImageLoading(true); // Start loading state for image rendering
-                                  
+
                                   // Upload the image in the background
                                   try {
                                     console.log('Starting upload...');
                                     setUploading(true);
-                                    
+
                                     // Ensure we have a valid user (session might have refreshed)
                                     const currentUser = authUser || user;
                                     if (!currentUser?.id) {
                                       throw new Error('Session expired. Please refresh the page.');
                                     }
-                                    
+
                                     const { path, publicUrl, signedUrl } = await uploadFoodImage(file, currentUser.id);
                                     console.log('Upload successful:', { path, publicUrl });
                                     setUploadedImageUrl(signedUrl || publicUrl);
                                     setUploadedImagePath(path);
                                   } catch (e: any) {
                                     console.error("Upload error:", e);
-                                    toast({ 
-                                      title: "Upload Failed", 
-                                      description: e?.message || "Failed to upload image. Please try again.", 
-                                      variant: "destructive" 
+                                    toast({
+                                      title: "Upload Failed",
+                                      description: e?.message || "Failed to upload image. Please try again.",
+                                      variant: "destructive"
                                     });
                                     // Clear file on error
                                     setUploadedFile(null);
@@ -958,7 +964,7 @@ export function DashboardClient({
                                   } finally {
                                     setUploading(false);
                                   }
-                                  
+
                                   cleanup();
                                 } catch (error: any) {
                                   console.error("File processing error:", error);
@@ -970,28 +976,28 @@ export function DashboardClient({
                                   cleanup();
                                 }
                               };
-                      
-                      // Use addEventListener only (onchange is redundant and causes double-firing)
-                      input.addEventListener('change', handleFileChange, { once: true });
-                      
-                      // Trigger file picker
-                      // Use setTimeout to ensure input is in DOM before clicking (mobile fix)
-                      setTimeout(() => {
-                        try {
-                          input.click();
-                          console.log('File picker triggered');
-                        } catch (err) {
-                          console.error('Error triggering file picker:', err);
-                          toast({
-                            title: "Error",
-                            description: "Failed to open file picker. Please try again.",
-                            variant: "destructive",
-                          });
-                          if (input.parentNode) {
-                            input.parentNode.removeChild(input);
-                          }
-                        }
-                      }, 10);
+
+                              // Use addEventListener only (onchange is redundant and causes double-firing)
+                              input.addEventListener('change', handleFileChange, { once: true });
+
+                              // Trigger file picker
+                              // Use setTimeout to ensure input is in DOM before clicking (mobile fix)
+                              setTimeout(() => {
+                                try {
+                                  input.click();
+                                  console.log('File picker triggered');
+                                } catch (err) {
+                                  console.error('Error triggering file picker:', err);
+                                  toast({
+                                    title: "Error",
+                                    description: "Failed to open file picker. Please try again.",
+                                    variant: "destructive",
+                                  });
+                                  if (input.parentNode) {
+                                    input.parentNode.removeChild(input);
+                                  }
+                                }
+                              }, 10);
                             }}
                           >
                             {t("dashboard.upload.change")}
@@ -1047,10 +1053,10 @@ export function DashboardClient({
                                 ...(result.insights ? { insights: result.insights } : {}),
                               },
                             });
-                            
+
                             // Navigate immediately for instant feedback
                             router.push(`/food-results?id=${scanId}`);
-                            
+
                             // Cleanup and decrement free scans in the background (non-blocking)
                             if (previewUrl) {
                               URL.revokeObjectURL(previewUrl);
@@ -1061,7 +1067,7 @@ export function DashboardClient({
                             setPreviewUrl(null);
                             setImageLoading(false);
                             setServings(1);
-                            
+
                             // Decrement free scans in background (don't await - let it happen after navigation)
                             if (!subscription || subscription.subscription_type !== "premium") {
                               decrementFreeScan()
@@ -1081,11 +1087,10 @@ export function DashboardClient({
                           }
                           // Don't reset analyzing here - let it stay until redirect
                         }}
-                        className={`flex-1 ${
-                          (analyzing || uploading)
-                            ? "bg-green-400 hover:bg-green-400 cursor-not-allowed" 
-                            : ""
-                        }`}
+                        className={`flex-1 ${(analyzing || uploading)
+                          ? "bg-green-400 hover:bg-green-400 cursor-not-allowed"
+                          : ""
+                          }`}
                       >
                         {uploading ? (
                           <>
