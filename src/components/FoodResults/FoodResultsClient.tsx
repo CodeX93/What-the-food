@@ -3163,7 +3163,7 @@ export function FoodResultsClient() {
 
                         {/* New Format: Key Recommendations and Action Items */}
                         {(parsedInsights.keyRecommendations?.length > 0 || parsedInsights.actionItems?.length > 0) ? (
-                          <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                             {/* Key Recommendations */}
                             {parsedInsights.keyRecommendations?.length > 0 && (
                               <div className="space-y-3">
@@ -3211,7 +3211,7 @@ export function FoodResultsClient() {
                         ) : parsedInsights.healthContext ? (
                           /* Legacy format fallback */
                           <div className="space-y-6">
-                            <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                               <div className="space-y-3">
                                 <div className="flex items-center gap-2 mb-4">
                                   <div className="p-2 rounded-lg bg-primary/10">

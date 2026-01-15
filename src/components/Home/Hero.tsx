@@ -562,7 +562,7 @@ export default function Hero() {
           </div>
 
           {/* App Store and Play Store Banners */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center w-full">
+          <div className="flex flex-row gap-3 sm:gap-4 justify-center items-center w-full">
             <div
               onClick={() => {
                 toast({
@@ -801,7 +801,7 @@ export default function Hero() {
                 </p>
               </div>
               {/* App Store and Play Store Banners */}
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-start">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-start items-center sm:items-start">
                 <div
                   onClick={() => {
                     toast({
