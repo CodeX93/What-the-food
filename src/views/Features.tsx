@@ -9,7 +9,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function FeaturesPage() {
   const { t } = useLanguage();
-  
+
   const features = [
     {
       icon: Camera,
@@ -154,7 +154,7 @@ export default function FeaturesPage() {
           <div className="max-w-5xl mx-auto space-y-10">
             <div className="text-center space-y-5">
               <h2 className="text-3xl sm:text-4xl font-bold">{t("featurespage.ready")}</h2>
-              <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
+              <p className="text-base sm:text-lg text-muted-foreground max-w-4xl mx-auto">
                 {t("featurespage.readydescription")}
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">

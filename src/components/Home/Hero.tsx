@@ -562,7 +562,7 @@ export default function Hero() {
           </div>
 
           {/* App Store and Play Store Banners */}
-          <div className="flex flex-row gap-3 sm:gap-4 justify-center items-center w-full">
+          <div className="flex flex-row gap-1 sm:gap-2 justify-center items-center w-full">
             <div
               onClick={() => {
                 toast({
@@ -573,9 +573,9 @@ export default function Hero() {
               className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
             >
               <img
-                src="/appstore-banner.png"
+                src="/appstore-badge.svg"
                 alt="Download on the App Store"
-                className="h-[40px] sm:h-[48px] w-auto"
+                className="h-[42px] w-auto sm:h-[51px] lg:h-[60px] object-contain"
               />
             </div>
             <div
@@ -588,9 +588,9 @@ export default function Hero() {
               className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
             >
               <img
-                src="/playstore-banner.png"
+                src="/playstore-badge.svg"
                 alt="Get it on Google Play"
-                className="h-[40px] sm:h-[48px] w-auto"
+                className="h-[42px] w-auto sm:h-[51px] lg:h-[60px] object-contain"
               />
             </div>
           </div>
@@ -801,7 +801,7 @@ export default function Hero() {
                 </p>
               </div>
               {/* App Store and Play Store Banners */}
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-start items-center sm:items-start">
+              <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 justify-start items-center sm:items-start">
                 <div
                   onClick={() => {
                     toast({
@@ -812,9 +812,9 @@ export default function Hero() {
                   className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
                 >
                   <img
-                    src="/appstore-banner.png"
+                    src="/appstore-badge.svg"
                     alt="Download on the App Store"
-                    className="h-[40px] sm:h-[48px] lg:h-[54px] w-auto"
+                    className="h-[42px] w-auto sm:h-[51px] lg:h-[60px] object-contain"
                   />
                 </div>
                 <div
@@ -827,9 +827,9 @@ export default function Hero() {
                   className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
                 >
                   <img
-                    src="/playstore-banner.png"
+                    src="/playstore-badge.svg"
                     alt="Get it on Google Play"
-                    className="h-[40px] sm:h-[48px] lg:h-[54px] w-auto"
+                    className="h-[42px] w-auto sm:h-[51px] lg:h-[60px] object-contain"
                   />
                 </div>
               </div>

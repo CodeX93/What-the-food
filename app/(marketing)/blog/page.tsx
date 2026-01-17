@@ -34,6 +34,22 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function BlogRoute() {
-  return <BlogPage />;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "What The Food Blog",
+    "description": "Tips, guides, and insights for healthier eating",
+    "url": "https://whatthefood.io/blog"
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <BlogPage />
+    </>
+  );
 }
 

@@ -37,7 +37,7 @@ const Reviews = () => {
     };
     fetchUserCount();
   }, []);
-  
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -86,9 +86,9 @@ const Reviews = () => {
                 const parts = title.split(full);
                 return (
                   <>
-                    {parts[0]}
+                    {/* {parts[0]}
                     <span className="text-primary whitespace-nowrap">{full}</span>
-                    {parts[1]}
+                    {parts[1]} */}
                   </>
                 );
               }
@@ -115,10 +115,10 @@ const Reviews = () => {
           </p>
         </div>
 
-        <div 
-          className="senja-embed" 
-          data-id="d57c0a6b-f3c8-42a8-ac49-ab0ad78ca7a1" 
-          data-mode="shadow" 
+        <div
+          className="senja-embed"
+          data-id="d57c0a6b-f3c8-42a8-ac49-ab0ad78ca7a1"
+          data-mode="shadow"
           data-lazyload="false"
         />
 

@@ -6,8 +6,11 @@ import Link from "next/link";
 import { Sparkles, Timer, ShieldCheck } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+import { useToast } from "@/hooks/use-toast";
+
 export function FeaturesHero() {
   const { t } = useLanguage();
+  const { toast } = useToast();
   return (
     <section
       className="relative flex items-center justify-center overflow-hidden bg-white dark:bg-[#000000] transition-colors duration-300 min-h-screen"
@@ -19,78 +22,62 @@ export function FeaturesHero() {
         <div className="hidden lg:flex items-center w-full">
           <div className="w-full flex flex-row items-start justify-between gap-6 sm:gap-10 lg:gap-12 xl:gap-16">
             {/* Left Section - Value Proposition (aligned with logo) */}
-            <div className="w-full text-left max-w-2xl lg:max-w-[32rem] xl:max-w-[36rem] lg:pr-8 xl:pr-12 self-start">
-              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+            <div className="w-full text-left max-w-3xl lg:max-w-[40rem] xl:max-w-[45rem] lg:pr-8 xl:pr-12 self-start">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-bold mb-4 sm:mb-6 leading-tight tracking-tight break-words block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                 {(() => {
                   const title = t("featureshero.title");
-                  // Split on "AI Food Scanner?" to make it green
-                  const scannerMatch = title.match(/(AI Food Scanner\?)/i);
-                  if (scannerMatch) {
-                    const parts = title.split(/(AI Food Scanner\?)/i);
-                    return (
-                      <>
-                        {parts.map((part, index) => {
-                          if (part.match(/(AI Food Scanner\?)/i)) {
-                            return <span key={index} className="text-primary whitespace-normal">{part}</span>;
-                          }
-                          return <span key={index} className="text-black dark:text-white whitespace-normal">{part}</span>;
-                        })}
-                      </>
-                    );
-                  }
-                  // Fallback: Split on "Healthy Living"
-                  const parts = title.split("Healthy Living");
+                  const parts = title.split("\n");
                   if (parts.length > 1) {
                     return (
                       <>
-                        <span className="text-black dark:text-white whitespace-normal">{parts[0]}</span>
-                        <span className="text-primary whitespace-normal">Healthy Living</span>
-                        {parts[1] && <span className="text-black dark:text-white whitespace-normal">{parts[1]}</span>}
+                        <span className="text-black dark:text-white whitespace-normal block">{parts[0]}</span>
+                        <span className="text-black dark:text-white whitespace-normal block">
+                          Learn <span className="text-primary">What to Change</span>
+                        </span>
                       </>
                     );
                   }
                   return <span className="text-black dark:text-white">{title}</span>;
                 })()}
               </h2>
-              <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed">
+              <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-7 leading-relaxed max-w-[90%] sm:max-w-[80%] lg:max-w-[90%] whitespace-pre-line">
                 {t("featureshero.description")}
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-start">
-                <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base" asChild>
-                  <Link href="/auth">{t("common.getstartedfree")}</Link>
-                </Button>
-                <Button size="lg" variant="outline" className="text-sm sm:text-base" asChild>
-                  <Link href="/pricing">{t("featureshero.viewpricing")}</Link>
-                </Button>
+              <div className="flex flex-row gap-1 sm:gap-2 justify-start items-center w-full mt-6 sm:mt-8">
+                <div
+                  onClick={() => {
+                    toast({
+                      title: "Coming Soon",
+                      description: "The app will be available on the App Store soon!",
+                    });
+                  }}
+                  className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
+                >
+                  <img
+                    src="/appstore-badge.svg"
+                    alt="Download on the App Store"
+                    className="h-[42px] w-auto sm:h-[51px] lg:h-[60px] object-contain"
+                  />
+                </div>
+                <div
+                  onClick={() => {
+                    toast({
+                      title: "Coming Soon",
+                      description: "The app will be available on Google Play soon!",
+                    });
+                  }}
+                  className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
+                >
+                  <img
+                    src="/playstore-badge.svg"
+                    alt="Get it on Google Play"
+                    className="h-[42px] w-auto sm:h-[51px] lg:h-[60px] object-contain"
+                  />
+                </div>
               </div>
 
-              {/* Feature boxes for desktop - below CTAs */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6 sm:mt-7 lg:mt-8">
-                <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.aiaccuracy")}</p>
-                    <p className="text-xs text-muted-foreground">{t("hero.understands10k")}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-                  <Timer className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.instantresults")}</p>
-                    <p className="text-xs text-muted-foreground">{t("hero.nutritionseconds")}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-                  <ShieldCheck className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.healthfocused")}</p>
-                    <p className="text-xs text-muted-foreground">{t("hero.macrosmicronutrients")}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Trusted by text for desktop - after feature boxes */}
-              <p className="text-xs sm:text-sm text-muted-foreground mt-4 sm:mt-6">
+              {/* Trusted by text for desktop - after banners */}
+              <p className="text-xs sm:text-sm text-muted-foreground mt-6 sm:mt-8">
                 {t("featureshero.trustedby")} <span className="font-semibold text-foreground">{t("featureshero.countries")}</span>.
               </p>
             </div>
@@ -142,63 +129,66 @@ export function FeaturesHero() {
         <div className="flex flex-col lg:hidden w-full gap-6">
           {/* H1 and Description */}
           <div className="w-full text-center">
-            <h1 className="text-3xl sm:text-4xl font-bold mb-4 leading-tight tracking-tight break-words inline-block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+            <h1 className="text-3xl sm:text-4xl font-bold mb-4 leading-tight tracking-tight break-words block" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
               {(() => {
                 const title = t("featureshero.title");
-                const parts = title.split("Healthy Living");
-                return (
-                  <>
-                    <span className="text-black dark:text-white whitespace-normal">{parts[0]}</span>
-                    <span className="text-primary whitespace-normal">Healthy Living</span>
-                    {parts[1] && <span className="text-black dark:text-white whitespace-normal">{parts[1]}</span>}
-                  </>
-                );
+                const parts = title.split("\n");
+                if (parts.length > 1) {
+                  return (
+                    <>
+                      <span className="text-black dark:text-white whitespace-normal block">{parts[0]}</span>
+                      <span className="text-black dark:text-white whitespace-normal block">
+                        Learn <span className="text-primary">What to Change</span>
+                      </span>
+                    </>
+                  );
+                }
+                return <span className="text-black dark:text-white">{title}</span>;
               })()}
             </h1>
-            <p className="text-base sm:text-lg text-muted-foreground mb-6 leading-relaxed">
+            <p className="text-base sm:text-lg text-muted-foreground mb-6 leading-relaxed max-w-xl mx-auto whitespace-pre-line">
               {t("featureshero.description")}
             </p>
           </div>
 
-          {/* Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center w-full">
-            <Button size="lg" className="bg-primary hover:bg-primary-hover text-sm sm:text-base w-full sm:w-auto" asChild>
-              <Link href="/auth">{t("common.getstartedfree")}</Link>
-            </Button>
-            <Button size="lg" variant="outline" className="text-sm sm:text-base w-full sm:w-auto" asChild>
-              <Link href="/pricing">{t("featureshero.viewpricing")}</Link>
-            </Button>
+          {/* Buttons - Banners for mobile */}
+          <div className="flex flex-row gap-1 sm:gap-2 justify-center items-center w-full">
+            <div
+              onClick={() => {
+                toast({
+                  title: "Coming Soon",
+                  description: "The app will be available on the App Store soon!",
+                });
+              }}
+              className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
+            >
+              <img
+                src="/appstore-badge.svg"
+                alt="Download on the App Store"
+                className="h-[42px] w-auto sm:h-[51px] lg:h-[60px] object-contain"
+              />
+            </div>
+            <div
+              onClick={() => {
+                toast({
+                  title: "Coming Soon",
+                  description: "The app will be available on Google Play soon!",
+                });
+              }}
+              className="inline-block hover:opacity-80 transition-opacity cursor-pointer"
+            >
+              <img
+                src="/playstore-badge.svg"
+                alt="Get it on Google Play"
+                className="h-[42px] w-auto sm:h-[51px] lg:h-[60px] object-contain"
+              />
+            </div>
           </div>
 
           {/* Trusted by text */}
-          <p className="text-xs sm:text-sm text-muted-foreground text-center">
+          <p className="text-xs sm:text-sm text-muted-foreground text-center mt-2">
             {t("featureshero.trustedby")} <span className="font-semibold text-foreground">{t("featureshero.countries")}</span>.
           </p>
-
-          {/* Feature boxes - after trusted by text on mobile */}
-          <div className="grid grid-cols-1 gap-3 sm:gap-4 mt-6 w-full">
-            <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-              <Sparkles className="h-5 w-5 text-primary flex-shrink-0" />
-              <div className="text-left">
-                <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.aiaccuracy")}</p>
-                <p className="text-xs text-muted-foreground">{t("hero.understands10k")}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-              <Timer className="h-5 w-5 text-primary flex-shrink-0" />
-              <div className="text-left">
-                <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.instantresults")}</p>
-                <p className="text-xs text-muted-foreground">{t("hero.nutritionseconds")}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 rounded-xl border border-input bg-white/70 dark:bg-white/5 px-4 py-3 shadow-sm">
-              <ShieldCheck className="h-5 w-5 text-primary flex-shrink-0" />
-              <div className="text-left">
-                <p className="text-sm font-semibold text-slate-800 dark:text-white">{t("hero.healthfocused")}</p>
-                <p className="text-xs text-muted-foreground">{t("hero.macrosmicronutrients")}</p>
-              </div>
-            </div>
-          </div>
 
           {/* Card */}
           <div className="w-full">

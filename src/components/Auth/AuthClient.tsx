@@ -197,13 +197,13 @@ export function AuthClient() {
 
     try {
       // Use window.location.origin to ensure we use the current domain (production or localhost)
-      const redirectUrl = typeof window !== 'undefined' 
+      const redirectUrl = typeof window !== 'undefined'
         ? `${window.location.origin}/auth/callback`
         : getUrl("/auth/callback");
-      
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { 
+        options: {
           redirectTo: redirectUrl,
         },
       });
@@ -271,7 +271,7 @@ export function AuthClient() {
           <Tabs value={tabValue} onValueChange={setTabValue} className="w-full">
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold mb-2">
-                {tabValue === "signin" ? t("auth.welcomeback") : t("auth.createaccount")}
+                {tabValue === "signin" ? t("auth.signin.title") : t("auth.signup.title")}
               </h2>
               <p className="text-sm text-muted-foreground">
                 {tabValue === "signin"
@@ -371,7 +371,7 @@ export function AuthClient() {
                   </Button>
 
                   <Button className="w-full h-11 bg-primary hover:bg-primary-hover mt-4" type="submit" disabled={isLoading}>
-                    {isLoading ? t("auth.signingin") : t("auth.signin")}
+                    {isLoading ? t("auth.signingin") : t("auth.signin.button")}
                   </Button>
                 </div>
               </form>
@@ -382,9 +382,8 @@ export function AuthClient() {
                 <form onSubmit={handleSignUp}>
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20 mb-4 backdrop-blur-sm">
-                      <Sparkles className="h-5 w-5 text-primary" />
-                      <p className="text-sm text-muted-foreground">
-                        {t("auth.freescans.banner")} <span className="font-semibold text-foreground">{t("auth.freescans.daily")}</span> {t("auth.freescans.orupgrade")}
+                      <p className="text-sm text-muted-foreground w-full text-center">
+                        {t("auth.freescans.banner")}
                       </p>
                     </div>
 
@@ -458,7 +457,7 @@ export function AuthClient() {
                     </Button>
 
                     <Button className="w-full h-11 bg-primary hover:bg-primary-hover mt-4" type="submit" disabled={isLoading}>
-                      {isLoading ? t("auth.creatingaccount") : t("auth.createaccount")}
+                      {isLoading ? t("auth.creatingaccount") : t("auth.signup.button")}
                     </Button>
                   </div>
                 </form>

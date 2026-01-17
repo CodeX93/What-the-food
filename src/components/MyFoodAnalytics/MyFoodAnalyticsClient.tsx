@@ -136,7 +136,7 @@ const calculateDailyRequirements = (profile: any) => {
 
   // Fiber: 14g per 1000 calories (minimum)
   const fiber = Math.round((calories / 1000) * 14);
-  
+
   // Sugar: Max 10% of calories (WHO recommendation)
   const sugar = Math.round((calories * 0.10) / 4);
 
@@ -271,7 +271,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
             },
           },
         });
-        
+
         if (!analyzeError && analyzeData?.ok && analyzeData?.analysis) {
           // Update the scan with generated additionalInfo and insights
           const updatedResult = {
@@ -279,7 +279,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
             additionalInfo: analyzeData.analysis.additionalInfo || manualResult.additionalInfo,
             insights: analyzeData.insights || undefined,
           };
-          
+
           await (supabase as any)
             .from("food_scans")
             .update({ result_json: updatedResult })
@@ -336,38 +336,38 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
         router.push("/auth");
         return;
       }
-      
+
       const cacheKey = `analytics_scans_${user.id}`;
-      
+
       // OPTIMIZATION: Check cache first for instant loading
       const cachedScans = DataCache.get<FoodScan[]>(cacheKey);
       if (cachedScans) {
         setScans(cachedScans);
         setLoading(false);
       }
-      
+
       // Fetch profile and scans in parallel for faster loading
       const [profileResult, scansResult] = await Promise.all([
         supabase
-        .from("profiles")
-        .select("*")
+          .from("profiles")
+          .select("*")
           .eq("id", user.id)
           .maybeSingle(),
         supabase
-        .from("food_scans")
-        .select("id, created_at, serving, result_json")
+          .from("food_scans")
+          .select("id, created_at, serving, result_json")
           .eq("user_id", user.id)
           .order("created_at", { ascending: true })
       ]);
-      
+
       if (profileResult.data) {
         setProfile(profileResult.data);
       }
-      
+
       if (scansResult.error) throw scansResult.error;
       const freshScans = (scansResult.data || []) as FoodScan[];
       setScans(freshScans);
-      
+
       // OPTIMIZATION: Cache for 2 minutes
       DataCache.set(cacheKey, freshScans, CACHE_DURATION.SHORT);
     } finally {
@@ -552,7 +552,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
       const filteredDays = stats.byDay.filter(([date]) => {
         return date >= startDate && date <= endDate;
       });
-      
+
       if (filteredDays.length > 0) {
         const totals = filteredDays.reduce((acc, [, values]) => ({
           calories: acc.calories + values.calories,
@@ -562,7 +562,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
           fiber: acc.fiber + values.fiber,
           sugar: acc.sugar + values.sugar,
         }), { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, sugar: 0 });
-        
+
         return {
           calories: totals.calories / filteredDays.length,
           protein: totals.protein / filteredDays.length,
@@ -585,22 +585,21 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
       <div className="container mx-auto px-4 py-8">
         {/* Paywall Bar for Free Users */}
         {!isPremium && (
-          <Alert className="mb-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5">
+          <Alert className="mb-6 border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 relative">
             <TrendingUp className="h-4 w-4 text-primary flex-shrink-0" />
-            <AlertTitle className="font-semibold text-base sm:text-lg mb-2">Premium feature</AlertTitle>
-            <AlertDescription className="mt-1 text-sm sm:text-base">
-              <p className="mb-3">
+            <AlertTitle className="font-semibold text-base sm:text-lg mb-2 sm:pr-48">Premium feature</AlertTitle>
+            <AlertDescription className="mt-1 sm:pr-48">
+              <p className="text-xs sm:text-sm">
                 Upgrade to a premium plan to view your complete food analytics.
               </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="bg-primary hover:bg-primary-hover text-white border-primary"
-                onClick={() => router.push("/plans")}
-              >
-                Upgrade to Premium
-              </Button>
             </AlertDescription>
+            <Button
+              size="sm"
+              className="mt-3 w-full sm:w-auto sm:mt-0 sm:absolute sm:top-4 sm:right-4 bg-primary hover:bg-primary/90 text-white border-primary whitespace-nowrap !px-3"
+              onClick={() => router.push("/plans")}
+            >
+              Upgrade to Premium
+            </Button>
           </Alert>
         )}
         <div className="flex items-center justify-between mb-6">
@@ -666,7 +665,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
           </div>
         </div>
 
-        
+
 
         {loading ? (
           <div className="min-h-[200px] flex items-center justify-center">
@@ -796,13 +795,12 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                               </div>
                               <div className="mt-1 h-1.5 bg-white/50 rounded-full overflow-hidden">
                                 <div
-                                  className={`h-full rounded-full ${
-                                    isOver
-                                      ? "bg-red-500"
-                                      : isUnder
+                                  className={`h-full rounded-full ${isOver
+                                    ? "bg-red-500"
+                                    : isUnder
                                       ? "bg-yellow-500"
                                       : "bg-green-500"
-                                  }`}
+                                    }`}
                                   style={{
                                     width: `${Math.min((item.value / target) * 100, 100)}%`,
                                   }}
@@ -961,7 +959,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                   </div>
                 </CardContent>
               </Card>
-          </div>
+            </div>
           </div>
         )}
         {/* Macro Distribution Chart */}
@@ -988,18 +986,18 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                     {startDate && endDate && startDate !== endDate ? t("analytics.macro.avg") : t("analytics.macro.kcal")}
                   </div>
                 </div>
-                
+
                 {/* Stacked Bar Chart - Calorie Distribution */}
                 {(() => {
                   const totalCalories = macroStats.calories || 1;
                   const proteinCal = macroStats.protein * 4;
                   const carbsCal = macroStats.carbs * 4;
                   const fatCal = macroStats.fat * 9;
-                  
+
                   const proteinPercent = Math.min((proteinCal / totalCalories) * 100, 100);
                   const carbsPercent = Math.min((carbsCal / totalCalories) * 100, 100);
                   const fatPercent = Math.min((fatCal / totalCalories) * 100, 100);
-                  
+
                   return (
                     <div className="h-8 bg-muted rounded-full overflow-hidden flex">
                       <div
@@ -1020,7 +1018,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                     </div>
                   );
                 })()}
-                
+
                 {/* Macro Details - Daily Requirements */}
                 <div className="space-y-4">
                   {[
@@ -1050,7 +1048,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                     const requirementPercent = macro.target && macro.target > 0
                       ? (macro.value / macro.target) * 100
                       : 0;
-                    
+
                     return (
                       <div key={macro.label} className="space-y-1">
                         <div className="flex items-center justify-between text-sm">
@@ -1065,14 +1063,14 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                         <div className="h-2 bg-muted rounded-full overflow-hidden relative">
                           <div
                             className={`h-full ${macro.color}`}
-                            style={{ 
+                            style={{
                               width: `${Math.min(requirementPercent, 100)}%`,
                             }}
                           />
                           {requirementPercent > 100 && (
                             <div
                               className={`h-full ${macro.color} opacity-60`}
-                              style={{ 
+                              style={{
                                 width: '100%',
                                 position: 'absolute',
                                 top: 0,

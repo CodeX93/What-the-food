@@ -1,22 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-const GEMINI_MODEL = "gemini-2.0-flash-exp";
+const GEMINI_MODEL = "gemini-1.5-flash";
 
 export async function POST(req: NextRequest) {
   try {
     if (!GEMINI_API_KEY) {
+      console.error("Nutrition Score API Error: GEMINI_API_KEY is not set");
       return NextResponse.json(
-        { error: "Gemini API key not configured" },
-        { status: 500 }
+        { error: "Service configuration error: API key missing" },
+        { status: 503 }
       );
     }
 
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      console.error("Nutrition Score API Error: Invalid JSON body");
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 }
+      );
+    }
+
     const { nutrients } = body;
 
-    if (!nutrients || !nutrients.calories || nutrients.calories <= 0) {
-      return NextResponse.json({ score: 0 });
+    if (!nutrients || (typeof nutrients.calories !== 'number' && !nutrients.calories)) {
+      console.warn("Nutrition Score API Warning: Missing calories in request");
+      return NextResponse.json({ score: 0 }); // Fallback for invalid inputs
     }
 
     const prompt = `You are a nutrition expert. Calculate a nutrition score (0-100) for a meal based on the following nutritional information.

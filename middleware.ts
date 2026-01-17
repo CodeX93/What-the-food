@@ -4,6 +4,27 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  // Enforce HTTPS and non-www in production
+  if (process.env.NODE_ENV === 'production') {
+    const url = request.nextUrl.clone();
+    const { pathname, search } = url;
+    const hostname = request.headers.get('host') || '';
+    const proto = request.headers.get('x-forwarded-proto');
+
+    // 1. Redirect HTTP to HTTPS
+    if (proto === 'http') {
+      url.protocol = 'https';
+      return NextResponse.redirect(url);
+    }
+
+    // 2. Redirect www to non-www
+    if (hostname.startsWith('www.')) {
+      const newHostname = hostname.replace(/^www\./, '');
+      const newUrl = `https://${newHostname}${pathname}${search}`;
+      return NextResponse.redirect(new URL(newUrl));
+    }
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -65,7 +86,7 @@ export async function middleware(request: NextRequest) {
   // Optional: Protect routes
   const isAuthRoute = request.nextUrl.pathname.startsWith('/auth');
   const isProtectedRoute = request.nextUrl.pathname.startsWith('/dashboard') ||
-                           request.nextUrl.pathname.startsWith('/scan');
+    request.nextUrl.pathname.startsWith('/scan');
 
   if (error || !user) {
     // No valid session

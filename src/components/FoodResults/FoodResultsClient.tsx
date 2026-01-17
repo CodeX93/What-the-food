@@ -746,9 +746,9 @@ export function FoodResultsClient() {
     const pdfNutritionScore = nutritionScore !== null
       ? nutritionScore
       : scaled
-        ? calculateNutritionScore(scaled)
+        ? calculateNutritionScore(scaled, analysis.ingredients)
         : analysis.nutrients
-          ? calculateNutritionScore(analysis.nutrients)
+          ? calculateNutritionScore(analysis.nutrients, analysis.ingredients)
           : null;
     const nutritionScoreLabel = pdfNutritionScore !== null
       ? `Nutrition Score: ${pdfNutritionScore}/100`
@@ -1881,7 +1881,12 @@ export function FoodResultsClient() {
     }
 
     // Calculate fallback score immediately
-    const fallbackScore = calculateNutritionScore(scaled);
+    // Prefer server-provided score (Gemini) if available, otherwise calculate locally
+    const serverScore = analysis?.nutritionScore;
+    const fallbackScore = typeof serverScore === 'number'
+      ? serverScore
+      : calculateNutritionScore(scaled, analysis?.ingredients);
+
     setNutritionScore(fallbackScore);
 
     // Try to get Gemini score
@@ -3005,16 +3010,34 @@ export function FoodResultsClient() {
                     )}
                     {hasPremiumAccess && !insightsLoading && !insightsText && (
                       <div className="text-center py-6">
-                        <p className="text-sm text-muted-foreground mb-4">
-                          {profileComplete
-                            ? t("foodresults.insights.complete")
-                            : t("foodresults.insights.incomplete")}
-                        </p>
+                        {profileComplete ? (
+                          <p className="text-sm text-muted-foreground mb-4">
+                            {t("foodresults.insights.complete")}
+                          </p>
+                        ) : (
+                          <Alert className="max-w-md mx-auto mb-6 text-left border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 shadow-sm">
+                            <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+                            <AlertTitle className="text-amber-900 dark:text-amber-100">{t("foodresults.insights.incomplete.title")}</AlertTitle>
+                            <AlertDescription className="mt-2 text-xs sm:text-sm text-amber-800 dark:text-amber-200">
+                              <p className="mb-3">
+                                {t("foodresults.insights.incomplete.description")}
+                              </p>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full bg-background/50 hover:bg-background border-amber-200 text-amber-900 dark:text-amber-200 dark:border-amber-800 hover:text-amber-950"
+                                onClick={() => router.push("/profile")}
+                              >
+                                Complete Profile <ArrowRight className="ml-2 h-4 w-4" />
+                              </Button>
+                            </AlertDescription>
+                          </Alert>
+                        )}
                         <div className="flex flex-wrap justify-center gap-2">
                           <Button
                             size="sm"
                             variant="default"
-                            disabled={insightsLoading}
+                            disabled={insightsLoading || !profileComplete}
                             onClick={async () => {
                               console.log("Generate Insights clicked", { id, profileAge, profileGender, profileComplete, hasPremiumAccess });
                               if (!id) {
@@ -3025,13 +3048,14 @@ export function FoodResultsClient() {
                                 });
                                 return;
                               }
-                              // Allow generation even with partial profile data
-                              if (!profileAge || !profileGender) {
+                              // Block generation if profile data is missing
+                              if (!profileComplete) {
                                 toast({
                                   title: t("foodresults.insights.incomplete.title"),
                                   description: t("foodresults.insights.incomplete.description"),
-                                  variant: "default",
+                                  variant: "destructive",
                                 });
+                                return;
                               }
                               try {
                                 setInsightsLoading(true);
@@ -3119,13 +3143,15 @@ export function FoodResultsClient() {
                         data-collapse-gap-in-pdf={insightsText ? "true" : undefined}
                       >
                         {/* Profile Badges */}
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-col gap-2">
                           {parsedInsights.demographics && (
-                            <Badge variant="outline" className="text-xs px-3 bg-background/80 border-primary/30">
-                              {parsedInsights.demographics}
-                            </Badge>
+                            <div className="w-full">
+                              <Badge variant="outline" className="text-xs px-3 bg-background/80 border-primary/30 w-full justify-start whitespace-normal text-left sm:w-auto">
+                                {parsedInsights.demographics}
+                              </Badge>
+                            </div>
                           )}
-                          <div className="flex items-center gap-2 flex-nowrap">
+                          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                             {profile?.weight_kg && profile?.height_cm && (() => {
                               const bmi = calculateBMI(profile.weight_kg, profile.height_cm);
                               const bmiCategory = getBMICategory(bmi);
@@ -3133,13 +3159,13 @@ export function FoodResultsClient() {
                                 return (
                                   <Badge
                                     variant="outline"
-                                    className={`text-xs px-3 py-1.5 border-2 ${bmiCategory.color === "green" ? "bg-green-50 border-green-500 text-green-700" :
+                                    className={`text-[10px] px-2 py-0.5 border flex-shrink-0 ${bmiCategory.color === "green" ? "bg-green-50 border-green-500 text-green-700" :
                                       bmiCategory.color === "blue" ? "bg-blue-50 border-blue-500 text-blue-700" :
                                         bmiCategory.color === "orange" ? "bg-orange-50 border-orange-500 text-orange-700" :
                                           "bg-red-50 border-red-500 text-red-700"
                                       }`}
                                   >
-                                    <Scale className="h-3 w-3 mr-1.5" />
+                                    <Scale className="h-3 w-3 mr-1" />
                                     BMI: {bmi.toFixed(1)} ({bmiCategory.category})
                                   </Badge>
                                 );
@@ -3147,23 +3173,23 @@ export function FoodResultsClient() {
                               return null;
                             })()}
                             {profile?.activity_level && (
-                              <Badge variant="outline" className="text-xs px-3 py-1 bg-primary/10 border-primary/30 text-primary">
-                                <Activity className="h-3 w-3 mr-1.5" />
+                              <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-primary/10 border-primary/30 text-primary flex-shrink-0">
+                                <Activity className="h-3 w-3 mr-1" />
                                 {profile.activity_level.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
                               </Badge>
                             )}
+                            {profile?.goal && (
+                              <Badge variant="outline" className="text-[10px] px-2 bg-primary/10 border-primary/30 text-primary flex-shrink-0">
+                                <Target className="h-3 w-3 mr-1" />
+                                {profile.goal.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                              </Badge>
+                            )}
                           </div>
-                          {profile?.goal && (
-                            <Badge variant="outline" className="text-xs px-3 bg-primary/10 border-primary/30 text-primary">
-                              <Target className="h-3 w-3 mr-1.5" />
-                              {profile.goal.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
-                            </Badge>
-                          )}
                         </div>
 
                         {/* New Format: Key Recommendations and Action Items */}
                         {(parsedInsights.keyRecommendations?.length > 0 || parsedInsights.actionItems?.length > 0) ? (
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                          <div className="grid grid-cols-1 gap-4 sm:gap-6">
                             {/* Key Recommendations */}
                             {parsedInsights.keyRecommendations?.length > 0 && (
                               <div className="space-y-3">
@@ -3211,7 +3237,7 @@ export function FoodResultsClient() {
                         ) : parsedInsights.healthContext ? (
                           /* Legacy format fallback */
                           <div className="space-y-6">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                            <div className="grid grid-cols-1 gap-4 sm:gap-6">
                               <div className="space-y-3">
                                 <div className="flex items-center gap-2 mb-4">
                                   <div className="p-2 rounded-lg bg-primary/10">

@@ -99,7 +99,7 @@ const PricingTable = () => {
           setFetchedPlans(cached);
           setLoading(false);
         }
-        
+
         // Fetch fresh data (even if cached)
         const { data, error } = await supabase
           .from("platform_plans")
@@ -110,13 +110,13 @@ const PricingTable = () => {
         if (error) throw error;
         if (!cancelled && data) {
           const plans = data.map((plan: any) => ({
-              ...plan,
-              features: parseFeatures(plan.features),
-              not_included: parseFeatures(plan.not_included),
+            ...plan,
+            features: parseFeatures(plan.features),
+            not_included: parseFeatures(plan.not_included),
           }));
-          
+
           setFetchedPlans(plans);
-          
+
           // OPTIMIZATION: Cache plans for 10 minutes (they rarely change)
           DataCache.set('pricing_plans', plans, CACHE_DURATION.LONG);
         }
@@ -163,14 +163,14 @@ const PricingTable = () => {
         (freePlan?.features as string[] | undefined)?.length
           ? (freePlan?.features as string[])
           : [
-              t("pricing.free.feature1"),
-              t("pricing.free.feature2"),
-              t("pricing.free.feature3"),
-              t("pricing.free.feature4"),
-              t("pricing.free.feature5"),
-              t("pricing.free.feature6"),
-              t("pricing.free.feature7"),
-            ],
+            t("pricing.free.feature1"),
+            t("pricing.free.feature2"),
+            t("pricing.free.feature3"),
+            t("pricing.free.feature4"),
+            t("pricing.free.feature5"),
+            t("pricing.free.feature6"),
+            t("pricing.free.feature7"),
+          ],
       notIncluded: freeNotIncluded,
       cta: t("pricing.free.cta"),
       popular: false,
@@ -188,30 +188,30 @@ const PricingTable = () => {
             ? formatPrice(premiumYearly.price_cents)
             : t("pricing.premium.price")
           : premiumMonthly
-          ? formatPrice(premiumMonthly.price_cents)
-          : t("pricing.premium.price"),
+            ? formatPrice(premiumMonthly.price_cents)
+            : t("pricing.premium.price"),
       previousPrice:
         billingToggle === "yearly"
           ? premiumYearly?.previous_price_cents
             ? formatPrice(premiumYearly.previous_price_cents)
             : undefined
           : premiumMonthly?.previous_price_cents
-          ? formatPrice(premiumMonthly.previous_price_cents)
-          : undefined,
+            ? formatPrice(premiumMonthly.previous_price_cents)
+            : undefined,
       period:
         billingToggle === "yearly"
           ? premiumYearly?.interval
             ? `/${premiumYearly.interval}`
             : t("pricing.premium.period")
           : premiumMonthly?.interval
-          ? `/${premiumMonthly.interval}`
-          : t("pricing.premium.period"),
+            ? `/${premiumMonthly.interval}`
+            : t("pricing.premium.period"),
       yearlyPrice:
         billingToggle === "yearly"
           ? undefined
           : premiumYearly
-          ? `${formatPrice(premiumYearly.price_cents)}/year`
-          : t("pricing.premium.yearly"),
+            ? `${formatPrice(premiumYearly.price_cents)}/year`
+            : t("pricing.premium.yearly"),
       description:
         billingToggle === "yearly"
           ? premiumYearly?.description || t("pricing.premium.description")
@@ -221,17 +221,17 @@ const PricingTable = () => {
           ? (premiumYearly?.features as string[] | undefined)
           : (premiumMonthly?.features as string[] | undefined))?.length
           ? (billingToggle === "yearly"
-              ? (premiumYearly?.features as string[] | undefined)
-              : (premiumMonthly?.features as string[] | undefined))!
+            ? (premiumYearly?.features as string[] | undefined)
+            : (premiumMonthly?.features as string[] | undefined))!
           : [
-              t("pricing.premium.feature1"),
-              t("pricing.premium.feature2"),
-              t("pricing.premium.feature3"),
-              t("pricing.premium.feature4"),
-              t("pricing.premium.feature5"),
-              t("pricing.premium.feature6"),
-              t("pricing.premium.feature7"),
-            ],
+            t("pricing.premium.feature1"),
+            t("pricing.premium.feature2"),
+            t("pricing.premium.feature3"),
+            t("pricing.premium.feature4"),
+            t("pricing.premium.feature5"),
+            t("pricing.premium.feature6"),
+            t("pricing.premium.feature7"),
+          ],
       notIncluded: premiumNotIncluded,
       cta: t("pricing.premium.cta"),
       popular: true,
@@ -244,7 +244,7 @@ const PricingTable = () => {
     const checkAuth = async () => {
       // Use user from auth context
       setIsLoggedIn(!!user);
-      
+
       if (user) {
         try {
           // OPTIMIZATION: Try cache first for instant loading
@@ -253,11 +253,11 @@ const PricingTable = () => {
             setSubscription(cached);
             setLoading(false);
           }
-          
+
           // Fetch fresh data (even if cached)
           const sub = await getPlatformSubscription(user.id);
           setSubscription(sub);
-          
+
           // OPTIMIZATION: Cache subscription for 5 minutes
           DataCache.set(CACHE_KEYS.SUBSCRIPTION(user.id), sub, CACHE_DURATION.MEDIUM);
         } catch (error) {
@@ -268,7 +268,7 @@ const PricingTable = () => {
       }
       setLoading(false);
     };
-    
+
     // Wait for auth to load, then check subscription
     if (!authLoading) {
       checkAuth();
@@ -297,19 +297,19 @@ const PricingTable = () => {
       }
       return t("pricing.premium.cta");
     }
-      // For free plan - if user is on free plan, show "Current Plan"
-      if (isFree) {
-        return t("pricing.current");
-      }
-      // If user is on premium, they can't cancel to free from here, just show "Start Free"
-      return t("pricing.free.cta");
+    // For free plan - if user is on free plan, show "Current Plan"
+    if (isFree) {
+      return t("pricing.current");
+    }
+    // If user is on premium, they can't cancel to free from here, just show "Start Free"
+    return t("pricing.free.cta");
   };
 
   const isCurrentPlan = (planType: "free" | "premium", planName: string) => {
     if (!isLoggedIn || !subscription) return false;
     const isPremium = subscription.subscription_type === "premium" && subscription.is_active;
     const isFree = subscription.subscription_type === "free";
-    
+
     if (planType === "premium") {
       return isPremium;
     } else if (planType === "free") {
@@ -381,12 +381,12 @@ const PricingTable = () => {
     }
 
     const cta = getPlanCTA(plan.type, plan.name);
-    
+
     // Don't do anything if it's the current plan (for Free plan)
     if (cta === t("pricing.current")) {
       return;
     }
-    
+
     // Navigate to /plans with full page reload
     window.location.href = "/plans";
   };
@@ -429,7 +429,7 @@ const PricingTable = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 w-full">
           {plans.map((plan, index) => (
-            <Card key={index} 
+            <Card key={index}
               className={`relative ${plan.popular ? 'border-primary shadow-strong' : ''}`}
             >
               {plan.popular && (
@@ -448,9 +448,9 @@ const PricingTable = () => {
                     <span className="text-3xl sm:text-4xl font-bold">{plan.price}</span>
                     <span className="text-muted-foreground text-sm sm:text-base">{plan.period}</span>
                   </div>
-                 
-                   
-                  
+
+
+
                 </div>
               </CardHeader>
               <CardContent className="p-4 sm:p-6 pt-0">
@@ -500,7 +500,7 @@ const PricingTable = () => {
                 </Tabs>
               </CardContent>
               <CardFooter className="p-4 sm:p-6 pt-0 flex flex-col gap-2">
-                <Button 
+                <Button
                   className={`w-full text-sm sm:text-base ${plan.popular && !isCurrentPlan(plan.type, plan.name) ? 'bg-primary hover:bg-primary-hover' : ''}`}
                   variant={plan.popular ? 'default' : 'outline'}
                   onClick={(e) => handlePlanClick(e, plan)}
@@ -509,7 +509,7 @@ const PricingTable = () => {
                   {loading || cancelling ? t("common.loading") : getPlanCTA(plan.type, plan.name)}
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">
-                  No commitments . Cancel anytime
+                  {plan.type === "premium" && "No commitments . Cancel anytime"}
                 </p>
               </CardFooter>
             </Card>

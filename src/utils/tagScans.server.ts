@@ -49,7 +49,7 @@ export async function getScansByTag(tagSlug: string): Promise<TagScanItem[]> {
     const filteredData = data.filter((scan: any) => {
       const tags = scan.result_json?.tags || [];
       if (!Array.isArray(tags)) return false;
-      return tags.some((tag: string) => 
+      return tags.some((tag: string) =>
         typeof tag === "string" && tag.trim().toLowerCase() === tagName.toLowerCase()
       );
     }).slice(0, 200); // Limit to 200 results
@@ -73,7 +73,7 @@ async function processScans(scanData: any[]): Promise<TagScanItem[]> {
   // Process in batches to prevent connection timeouts
   for (let i = 0; i < scanData.length; i += BATCH_SIZE) {
     const batch = scanData.slice(i, i + BATCH_SIZE);
-    
+
     const batchResults = await Promise.allSettled(
       batch.map(async (scan: any) => {
         const resultJson = scan.result_json || {};
@@ -95,10 +95,10 @@ async function processScans(scanData: any[]): Promise<TagScanItem[]> {
         if (hasStorageImage) {
           try {
             // Add timeout to prevent hanging
-            const timeoutPromise = new Promise<null>((resolve) => 
+            const timeoutPromise = new Promise<null>((resolve) =>
               setTimeout(() => resolve(null), 3000) // 3 second timeout
             );
-            
+
             const signedUrlPromise = supabase.storage
               .from("FoodScans")
               .createSignedUrl(scan.image_path as string, 60 * 60)
@@ -131,7 +131,7 @@ async function processScans(scanData: any[]): Promise<TagScanItem[]> {
         };
 
         const dish = resultJson.dish || "Unknown Dish";
-        
+
         if (dish === "Unknown Dish") {
           return null; // Skip invalid scans
         }
@@ -141,7 +141,9 @@ async function processScans(scanData: any[]): Promise<TagScanItem[]> {
           dish,
           imageUrl,
           nutrients: scaledNutrients,
-          nutritionScore: calculateNutritionScore(scaledNutrients),
+          nutritionScore: typeof resultJson.nutritionScore === 'number'
+            ? resultJson.nutritionScore
+            : calculateNutritionScore(scaledNutrients, resultJson.ingredients),
           created_at: scan.created_at,
         };
       })

@@ -27,6 +27,7 @@ export type FoodAnalysis = {
   insights?: string;
   isManualEntry?: boolean;
   manualItems?: any[];
+  nutritionScore?: number;
 };
 
 type AnalyzeFoodResponse = {
@@ -42,7 +43,7 @@ type AnalyzeFoodInvokeResult = {
   error: { message?: string } | null;
 };
 
-export async function uploadFoodImage(file: File, userId: string): Promise<{ path: string; publicUrl: string; signedUrl?: string }>{
+export async function uploadFoodImage(file: File, userId: string): Promise<{ path: string; publicUrl: string; signedUrl?: string }> {
   const cleanName = file.name.replace(/[^a-zA-Z0-9_.-]/g, "_");
   const ext = cleanName.split(".").pop() || "jpg";
   const filename = `${Date.now()}.${ext}`;
@@ -50,7 +51,7 @@ export async function uploadFoodImage(file: File, userId: string): Promise<{ pat
 
   // Check if this is a guest user (temp user ID)
   const isGuestUser = userId.startsWith('temp_');
-  
+
   // Only check session for authenticated users
   if (!isGuestUser) {
     // Ensure session is fresh before upload
@@ -62,7 +63,7 @@ export async function uploadFoodImage(file: File, userId: string): Promise<{ pat
         throw new Error('Session expired. Please refresh the page and try again.');
       }
     }
-    
+
     // Get fresh session after potential refresh
     const { data: { session: currentSession } } = await supabase.auth.getSession();
     if (!currentSession) {
@@ -74,7 +75,7 @@ export async function uploadFoodImage(file: File, userId: string): Promise<{ pat
     upsert: false,
     cacheControl: "3600",
   });
-  
+
   // If upload fails due to auth error, try refreshing session and retry once (only for authenticated users)
   if (upErr && (
     upErr.message?.includes('JWT') ||
@@ -87,7 +88,7 @@ export async function uploadFoodImage(file: File, userId: string): Promise<{ pat
     if (isGuestUser) {
       throw new Error('Unable to upload image. Please sign up to continue.');
     }
-    
+
     console.log('Upload failed due to auth error, refreshing session...');
     // Get current session and refresh it
     const { data: { session: currentSession } } = await supabase.auth.getSession();
@@ -95,7 +96,7 @@ export async function uploadFoodImage(file: File, userId: string): Promise<{ pat
     if (refreshError) {
       throw new Error('Session expired. Please refresh the page and try again.');
     }
-    
+
     // Retry upload after refresh
     const { error: retryErr } = await supabase.storage.from("FoodScans").upload(path, file, {
       upsert: false,
@@ -108,7 +109,7 @@ export async function uploadFoodImage(file: File, userId: string): Promise<{ pat
 
   const { data: pub } = supabase.storage.from("FoodScans").getPublicUrl(path);
   const publicUrl = pub.publicUrl;
-  
+
   // We MUST create a signed URL for ALL users because the bucket is private
   // and the edge function needs to fetch the image. Without a signed URL, the edge function
   // will get a 400 error when trying to fetch the image.
@@ -119,18 +120,18 @@ export async function uploadFoodImage(file: File, userId: string): Promise<{ pat
   const { data: signed, error: signedError } = await supabase.storage
     .from("FoodScans")
     .createSignedUrl(path, 60 * 60); // 1 hour expiry
-  
+
   if (signedError || !signed?.signedUrl) {
     // Signed URL is required for the edge function to access the image
     // Throw error for all users if we can't create it
     throw new Error(
-      signedError?.message || 
+      signedError?.message ||
       'Failed to create signed URL for image. Please try again.'
     );
   }
-  
+
   signedUrl = signed.signedUrl;
-  
+
   return { path, publicUrl, signedUrl };
 }
 
@@ -139,9 +140,9 @@ export async function analyzeFood(
   serving: number = 1,
   insightsParams?: { age?: number; gender?: string; activity?: string; goal?: string; optimize?: boolean; weight_kg?: number; height_cm?: number },
   options?: { overrideIngredients?: string[]; manualEntry?: { dish: string; ingredients: string[] } }
-): Promise<{ analysis: FoodAnalysis; insights?: string; upgrade?: boolean }>{
+): Promise<{ analysis: FoodAnalysis; insights?: string; upgrade?: boolean }> {
   const body: Record<string, unknown> = { serving, ...(insightsParams || {}) };
-  
+
   // Support both image-based and manual entry analysis
   if (options?.manualEntry) {
     body.manualEntry = options.manualEntry;
@@ -150,7 +151,7 @@ export async function analyzeFood(
   } else {
     throw new Error("Either imageUrl or manualEntry must be provided");
   }
-  
+
   if (options?.overrideIngredients && options.overrideIngredients.length > 0) {
     body.overrideIngredients = options.overrideIngredients;
   }
@@ -196,7 +197,7 @@ export async function recalculateNutritionFromIngredients(
   return data.analysis as FoodAnalysis;
 }
 
-export function scaleNutrients(base: FoodAnalysis["nutrients"] | undefined, multiplier: number){
+export function scaleNutrients(base: FoodAnalysis["nutrients"] | undefined, multiplier: number) {
   const scale = (v?: number | null) => (typeof v === "number" ? Math.round(v * multiplier * 10) / 10 : undefined);
   return {
     calories: scale(base?.calories),
@@ -214,7 +215,7 @@ export async function saveScanHistory(params: {
   imageUrl: string;
   serving: number;
   result: FoodAnalysis;
-}): Promise<string>{
+}): Promise<string> {
   // Store image_path (never expires) and optionally a public URL if available
   // We'll always generate fresh signed URLs when displaying, so stored image_url is just a fallback
   const { data, error } = await (supabase as any).from("food_scans").insert({
@@ -252,12 +253,12 @@ export async function getFreshImageUrl(imagePath: string | null, expirySeconds: 
   if (!imagePath) {
     return null;
   }
-  
+
   // Skip manual entry paths - they don't have actual images in storage
   if (imagePath.toLowerCase().startsWith("manual-entry")) {
     return null;
   }
-  
+
   try {
     const { data, error } = await supabase.storage.from("FoodScans").createSignedUrl(imagePath, expirySeconds);
     if (error) {
@@ -283,7 +284,7 @@ export async function getImageUrl(imagePath: string | null, expirySeconds: numbe
   return getFreshImageUrl(imagePath, expirySeconds);
 }
 
-export async function fetchRecentScans(userId: string, limit: number = 10){
+export async function fetchRecentScans(userId: string, limit: number = 10) {
   const { data, error } = await (supabase as any)
     .from("food_scans")
     .select("id, image_url, image_path, serving, result_json, created_at")
@@ -291,7 +292,7 @@ export async function fetchRecentScans(userId: string, limit: number = 10){
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  
+
   // Generate fresh signed URLs for all scans
   const scansWithUrls = await Promise.all(
     ((data || []) as Array<{
@@ -327,7 +328,7 @@ export async function fetchRecentScans(userId: string, limit: number = 10){
       };
     })
   );
-  
+
   return scansWithUrls;
 }
 
@@ -340,14 +341,14 @@ export async function getPersonalizedInsights(params: {
   optimize?: boolean;
   weight_kg?: number;
   height_cm?: number;
-}): Promise<{ insights?: string; upgrade?: boolean; message?: string }>{
+}): Promise<{ insights?: string; upgrade?: boolean; message?: string }> {
   // Fetch the scan to get image URL or manual entry data
   const { data: scan, error: scanError } = await (supabase as any)
     .from("food_scans")
     .select("image_url, image_path, serving, result_json")
     .eq("id", params.scanId)
     .maybeSingle();
-  
+
   if (scanError || !scan) {
     throw new Error("Scan not found");
   }
@@ -398,13 +399,13 @@ export async function getPersonalizedInsights(params: {
   } catch (error: any) {
     throw new Error(error?.message || "Failed to get insights");
   }
-  
+
   const { data, error } = result;
-  
+
   if (error || !data?.ok) {
     throw new Error(data?.error || error?.message || "Failed to get insights");
   }
-  
+
   return {
     insights: data.insights,
     upgrade: data.upgrade,

@@ -930,7 +930,7 @@ export function MealPlannerClient({ initialSubscription = null }: MealPlannerCli
             </AlertDescription>
             <Button
               size="sm"
-              className="mt-3 w-full sm:w-auto sm:mt-0 sm:absolute sm:top-4 sm:right-4 bg-primary hover:bg-primary/90 text-white border-primary whitespace-nowrap"
+              className="mt-3 w-full sm:w-auto sm:mt-0 sm:absolute sm:top-4 sm:right-4 bg-primary hover:bg-primary/90 text-white border-primary whitespace-nowrap !px-3"
               onClick={() => router.push("/plans")}
             >
               Create Your 1st Meal Plan

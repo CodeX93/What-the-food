@@ -177,14 +177,14 @@ export function PlansClient({
 
   const translateFeature = (feature: string): string => {
     if (!feature) return feature;
-    
+
     // If the feature is already a translation key (starts with "plans.feature."), translate it directly
     if (feature.startsWith("plans.feature.")) {
       const translated = t(feature);
       // If translation returns the key itself (not found), return original
       return translated !== feature ? translated : feature;
     }
-    
+
     // Map English feature strings to translation keys
     const featureMap: Record<string, string> = {
       "Unlimited scans": "plans.feature.unlimitedscans",
@@ -199,7 +199,7 @@ export function PlansClient({
       "Scan history": "plans.feature.scanhistory",
       "Email support": "plans.feature.emailsupport",
     };
-    
+
     // Check if we have a translation key for this feature
     const translationKey = featureMap[feature];
     if (translationKey) {
@@ -207,28 +207,28 @@ export function PlansClient({
       // If translation returns the key itself (not found), return original feature
       return translated !== translationKey ? translated : feature;
     }
-    
+
     // If no mapping found, return the original feature (might already be in user's language)
     return feature;
   };
 
   const translateDescription = (description: string | undefined, billingCycle: string): string => {
     if (!description) return "";
-    
+
     // If the description is already a translation key (starts with "plans.description."), translate it directly
     if (description.startsWith("plans.description.")) {
       const translated = t(description);
       // If translation returns the key itself (not found), return original
       return translated !== description ? translated : description;
     }
-    
+
     // Map English descriptions to translation keys
     const descriptionMap: Record<string, string> = {
       "Perfect for trying out our service": "plans.description.free",
       "Unlimited access to all features": "plans.description.premium.monthly",
       "Best value - Save with yearly billing": "plans.description.premium.yearly",
     };
-    
+
     // Check if we have a translation key for this description
     const translationKey = descriptionMap[description];
     if (translationKey) {
@@ -236,7 +236,7 @@ export function PlansClient({
       // If translation returns the key itself (not found), return original description
       return translated !== translationKey ? translated : description;
     }
-    
+
     // If no mapping found, return the original description (might already be in user's language)
     return description;
   };
@@ -442,8 +442,8 @@ export function PlansClient({
         (billingCycle === "monthly"
           ? process.env.NEXT_PUBLIC_STRIPE_PREMIUM_MONTHLY_PRICE_ID
           : billingCycle === "yearly"
-          ? process.env.NEXT_PUBLIC_STRIPE_PREMIUM_YEARLY_PRICE_ID
-          : undefined);
+            ? process.env.NEXT_PUBLIC_STRIPE_PREMIUM_YEARLY_PRICE_ID
+            : undefined);
 
       if (!priceId) {
         toast({
@@ -479,11 +479,23 @@ export function PlansClient({
     <main className="flex-1">
       <div className="container mx-auto px-4 py-16">
         <div className="text-center max-w-3xl mx-auto mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-hero bg-clip-text text-transparent">
-            {t("plans.title")}
+          <h1 className="text-3xl sm:text-4xl font-bold mb-3 sm:mb-4">
+            {(() => {
+              const title = t("pricing.title");
+              const match = title.match(/(Transparent Pricing)/i);
+              if (!match) return title;
+              const parts = title.split(match[0]);
+              return (
+                <>
+                  <span className="text-black dark:text-white">{parts[0]}</span>
+                  <span className="text-primary">{match[0]}</span>
+                  <span className="text-black dark:text-white">{parts[1]}</span>
+                </>
+              );
+            })()}
           </h1>
-          <p className="text-lg text-muted-foreground mb-6 pb-1" >
-            {t("plans.description")}
+          <p className="text-base sm:text-lg text-muted-foreground mb-6 pb-1">
+            {t("pricing.subtitle")}
           </p>
           <Button variant="outline" onClick={() => router.push("/dashboard")} className="mx-auto">
             {t("plans.keepusing")}
@@ -505,18 +517,18 @@ export function PlansClient({
 
               const isPaidPlan = billingCycle !== "free";
               const isCurrentPaidPlan = isCurrent && isPaidPlan;
-              
+
               // Determine button text based on current subscription and target plan
               const getButtonText = () => {
                 if (isLoading) return t("plans.button.processing");
                 if (isCurrentPaidPlan) return t("plans.button.cancel");
                 if (isCurrent) return t("plans.button.current");
-                
+
                 // Check if user has an active premium subscription
                 const hasActivePremium = subscription?.subscription_type === "premium" && subscription?.is_active;
                 const currentBillingCycle = subscription?.billing_cycle;
                 const isOnFreePlan = !hasActivePremium && (subscription?.subscription_type === "free" || !subscription);
-                
+
                 if (billingCycle === "free") {
                   // If user is on premium (monthly or yearly), show "Go Free"
                   if (hasActivePremium) {
@@ -524,7 +536,7 @@ export function PlansClient({
                   }
                   return t("plans.button.getstarted");
                 }
-                
+
                 if (billingCycle === "yearly") {
                   // If user is on premium monthly, show "Go Annually"
                   if (hasActivePremium && currentBillingCycle === "monthly") {
@@ -536,7 +548,7 @@ export function PlansClient({
                   }
                   return t("plans.button.subscribeyearly");
                 }
-                
+
                 if (billingCycle === "monthly") {
                   // If user is on premium yearly, show "Go Monthly"
                   if (hasActivePremium && currentBillingCycle === "yearly") {
@@ -548,10 +560,10 @@ export function PlansClient({
                   }
                   return t("plans.button.subscribemonthly");
                 }
-                
+
                 return t("plans.button.go");
               };
-              
+
               const buttonText = getButtonText();
 
               return (
@@ -569,7 +581,6 @@ export function PlansClient({
                   <CardHeader>
                     <div className="flex items-center justify-between mb-2">
                       <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                      {plan.billing_cycle === "free" && <Sparkles className="h-6 w-6 text-primary" />}
                     </div>
                     <div className="flex items-baseline gap-2">
                       {plan.previous_price_cents ? (
@@ -592,29 +603,29 @@ export function PlansClient({
                       return (
                         <div className="max-h-[440px] overflow-y-auto pr-1 space-y-4">
                           <Tabs defaultValue="included" className="space-y-4">
-                          <TabsList className="flex justify-start w-full bg-transparent p-0 shadow-none gap-2">
-                            <TabsTrigger
-                              value="included"
-                              className="border border-green-500 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
-                            >
-                              {t("plans.included")}
-                            </TabsTrigger>
-                            <TabsTrigger
-                              value="not-included"
-                              className="border border-green-500 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
-                            >
-                              {t("plans.notincluded.title")}
-                            </TabsTrigger>
+                            <TabsList className="flex justify-start w-full bg-transparent p-0 shadow-none gap-2">
+                              <TabsTrigger
+                                value="included"
+                                className="border border-green-500 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                              >
+                                {t("plans.included")}
+                              </TabsTrigger>
+                              <TabsTrigger
+                                value="not-included"
+                                className="border border-green-500 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm"
+                              >
+                                {t("plans.notincluded.title")}
+                              </TabsTrigger>
                             </TabsList>
                             <TabsContent value="included">
                               <ul className="space-y-3">
                                 {features.map((feature, index) => (
-                        <li key={index} className="flex items-start gap-2">
-                          <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                          <span className="text-sm">{translateFeature(feature)}</span>
-                        </li>
-                      ))}
-                    </ul>
+                                  <li key={index} className="flex items-start gap-2">
+                                    <Check className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                                    <span className="text-sm">{translateFeature(feature)}</span>
+                                  </li>
+                                ))}
+                              </ul>
                             </TabsContent>
                             <TabsContent value="not-included">
                               {notIncluded.length > 0 ? (

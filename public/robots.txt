@@ -38,4 +38,4 @@ Disallow: /*?gclid=*
 Disallow: /*?ref=*
 
 # Sitemaps
-Sitemap: https://whatthefood.io/sitemap-index.xml
+Sitemap: https://whatthefood.io/sitemap.xml

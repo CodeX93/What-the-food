@@ -10,159 +10,114 @@ export function calculateNutritionScore(nutrients: {
   fat_g?: number | null;
   fiber_g?: number | null;
   sugar_g?: number | null;
-}): number {
+  sodium_mg?: number | null;
+}, ingredients: string[] = []): number {
   if (!nutrients || !nutrients.calories || nutrients.calories <= 0) {
     return 0;
   }
 
-  const calories = nutrients.calories;
+  const {
+    calories
+  } = nutrients;
+
   const protein = nutrients.protein_g || 0;
   const carbs = nutrients.carbohydrates_g || 0;
   const fat = nutrients.fat_g || 0;
   const fiber = nutrients.fiber_g || 0;
   const sugar = nutrients.sugar_g || 0;
+  const sodium = nutrients.sodium_mg || 0;
 
-  // SPECIAL CASE: Very low-calorie, nutrient-dense foods (leafy greens, vegetables)
-  // These should score high (75-95) regardless of macro ratios
-  if (calories < 50 && fiber > 0 && sugar < 5) {
-    // Check if it's a vegetable/leafy green pattern
-    const isLowCalorieVegetable = calories < 30 && (fiber > 0.3 || protein > 1);
-    if (isLowCalorieVegetable) {
-      // Base score for nutrient density
-      let vegScore = 75;
-      
-      // Bonus for high fiber relative to calories
-      const fiberPer100Cal = (fiber * 4) / calories;
-      if (fiberPer100Cal > 2) vegScore += 10;
-      else if (fiberPer100Cal > 1) vegScore += 5;
-      
-      // Bonus for protein relative to calories
-      const proteinPer100Cal = (protein * 4) / calories;
-      if (proteinPer100Cal > 1) vegScore += 5;
-      
-      // Bonus for very low sugar
-      if (sugar < 1) vegScore += 5;
-      
-      // Watercress and similar superfoods get extra points
-      if (calories < 15 && fiber > 0.4) vegScore += 5;
-      
-      return Math.min(95, Math.max(75, Math.round(vegScore)));
+  let score = 70; // Start with a neutral baseline 
+
+  // --- MACRO QUALITY SCORING ---
+
+  // 1. Protein Density (High protein is generally good)
+  // Target: > 3g per 100 kcal is decent, > 8g is high
+  const proteinPer100Cal = (protein * 4) / calories * 25; // approximated scaling
+  if (proteinPer100Cal > 25) score += 15; // Very high protein
+  else if (proteinPer100Cal > 15) score += 10;
+  else if (proteinPer100Cal > 8) score += 5;
+  else if (proteinPer100Cal < 2) score -= 5; // Very low protein
+
+  // 2. Fiber Density (Fiber is critical for health)
+  // Target: > 3g per 100g serving or substantial amount per calorie
+  // Using per 100 kcal metric: > 3g/100kcal is excellent
+  const fiberPer100Cal = (fiber * 100) / calories;
+  if (fiberPer100Cal > 3) score += 15;
+  else if (fiberPer100Cal > 1.5) score += 10;
+  else if (fiberPer100Cal > 0.5) score += 5;
+  else score -= 5; // Very low fiber
+
+  // 3. Sugar Impact (Lower is better)
+  // Penalize high sugar content relative to total calories
+  const sugarCal = sugar * 4;
+  const sugarPct = (sugarCal / calories) * 100;
+  if (sugarPct > 40) score -= 20; // High sugar bomb
+  else if (sugarPct > 20) score -= 10;
+  else if (sugarPct > 10) score -= 5;
+  else if (sugarPct < 5) score += 5; // Low sugar bonus
+
+  // 4. Saturated Fat / Sodium indications (rough proxies if data missing, assumption based on fat/salt)
+  // If sodium is available and high (> 800mg is a lot for a meal)
+  if (sodium > 1000) score -= 15;
+  else if (sodium > 600) score -= 5;
+
+
+  // --- INGREDIENT QUALITY SCORING ---
+  // Simple keyword matching for positives (whole foods) and negatives (processed)
+
+  // Normalize ingredients
+  const normalizedIngredients = ingredients.map(i => i.toLowerCase());
+
+  const negativeKeywords = [
+    "corn syrup", "high fructose", "hydrogenated", "partially hydrogenated",
+    "artificial flavor", "artificial color", "red 40", "blue 1", "yellow 5", "yellow 6",
+    "preservative", "sodium benzoate", "aspartame", "sucralose", "saccharin",
+    "soybean oil", "palm oil", "msg", "monosodium glutamate", "carrageenan",
+    "sugar", "added sugar", "dextrose", "maltodextrin"
+  ];
+
+  const positiveKeywords = [
+    "whole grain", "whole wheat", "oats", "quinoa", "brown rice",
+    "spinach", "kale", "broccoli", "cauliflower", "carrot", "vegetable",
+    "fruit", "apple", "banana", "berry", "berries", "avocado",
+    "olive oil", "extra virgin", "coconut oil", "nut", "almond", "walnut", "seed", "chia", "flax",
+    "chicken breast", "turkey", "salmon", "tuna", "egg", "legume", "bean", "lentil", "chickpea",
+    "yogurt", "kefir", "fermented"
+  ];
+
+  // Count matches (capped to prevent extreme skewing)
+  let negativeCount = 0;
+  let positiveCount = 0;
+
+  normalizedIngredients.forEach(ing => {
+    // Check negatives
+    if (negativeKeywords.some(keyword => ing.includes(keyword))) {
+      negativeCount++;
     }
+    // Check positives
+    if (positiveKeywords.some(keyword => ing.includes(keyword))) {
+      positiveCount++;
+    }
+  });
+
+  // Apply Ingredient Penalties/Bonuses
+  score -= (negativeCount * 5); // -5 per bad ingredient
+  score += (positiveCount * 4); // +4 per good ingredient
+
+  // Cap modifier impact to avoid overriding nutrition completely
+  // No strict cap logic needed here as 0-100 clamping handles the result, 
+  // but logically we trust macros first, ingredients as quality modifiers.
+
+
+  // --- CALORIE DENSITY / SPECIAL CASES ---
+
+  // Low calorie vegetable bonus (retained concept from previous logic but simplified)
+  if (calories < 100 && fiber > 1 && sugar < 5) {
+    score += 15; // Healthy snack / veg bonus
   }
 
-  // Calculate actual macro percentages (by calories)
-  const proteinCalories = protein * 4;
-  const carbsCalories = carbs * 4;
-  const fatCalories = fat * 9;
-  const totalMacroCalories = proteinCalories + carbsCalories + fatCalories;
-
-  // Avoid division by zero
-  if (totalMacroCalories === 0) {
-    return 0;
-  }
-
-  const actualCarbsPercent = (carbsCalories / totalMacroCalories) * 100;
-  const actualProteinPercent = (proteinCalories / totalMacroCalories) * 100;
-  const actualFatPercent = (fatCalories / totalMacroCalories) * 100;
-
-  // Ideal ratios: 40% carbs, 30% protein, 30% fat
-  const idealCarbs = 40;
-  const idealProtein = 30;
-  const idealFat = 30;
-
-  let score = 0;
-
-  // Macro distribution score (0-60 points)
-  // Calculate how close each macro is to ideal (max 20 points each)
-  const carbsDeviation = Math.abs(actualCarbsPercent - idealCarbs);
-  const proteinDeviation = Math.abs(actualProteinPercent - idealProtein);
-  const fatDeviation = Math.abs(actualFatPercent - idealFat);
-
-  // Carbs score (0-20 points) - closer to 40% is better
-  if (carbsDeviation <= 5) {
-    score += 20; // Within 5% of ideal
-  } else if (carbsDeviation <= 10) {
-    score += 15; // Within 10% of ideal
-  } else if (carbsDeviation <= 15) {
-    score += 10; // Within 15% of ideal
-  } else if (carbsDeviation <= 20) {
-    score += 5; // Within 20% of ideal
-  } else {
-    score += 2; // Far from ideal
-  }
-
-  // Protein score (0-20 points) - closer to 30% is better
-  if (proteinDeviation <= 5) {
-    score += 20;
-  } else if (proteinDeviation <= 10) {
-    score += 15;
-  } else if (proteinDeviation <= 15) {
-    score += 10;
-  } else if (proteinDeviation <= 20) {
-    score += 5;
-  } else {
-    score += 2;
-  }
-
-  // Fat score (0-20 points) - closer to 30% is better
-  if (fatDeviation <= 5) {
-    score += 20;
-  } else if (fatDeviation <= 10) {
-    score += 15;
-  } else if (fatDeviation <= 15) {
-    score += 10;
-  } else if (fatDeviation <= 20) {
-    score += 5;
-  } else {
-    score += 2;
-  }
-
-  // Fiber quality score (0-15 points)
-  // Ideal: 3-5g per 100 calories (0.75-1.25g per 100 cal)
-  const fiberPer100Cal = (fiber * 4) / calories;
-  if (fiberPer100Cal >= 0.75 && fiberPer100Cal <= 1.25) {
-    score += 15;
-  } else if (fiberPer100Cal >= 0.5 && fiberPer100Cal < 0.75) {
-    score += 10;
-  } else if (fiberPer100Cal > 1.25 && fiberPer100Cal <= 1.5) {
-    score += 12;
-  } else if (fiberPer100Cal > 0.25 && fiberPer100Cal < 0.5) {
-    score += 5;
-  } else {
-    score += 2;
-  }
-
-  // Sugar quality score (0-15 points) - lower is better
-  // Ideal: < 10% of calories from sugar
-  const sugarCalories = sugar * 4;
-  const sugarPercent = totalMacroCalories > 0 ? (sugarCalories / totalMacroCalories) * 100 : 0;
-  if (sugarPercent < 5) {
-    score += 15;
-  } else if (sugarPercent < 10) {
-    score += 12;
-  } else if (sugarPercent < 15) {
-    score += 8;
-  } else if (sugarPercent < 20) {
-    score += 5;
-  } else {
-    score += 2;
-  }
-
-  // Calorie density bonus (0-10 points)
-  // Lower calorie density is generally better for nutrition
-  if (calories < 200) {
-    score += 10;
-  } else if (calories < 300) {
-    score += 8;
-  } else if (calories < 400) {
-    score += 6;
-  } else if (calories < 500) {
-    score += 4;
-  } else {
-    score += 2;
-  }
-
-  // Ensure score is between 0-100
+  // Ensure bounds
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 

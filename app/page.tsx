@@ -5,7 +5,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const requestUrl = await getRequestUrl();
   const imageUrl = getPreviewImageUrlFromRequest("Homepage.png", requestUrl);
   const canonicalUrl = await getCanonicalUrlFromRequest('/');
-  const title = "Free AI Food Scanner and Calorie Estimator | What the Food";
+  const title = "Macro Tracker and Food Calorie Finder | What the Food";
   const description =
     "What The Food is a macro tracker and food calorie finder that helps you track meals, understand macros, and spot eating patterns to build healthier habits.";
   return {
@@ -27,8 +27,34 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       images: [imageUrl],
     },
-};
+  };
 }
 export default function HomePage() {
-  return <Index />;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "What The Food",
+    "applicationCategory": "HealthApplication",
+    "operatingSystem": "iOS, Android, Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "ratingCount": "1250"
+    }
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <Index />
+    </>
+  );
 }

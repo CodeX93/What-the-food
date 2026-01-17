@@ -19,7 +19,7 @@ const corsHeaders = {
 };
 
 // Optimized: Reduced schema strings (YouTube video removed)
-const BASE_SCHEMA = `{"dish":string,"description":string,"tags":string[],"additionalInfo":string,"servingGuidance":string,"confidence":number,"servingSize":string,"servingWeightGrams":number,"nutrients":{"calories":number,"protein_g":number,"carbohydrates_g":number,"fat_g":number,"fiber_g":number,"sugar_g":number},"ingredients":string[],"instructions":string[]}`;
+const BASE_SCHEMA = `{"dish":string,"description":string,"tags":string[],"additionalInfo":string,"servingGuidance":string,"confidence":number,"servingSize":string,"servingWeightGrams":number,"nutrients":{"calories":number,"protein_g":number,"carbohydrates_g":number,"fat_g":number,"fiber_g":number,"sugar_g":number},"ingredients":string[],"instructions":string[],"nutritionScore":number}`;
 const SCHEMA_WITH_INSIGHTS = `${BASE_SCHEMA.slice(0, -1)},"insights":string}`;
 
 // Optimized: Clear but concise prompt guidelines (YouTube removed)
@@ -35,7 +35,8 @@ const PROMPT_GUIDELINES = `REQUIRED - Generate ALL fields:
 - servingWeightGrams: MUST provide realistic weight (pasta 200-250g, burger 150-200g, salad 150g)
 - ingredients: List ALL ingredients with METRIC quantities (g, kg, ml, L) - NEVER imperial
 - instructions: Detailed step-by-step recipe. Format: "**Step Name**: Complete instructions with temps, times"
-- nutrients: Use USDA FoodData. Calculate: (ingredient_g/100)×value_per_100g. Verify: calories=(protein×4)+(carbs×4)+(fat×9)±2, fiber≤carbs`;
+- nutrients: Use USDA FoodData. Calculate: (ingredient_g/100)×value_per_100g. Verify: calories=(protein×4)+(carbs×4)+(fat×9)±2, fiber≤carbs
+- nutritionScore: 0-100 score based on nutritional quality. + points for: high protein, high fiber, whole food ingredients (veg/fruits/nuts). - points for: added sugars, processed ingredients, artificial additives. 70=neutral/good, >85=excellent superfood, <40=highly processed/unhealthy.`;
 
 const buildPrompt = (includeInsights = false) =>
   `Return JSON only with schema: ${includeInsights ? SCHEMA_WITH_INSIGHTS : BASE_SCHEMA}\n${PROMPT_GUIDELINES}`;
@@ -45,12 +46,12 @@ function arrayBufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = '';
   const chunkSize = 0x10000; // 64KB chunks for better performance
-  
+
   for (let i = 0; i < bytes.length; i += chunkSize) {
     const chunk = bytes.subarray(i, i + chunkSize);
     binary += String.fromCharCode.apply(null, chunk);
   }
-  
+
   return btoa(binary);
 }
 
@@ -311,7 +312,7 @@ async function fetchAndEncodeImage(url) {
 
     const arrayBuffer = await res.arrayBuffer();
     clearTimeout(timeoutId);
-    
+
     if (!arrayBuffer.byteLength) throw new Error("Empty image");
 
     return {
@@ -331,7 +332,7 @@ async function recalculateNutritionFromIngredients(dishName, ingredients, existi
   }
 
   const prompt = `Calculate nutrition for these ${ingredients.length} ingredients:
-${ingredients.map((ing, i) => `${i+1}. ${ing}`).join('\n')}
+${ingredients.map((ing, i) => `${i + 1}. ${ing}`).join('\n')}
 Do not do anything else than the following steps. JUST FOCUS ON THE INGREDIENTS AND THE CALCULATIONS WHICH ARE CHANGED.
 For each ingredient:
 1. Extract weight in grams
@@ -368,9 +369,10 @@ Your final calculation must reflect accurate nutritional causality.
             },
             required: ["calories", "protein_g", "carbohydrates_g", "fat_g", "fiber_g", "sugar_g"]
           },
-          servingWeightGrams: { type: "number" }
+          servingWeightGrams: { type: "number" },
+          nutritionScore: { type: "number" }
         },
-        required: ["nutrients", "servingWeightGrams"]
+        required: ["nutrients", "servingWeightGrams", "nutritionScore"]
       },
       topP: 0.95,
       topK: 20
@@ -400,12 +402,12 @@ Your final calculation must reflect accurate nutritional causality.
 
     const data = await resp.json();
     const text = data?.candidates?.[0]?.content?.parts?.map(p => p?.text || "").join("").trim();
-    
+
     if (!text) throw new Error("Empty response");
 
     const jsonStr = text.replace(/^```(?:json)?|```$/gi, "").trim();
     let parsed;
-    
+
     try {
       parsed = JSON.parse(jsonStr);
     } catch (e) {
@@ -422,41 +424,41 @@ Your final calculation must reflect accurate nutritional causality.
 
     // CRITICAL: Validate and enforce accurate nutrition math
     let { calories, protein_g, carbohydrates_g, fat_g, fiber_g, sugar_g } = parsed.nutrients;
-    
+
     // Ensure all values are positive
     protein_g = Math.max(0, protein_g);
     carbohydrates_g = Math.max(0, carbohydrates_g);
     fat_g = Math.max(0, fat_g);
     fiber_g = Math.max(0, fiber_g);
     sugar_g = Math.max(0, sugar_g);
-    
+
     // Calculate accurate calories from macros
     const calculatedCal = Math.round((protein_g * 4) + (carbohydrates_g * 4) + (fat_g * 9));
-    
+
     // Enforce calorie accuracy - always use calculated value if difference > 2
     if (Math.abs(calories - calculatedCal) > 2) {
       calories = calculatedCal;
     }
-    
+
     // Ensure fiber doesn't exceed carbs (impossible)
     if (fiber_g > carbohydrates_g) {
       fiber_g = Math.min(fiber_g, carbohydrates_g);
     }
-    
+
     // Ensure sugar doesn't exceed carbs (impossible)
     if (sugar_g > carbohydrates_g) {
       sugar_g = Math.min(sugar_g, carbohydrates_g);
     }
-    
+
     // Validation logging
     const originalCalories = existingAnalysis?.nutrients?.calories || 0;
     const originalIngCount = existingAnalysis?.ingredients?.length || 0;
     const newIngCount = ingredients.length;
-    
+
     console.log(`🔍 Calculated: ${calories}cal, ${protein_g}g protein, ${fat_g}g fat`);
     console.log(`🔍 Original: ${originalCalories}cal with ${originalIngCount} ingredients → New: ${newIngCount} ingredients`);
-    
-    
+
+
     // Update parsed nutrients with validated values
     parsed.nutrients = {
       calories,
@@ -466,7 +468,7 @@ Your final calculation must reflect accurate nutritional causality.
       fiber_g: Math.round(fiber_g * 10) / 10,
       sugar_g: Math.round(sugar_g * 10) / 10,
     };
-    
+
     const weight = Math.round(parsed.servingWeightGrams);
     const exampleWeight = Math.round(weight * 1.5);
 
@@ -496,7 +498,7 @@ async function callGemini(imageBase64, mimeType, options = {}) {
 
   let prompt = buildPrompt(includeInsights);
   let maxTokens = 2048; // Balanced for complete responses
-  
+
   // Add manual entry context
   if (manualEntry) {
     prompt += `\n\nMANUAL ENTRY (no image):
@@ -510,7 +512,7 @@ Generate COMPLETE analysis with all fields including ingredients, instructions, 
   if (insightsParams && (insightsParams.weight_kg || insightsParams.height_cm || insightsParams.gender || insightsParams.age)) {
     const { weight_kg, height_cm, age, gender } = insightsParams;
     const parts = [];
-    
+
     if (weight_kg && height_cm) {
       const bmi = weight_kg / Math.pow(height_cm / 100, 2);
       parts.push(`${weight_kg}kg, ${height_cm}cm (BMI: ${bmi.toFixed(1)})`);
@@ -520,21 +522,21 @@ Generate COMPLETE analysis with all fields including ingredients, instructions, 
     }
     if (age) parts.push(`${age}yo`);
     if (gender) parts.push(gender);
-    
+
     if (parts.length > 0) prompt += `\nUser profile: ${parts.join(", ")}`;
   }
 
   // Add insights context
   if (includeInsights && insightsParams) {
     const { age = "30", gender = "any", activity = "moderate", goal = "maintenance", weight_kg, height_cm } = insightsParams;
-    
+
     let bmiStr = "";
     if (weight_kg && height_cm) {
       const bmi = weight_kg / Math.pow(height_cm / 100, 2);
       const cat = bmi < 18.5 ? "underweight" : bmi < 25 ? "normal" : bmi < 30 ? "overweight" : "obese";
       bmiStr = `, BMI ${bmi.toFixed(1)} (${cat})`;
     }
-    
+
     prompt += `\n\nCRITICAL: Include "insights" field with personalized health analysis in JSON format.
 Context: Age ${age}, Gender: ${gender}, Activity: ${activity}, Goal: ${goal}${bmiStr}
 
@@ -559,12 +561,12 @@ IMPORTANT: Return insights as a JSON string that can be parsed. Each recommendat
   }
 
   const parts = [{ text: prompt }];
-  
+
   // Add image if provided
   if (imageBase64 && mimeType) {
     parts.push({ inlineData: { mimeType, data: imageBase64 } });
   }
-  
+
   parts.push({
     text: "IMPORTANT: Generate ALL required fields (dish, description, tags, additionalInfo, servingGuidance, ingredients, instructions, nutrients). Use METRIC units. Verify: calories = (protein×4) + (carbs×4) + (fat×9) ± 2, fiber ≤ carbs.",
   });
@@ -620,12 +622,12 @@ ACCURATE NUTRITION REQUIRED:
 
     const data = await resp.json();
     const text = data?.candidates?.[0]?.content?.parts?.map(p => p?.text || "").join("").trim();
-    
+
     if (!text) throw new Error("Empty response");
 
     const jsonStr = text.replace(/^```(?:json)?|```$/gi, "").trim();
     let parsed;
-    
+
     try {
       parsed = JSON.parse(jsonStr);
     } catch (e) {
@@ -640,7 +642,7 @@ ACCURATE NUTRITION REQUIRED:
     delete parsed.insights;
 
     const sanitized = sanitizeAnalysis(parsed, overrideIngredients);
-    
+
     return { analysis: sanitized, insights: insights || undefined };
   } catch (e) {
     clearTimeout(timeoutId);
@@ -676,6 +678,7 @@ const defaultAnalysis = {
   nutrients: { calories: 320, protein_g: 18, carbohydrates_g: 34, fat_g: 12, fiber_g: 6, sugar_g: 8 },
   ingredients: [],
   instructions: [],
+  nutritionScore: 70,
 };
 
 // Optimized: Inline sanitization helpers
@@ -685,21 +688,21 @@ function sanitizeAnalysis(raw, ingredientOverrides = []) {
   if (raw && typeof raw === "object") {
     result.dish = (typeof raw.dish === "string" && raw.dish.trim()) || result.dish;
     result.description = (typeof raw.description === "string" && raw.description.trim()) || result.description;
-    
+
     const tags = Array.isArray(raw.tags) ? raw.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 8) : result.tags;
     result.tags = tags.length ? tags : result.tags;
-    
+
     const info = typeof raw.additionalInfo === "string" ? raw.additionalInfo.trim() : "";
     if (info) result.additionalInfo = info;
-    
+
     const guidance = typeof raw.servingGuidance === "string" ? raw.servingGuidance.trim() : "";
     if (guidance) result.servingGuidance = guidance;
-    
+
     const confidence = typeof raw.confidence === "number" ? Math.max(0, Math.min(1, raw.confidence)) : result.confidence;
     result.confidence = confidence;
-    
+
     result.servingSize = (typeof raw.servingSize === "string" && raw.servingSize.trim()) || result.servingSize;
-    
+
     const weightGrams = typeof raw.servingWeightGrams === "number" && raw.servingWeightGrams > 0 ? raw.servingWeightGrams : result.servingWeightGrams;
     result.servingWeightGrams = weightGrams;
 
@@ -713,9 +716,13 @@ function sanitizeAnalysis(raw, ingredientOverrides = []) {
       sugar_g: typeof nutrients.sugar_g === "number" ? nutrients.sugar_g : result.nutrients.sugar_g,
     };
 
+    // Validate score (0-100)
+    const score = typeof raw.nutritionScore === "number" ? Math.round(raw.nutritionScore) : result.nutritionScore;
+    result.nutritionScore = Math.max(0, Math.min(100, score));
+
     const ingredients = Array.isArray(raw.ingredients) ? raw.ingredients.map(i => String(i).trim()).filter(Boolean) : result.ingredients;
     result.ingredients = ingredients.length ? ingredients : result.ingredients;
-    
+
     result.instructions = Array.isArray(raw.instructions) ? raw.instructions.map(i => String(i).trim()).filter(Boolean) : result.instructions;
   }
 
@@ -752,26 +759,26 @@ Deno.serve(async (req) => {
       recalculateOnly = false,
       existingAnalysis = null,
     } = await req.json();
-    
+
     // Fast-path: Ingredient-only recalculation (no image/auth needed)
     if (recalculateOnly && existingAnalysis && Array.isArray(overrideIngredients) && overrideIngredients.length > 0) {
       console.log(`🔄 Starting recalculation for ${overrideIngredients.length} ingredients...`);
-      
+
       const updatedAnalysis = await recalculateNutritionFromIngredients(
         existingAnalysis.dish || "Custom Dish",
         overrideIngredients,
         existingAnalysis
       );
-      
+
       console.log(`⚡ Recalc completed: ${Date.now() - startTime}ms`);
       console.log(`📊 Results: ${updatedAnalysis.nutrients.calories}cal, ${updatedAnalysis.nutrients.protein_g}g protein`);
-      
+
       return new Response(
         JSON.stringify({ ok: true, serving, analysis: updatedAnalysis }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    
+
     const isManualEntry = !!manualEntry && !imageUrl;
     if (!imageUrl && !isManualEntry) {
       return new Response(
@@ -782,30 +789,30 @@ Deno.serve(async (req) => {
 
     const overrides = Array.isArray(overrideIngredients) ? overrideIngredients.map(i => String(i).trim()).filter(Boolean) : [];
     const wantsInsights = !!(age || gender || activity || goal);
-    
+
     // Ultra-parallel execution - start all tasks immediately
     const authHeader = req.headers.get("Authorization") || "";
     const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } }
     });
-    
+
     // Start image fetch and auth in parallel immediately
-    const imagePromise = (!isManualEntry && imageUrl) 
-      ? fetchAndEncodeImage(imageUrl) 
+    const imagePromise = (!isManualEntry && imageUrl)
+      ? fetchAndEncodeImage(imageUrl)
       : Promise.resolve({ base64: null, mimeType: null });
-    
+
     const authPromise = (async () => {
       const { data: { user } } = await supabaseAuth.auth.getUser();
       if (!user) return { user: null, isPremium: false, profile: null };
-      
+
       // Only fetch premium/profile if insights requested
       if (!wantsInsights) return { user, isPremium: false, profile: null };
-      
+
       const [isPremium, profileData] = await Promise.all([
         quickPremiumCheck(supabaseAuth, user.id),
         supabaseAuth.from("profiles").select("weight_kg, height_cm, age, gender").eq("id", user.id).single()
       ]);
-      
+
       return { user, isPremium, profile: profileData.data };
     })();
 
@@ -816,7 +823,7 @@ Deno.serve(async (req) => {
     const finalHeight = height_cm || authResult.profile?.height_cm;
     const finalAge = age || authResult.profile?.age;
     const finalGender = gender || authResult.profile?.gender;
-    
+
     // Optimize: Single Gemini call path
     const shouldIncludeInsights = wantsInsights && authResult.user && authResult.isPremium;
     const profileParams = (finalWeight || finalHeight || finalAge || finalGender) ? {
@@ -825,17 +832,17 @@ Deno.serve(async (req) => {
       age: finalAge,
       gender: finalGender,
     } : null;
-    
-    const insightsParams = shouldIncludeInsights ? { 
-      age: finalAge, 
-      gender: finalGender, 
-      activity, 
-      goal, 
-      optimize, 
-      weight_kg: finalWeight, 
-      height_cm: finalHeight 
+
+    const insightsParams = shouldIncludeInsights ? {
+      age: finalAge,
+      gender: finalGender,
+      activity,
+      goal,
+      optimize,
+      weight_kg: finalWeight,
+      height_cm: finalHeight
     } : profileParams;
-    
+
     // Strict non-food guard (prompt-level + programmatic threshold)
     if (!isManualEntry && imageData.base64 && imageData.mimeType && overrides.length === 0) {
       const classification = await classifyFoodImage(imageData.base64, imageData.mimeType);
@@ -854,21 +861,21 @@ Deno.serve(async (req) => {
       overrideIngredients: overrides,
       manualEntry: isManualEntry ? manualEntry : null,
     });
-    
+
     console.log(`Response: ${Date.now() - startTime}ms`);
-    
+
     const response = {
       ok: true,
       serving,
       analysis: result.analysis
     };
-    
+
     if (wantsInsights && !shouldIncludeInsights) {
       response.upgrade = true;
     } else if (shouldIncludeInsights) {
       response.insights = result.insights;
     }
-    
+
     return new Response(
       JSON.stringify(response),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
