@@ -30,6 +30,15 @@ export type FoodAnalysis = {
   nutritionScore?: number;
 };
 
+export type FoodScan = {
+  id: string;
+  created_at: string;
+  serving: number | null;
+  image_path?: string | null;
+  image_url?: string | null;
+  result_json: FoodAnalysis;
+};
+
 type AnalyzeFoodResponse = {
   ok?: boolean;
   analysis?: FoodAnalysis;
