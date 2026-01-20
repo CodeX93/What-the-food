@@ -5,11 +5,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { HowItWorksHero } from "@/components/HowItWorks/HowItWorksHero";
+import FAQ from "@/components/HowItWorks/FAQ";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 function HowItWorksPage() {
   const { t } = useLanguage();
-  
+
   const steps = [
     {
       icon: Upload,
@@ -74,7 +75,7 @@ function HowItWorksPage() {
         </div>
       </section>
 
-   
+
 
       {/* CTA */}
       <section className="relative bg-background">
@@ -168,6 +169,8 @@ function HowItWorksPage() {
           </div>
         </div>
       </section>
+
+      <FAQ />
     </div>
   );
 }

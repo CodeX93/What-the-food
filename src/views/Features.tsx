@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { FeaturesHero } from "@/components/Features/FeaturesHero";
+import FAQ from "@/components/Features/FAQ";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function FeaturesPage() {
@@ -212,6 +213,8 @@ export default function FeaturesPage() {
           </div>
         </div>
       </section>
+
+      <FAQ />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import PricingTable from "@/components/Home/PricingTable";
-import FAQ from "@/components/Home/FAQ";
+import FAQ from "@/components/Pricing/FAQ";
 
 export default function PricingPage() {
   return (

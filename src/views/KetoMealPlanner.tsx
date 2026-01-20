@@ -6,6 +6,7 @@ import { Target, UtensilsCrossed, ShieldCheck, Sparkles, CheckCircle2 } from "lu
 import Image from "next/image";
 import Link from "next/link";
 import { KetoMealPlannerHero } from "@/components/KetoMealPlanner/KetoMealPlannerHero";
+import FAQ from "@/components/KetoMealPlanner/FAQ";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
@@ -130,13 +131,12 @@ export default function KetoMealPlannerPage() {
             {steps.map((step, idx) => {
               const IconComponent = step.icon;
               const isEven = idx % 2 === 0;
-              
+
               return (
                 <div
                   key={step.step}
-                  className={`grid lg:grid-cols-2 gap-10 lg:gap-14 items-center ${
-                    isEven ? "" : "lg:flex-row-reverse"
-                  }`}
+                  className={`grid lg:grid-cols-2 gap-10 lg:gap-14 items-center ${isEven ? "" : "lg:flex-row-reverse"
+                    }`}
                 >
                   {/* Image Section */}
                   <div className={`${isEven ? "lg:order-1" : "lg:order-2"}`}>
@@ -239,6 +239,8 @@ export default function KetoMealPlannerPage() {
           </div>
         </div>
       </section>
+
+      <FAQ />
     </main>
   );
 }
