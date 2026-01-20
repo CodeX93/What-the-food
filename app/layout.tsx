@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import { AppProviders } from "./providers";
@@ -27,16 +27,15 @@ export const metadata: Metadata = {
     "food recognition",
     "free calorie counter app",
     "macro tracking",
-    "what is this food","calorie estimator",
-    "food calorie finder","calorie cal","calorie calculator","calorie counter","food calorie calculator",
-    
+    "what is this food", "calorie estimator",
+    "food calorie finder", "calorie cal", "calorie calculator", "calorie counter", "food calorie calculator",
+
   ],
   authors: [{ name: "Odeh Ahwal" }],
   robots: {
     index: true,
     follow: true,
   },
-  themeColor: "#22C55E",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -61,12 +60,14 @@ export const metadata: Metadata = {
   other: {
     "fo-verify": "5e2b562c-d6e8-4a24-aef4-7c1bbdd4a97a",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#22C55E",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 type RootLayoutProps = {

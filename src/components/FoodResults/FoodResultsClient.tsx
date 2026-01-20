@@ -18,6 +18,7 @@ import { hasActivePremiumSubscription } from "@/utils/subscription";
 import { calculateBMI, getBMICategory } from "@/utils/bmi";
 import { tagToSlug } from "@/utils/tagSlug";
 import { calculateNutritionScore, getNutritionScoreColor, getNutritionScoreBarColor } from "@/utils/nutritionScore";
+import { calculateDailyRequirements } from "@/utils/analyticsInsights";
 import {
   Loader2,
   Salad,
@@ -89,9 +90,17 @@ import { Input } from "@/components/ui/input";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { FeedbackDialog } from "@/components/Feedback/FeedbackDialog";
-export function FoodResultsClient() {
+export interface FoodResultsClientProps {
+  initialScanId?: string | null;
+  isModal?: boolean;
+  onClose?: () => void;
+}
+
+export function FoodResultsClient({ initialScanId, isModal, onClose }: FoodResultsClientProps = {}) {
   const searchParams = useSearchParams();
-  const id = searchParams?.get("id") ?? null;
+  // If isModal is true, we rely on initialScanId. 
+  // If not, we fallback to searchParams, but we can also support initialScanId in non-modal if passed.
+  const id = initialScanId ?? (searchParams?.get("id") ?? null);
   const widgetResultId = searchParams?.get("widgetResultId") ?? null;
   const router = useRouter();
   const { toast } = useToast();
@@ -255,6 +264,7 @@ export function FoodResultsClient() {
     }
   };
   const [savedServings, setSavedServings] = useState(1);
+  const [previousStats, setPreviousStats] = useState<{ calories: number; protein: number; carbs: number; fat: number } | null>(null);
   const [imageUrl, setImageUrl] = useState<string>("");
   const [imagePath, setImagePath] = useState<string>("");
   const [analysis, setAnalysis] = useState<FoodAnalysis | null>(null);
@@ -291,6 +301,62 @@ export function FoodResultsClient() {
   const reportRef = useRef<HTMLDivElement | null>(null);
   const imageCardRef = useRef<HTMLDivElement | null>(null);
   const nutritionCardRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const fetchPreviousStats = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) return;
+
+      // Get today's date in local time YYYY-MM-DD
+      const today = new Date().toISOString().split("T")[0];
+
+      let query = (supabase as any)
+        .from("food_scans")
+        .select("id, serving, result_json, created_at")
+        .eq("user_id", session.user.id)
+        .gte("created_at", `${today}T00:00:00.000Z`)
+        .lte("created_at", `${today}T23:59:59.999Z`);
+
+      // Exclude current scan to avoid double counting or stale data
+      if (id) {
+        query = query.neq("id", id);
+      }
+
+      const { data: scans } = await query;
+
+      if (scans) {
+        let stats = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+        scans.forEach((s: any) => {
+          const m = s.serving || 1;
+          const n = s.result_json?.nutrients || {};
+          stats.calories += (n.calories || 0) * m;
+          stats.protein += (n.protein_g || 0) * m;
+          stats.carbs += (n.carbohydrates_g || 0) * m;
+          stats.fat += (n.fat_g || 0) * m;
+        });
+        setPreviousStats(stats);
+      }
+    };
+    fetchPreviousStats();
+  }, [id, analysis]); // Refresh when id or analysis changes
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) return;
+
+      const { data: profileData } = await (supabase as any)
+        .from("profiles")
+        .select("*")
+        .eq("id", session.user.id)
+        .single();
+
+      if (profileData) {
+        setProfile(profileData);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const syncCardHeights = useCallback(() => {
     if (typeof window === "undefined") return;
@@ -1888,38 +1954,6 @@ export function FoodResultsClient() {
       : calculateNutritionScore(scaled, analysis?.ingredients);
 
     setNutritionScore(fallbackScore);
-
-    // Try to get Gemini score
-    const fetchGeminiScore = async () => {
-      setNutritionScoreLoading(true);
-      try {
-        const response = await fetch("/api/nutrition-score", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            nutrients: scaled,
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.score !== null && data.score !== undefined) {
-            setNutritionScore(data.score);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch Gemini nutrition score:", error);
-        // Keep fallback score
-      } finally {
-        setNutritionScoreLoading(false);
-      }
-    };
-
-    // Small delay to avoid blocking UI
-    const timeoutId = setTimeout(fetchGeminiScore, 100);
-    return () => clearTimeout(timeoutId);
   }, [scaled]);
 
   const isNonFood = analysis?.foodDetected === false;
@@ -2094,7 +2128,7 @@ export function FoodResultsClient() {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center py-12">
+      <div className={`${isModal ? "h-[50vh] flex items-center justify-center" : "min-h-[60vh] flex items-center justify-center py-12"}`}>
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
             <div className="animate-spin rounded-full h-12 w-12 border-3 border-primary/20 border-t-primary" />
@@ -2107,13 +2141,13 @@ export function FoodResultsClient() {
   }
   if (!analysis) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-background to-muted/20">
-        <Card className="max-w-md">
+      <div className={`flex-1 flex items-center justify-center ${isModal ? "p-4" : "bg-gradient-to-b from-background to-muted/20"}`}>
+        <Card className={`${isModal ? "w-full border-none shadow-none" : "max-w-md"}`}>
           <CardContent className="pt-6 text-center">
             <Salad className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
             <p className="text-muted-foreground">No result found.</p>
-            <Button onClick={() => router.push("/dashboard")} className="mt-4">
-              Go to Dashboard
+            <Button onClick={isModal && onClose ? onClose : () => router.push("/dashboard")} className="mt-4">
+              {isModal ? "Close" : "Go to Dashboard"}
             </Button>
           </CardContent>
         </Card>
@@ -2123,7 +2157,7 @@ export function FoodResultsClient() {
   return (
     <>
       <main className="flex-1">
-        <div className="container mx-auto px-4 py-6 md:py-8 relative w-full overflow-x-hidden" ref={reportRef}>
+        <div className={`${isModal ? "px-2 py-4 w-full max-w-full box-border" : "container mx-auto px-4 py-6 md:py-8"} relative overflow-x-hidden`} ref={reportRef}>
           {/* Guest User Warning Banner */}
           {isGuestUser && (
             <Alert className="mb-6 border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950 relative">
@@ -2146,9 +2180,15 @@ export function FoodResultsClient() {
           <div className="mb-4 sm:mb-6 md:mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                <Button variant="ghost" onClick={() => router.back()} className="px-2 flex-shrink-0">
-                  <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
-                </Button>
+                {(isModal && onClose) ? (
+                  <Button variant="ghost" onClick={onClose} className="px-2 flex-shrink-0">
+                    <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </Button>
+                ) : (
+                  <Button variant="ghost" onClick={() => router.back()} className="px-2 flex-shrink-0">
+                    <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </Button>
+                )}
                 <div className="min-w-0 flex-1 py-1">
                   <h1 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold flex items-center gap-1 sm:gap-2 flex-wrap leading-relaxed">
                     <Salad className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-8 lg:w-8 text-primary flex-shrink-0" />
@@ -2158,119 +2198,123 @@ export function FoodResultsClient() {
                         : analysis.dish || t("foodresults.title")}
                     </span>
                     <div className="flex items-center gap-1 pdf-hide">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 sm:h-8 sm:w-8"
-                              onClick={handleLike}
-                              disabled={userReaction === "like"}
-                            >
-                              <ThumbsUp className={`h-4 w-4 sm:h-5 sm:w-5 ${userReaction === "like" ? "text-green-600 fill-green-600" : ""}`} />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Like this analysis</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 sm:h-8 sm:w-8"
-                              onClick={handleDislike}
-                              disabled={userReaction === "dislike"}
-                            >
-                              <ThumbsDown className={`h-4 w-4 sm:h-5 sm:w-5 ${userReaction === "dislike" ? "text-red-600 fill-red-600" : ""}`} />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Dislike - suggest correction</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      {!isModal && (<>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 sm:h-8 sm:w-8"
+                                onClick={handleLike}
+                                disabled={userReaction === "like"}
+                              >
+                                <ThumbsUp className={`h-4 w-4 sm:h-5 sm:w-5 ${userReaction === "like" ? "text-green-600 fill-green-600" : ""}`} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Like this analysis</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 sm:h-8 sm:w-8"
+                                onClick={handleDislike}
+                                disabled={userReaction === "dislike"}
+                              >
+                                <ThumbsDown className={`h-4 w-4 sm:h-5 sm:w-5 ${userReaction === "dislike" ? "text-red-600 fill-red-600" : ""}`} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Dislike - suggest correction</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </>)}
                     </div>
                   </h1>
                 </div>
               </div>
-              <div className="flex items-center gap-2 pdf-hide flex-shrink-0">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline" className="text-xs sm:text-sm">
-                      <Share2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">{t("foodresults.share")}</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={handleCopyLink}>
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copy
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleShareWhatsApp}>
-                      <Share2 className="mr-2 h-4 w-4 text-green-600" />
-                      WhatsApp
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleShareFacebook}>
-                      <Share2 className="mr-2 h-4 w-4 text-blue-600" />
-                      Facebook
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleShareTwitter}>
-                      <Share2 className="mr-2 h-4 w-4" />
-                      Twitter
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleShareLinkedIn}>
-                      <Share2 className="mr-2 h-4 w-4 text-blue-700" />
-                      LinkedIn
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleShareEmail}>
-                      <Mail className="mr-2 h-4 w-4" />
-                      Email
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleDownloadImage}>
-                      <ImageIcon className="mr-2 h-4 w-4 text-blue-500" />
-                      Download as image
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleExportPdf} disabled={!hasPremiumAccess}>
-                      <FileText className="mr-2 h-4 w-4 text-red-600" />
-                      Download as PDF
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <TooltipProvider delayDuration={200}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div>
-                        <Button
-                          size="sm"
-                          onClick={handleExportPdf}
-                          disabled={exportingPdf || !hasPremiumAccess}
-                          variant={!hasPremiumAccess ? "outline" : "default"}
-                          className="text-xs sm:text-sm"
-                        >
-                          {exportingPdf ? <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2 animate-spin" /> : <FileDown className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />}
-                          <span className="hidden sm:inline">{exportingPdf ? t("foodresults.pdf.preparing") : t("foodresults.pdf")}</span>
-                        </Button>
-                      </div>
-                    </TooltipTrigger>
-                    {!hasPremiumAccess && (
-                      <TooltipContent side="bottom" className="max-w-xs">
-                        <p>{t("foodresults.pdf.upgrade")}</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                </TooltipProvider>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setFeedbackDialogOpen(true)}
-                  className="text-xs sm:text-sm"
-                >
-                  <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">{t("feedback.button")}</span>
-                </Button>
-              </div>
+              {!isModal && (
+                <div className="flex items-center gap-2 pdf-hide flex-shrink-0">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="sm" variant="outline" className="text-xs sm:text-sm">
+                        <Share2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">{t("foodresults.share")}</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={handleCopyLink}>
+                        <Copy className="mr-2 h-4 w-4" />
+                        Copy
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleShareWhatsApp}>
+                        <Share2 className="mr-2 h-4 w-4 text-green-600" />
+                        WhatsApp
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleShareFacebook}>
+                        <Share2 className="mr-2 h-4 w-4 text-blue-600" />
+                        Facebook
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleShareTwitter}>
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Twitter
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleShareLinkedIn}>
+                        <Share2 className="mr-2 h-4 w-4 text-blue-700" />
+                        LinkedIn
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleShareEmail}>
+                        <Mail className="mr-2 h-4 w-4" />
+                        Email
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleDownloadImage}>
+                        <ImageIcon className="mr-2 h-4 w-4 text-blue-500" />
+                        Download as image
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleExportPdf} disabled={!hasPremiumAccess}>
+                        <FileText className="mr-2 h-4 w-4 text-red-600" />
+                        Download as PDF
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div>
+                          <Button
+                            size="sm"
+                            onClick={handleExportPdf}
+                            disabled={exportingPdf || !hasPremiumAccess}
+                            variant={!hasPremiumAccess ? "outline" : "default"}
+                            className="text-xs sm:text-sm"
+                          >
+                            {exportingPdf ? <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2 animate-spin" /> : <FileDown className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />}
+                            <span className="hidden sm:inline">{exportingPdf ? t("foodresults.pdf.preparing") : t("foodresults.pdf")}</span>
+                          </Button>
+                        </div>
+                      </TooltipTrigger>
+                      {!hasPremiumAccess && (
+                        <TooltipContent side="bottom" className="max-w-xs">
+                          <p>{t("foodresults.pdf.upgrade")}</p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setFeedbackDialogOpen(true)}
+                    className="text-xs sm:text-sm"
+                  >
+                    <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">{t("feedback.button")}</span>
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
           {isAuthenticated && !hasPremiumAccess && (
@@ -2329,50 +2373,84 @@ export function FoodResultsClient() {
                       <Salad className="absolute inset-0 m-auto h-16 w-16 opacity-30 lg:relative" />
                     </div>
                   )}
-                  <CardContent className="p-3 sm:p-4 flex-shrink-0">
-                    <div className="flex items-center justify-between text-xs sm:text-sm">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <span className="whitespace-nowrap">Nutrition Score</span>
-                        <TooltipProvider delayDuration={150}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span
-                                role="button"
-                                aria-label="Nutrition Score info"
-                                className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-muted-foreground/40 text-[10px] text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary"
-                              >
-                                <Info className="h-3 w-3" strokeWidth={2} />
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent side="top" align="start" className="max-w-xs text-xs leading-relaxed">
-                              A score (0-100) evaluating nutritional quality based on macro balance (ideal 40% carbs, 30% protein, 30% fat), fiber content, sugar levels, and calorie density. Higher scores indicate a more balanced and nutritious meal.
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                  {!isModal && (
+                    <CardContent className="p-3 sm:p-4 flex-shrink-0">
+                      <div className="flex items-center justify-between text-xs sm:text-sm mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium text-muted-foreground">Daily Macro Progress</span>
+                          <TooltipProvider delayDuration={150}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3.5 w-3.5 text-muted-foreground/70 cursor-pointer" />
+                              </TooltipTrigger>
+                              <TooltipContent side="top" align="start" className="max-w-xs text-xs leading-relaxed">
+                                Shows how your meals add up toward your daily protein, carbs, and fat targets. Updates with every scan.
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto p-0 text-primary hover:text-primary/80 hover:bg-transparent"
+                          onClick={() => router.push("/my-food-analytics")}
+                        >
+                          Analytics <ArrowRight className="ml-1 h-3 w-3" />
+                        </Button>
                       </div>
-                      <span className={`font-semibold whitespace-nowrap ml-2 ${nutritionScore !== null
-                        ? nutritionScore >= 70
-                          ? "text-green-600"
-                          : nutritionScore >= 50
-                            ? "text-yellow-600"
-                            : nutritionScore >= 30
-                              ? "text-orange-600"
-                              : "text-red-600"
-                        : "text-muted-foreground"
-                        }`}>
-                        {nutritionScore !== null ? `${nutritionScore}/100` : "—"}
-                      </span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full mt-2 overflow-hidden">
-                      <div
-                        className={`h-full transition-all ${nutritionScore !== null
-                          ? getNutritionScoreBarColor(nutritionScore)
-                          : "bg-muted"
-                          }`}
-                        style={{ width: `${nutritionScore !== null ? nutritionScore : 0}%` }}
-                      />
-                    </div>
-                  </CardContent>
+
+                      {(() => {
+                        const dailyReqs = calculateDailyRequirements(profile);
+                        // Default targets if profile incomplete
+                        const targetCal = dailyReqs?.calories || 2000;
+                        const targetP = dailyReqs?.protein || 150;
+                        const targetC = dailyReqs?.carbs || 200;
+                        const targetF = dailyReqs?.fat || 70;
+
+                        // Calculate widths based on TARGET distribution relative to total target calories
+                        // We use the calorie contribution of each macro target
+                        const pCal = targetP * 4;
+                        const cCal = targetC * 4;
+                        const fCal = targetF * 9;
+                        const totalTargetMacroCals = pCal + cCal + fCal; // This should be approx targetCal
+
+                        // Segment Widths (Fixed based on goals)
+                        const pWidth = (pCal / totalTargetMacroCals) * 100;
+                        const cWidth = (cCal / totalTargetMacroCals) * 100;
+                        const fWidth = (fCal / totalTargetMacroCals) * 100;
+
+                        // Current Progress (Previous meals today + current meal scaled)
+                        const currentP = (previousStats?.protein || 0) + (scaled?.protein_g || 0);
+                        const currentC = (previousStats?.carbs || 0) + (scaled?.carbohydrates_g || 0);
+                        const currentF = (previousStats?.fat || 0) + (scaled?.fat_g || 0);
+
+                        // Fill % within the segment (e.g. 50g current / 150g target = 33% full)
+                        // Cap at 100% to fill the segment completely but not spill
+                        const pFill = Math.min((currentP / targetP) * 100, 100);
+                        const cFill = Math.min((currentC / targetC) * 100, 100);
+                        const fFill = Math.min((currentF / targetF) * 100, 100);
+
+                        return (
+                          <div className="space-y-3 pt-1">
+                            <div className="flex h-3 w-full rounded-full overflow-hidden bg-transparent">
+                              {/* Protein Segment */}
+                              <div style={{ width: `${pWidth}%` }} className="h-full bg-red-100 dark:bg-red-900/20 relative border-r-2 border-white dark:border-slate-950 last:border-0">
+                                <div style={{ width: `${pFill}%` }} className="h-full bg-red-500 transition-all duration-1000 ease-out" />
+                              </div>
+                              {/* Carbs Segment */}
+                              <div style={{ width: `${cWidth}%` }} className="h-full bg-yellow-100 dark:bg-yellow-900/20 relative border-r-2 border-white dark:border-slate-950 last:border-0">
+                                <div style={{ width: `${cFill}%` }} className="h-full bg-yellow-500 transition-all duration-1000 ease-out" />
+                              </div>
+                              {/* Fat Segment */}
+                              <div style={{ width: `${fWidth}%` }} className="h-full bg-blue-100 dark:bg-blue-900/20 relative">
+                                <div style={{ width: `${fFill}%` }} className="h-full bg-blue-500 transition-all duration-1000 ease-out" />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </CardContent>
+                  )}
                 </Card>
                 <div className="mt-4 space-y-4">
                   <div ta-ad-container=""></div>
@@ -2393,139 +2471,141 @@ export function FoodResultsClient() {
                       <CardTitle className="text-lg sm:text-xl lg:text-2xl overflow-hidden">
                         <span className="block sm:inline">{t("foodresults.nutrition.summary")}</span>
                         {servingApproximation && (
-                          <span className="text-sm sm:text-base font-normal text-muted-foreground whitespace-nowrap sm:mx-2 ml-0 sm:ml-3 block sm:inline">
+                          <span className="text-sm sm:text-base font-normal text-muted-foreground whitespace-normal sm:whitespace-nowrap sm:mx-2 ml-0 sm:ml-3 block sm:inline">
                             (~ {servingApproximation.grams}g)
                           </span>
                         )}
                       </CardTitle>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{t("foodresults.servings")}</span>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          className="border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 w-20 sm:w-28 text-center font-medium bg-background flex-shrink-0 text-sm sm:text-base"
-                          value={servingsInput}
-                          onChange={(e) => {
-                            const raw = e.target.value;
+                      {!isModal && (
+                        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap sm:flex-nowrap">
+                          <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">{t("foodresults.servings")}</span>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            className="border rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 w-20 sm:w-28 text-center font-medium bg-background flex-shrink-0 text-sm sm:text-base"
+                            value={servingsInput}
+                            onChange={(e) => {
+                              const raw = e.target.value;
 
-                            if (raw === "") {
-                              setServingsInput("");
-                              return;
-                            }
-                            const sanitized = raw.replace(/[^0-9.]/g, "");
-                            const dots = (sanitized.match(/\./g) ?? []).length;
-                            if (dots > 1) {
-                              return;
-                            }
-                            setServingsInput(sanitized);
-                            const parsed = parseFloat(sanitized);
-                            const hasCompleteNumber = sanitized !== "" && !sanitized.endsWith(".");
+                              if (raw === "") {
+                                setServingsInput("");
+                                return;
+                              }
+                              const sanitized = raw.replace(/[^0-9.]/g, "");
+                              const dots = (sanitized.match(/\./g) ?? []).length;
+                              if (dots > 1) {
+                                return;
+                              }
+                              setServingsInput(sanitized);
+                              const parsed = parseFloat(sanitized);
+                              const hasCompleteNumber = sanitized !== "" && !sanitized.endsWith(".");
 
-                            if (
-                              hasCompleteNumber &&
-                              !Number.isNaN(parsed) &&
-                              parsed >= MIN_SERVINGS
-                            ) {
-                              applyServings(parsed);
-                            }
-                          }}
-                          onBlur={() => {
-                            const parsed = parseFloat(servingsInput);
-                            if (!Number.isNaN(parsed) && parsed >= MIN_SERVINGS) {
-                              applyServings(parsed);
-                              setServingsInput(parsed.toString());
-                            } else {
-                              applyServings(MIN_SERVINGS);
-                              setServingsInput(MIN_SERVINGS.toString());
-                            }
-                          }}
-                        />
-                        {isAuthenticated && servings !== savedServings && (
-                          <Button
-                            size="sm"
-                            className="text-xs sm:text-sm"
-                            onClick={async () => {
-                              if (!id) return;
-                              try {
-                                setSavingServings(true);
-
-                                // Check authentication first
-                                const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-                                if (sessionError || !session) {
-                                  throw new Error("Please sign in to save changes");
-                                }
-
-                                // Retry logic for network errors
-                                let lastError: any = null;
-                                for (let attempt = 0; attempt < 3; attempt++) {
-                                  try {
-                                    const { data, error } = await (supabase as any)
-                                      .from("food_scans")
-                                      .update({ serving: Number(servings) })
-                                      .eq("id", id)
-                                      .select()
-                                      .single();
-
-                                    if (error) {
-                                      lastError = error;
-                                      // If it's a network error, retry
-                                      if (error.message?.includes("Load failed") || error.message?.includes("fetch")) {
-                                        if (attempt < 2) {
-                                          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
-                                          continue;
-                                        }
-                                      }
-                                      throw error;
-                                    }
-
-                                    // Success
-                                    setSavedServings(servings);
-                                    toast({
-                                      title: t("foodresults.servings.saved.title"),
-                                      description: t("foodresults.servings.saved.description"),
-                                    });
-                                    return;
-                                  } catch (err: any) {
-                                    lastError = err;
-                                    // If it's not a network error, don't retry
-                                    if (!err?.message?.includes("Load failed") && !err?.message?.includes("fetch")) {
-                                      throw err;
-                                    }
-                                    // If last attempt, throw
-                                    if (attempt === 2) {
-                                      throw err;
-                                    }
-                                  }
-                                }
-
-                                // If we get here, all retries failed
-                                throw lastError || new Error("Failed to save after multiple attempts");
-                              } catch (error: any) {
-                                console.error("Failed to update serving in database:", error);
-
-                                // Provide user-friendly error messages
-                                let errorMessage = t("foodresults.error.servings");
-                                if (error?.message?.includes("Load failed") || error?.message?.includes("fetch")) {
-                                  errorMessage = "Network error. Please check your connection and try again.";
-                                } else if (error?.message) {
-                                  errorMessage = error.message;
-                                }
-
-                                toast({
-                                  title: t("foodresults.error"),
-                                  description: `${t("foodresults.error.save")} ${errorMessage}`,
-                                  variant: "destructive",
-                                });
-                              } finally {
-                                setSavingServings(false);
+                              if (
+                                hasCompleteNumber &&
+                                !Number.isNaN(parsed) &&
+                                parsed >= MIN_SERVINGS
+                              ) {
+                                applyServings(parsed);
                               }
                             }}
-                            disabled={savingServings}
-                          >
-                            {savingServings ? <Loader2 className="h-4 w-4 animate-spin" /> : t("foodresults.save")}
-                          </Button>
-                        )}
-                      </div>
+                            onBlur={() => {
+                              const parsed = parseFloat(servingsInput);
+                              if (!Number.isNaN(parsed) && parsed >= MIN_SERVINGS) {
+                                applyServings(parsed);
+                                setServingsInput(parsed.toString());
+                              } else {
+                                applyServings(MIN_SERVINGS);
+                                setServingsInput(MIN_SERVINGS.toString());
+                              }
+                            }}
+                          />
+                          {isAuthenticated && servings !== savedServings && (
+                            <Button
+                              size="sm"
+                              className="text-xs sm:text-sm"
+                              onClick={async () => {
+                                if (!id) return;
+                                try {
+                                  setSavingServings(true);
+
+                                  // Check authentication first
+                                  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+                                  if (sessionError || !session) {
+                                    throw new Error("Please sign in to save changes");
+                                  }
+
+                                  // Retry logic for network errors
+                                  let lastError: any = null;
+                                  for (let attempt = 0; attempt < 3; attempt++) {
+                                    try {
+                                      const { data, error } = await (supabase as any)
+                                        .from("food_scans")
+                                        .update({ serving: Number(servings) })
+                                        .eq("id", id)
+                                        .select()
+                                        .single();
+
+                                      if (error) {
+                                        lastError = error;
+                                        // If it's a network error, retry
+                                        if (error.message?.includes("Load failed") || error.message?.includes("fetch")) {
+                                          if (attempt < 2) {
+                                            await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+                                            continue;
+                                          }
+                                        }
+                                        throw error;
+                                      }
+
+                                      // Success
+                                      setSavedServings(servings);
+                                      toast({
+                                        title: t("foodresults.servings.saved.title"),
+                                        description: t("foodresults.servings.saved.description"),
+                                      });
+                                      return;
+                                    } catch (err: any) {
+                                      lastError = err;
+                                      // If it's not a network error, don't retry
+                                      if (!err?.message?.includes("Load failed") && !err?.message?.includes("fetch")) {
+                                        throw err;
+                                      }
+                                      // If last attempt, throw
+                                      if (attempt === 2) {
+                                        throw err;
+                                      }
+                                    }
+                                  }
+
+                                  // If we get here, all retries failed
+                                  throw lastError || new Error("Failed to save after multiple attempts");
+                                } catch (error: any) {
+                                  console.error("Failed to update serving in database:", error);
+
+                                  // Provide user-friendly error messages
+                                  let errorMessage = t("foodresults.error.servings");
+                                  if (error?.message?.includes("Load failed") || error?.message?.includes("fetch")) {
+                                    errorMessage = "Network error. Please check your connection and try again.";
+                                  } else if (error?.message) {
+                                    errorMessage = error.message;
+                                  }
+
+                                  toast({
+                                    title: t("foodresults.error"),
+                                    description: `${t("foodresults.error.save")} ${errorMessage}`,
+                                    variant: "destructive",
+                                  });
+                                } finally {
+                                  setSavingServings(false);
+                                }
+                              }}
+                              disabled={savingServings}
+                            >
+                              {savingServings ? <Loader2 className="h-4 w-4 animate-spin" /> : t("foodresults.save")}
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </div>
                     {analysis.description && (
                       <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed border-l-2 border-primary/30 pl-2 sm:pl-3 pt-1 break-words">
@@ -2605,7 +2685,7 @@ export function FoodResultsClient() {
               </Card>
             </div>
           </div>
-          {analysis.additionalInfo && (
+          {!isModal && analysis.additionalInfo && (
             <Alert className="border-amber-200 bg-amber-50 text-amber-900  mb-4 sm:mb-6">
               <div className="flex items-start gap-2 sm:gap-3">
                 <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 mt-0.5 flex-shrink-0" />
@@ -2619,7 +2699,7 @@ export function FoodResultsClient() {
             </Alert>
           )}
           {/* Dashboard Preview Section - Show for Free users and Guest users only */}
-          {(isGuestUser || !isAuthenticated || (isAuthenticated && !hasPremiumAccess)) && (
+          {!isModal && (isGuestUser || !isAuthenticated || (isAuthenticated && !hasPremiumAccess)) && (
             <div className="mb-6 sm:mb-8">
               {/* Title and CTA */}
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
@@ -2729,32 +2809,37 @@ export function FoodResultsClient() {
           )}
           <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
             <Card className={`relative ${analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input") ? "lg:col-span-3" : ""}`}>
-              <Badge
-                className="absolute top-2 right-2 bg-orange-500 text-white border-0 text-[10px] px-1.5 py-0.5 z-10 cursor-pointer hover:bg-orange-600 transition-colors"
-                onClick={() => {
-                  toast({
-                    title: "Coming Soon",
-                    description: "The ingredient editor feature is currently under development and will be available soon. Thank you for your patience!",
-                  });
-                }}
-              >
-                Coming Soon
-              </Badge>
+              {!isModal && (
+                <Badge
+                  className="absolute top-2 right-2 bg-orange-500 text-white border-0 text-[10px] px-1.5 py-0.5 z-10 cursor-pointer hover:bg-orange-600 transition-colors"
+                  onClick={() => {
+                    toast({
+                      title: "Coming Soon",
+                      description: "The ingredient editor feature is currently under development and will be available soon. Thank you for your patience!",
+                    });
+                  }}
+                >
+                  Coming Soon
+                </Badge>
+              )}
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-2 sm:gap-3">
                   <div className="flex items-center gap-2">
                     <Apple className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
                     <CardTitle className="text-base sm:text-lg">Ingredients</CardTitle>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    className="text-xs sm:text-sm px-2 sm:px-3 opacity-50 cursor-not-allowed"
-                  >
-                    <Pencil className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Edit</span>
-                  </Button>
+                  {!isModal && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      className="text-xs sm:text-sm px-2 sm:px-3 opacity-50 cursor-not-allowed"
+                    >
+                      <Pencil className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Edit</span>
+                    </Button>
+                  )}
+
                 </div>
                 <CardDescription className="text-xs sm:text-sm">Detected/estimated ingredients</CardDescription>
               </CardHeader>
@@ -2770,7 +2855,7 @@ export function FoodResultsClient() {
               </CardContent>
             </Card>
             {!(analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input")) && (
-              <Card>
+              <Card className={isModal ? "lg:col-span-2" : ""}>
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -2874,429 +2959,431 @@ export function FoodResultsClient() {
                 </CardContent>
               </Card>
             )}
-            <Card className="border-primary/20">
-              <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
-                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                    <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0">
-                      <Crown className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <CardTitle className="text-base sm:text-lg lg:text-xl flex items-center gap-1 sm:gap-2 whitespace-nowrap">Personalized Health Context</CardTitle>
-                      <CardDescription className="text-xs sm:text-sm">Guidance based on what you eat.</CardDescription>
-                    </div>
-                  </div>
-                  {(upgradeRequired || !hasPremiumAccess) && (
-                    <span className="text-xs bg-primary/10 text-primary px-2 sm:px-3 py-1 rounded-full flex items-center gap-1 border border-primary/20 flex-shrink-0 self-start sm:self-center">
-                      <Sparkles className="h-3 w-3" /> <span className="hidden sm:inline">Premium</span>
-                    </span>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="pt-4">
-                {checkingPremium ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                  </div>
-                ) : !hasPremiumAccess ? (
-                  <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6 sm:p-8 md:p-10">
-                    <div className="absolute inset-0 pointer-events-none opacity-40" aria-hidden>
-                      <div className="absolute -top-10 -right-10 h-32 w-32 bg-primary/30 blur-3xl" />
-                      <div className="absolute -bottom-12 -left-12 h-40 w-40 bg-emerald-400/20 blur-3xl" />
-                    </div>
-                    <div className="relative flex flex-col items-center gap-6 sm:gap-8">
-                      {/* Heading and Description */}
-                      <div className="space-y-3 text-center w-full max-w-4xl mx-auto">
-                        <h3 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
-                          Numbers don&apos;t change habits. Context does.
-                        </h3>
-                        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed px-4 text-left mx-auto max-w-4xl">
-                          Right now, you can see what&apos;s in this meal, but not what it means for your goals over time. Personalized Health Context connects your meals, patterns, and targets to help you understand what to adjust and why. No generic advice. No guessing.
-                        </p>
+            {!isModal && (
+              <Card className="border-primary/20">
+                <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                      <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                        <Crown className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       </div>
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-base sm:text-lg lg:text-xl flex items-center gap-1 sm:gap-2 whitespace-nowrap">Personalized Health Context</CardTitle>
+                        <CardDescription className="text-xs sm:text-sm">Guidance based on what you eat.</CardDescription>
+                      </div>
+                    </div>
+                    {(upgradeRequired || !hasPremiumAccess) && (
+                      <span className="text-xs bg-primary/10 text-primary px-2 sm:px-3 py-1 rounded-full flex items-center gap-1 border border-primary/20 flex-shrink-0 self-start sm:self-center">
+                        <Sparkles className="h-3 w-3" /> <span className="hidden sm:inline">Premium</span>
+                      </span>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  {checkingPremium ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : !hasPremiumAccess ? (
+                    <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6 sm:p-8 md:p-10">
+                      <div className="absolute inset-0 pointer-events-none opacity-40" aria-hidden>
+                        <div className="absolute -top-10 -right-10 h-32 w-32 bg-primary/30 blur-3xl" />
+                        <div className="absolute -bottom-12 -left-12 h-40 w-40 bg-emerald-400/20 blur-3xl" />
+                      </div>
+                      <div className="relative flex flex-col items-center gap-6 sm:gap-8">
+                        {/* Heading and Description */}
+                        <div className="space-y-3 text-center w-full max-w-4xl mx-auto">
+                          <h3 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                            Numbers don&apos;t change habits. Context does.
+                          </h3>
+                          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed px-4 text-left mx-auto max-w-4xl">
+                            Right now, you can see what&apos;s in this meal, but not what it means for your goals over time. Personalized Health Context connects your meals, patterns, and targets to help you understand what to adjust and why. No generic advice. No guessing.
+                          </p>
+                        </div>
 
-                      {/* Action Buttons */}
-                      <div className="flex flex-wrap justify-center gap-3 sm:gap-4 w-full">
-                        <Button
-                          className="bg-primary hover:bg-primary/90 text-white min-w-[200px]"
-                          size="default"
-                          onClick={() => window.location.href = "/plans"}
-                        >
-                          <Sparkles className="h-4 w-4 mr-2" />
-                          Unlock Personalized Guidance
-                        </Button>
-                      </div>
-
-                      {/* Feature Cards */}
-                      <div className="mt-2 sm:mt-4 grid grid-cols-1 gap-4 sm:gap-5 w-full max-w-5xl">
-                        <div className="rounded-xl border border-primary/10 bg-background/80 backdrop-blur-sm p-4 sm:p-5 flex flex-col items-start gap-2 hover:border-primary/20 transition-colors">
-                          <div className="flex items-center gap-3 w-full">
-                            <div className="flex-shrink-0 p-2 text-primary bg-primary/10 rounded-lg">
-                              <Target className="h-5 w-5" />
-                            </div>
-                            <h4 className="text-sm sm:text-base font-semibold text-foreground">
-                              Stop guessing what to fix
-                            </h4>
-                          </div>
-                          <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed pl-1">
-                            See which habits are actually holding you back; Protein, timing, portions, or consistency.
-                          </p>
-                        </div>
-                        <div className="rounded-xl border border-primary/10 bg-background/80 backdrop-blur-sm p-4 sm:p-5 flex flex-col items-start gap-2 hover:border-primary/20 transition-colors">
-                          <div className="flex items-center gap-3 w-full">
-                            <div className="flex-shrink-0 p-2 text-primary bg-primary/10 rounded-lg">
-                              <Lightbulb className="h-5 w-5" />
-                            </div>
-                            <h4 className="text-sm sm:text-base font-semibold text-foreground">
-                              Make small changes that matter
-                            </h4>
-                          </div>
-                          <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed pl-1">
-                            Get clear, practical adjustments you can apply to your next meal, not abstract rules.
-                          </p>
-                        </div>
-                        <div className="rounded-xl border border-primary/10 bg-background/80 backdrop-blur-sm p-4 sm:p-5 flex flex-col items-start gap-2 hover:border-primary/20 transition-colors">
-                          <div className="flex items-center gap-3 w-full">
-                            <div className="flex-shrink-0 p-2 text-primary bg-primary/10 rounded-lg">
-                              <TrendingUp className="h-5 w-5" />
-                            </div>
-                            <h4 className="text-sm sm:text-base font-semibold text-foreground">
-                              Know if you&apos;re on track
-                            </h4>
-                          </div>
-                          <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed pl-1">
-                            Understand whether your eating supports your goal, before weeks go by with no progress.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {/* Announcement Bars for Free Registered Users */}
-                    {/* Announcement Bar for Free Registered Users */}
-                    {!hasPremiumAccess && isAuthenticated && (
-                      <div className="mb-6">
-                        <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950 relative">
-                          <AlertCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
-                          <AlertTitle className="text-green-900 dark:text-green-100 font-semibold sm:pr-48">
-                            Start tracking your health
-                          </AlertTitle>
-                          <AlertDescription className="text-green-800 dark:text-green-200 sm:pr-48">
-                            <p className="text-xs sm:text-sm">
-                              You&apos;ve started tracking your meals! Unlock personalized insights to see how this fits into your goals.
-                            </p>
-                          </AlertDescription>
+                        {/* Action Buttons */}
+                        <div className="flex flex-wrap justify-center gap-3 sm:gap-4 w-full">
                           <Button
-                            size="sm"
-                            className="mt-3 w-full sm:w-auto sm:mt-0 sm:absolute sm:top-4 sm:right-4 bg-green-600 hover:bg-green-700 text-white border-green-600 whitespace-nowrap"
-                            onClick={() => router.push("/plans")}
+                            className="bg-primary hover:bg-primary/90 text-white min-w-[200px]"
+                            size="default"
+                            onClick={() => window.location.href = "/plans"}
                           >
-                            Unlock Insights
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Unlock Personalized Guidance
                           </Button>
-                        </Alert>
-                      </div>
-                    )}
-                    {insightsLoading && !insightsText && (
-                      <div className="flex flex-col items-center justify-center py-8 space-y-3">
-                        <div className="flex items-center">
-                          <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-                          <span className="text-sm text-muted-foreground">{t("foodresults.insights.generating")}</span>
                         </div>
-                        <p className="text-xs text-muted-foreground/70 text-center max-w-md">
-                          {t("foodresults.insights.timeout")}
-                        </p>
+
+                        {/* Feature Cards */}
+                        <div className="mt-2 sm:mt-4 grid grid-cols-1 gap-4 sm:gap-5 w-full max-w-5xl">
+                          <div className="rounded-xl border border-primary/10 bg-background/80 backdrop-blur-sm p-4 sm:p-5 flex flex-col items-start gap-2 hover:border-primary/20 transition-colors">
+                            <div className="flex items-center gap-3 w-full">
+                              <div className="flex-shrink-0 p-2 text-primary bg-primary/10 rounded-lg">
+                                <Target className="h-5 w-5" />
+                              </div>
+                              <h4 className="text-sm sm:text-base font-semibold text-foreground">
+                                Stop guessing what to fix
+                              </h4>
+                            </div>
+                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed pl-1">
+                              See which habits are actually holding you back; Protein, timing, portions, or consistency.
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-primary/10 bg-background/80 backdrop-blur-sm p-4 sm:p-5 flex flex-col items-start gap-2 hover:border-primary/20 transition-colors">
+                            <div className="flex items-center gap-3 w-full">
+                              <div className="flex-shrink-0 p-2 text-primary bg-primary/10 rounded-lg">
+                                <Lightbulb className="h-5 w-5" />
+                              </div>
+                              <h4 className="text-sm sm:text-base font-semibold text-foreground">
+                                Make small changes that matter
+                              </h4>
+                            </div>
+                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed pl-1">
+                              Get clear, practical adjustments you can apply to your next meal, not abstract rules.
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-primary/10 bg-background/80 backdrop-blur-sm p-4 sm:p-5 flex flex-col items-start gap-2 hover:border-primary/20 transition-colors">
+                            <div className="flex items-center gap-3 w-full">
+                              <div className="flex-shrink-0 p-2 text-primary bg-primary/10 rounded-lg">
+                                <TrendingUp className="h-5 w-5" />
+                              </div>
+                              <h4 className="text-sm sm:text-base font-semibold text-foreground">
+                                Know if you&apos;re on track
+                              </h4>
+                            </div>
+                            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed pl-1">
+                              Understand whether your eating supports your goal, before weeks go by with no progress.
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    {hasPremiumAccess && !insightsLoading && !insightsText && (
-                      <div className="text-center py-6">
-                        {profileComplete ? (
-                          <p className="text-sm text-muted-foreground mb-4">
-                            {t("foodresults.insights.complete")}
-                          </p>
-                        ) : (
-                          <Alert className="max-w-md mx-auto mb-6 text-left border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 shadow-sm">
-                            <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-                            <AlertTitle className="text-amber-900 dark:text-amber-100">{t("foodresults.insights.incomplete.title")}</AlertTitle>
-                            <AlertDescription className="mt-2 text-xs sm:text-sm text-amber-800 dark:text-amber-200">
-                              <p className="mb-3">
-                                {t("foodresults.insights.incomplete.description")}
+                    </div>
+                  ) : (
+                    <>
+                      {/* Announcement Bars for Free Registered Users */}
+                      {/* Announcement Bar for Free Registered Users */}
+                      {!hasPremiumAccess && isAuthenticated && (
+                        <div className="mb-6">
+                          <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950 relative">
+                            <AlertCircle className="h-4 w-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                            <AlertTitle className="text-green-900 dark:text-green-100 font-semibold sm:pr-48">
+                              Start tracking your health
+                            </AlertTitle>
+                            <AlertDescription className="text-green-800 dark:text-green-200 sm:pr-48">
+                              <p className="text-xs sm:text-sm">
+                                You&apos;ve started tracking your meals! Unlock personalized insights to see how this fits into your goals.
                               </p>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="w-full bg-background/50 hover:bg-background border-amber-200 text-amber-900 dark:text-amber-200 dark:border-amber-800 hover:text-amber-950"
-                                onClick={() => router.push("/profile")}
-                              >
-                                Complete Profile <ArrowRight className="ml-2 h-4 w-4" />
-                              </Button>
                             </AlertDescription>
+                            <Button
+                              size="sm"
+                              className="mt-3 w-full sm:w-auto sm:mt-0 sm:absolute sm:top-4 sm:right-4 bg-green-600 hover:bg-green-700 text-white border-green-600 whitespace-nowrap"
+                              onClick={() => router.push("/plans")}
+                            >
+                              Unlock Insights
+                            </Button>
                           </Alert>
-                        )}
-                        <div className="flex flex-wrap justify-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="default"
-                            disabled={insightsLoading || !profileComplete}
-                            onClick={async () => {
-                              console.log("Generate Insights clicked", { id, profileAge, profileGender, profileComplete, hasPremiumAccess });
-                              if (!id) {
-                                toast({
-                                  title: "Error",
-                                  description: "Scan ID is missing.",
-                                  variant: "destructive",
-                                });
-                                return;
-                              }
-                              // Block generation if profile data is missing
-                              if (!profileComplete) {
-                                toast({
-                                  title: t("foodresults.insights.incomplete.title"),
-                                  description: t("foodresults.insights.incomplete.description"),
-                                  variant: "destructive",
-                                });
-                                return;
-                              }
-                              try {
-                                setInsightsLoading(true);
-                                setUpgradeRequired(false);
-                                console.log("Starting insights generation...");
-
-                                // Add timeout wrapper (40 seconds max for insights)
-                                const timeoutPromise = new Promise((_, reject) => {
-                                  setTimeout(() => reject(new Error("Insights generation timed out after 40 seconds. Please try again.")), 40000);
-                                });
-
-                                const insightsPromise = getPersonalizedInsights({
-                                  scanId: id,
-                                  age: profileAge || undefined,
-                                  gender: profileGender || undefined,
-                                  activity: profileActivityLevel || undefined,
-                                  goal: profileGoal || undefined,
-                                  optimize: false,
-                                  weight_kg: profile?.weight_kg || undefined,
-                                  height_cm: profile?.height_cm || undefined,
-                                });
-
-                                console.log("Waiting for insights...");
-                                const res = await Promise.race([insightsPromise, timeoutPromise]) as Awaited<ReturnType<typeof getPersonalizedInsights>>;
-                                console.log("Insights received:", res);
-
-                                if (res.upgrade) {
-                                  setUpgradeRequired(true);
-                                  setInsightsText("");
+                        </div>
+                      )}
+                      {insightsLoading && !insightsText && (
+                        <div className="flex flex-col items-center justify-center py-8 space-y-3">
+                          <div className="flex items-center">
+                            <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                            <span className="text-sm text-muted-foreground">{t("foodresults.insights.generating")}</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground/70 text-center max-w-md">
+                            {t("foodresults.insights.timeout")}
+                          </p>
+                        </div>
+                      )}
+                      {hasPremiumAccess && !insightsLoading && !insightsText && (
+                        <div className="text-center py-6">
+                          {profileComplete ? (
+                            <p className="text-sm text-muted-foreground mb-4">
+                              {t("foodresults.insights.complete")}
+                            </p>
+                          ) : (
+                            <Alert className="max-w-md mx-auto mb-6 text-left border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900 shadow-sm">
+                              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+                              <AlertTitle className="text-amber-900 dark:text-amber-100">{t("foodresults.insights.incomplete.title")}</AlertTitle>
+                              <AlertDescription className="mt-2 text-xs sm:text-sm text-amber-800 dark:text-amber-200">
+                                <p className="mb-3">
+                                  {t("foodresults.insights.incomplete.description")}
+                                </p>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="w-full bg-background/50 hover:bg-background border-amber-200 text-amber-900 dark:text-amber-200 dark:border-amber-800 hover:text-amber-950"
+                                  onClick={() => router.push("/profile")}
+                                >
+                                  Complete Profile <ArrowRight className="ml-2 h-4 w-4" />
+                                </Button>
+                              </AlertDescription>
+                            </Alert>
+                          )}
+                          <div className="flex flex-wrap justify-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="default"
+                              disabled={insightsLoading || !profileComplete}
+                              onClick={async () => {
+                                console.log("Generate Insights clicked", { id, profileAge, profileGender, profileComplete, hasPremiumAccess });
+                                if (!id) {
+                                  toast({
+                                    title: "Error",
+                                    description: "Scan ID is missing.",
+                                    variant: "destructive",
+                                  });
                                   return;
                                 }
-                                if (res.insights) {
-                                  await persistInsights(res.insights);
-                                  console.log("Insights set successfully");
-                                } else {
-                                  throw new Error("No insights returned from server");
+                                // Block generation if profile data is missing
+                                if (!profileComplete) {
+                                  toast({
+                                    title: t("foodresults.insights.incomplete.title"),
+                                    description: t("foodresults.insights.incomplete.description"),
+                                    variant: "destructive",
+                                  });
+                                  return;
                                 }
-                              } catch (error: any) {
-                                console.error("Failed to generate insights:", error);
-                                toast({
-                                  title: "Insights Generation Failed",
-                                  description: error?.message || "Unable to generate personalized insights. Please try again.",
-                                  variant: "destructive",
-                                });
-                                setInsightsText(""); // Clear any partial state
-                              } finally {
-                                setInsightsLoading(false);
-                                console.log("Insights loading finished");
-                              }
-                            }}
-                          >
-                            {insightsLoading ? (
-                              <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              </>
-                            ) : (
-                              <Sparkles className="h-4 w-4 mr-2" />
-                            )}
-                            Generate Insights
-                          </Button>
-                          <Button variant="outline" onClick={() => router.push("/meal-planner")}>Generate Meal Plan</Button>
+                                try {
+                                  setInsightsLoading(true);
+                                  setUpgradeRequired(false);
+                                  console.log("Starting insights generation...");
 
-                        </div>
-                      </div>
-                    )}
-                    {upgradeRequired && (
-                      <div className="mt-6 p-4 rounded-lg border border-primary/20 bg-primary/5">
-                        <div className="flex items-start gap-3">
-                          <Shield className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium mb-1">Premium Feature</p>
-                            <p className="text-sm text-muted-foreground mb-3">
-                              Upgrade to Premium to unlock personalized insights and smart substitutions tailored to your goals.
-                            </p>
-                            <Button size="sm" onClick={() => window.location.href = "/plans"}>
-                              <Sparkles className="h-4 w-4 mr-2" /> Upgrade Now
+                                  // Add timeout wrapper (40 seconds max for insights)
+                                  const timeoutPromise = new Promise((_, reject) => {
+                                    setTimeout(() => reject(new Error("Insights generation timed out after 40 seconds. Please try again.")), 40000);
+                                  });
+
+                                  const insightsPromise = getPersonalizedInsights({
+                                    scanId: id,
+                                    age: profileAge || undefined,
+                                    gender: profileGender || undefined,
+                                    activity: profileActivityLevel || undefined,
+                                    goal: profileGoal || undefined,
+                                    optimize: false,
+                                    weight_kg: profile?.weight_kg || undefined,
+                                    height_cm: profile?.height_cm || undefined,
+                                  });
+
+                                  console.log("Waiting for insights...");
+                                  const res = await Promise.race([insightsPromise, timeoutPromise]) as Awaited<ReturnType<typeof getPersonalizedInsights>>;
+                                  console.log("Insights received:", res);
+
+                                  if (res.upgrade) {
+                                    setUpgradeRequired(true);
+                                    setInsightsText("");
+                                    return;
+                                  }
+                                  if (res.insights) {
+                                    await persistInsights(res.insights);
+                                    console.log("Insights set successfully");
+                                  } else {
+                                    throw new Error("No insights returned from server");
+                                  }
+                                } catch (error: any) {
+                                  console.error("Failed to generate insights:", error);
+                                  toast({
+                                    title: "Insights Generation Failed",
+                                    description: error?.message || "Unable to generate personalized insights. Please try again.",
+                                    variant: "destructive",
+                                  });
+                                  setInsightsText(""); // Clear any partial state
+                                } finally {
+                                  setInsightsLoading(false);
+                                  console.log("Insights loading finished");
+                                }
+                              }}
+                            >
+                              {insightsLoading ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                </>
+                              ) : (
+                                <Sparkles className="h-4 w-4 mr-2" />
+                              )}
+                              Generate Insights
                             </Button>
+                            <Button variant="outline" onClick={() => router.push("/meal-planner")}>Generate Meal Plan</Button>
+
                           </div>
                         </div>
-                      </div>
-                    )}
-                    {parsedInsights && (
-                      <div
-                        className="space-y-6"
-                        data-collapse-gap-in-pdf={insightsText ? "true" : undefined}
-                      >
-                        {/* Profile Badges */}
-                        <div className="flex flex-col gap-2">
-                          {parsedInsights.demographics && (
-                            <div className="w-full">
-                              <Badge variant="outline" className="text-xs px-3 bg-background/80 border-primary/30 w-full justify-start whitespace-normal text-left sm:w-auto">
-                                {parsedInsights.demographics}
-                              </Badge>
+                      )}
+                      {upgradeRequired && (
+                        <div className="mt-6 p-4 rounded-lg border border-primary/20 bg-primary/5">
+                          <div className="flex items-start gap-3">
+                            <Shield className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium mb-1">Premium Feature</p>
+                              <p className="text-sm text-muted-foreground mb-3">
+                                Upgrade to Premium to unlock personalized insights and smart substitutions tailored to your goals.
+                              </p>
+                              <Button size="sm" onClick={() => window.location.href = "/plans"}>
+                                <Sparkles className="h-4 w-4 mr-2" /> Upgrade Now
+                              </Button>
                             </div>
-                          )}
-                          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-                            {profile?.weight_kg && profile?.height_cm && (() => {
-                              const bmi = calculateBMI(profile.weight_kg, profile.height_cm);
-                              const bmiCategory = getBMICategory(bmi);
-                              if (bmi) {
-                                return (
-                                  <Badge
-                                    variant="outline"
-                                    className={`text-[10px] px-2 py-0.5 border flex-shrink-0 ${bmiCategory.color === "green" ? "bg-green-50 border-green-500 text-green-700" :
-                                      bmiCategory.color === "blue" ? "bg-blue-50 border-blue-500 text-blue-700" :
-                                        bmiCategory.color === "orange" ? "bg-orange-50 border-orange-500 text-orange-700" :
-                                          "bg-red-50 border-red-500 text-red-700"
-                                      }`}
-                                  >
-                                    <Scale className="h-3 w-3 mr-1" />
-                                    BMI: {bmi.toFixed(1)} ({bmiCategory.category})
-                                  </Badge>
-                                );
-                              }
-                              return null;
-                            })()}
-                            {profile?.activity_level && (
-                              <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-primary/10 border-primary/30 text-primary flex-shrink-0">
-                                <Activity className="h-3 w-3 mr-1" />
-                                {profile.activity_level.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
-                              </Badge>
-                            )}
-                            {profile?.goal && (
-                              <Badge variant="outline" className="text-[10px] px-2 bg-primary/10 border-primary/30 text-primary flex-shrink-0">
-                                <Target className="h-3 w-3 mr-1" />
-                                {profile.goal.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
-                              </Badge>
-                            )}
                           </div>
                         </div>
-
-                        {/* New Format: Key Recommendations and Action Items */}
-                        {(parsedInsights.keyRecommendations?.length > 0 || parsedInsights.actionItems?.length > 0) ? (
-                          <div className="grid grid-cols-1 gap-4 sm:gap-6">
-                            {/* Key Recommendations */}
-                            {parsedInsights.keyRecommendations?.length > 0 && (
-                              <div className="space-y-3">
-                                <div className="flex items-center gap-2 mb-4">
-                                  <div className="p-2 rounded-lg bg-primary/10">
-                                    <CheckCircle2 className="h-5 w-5 text-primary" />
-                                  </div>
-                                  <h3 className="text-base font-semibold">Key Recommendations</h3>
-                                </div>
-                                <div className="space-y-3">
-                                  {parsedInsights.keyRecommendations.map((rec, idx) => (
-                                    <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border/50">
-                                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
-                                        <span className="text-xs font-semibold text-primary">{idx + 1}</span>
-                                      </div>
-                                      <p className="text-sm leading-relaxed text-foreground flex-1">{rec}</p>
-                                    </div>
-                                  ))}
-                                </div>
+                      )}
+                      {parsedInsights && (
+                        <div
+                          className="space-y-6"
+                          data-collapse-gap-in-pdf={insightsText ? "true" : undefined}
+                        >
+                          {/* Profile Badges */}
+                          <div className="flex flex-col gap-2">
+                            {parsedInsights.demographics && (
+                              <div className="w-full">
+                                <Badge variant="outline" className="text-xs px-3 bg-background/80 border-primary/30 w-full justify-start whitespace-normal text-left sm:w-auto">
+                                  {parsedInsights.demographics}
+                                </Badge>
                               </div>
                             )}
-
-                            {/* Action Items */}
-                            {parsedInsights.actionItems?.length > 0 && (
-                              <div className="space-y-3">
-                                <div className="flex items-center gap-2 mb-4">
-                                  <div className="p-2 rounded-lg bg-primary/10">
-                                    <Zap className="h-5 w-5 text-primary" />
-                                  </div>
-                                  <h3 className="text-base font-semibold">Action Items</h3>
-                                </div>
-                                <div className="space-y-3">
-                                  {parsedInsights.actionItems.map((item, idx) => (
-                                    <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border/50">
-                                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
-                                        <Zap className="h-3 w-3 text-primary" />
-                                      </div>
-                                      <p className="text-sm leading-relaxed text-foreground flex-1">{item}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+                            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                              {profile?.weight_kg && profile?.height_cm && (() => {
+                                const bmi = calculateBMI(profile.weight_kg, profile.height_cm);
+                                const bmiCategory = getBMICategory(bmi);
+                                if (bmi) {
+                                  return (
+                                    <Badge
+                                      variant="outline"
+                                      className={`text-[10px] px-2 py-0.5 border flex-shrink-0 ${bmiCategory.color === "green" ? "bg-green-50 border-green-500 text-green-700" :
+                                        bmiCategory.color === "blue" ? "bg-blue-50 border-blue-500 text-blue-700" :
+                                          bmiCategory.color === "orange" ? "bg-orange-50 border-orange-500 text-orange-700" :
+                                            "bg-red-50 border-red-500 text-red-700"
+                                        }`}
+                                    >
+                                      <Scale className="h-3 w-3 mr-1" />
+                                      BMI: {bmi.toFixed(1)} ({bmiCategory.category})
+                                    </Badge>
+                                  );
+                                }
+                                return null;
+                              })()}
+                              {profile?.activity_level && (
+                                <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-primary/10 border-primary/30 text-primary flex-shrink-0">
+                                  <Activity className="h-3 w-3 mr-1" />
+                                  {profile.activity_level.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                                </Badge>
+                              )}
+                              {profile?.goal && (
+                                <Badge variant="outline" className="text-[10px] px-2 bg-primary/10 border-primary/30 text-primary flex-shrink-0">
+                                  <Target className="h-3 w-3 mr-1" />
+                                  {profile.goal.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                        ) : parsedInsights.healthContext ? (
-                          /* Legacy format fallback */
-                          <div className="space-y-6">
+
+                          {/* New Format: Key Recommendations and Action Items */}
+                          {(parsedInsights.keyRecommendations?.length > 0 || parsedInsights.actionItems?.length > 0) ? (
                             <div className="grid grid-cols-1 gap-4 sm:gap-6">
-                              <div className="space-y-3">
-                                <div className="flex items-center gap-2 mb-4">
-                                  <div className="p-2 rounded-lg bg-primary/10">
-                                    <CheckCircle2 className="h-5 w-5 text-primary" />
-                                  </div>
-                                  <h3 className="text-base font-semibold">Key Recommendations</h3>
-                                </div>
+                              {/* Key Recommendations */}
+                              {parsedInsights.keyRecommendations?.length > 0 && (
                                 <div className="space-y-3">
-                                  {(() => {
-                                    const text = parsedInsights.healthContext;
-                                    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
-                                    const keyPoints = sentences.slice(0, 4).map(s => s.trim());
-                                    return keyPoints.map((point, idx) => (
+                                  <div className="flex items-center gap-2 mb-4">
+                                    <div className="p-2 rounded-lg bg-primary/10">
+                                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <h3 className="text-base font-semibold">Key Recommendations</h3>
+                                  </div>
+                                  <div className="space-y-3">
+                                    {parsedInsights.keyRecommendations.map((rec, idx) => (
                                       <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border/50">
                                         <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
                                           <span className="text-xs font-semibold text-primary">{idx + 1}</span>
                                         </div>
-                                        <p className="text-sm leading-relaxed text-foreground flex-1">{point}.</p>
+                                        <p className="text-sm leading-relaxed text-foreground flex-1">{rec}</p>
                                       </div>
-                                    ));
-                                  })()}
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                              {parsedInsights.substitutions.length > 0 && (
+                              )}
+
+                              {/* Action Items */}
+                              {parsedInsights.actionItems?.length > 0 && (
                                 <div className="space-y-3">
                                   <div className="flex items-center gap-2 mb-4">
                                     <div className="p-2 rounded-lg bg-primary/10">
-                                      <Lightbulb className="h-5 w-5 text-primary" />
+                                      <Zap className="h-5 w-5 text-primary" />
                                     </div>
-                                    <h3 className="text-base font-semibold">Smart Substitution Suggestions</h3>
+                                    <h3 className="text-base font-semibold">Action Items</h3>
                                   </div>
                                   <div className="space-y-3">
-                                    {parsedInsights.substitutions.map((sub, idx) => (
+                                    {parsedInsights.actionItems.map((item, idx) => (
                                       <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border/50">
                                         <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
-                                          <CheckCircle2 className="h-3 w-3 text-primary" />
+                                          <Zap className="h-3 w-3 text-primary" />
                                         </div>
-                                        <div className="flex-1">
-                                          {sub.title && <h5 className="font-semibold mb-1 text-sm">{sub.title}</h5>}
-                                          <p className="text-sm text-foreground leading-relaxed">{sub.description}</p>
-                                        </div>
+                                        <p className="text-sm leading-relaxed text-foreground flex-1">{item}</p>
                                       </div>
                                     ))}
                                   </div>
                                 </div>
                               )}
                             </div>
-                          </div>
-                        ) : insightsText ? (
-                          <div className="rounded-lg border p-4 bg-muted/30">
-                            <div className="whitespace-pre-wrap text-sm leading-relaxed">{insightsText}</div>
-                          </div>
-                        ) : null}
-                      </div>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                          ) : parsedInsights.healthContext ? (
+                            /* Legacy format fallback */
+                            <div className="space-y-6">
+                              <div className="grid grid-cols-1 gap-4 sm:gap-6">
+                                <div className="space-y-3">
+                                  <div className="flex items-center gap-2 mb-4">
+                                    <div className="p-2 rounded-lg bg-primary/10">
+                                      <CheckCircle2 className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <h3 className="text-base font-semibold">Key Recommendations</h3>
+                                  </div>
+                                  <div className="space-y-3">
+                                    {(() => {
+                                      const text = parsedInsights.healthContext;
+                                      const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
+                                      const keyPoints = sentences.slice(0, 4).map(s => s.trim());
+                                      return keyPoints.map((point, idx) => (
+                                        <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border/50">
+                                          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
+                                            <span className="text-xs font-semibold text-primary">{idx + 1}</span>
+                                          </div>
+                                          <p className="text-sm leading-relaxed text-foreground flex-1">{point}.</p>
+                                        </div>
+                                      ));
+                                    })()}
+                                  </div>
+                                </div>
+                                {parsedInsights.substitutions.length > 0 && (
+                                  <div className="space-y-3">
+                                    <div className="flex items-center gap-2 mb-4">
+                                      <div className="p-2 rounded-lg bg-primary/10">
+                                        <Lightbulb className="h-5 w-5 text-primary" />
+                                      </div>
+                                      <h3 className="text-base font-semibold">Smart Substitution Suggestions</h3>
+                                    </div>
+                                    <div className="space-y-3">
+                                      {parsedInsights.substitutions.map((sub, idx) => (
+                                        <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border border-border/50">
+                                          <div className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
+                                            <CheckCircle2 className="h-3 w-3 text-primary" />
+                                          </div>
+                                          <div className="flex-1">
+                                            {sub.title && <h5 className="font-semibold mb-1 text-sm">{sub.title}</h5>}
+                                            <p className="text-sm text-foreground leading-relaxed">{sub.description}</p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : insightsText ? (
+                            <div className="rounded-lg border p-4 bg-muted/30">
+                              <div className="whitespace-pre-wrap text-sm leading-relaxed">{insightsText}</div>
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </main>
