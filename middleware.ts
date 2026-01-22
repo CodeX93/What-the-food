@@ -4,13 +4,20 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
-  // Enforce HTTPS and non-www in production
-  if (process.env.NODE_ENV === 'production') {
     const url = request.nextUrl.clone();
     const { pathname, search } = url;
     const hostname = request.headers.get('host') || '';
     const proto = request.headers.get('x-forwarded-proto');
 
+  // 301 Redirects from blog subdomain to /blog route
+  // Note: WordPress will also handle 301 redirects for individual blog posts
+  if (hostname === 'blog.whatthefood.io' || hostname === 'www.blog.whatthefood.io') {
+    const newUrl = `https://whatthefood.io/blog${pathname === '/' ? '' : pathname}${search}`;
+    return NextResponse.redirect(new URL(newUrl), { status: 301 });
+  }
+
+  // Enforce HTTPS and non-www in production
+  if (process.env.NODE_ENV === 'production') {
     // 1. Redirect HTTP to HTTPS
     if (proto === 'http') {
       url.protocol = 'https';

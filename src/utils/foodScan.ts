@@ -206,6 +206,34 @@ export async function recalculateNutritionFromIngredients(
   return data.analysis as FoodAnalysis;
 }
 
+// New function for editing ingredients using the test edge function
+export async function editIngredientsAndRecalculate(
+  existingAnalysis: FoodAnalysis,
+  editedIngredients: string[],
+  serving: number = 1
+): Promise<FoodAnalysis> {
+  if (!Array.isArray(editedIngredients) || editedIngredients.length === 0) {
+    throw new Error("Ingredients list is required");
+  }
+
+  const body = {
+    dishName: existingAnalysis.dish,
+    ingredients: editedIngredients,
+    existingAnalysis: existingAnalysis,
+    serving,
+  };
+
+  const { data, error } = await supabase.functions.invoke<AnalyzeFoodResponse>("edit-ingredients", {
+    body,
+  });
+
+  if (error || !data?.ok) {
+    throw new Error(data?.error || error?.message || "Ingredient edit failed");
+  }
+
+  return data.analysis as FoodAnalysis;
+}
+
 export function scaleNutrients(base: FoodAnalysis["nutrients"] | undefined, multiplier: number) {
   const scale = (v?: number | null) => (typeof v === "number" ? Math.round(v * multiplier * 10) / 10 : undefined);
   return {

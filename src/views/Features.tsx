@@ -1,6 +1,6 @@
 "use client";
 
-import { Camera, BarChart3, History, FileText, Sliders, Sparkles, CheckCircle2, Target, Calculator, ChefHat } from "lucide-react";
+import { Camera, BarChart3, History, Calendar, ScanLine, Code2, CheckCircle2, Target, Calculator, ChefHat } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -46,7 +46,7 @@ export default function FeaturesPage() {
       ],
     },
     {
-      icon: FileText,
+      icon: Calendar,
       title: t("features.pdf.title"),
       description: t("features.pdf.description"),
       details: [
@@ -57,7 +57,7 @@ export default function FeaturesPage() {
       ],
     },
     {
-      icon: Sliders,
+      icon: ScanLine,
       title: t("features.serving.title"),
       description: t("features.serving.description"),
       details: [
@@ -68,7 +68,7 @@ export default function FeaturesPage() {
       ],
     },
     {
-      icon: Sparkles,
+      icon: Code2,
       title: t("features.adfree.title"),
       description: t("features.adfree.description"),
       details: [

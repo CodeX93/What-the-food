@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import BlogPage from "@/views/Blog";
+import BlogPostsGrid from "@/components/Blog/BlogPostsGrid";
 import { getPreviewImageUrlFromRequest, getRequestUrl, getCanonicalUrlFromRequest } from "@/lib/seo/siteUrl";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -33,7 +33,8 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function BlogRoute() {
+// Server-side rendering for blog listing page
+export default async function BlogRoute() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -48,7 +49,20 @@ export default function BlogRoute() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <BlogPage />
+      <div className="overflow-x-hidden bg-background">
+        <section className="min-h-screen flex items-center">
+          <div className="container mx-auto px-4 py-12 sm:py-16 md:py-20 w-full">
+            <div className="text-center mb-12">
+              <h1 className="text-4xl font-bold mb-4">Blog</h1>
+              <p className="text-lg text-muted-foreground">
+                Tips, guides, and insights for healthier eating
+              </p>
+            </div>
+
+            <BlogPostsGrid />
+          </div>
+        </section>
+      </div>
     </>
   );
 }

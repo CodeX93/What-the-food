@@ -44,9 +44,8 @@ export default function robots(): MetadataRoute.Robots {
           // API routes
           "/api/",
 
-          // Note: Blog posts are hosted on blog.whatthefood.io subdomain.
-          // If any blog post URLs exist on root domain, they should be accessible
-          // for SEO purposes (either as redirects or actual pages).
+          // Note: Blog posts are now hosted on /blog route (whatthefood.io/blog).
+          // Blog posts are accessible at /blog/[slug] for SEO purposes.
 
           // Block query parameters with tracking codes
           "/*?utm_*",

@@ -13,6 +13,7 @@ import {
   getPersonalizedInsights,
   getImageUrl,
   recalculateNutritionFromIngredients,
+  editIngredientsAndRecalculate,
 } from "@/utils/foodScan";
 import { hasActivePremiumSubscription } from "@/utils/subscription";
 import { calculateBMI, getBMICategory } from "@/utils/bmi";
@@ -1015,9 +1016,9 @@ export function FoodResultsClient({ initialScanId, isModal, onClose }: FoodResul
     setUpdatingIngredients(true);
     setAnalysisRefreshing(true);
     try {
-      // Use dedicated recalculation function for ingredient edits
+      // Use new test edge function for ingredient edits
       // This is more accurate and faster than full image re-analysis
-      const updatedAnalysis = await recalculateNutritionFromIngredients(
+      const updatedAnalysis = await editIngredientsAndRecalculate(
         analysis,
         cleaned,
         servings
@@ -2809,19 +2810,6 @@ export function FoodResultsClient({ initialScanId, isModal, onClose }: FoodResul
           )}
           <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
             <Card className={`relative ${analysis.isManualEntry || analysis.dish?.startsWith("Manual") || analysis.dish?.startsWith("Manual Input") ? "lg:col-span-3" : ""}`}>
-              {!isModal && (
-                <Badge
-                  className="absolute top-2 right-2 bg-orange-500 text-white border-0 text-[10px] px-1.5 py-0.5 z-10 cursor-pointer hover:bg-orange-600 transition-colors"
-                  onClick={() => {
-                    toast({
-                      title: "Coming Soon",
-                      description: "The ingredient editor feature is currently under development and will be available soon. Thank you for your patience!",
-                    });
-                  }}
-                >
-                  Coming Soon
-                </Badge>
-              )}
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-2 sm:gap-3">
                   <div className="flex items-center gap-2">
@@ -2832,8 +2820,8 @@ export function FoodResultsClient({ initialScanId, isModal, onClose }: FoodResul
                     <Button
                       variant="outline"
                       size="sm"
-                      disabled
-                      className="text-xs sm:text-sm px-2 sm:px-3 opacity-50 cursor-not-allowed"
+                      onClick={handleOpenIngredientEditor}
+                      className="text-xs sm:text-sm px-2 sm:px-3"
                     >
                       <Pencil className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
                       <span className="hidden sm:inline">Edit</span>

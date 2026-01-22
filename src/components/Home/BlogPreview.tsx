@@ -67,8 +67,6 @@ const BlogPreview = () => {
               <a
                 key={post.id}
                 href={post.url}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="group block h-full"
               >
                 <Card className="mt-2 flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/60 dark:border-white/10 bg-white/90 dark:bg-white/5 shadow-[0_25px_60px_-32px_rgba(30,41,59,0.35)] backdrop-blur-sm transition-all duration-300 group-hover:-translate-y-0.5 group-hover:shadow-strong group-hover:border-primary/30 dark:group-hover:border-primary/30">

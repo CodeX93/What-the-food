@@ -63,6 +63,7 @@
     "react-hook-form": "^7.61.1",
     "react-resizable-panels": "^2.1.9",
     "recharts": "^2.15.4",
+    "seobot": "^1.4.0",
     "sonner": "^1.7.4",
     "stripe": "^19.3.1",
     "tailwind-merge": "^2.6.0",

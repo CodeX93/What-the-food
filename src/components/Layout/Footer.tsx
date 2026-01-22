@@ -92,24 +92,20 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <a
-                  href="https://blog.whatthefood.io/free-calorie-calculator"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  href="/blog/free-calorie-calculator"
                   className="hover:text-primary transition-colors"
                 >
                   Free Calorie Calculator
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="https://blog.whatthefood.io/random-recipe-generator"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  href="/blog/random-recipe-generator"
                   className="hover:text-primary transition-colors"
                 >
                   Random Recipe Generator
-                </a>
+                </Link>
               </li>
               <li>
                 <a
