@@ -123,17 +123,6 @@ export function TagPageClient({ tagName, scans }: TagPageClientProps) {
                 <CardHeader>
                   <div className="flex items-start justify-between mb-2">
                     <CardTitle className="text-lg font-semibold line-clamp-2">{scan.dish}</CardTitle>
-                    <Badge
-                      variant="outline"
-                      className={`ml-2 flex-shrink-0 ${scan.nutritionScore >= 80
-                        ? "bg-green-50 text-green-700 border-green-200"
-                        : scan.nutritionScore >= 60
-                          ? "bg-yellow-50 text-yellow-700 border-yellow-200"
-                          : "bg-red-50 text-red-700 border-red-200"
-                        }`}
-                    >
-                      {scan.nutritionScore}/100
-                    </Badge>
                   </div>
                 </CardHeader>
                 <CardContent>

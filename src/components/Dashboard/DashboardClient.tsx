@@ -155,12 +155,16 @@ export function DashboardClient({
 
       const totals = manualData.totals || {};
       const dishName = `Manual Input: ${foods.join(", ")}`.slice(0, 200);
+      // Calculate total weight from items or use totals.weight_g
+      const totalWeight = totals.weight_g || 
+        (manualData.items?.reduce((sum: number, item: any) => sum + (item.weight_g || 0), 0) || null);
+      
       const manualResult = {
         dish: dishName,
         description: "Manually logged foods",
         tags: ["manual"],
         servingSize: "1 serving",
-        servingWeightGrams: undefined,
+        servingWeightGrams: totalWeight && totalWeight > 0 ? totalWeight : undefined,
         servingGuidance: "Manually added to analytics",
         nutrients: {
           calories: totals.calories ?? null,
