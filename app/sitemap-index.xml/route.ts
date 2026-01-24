@@ -18,13 +18,9 @@ export async function GET() {
     return `  <sitemap>\n    <loc>${loc}</loc>\n  </sitemap>`;
   }).join("\n");
 
-  // Include blog sitemap (now on root domain)
-  // Blog posts are now at /blog route, sitemap should be generated from SEObot or WordPress
-  // Note: Update this URL once blog sitemap is available at /blog/sitemap.xml
-  // const blogSitemap = `  <sitemap>\n    <loc>https://whatthefood.io/blog/sitemap.xml</loc>\n  </sitemap>`;
-  const blogSitemap = ``; // Blog sitemap will be added once available
+  // Blog (/blog) + all posts (/blog/[slug]) are included in the main sitemap chunks above.
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapsXml}\n${blogSitemap}\n</sitemapindex>\n`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemapsXml}\n</sitemapindex>\n`;
 
   return new NextResponse(xml, {
     headers: {

@@ -44,6 +44,33 @@ function dedupeByUrl(entries: MetadataRoute.Sitemap): MetadataRoute.Sitemap {
   return out;
 }
 
+async function fetchAllBlogPosts(): Promise<Array<{ slug: string; updatedAt: string }>> {
+  const key = process.env.SEOBOT_API_KEY;
+  if (!key) return [];
+
+  const { BlogClient } = await import("seobot");
+  const client = new BlogClient(key);
+  const limit = 50;
+  const all: Array<{ slug: string; updatedAt: string }> = [];
+  let page = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    try {
+      const { articles, total } = await client.getArticles(page, limit);
+      for (const a of articles) {
+        all.push({ slug: a.slug, updatedAt: a.updatedAt || a.createdAt });
+      }
+      hasMore = articles.length === limit && all.length < total;
+      page += 1;
+    } catch {
+      break;
+    }
+  }
+
+  return all;
+}
+
 export const getAllSitemapEntries = unstable_cache(
   async (): Promise<MetadataRoute.Sitemap> => {
     // Keep `lastModified` stable via caching/revalidation.
@@ -58,32 +85,42 @@ export const getAllSitemapEntries = unstable_cache(
       priority: p.priority,
     }));
 
-    // If/when you add indexable dynamic routes (e.g. `/blog/[slug]`),
-    // fetch them here and only include published items (no 404s).
-    //
-    // Keep this section fast: use lightweight "id+updated_at" queries and cache results.
+    // Dynamic routes: tag pages, blog posts at /blog/[slug].
     const dynamicEntries: MetadataRoute.Sitemap = [];
-    
+
     // Add tag pages dynamically
     try {
       const tags = await getAllTags();
       const tagEntries: MetadataRoute.Sitemap = tags.map((tag) => ({
         url: toAbsoluteUrl(`/${tagToSlug(tag)}`),
         lastModified,
-        changeFrequency: "daily" as const, // Tags update frequently as new scans are added
-        priority: 0.7, // High priority for tag pages
+        changeFrequency: "daily" as const,
+        priority: 0.7,
       }));
       dynamicEntries.push(...tagEntries);
     } catch (error) {
       console.error("Error fetching tags for sitemap:", error);
-      // Continue without tag pages if there's an error
+    }
+
+    // Blog posts at /blog/[slug] (root domain)
+    try {
+      const blogPosts = await fetchAllBlogPosts();
+      const blogPostEntries: MetadataRoute.Sitemap = blogPosts.map((p) => ({
+        url: toAbsoluteUrl(`/blog/${p.slug}`),
+        lastModified: p.updatedAt ? new Date(p.updatedAt) : lastModified,
+        changeFrequency: "monthly" as const,
+        priority: 0.5,
+      }));
+      dynamicEntries.push(...blogPostEntries);
+    } catch (error) {
+      console.error("Error fetching blog posts for sitemap:", error);
     }
 
     return dedupeByUrl([...staticEntries, ...dynamicEntries]).sort((a, b) =>
       a.url.localeCompare(b.url)
     );
   },
-  ["seo:sitemap:all-v1"],
+  ["seo:sitemap:all-v3"],
   { revalidate: 60 * 60 * 12 } // 12h
 );
 

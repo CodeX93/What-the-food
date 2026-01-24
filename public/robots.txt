@@ -37,5 +37,5 @@ Disallow: /*?fbclid=*
 Disallow: /*?gclid=*
 Disallow: /*?ref=*
 
-# Sitemaps
+# Sitemaps (main site, tag pages, blog + all posts at /blog/[slug])
 Sitemap: https://whatthefood.io/sitemap.xml
