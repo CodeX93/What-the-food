@@ -39,10 +39,14 @@ import {
   calculateDailyRequirements,
   generateInsights,
   calculateConsistencyScore,
+  calculateGoalProgress,
   analyzeEatingPatterns,
   getConsolidatedAction,
   Insight,
   ConsistencyBreakdown,
+  GoalProgress,
+  EatingPatterns,
+  AnalyticsAIResponse,
   UserProfile
 } from "@/utils/analyticsInsights";
 import { InsightCard } from "./InsightCard";
@@ -96,6 +100,9 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
   // Insights State
   const [insights, setInsights] = useState<Insight[]>([]);
   const [consistency, setConsistency] = useState<ConsistencyBreakdown>({ score: 0, breakdown: [] });
+  const [goalProgress, setGoalProgress] = useState<GoalProgress | null>(null);
+  const [aiEatingPatterns, setAiEatingPatterns] = useState<EatingPatterns | null>(null);
+  const [nextBestActions, setNextBestActions] = useState<string[]>([]);
   const [patterns, setPatterns] = useState<{ repeatedMeals: any[], triggerMeals: any[] }>({ repeatedMeals: [], triggerMeals: [] });
   const [whatToImproveNext, setWhatToImproveNext] = useState<string>("");
 
@@ -202,27 +209,40 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
       // 1. Calculate base stats locally to pass to AI
       const generatedConsistency = calculateConsistencyScore(filteredScans, 7);
       const generatedPatterns = analyzeEatingPatterns(filteredScans, dailyReqs?.calories || 2000); // Keep local pattern detection for inputs
+      const generatedGoalProgress = calculateGoalProgress(filteredScans, profile, dailyReqs);
 
       setConsistency(generatedConsistency);
       setPatterns(generatedPatterns);
+      setGoalProgress(generatedGoalProgress);
 
       // 2. Prepare context for AI
       const totalCals = filteredScans.reduce((sum, s) => sum + ((s.result_json?.nutrients?.calories || 0) * (s.serving || 1)), 0);
       const totalProtein = filteredScans.reduce((sum, s) => sum + ((s.result_json?.nutrients?.protein_g || 0) * (s.serving || 1)), 0);
+      const totalCarbs = filteredScans.reduce((sum, s) => sum + ((s.result_json?.nutrients?.carbohydrates_g || 0) * (s.serving || 1)), 0);
+      const totalFat = filteredScans.reduce((sum, s) => sum + ((s.result_json?.nutrients?.fat_g || 0) * (s.serving || 1)), 0);
 
       // Better: Group by day for accurate daily averages
       const days = new Set(filteredScans.map(s => formatDay(s.created_at)));
       const dayCount = days.size || 1;
       const trueAvgCalories = totalCals / dayCount;
       const trueAvgProtein = totalProtein / dayCount;
+      const trueAvgCarbs = totalCarbs / dayCount;
+      const trueAvgFat = totalFat / dayCount;
 
       const aiContext = {
         goal: profile?.goal || "maintenance",
         targetCalories: dailyReqs?.calories || 2000,
         targetProtein: dailyReqs?.protein || 150,
+        targetCarbs: dailyReqs?.carbs || 200,
+        targetFat: dailyReqs?.fat || 70,
         avgCalories: trueAvgCalories,
         avgProtein: trueAvgProtein,
+        avgCarbs: trueAvgCarbs,
+        avgFat: trueAvgFat,
         consistencyScore: generatedConsistency.score,
+        mealSummaryText: filteredScans.slice(-15).map(s => {
+          return `${s.result_json?.dish} (${s.result_json?.nutrients?.calories} kcal)`;
+        }).join(", "),
         mealPatternText: generatedPatterns.repeatedMeals.length
           ? `User repeats ${generatedPatterns.repeatedMeals[0].name} often.`
           : "Varied diet."
@@ -240,6 +260,15 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
 
           if (data?.insights && Array.isArray(data.insights)) {
             setInsights(data.insights);
+            if (data.goalProgress) {
+              setGoalProgress(data.goalProgress);
+            }
+            if (data.eatingPatterns) {
+              setAiEatingPatterns(data.eatingPatterns);
+            }
+            if (data.nextBestActions) {
+              setNextBestActions(data.nextBestActions);
+            }
             const nextAction = getConsolidatedAction(data.insights, generatedConsistency); // Use AI insights to determine next action
             setWhatToImproveNext(nextAction);
           } else {
@@ -429,6 +458,72 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
               </div>
             </section>
 
+            {/* Progress Toward Your Goal */}
+            <section className="space-y-4">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <Target className="w-5 h-5 text-indigo-500" />
+                Progress Toward Your Goal
+              </h2>
+              <Card className="bg-white dark:bg-slate-900 border-indigo-100 dark:border-indigo-900/30 overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x border-b">
+                    {/* Status Column */}
+                    <div className="p-6 flex flex-col items-center justify-center text-center">
+                      <div className={`mb-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${goalProgress?.status === 'on_track' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                        goalProgress?.status === 'warning' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                          'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        }`}>
+                        {goalProgress?.status === 'on_track' ? 'On Track' :
+                          goalProgress?.status === 'warning' ? 'Caution' : 'Off Track'}
+                      </div>
+                      <p className="font-semibold text-lg">{profile?.goal?.replace('_', ' ') || 'Maintenance'}</p>
+                      <p className="text-sm text-muted-foreground mt-1">Goal Status</p>
+                    </div>
+
+                    {/* Calorie Variance Column */}
+                    <div className="p-6">
+                      <div className="flex justify-between items-end mb-2">
+                        <span className="text-sm font-medium text-muted-foreground">Calorie Comparison</span>
+                        <span className={`text-lg font-bold ${(goalProgress?.avgCaloriesDiff || 0) > 100 ? 'text-red-500' :
+                          (goalProgress?.avgCaloriesDiff || 0) < -100 ? 'text-amber-500' : 'text-green-500'
+                          }`}>
+                          {goalProgress?.avgCaloriesDiff && goalProgress.avgCaloriesDiff > 0 ? '+' : ''}{goalProgress?.avgCaloriesDiff} kcal/day
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {goalProgress?.message}
+                      </p>
+                    </div>
+
+                    {/* Macro Adherence Column */}
+                    <div className="p-6">
+                      <div className="flex justify-between items-end mb-2">
+                        <span className="text-sm font-medium text-muted-foreground">Macro Adherence</span>
+                        <span className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                          {goalProgress?.macroAdherencePercent}%
+                        </span>
+                      </div>
+                      <Progress value={goalProgress?.macroAdherencePercent || 0} className="h-2 bg-indigo-50 dark:bg-indigo-900/20" indicatorClassName="bg-indigo-500" />
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Alignment with your {profile?.goal?.replace('_', ' ') || 'maintenance'} macro splits.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Bottom Prognosis Strip */}
+                  <div className={`px-6 py-3 flex items-center gap-3 ${goalProgress?.status === 'on_track' ? 'bg-green-50/50 dark:bg-green-900/10' :
+                    goalProgress?.status === 'warning' ? 'bg-amber-50/50 dark:bg-amber-900/10' :
+                      'bg-red-50/50 dark:bg-red-900/10'
+                    }`}>
+                    {goalProgress?.status === 'on_track' ? <TrendingUp className="w-4 h-4 text-green-500" /> : <AlertCircle className="w-4 h-4 text-red-500" />}
+                    <p className="text-sm font-medium">
+                      {goalProgress?.prognosticText}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+
             {/* SECTION 2: Weekly Insights (The Coach) */}
             <section className="space-y-4">
               <div className="flex items-center justify-between">
@@ -500,11 +595,10 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                 </h2>
                 <Card className={!isPremium ? "opacity-70 flex-1" : "flex-1"}>
                   <CardHeader>
-                    <CardTitle className="text-lg">Habit Analysis</CardTitle>
+                    <CardTitle className="text-lg">Behavioral Analysis</CardTitle>
                     <CardDescription>Recurring meals and potential triggers</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {/* Premium Lock for Patterns text if not premium, though we show minimal info */}
                     {!isPremium ? (
                       <div className="text-center py-6">
                         <Lock className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-50" />
@@ -512,22 +606,53 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                       </div>
                     ) : (
                       <>
-                        {patterns.repeatedMeals.length > 0 ? (
-                          <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                            <p className="text-sm font-medium">Top Recurring Meal</p>
-                            <p className="text-sm text-muted-foreground">You eat <strong>{patterns.repeatedMeals[0].name}</strong> frequently ({patterns.repeatedMeals[0].percent}% of meals).</p>
+                        {/* Repeated Meals */}
+                        {aiEatingPatterns?.repeatedMeals && aiEatingPatterns.repeatedMeals.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Most Repeated</p>
+                            {aiEatingPatterns.repeatedMeals.map((meal, i) => (
+                              <div key={i} className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg">
+                                <div className="flex justify-between items-start">
+                                  <p className="text-sm font-medium">{meal.name}</p>
+                                  <span className="text-xs bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded">{meal.frequency}</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">{meal.insight}</p>
+                              </div>
+                            ))}
                           </div>
-                        ) : null}
+                        )}
 
-                        {patterns.triggerMeals.length > 0 ? (
-                          <div className="p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded-lg">
-                            <p className="text-sm font-medium text-amber-900 dark:text-amber-500">Calorie Trigger</p>
-                            <p className="text-sm text-amber-700 dark:text-amber-400"><strong>{patterns.triggerMeals[0].name}</strong> often aligns with higher calorie days.</p>
+                        {/* Calorie Dense */}
+                        {aiEatingPatterns?.calorieDenseMeals && aiEatingPatterns.calorieDenseMeals.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Most Calorie-Dense</p>
+                            {aiEatingPatterns.calorieDenseMeals.map((meal, i) => (
+                              <div key={i} className="p-3 bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-800/30 rounded-lg">
+                                <div className="flex justify-between items-start">
+                                  <p className="text-sm font-medium text-orange-900 dark:text-orange-400">{meal.name}</p>
+                                  <span className="text-xs font-bold text-orange-700">{meal.calories} kcal</span>
+                                </div>
+                                <p className="text-xs text-orange-800/70 dark:text-orange-400/70 mt-1">{meal.insight}</p>
+                              </div>
+                            ))}
                           </div>
-                        ) : null}
+                        )}
 
-                        {patterns.repeatedMeals.length === 0 && patterns.triggerMeals.length === 0 && (
-                          <p className="text-sm text-muted-foreground italic">No strong patterns detected yet.</p>
+                        {/* Trigger Insights */}
+                        {aiEatingPatterns?.triggerInsights && aiEatingPatterns.triggerInsights.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Trigger Insights</p>
+                            {aiEatingPatterns.triggerInsights.map((insight, i) => (
+                              <div key={i} className="p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 rounded-lg flex gap-3 items-start">
+                                <Zap className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                                <p className="text-sm text-blue-900 dark:text-blue-400 font-medium leading-tight">{insight}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {!aiEatingPatterns && (
+                          <p className="text-sm text-muted-foreground italic">Analyzing your eating patterns...</p>
                         )}
                       </>
                     )}
@@ -550,6 +675,10 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                       </Button>
                     </div>
                   )}
+                  <CardHeader className="pb-0">
+                    <CardTitle className="text-lg">Consistency Score</CardTitle>
+                    <CardDescription className="text-xs">Improve consistency to see better results.</CardDescription>
+                  </CardHeader>
                   <CardContent className={isPremium ? "pt-6 flex flex-col items-center justify-center" : "pt-6 flex flex-col items-center justify-center opacity-30"}>
                     <div className="relative w-32 h-32 flex items-center justify-center mb-4">
                       {/* Simple SVG Ring */}
@@ -578,7 +707,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                     <div className="w-full space-y-2 mt-2">
                       {consistency.breakdown.map((item, idx) => (
                         <div key={idx} className="flex items-center gap-2 text-sm text-muted-foreground">
-                          {item.includes("✓") ? <TrendingUp className="w-4 h-4 text-green-500" /> : <AlertCircle className="w-4 h-4 text-amber-500" />}
+                          {item.includes("✓") || item.includes("consistent") || item.includes("stable") ? <TrendingUp className="w-4 h-4 text-green-500" /> : <AlertCircle className="w-4 h-4 text-amber-500" />}
                           <span>{item.replace("✓ ", "").replace("⚠ ", "")}</span>
                         </div>
                       ))}
@@ -606,16 +735,39 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                   </div>
                 )}
                 <CardHeader className={!isPremium ? "opacity-20" : ""}>
-                  <CardTitle className="text-lg text-primary">Priority Focus</CardTitle>
+                  <CardTitle className="text-xl font-bold text-primary">Priority Focus</CardTitle>
+                  <CardDescription className="text-sm font-medium">Personalized recommendations based on your recent activity.</CardDescription>
                 </CardHeader>
                 <CardContent className={!isPremium ? "opacity-20" : ""}>
-                  <p className="text-lg font-medium leading-relaxed mb-4">
-                    {whatToImproveNext}
-                  </p>
-                  <Button onClick={() => router.push("/dashboard")} className="w-full sm:w-auto" variant="default">
-                    Take Action
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
+                  <div className="space-y-6">
+                    <p className="text-lg font-semibold leading-relaxed text-slate-800 dark:text-slate-200">
+                      {whatToImproveNext}
+                    </p>
+
+                    {nextBestActions.length > 0 && (
+                      <div className="space-y-3 pt-4 border-t border-primary/10">
+                        <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Next best actions</h4>
+                        <ul className="grid gap-3 sm:grid-cols-2">
+                          {nextBestActions.map((action, i) => (
+                            <li key={i} className="flex items-start gap-2 bg-white/50 dark:bg-slate-900/50 p-3 rounded-lg border border-primary/5 shadow-sm">
+                              <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">{i + 1}</span>
+                              <span className="text-sm font-medium">{action}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-8">
+                    <Button
+                      onClick={() => window.open("/meal-planner", "_blank")}
+                      className="w-full sm:w-auto h-11 px-8 rounded-full shadow-lg hover:shadow-xl transition-all"
+                    >
+                      Plan my Meals
+                      <ChevronRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </section>

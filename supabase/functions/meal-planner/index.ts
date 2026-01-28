@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
       const age = profile.age || 30;
       const gender = profile.gender || "male";
       const activityLevel = profile.activity_level || "moderate";
-      
+
       // Map activity levels
       const activityMap: Record<string, string> = {
         "lightly_active": "light",
@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
 
       // Determine goal from endGoal or profile goal
       const goal = goalDetails.endGoal || profile.goal || "maintain_weight";
-      
+
       // Adjust for goal
       if (goal === "lose_weight" || goal === "weight_loss") {
         // Calculate deficit based on timeframe and target weight
@@ -444,7 +444,7 @@ Format your response as a well-structured JSON object with the following structu
 
 Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
 
-    const GEMINI_MODEL = "gemini-2.0-flash-exp";
+    const GEMINI_MODEL = "gemini-2.0-flash";
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
     const response = await fetch(geminiUrl, {
@@ -580,7 +580,7 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
       const targetCal = mealPlan.dailyCalorieTarget || calculatedCalorieTarget || 2000;
       const numMeals = preferences?.includeSnacks ? 5 : 3; // breakfast, lunch, dinner + 2 snacks if included
       const mealCalories = Math.round(targetCal / numMeals);
-      
+
       // Calculate macros for each meal type (30% protein, 40% carbs, 30% fat)
       const calculateMealMacros = (calories: number) => {
         return {
@@ -696,18 +696,18 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
     const mealOrder = ["breakfast", "snack", "lunch", "dinner"];
     const sortMeals = (meals: any[]) => {
       if (!meals || !Array.isArray(meals)) return meals;
-      
+
       // Separate snacks by position (we'll determine this by checking meal names or order)
       const breakfast = meals.find(m => m.type === "breakfast");
       const lunch = meals.find(m => m.type === "lunch");
       const dinner = meals.find(m => m.type === "dinner");
       const snacks = meals.filter(m => m.type === "snack");
-      
+
       // Determine snack positions based on meal names or order
       const morningSnacks: any[] = [];
       const afternoonSnacks: any[] = [];
       const eveningSnacks: any[] = [];
-      
+
       for (const snack of snacks) {
         const name = (snack.name || "").toLowerCase();
         if (name.includes("morning") || name.includes("mid-morning") || name.includes("am")) {
@@ -734,7 +734,7 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
           }
         }
       }
-      
+
       // Build ordered array
       const ordered: any[] = [];
       if (breakfast) ordered.push(breakfast);
@@ -743,20 +743,20 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
       if (afternoonSnacks.length > 0) ordered.push(...afternoonSnacks);
       if (dinner) ordered.push(dinner);
       if (eveningSnacks.length > 0) ordered.push(...eveningSnacks);
-      
+
       // Add any remaining meals that weren't categorized
-      const remaining = meals.filter(m => 
-        !ordered.includes(m) && 
-        m.type !== "breakfast" && 
-        m.type !== "lunch" && 
-        m.type !== "dinner" && 
+      const remaining = meals.filter(m =>
+        !ordered.includes(m) &&
+        m.type !== "breakfast" &&
+        m.type !== "lunch" &&
+        m.type !== "dinner" &&
         m.type !== "snack"
       );
       if (remaining.length > 0) ordered.push(...remaining);
-      
+
       return ordered;
     };
-    
+
     // Sort meals for each day
     for (const dayPlan of mealPlan.weeklyMealPlan) {
       if (dayPlan.meals && Array.isArray(dayPlan.meals)) {
@@ -769,7 +769,7 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
     if (targetCalories && mealPlan.weeklyMealPlan) {
       for (const dayPlan of mealPlan.weeklyMealPlan) {
         if (!dayPlan.meals || !Array.isArray(dayPlan.meals)) continue;
-        
+
         // Calculate actual total calories for the day
         let dayTotal = 0;
         for (const meal of dayPlan.meals) {
@@ -787,12 +787,12 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
           if (!meal.macros) {
             meal.macros = { protein_g: 0, carbohydrates_g: 0, fat_g: 0 };
           }
-          
+
           // If any macro is zero, recalculate from calories
           if (meal.macros.protein_g === 0 || meal.macros.carbohydrates_g === 0 || meal.macros.fat_g === 0) {
             const mealCal = meal.totalCalories || 0;
             let estimatedCalories = mealCal;
-            
+
             if (estimatedCalories === 0) {
               // Estimate calories based on meal type
               if (meal.type === "breakfast") estimatedCalories = Math.round(targetCalories * 0.25);
@@ -801,12 +801,12 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
               else if (meal.type === "snack") estimatedCalories = Math.round(targetCalories * 0.10);
               else estimatedCalories = Math.round(targetCalories * 0.30);
             }
-            
+
             // Standard ratios: 30% protein, 40% carbs, 30% fat
             meal.macros.protein_g = Math.max(1, Math.round((estimatedCalories * 0.30) / 4));
             meal.macros.carbohydrates_g = Math.max(1, Math.round((estimatedCalories * 0.40) / 4));
             meal.macros.fat_g = Math.max(1, Math.round((estimatedCalories * 0.30) / 9));
-            
+
             // Update meal calories if it was 0
             if (meal.totalCalories === 0) {
               meal.totalCalories = estimatedCalories;
@@ -827,7 +827,7 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
         // If there's a mismatch, adjust proportionally
         if (Math.abs(dayTotal - targetCalories) > 5) {
           const adjustmentFactor = targetCalories / (dayTotal || 1);
-          
+
           for (const meal of dayPlan.meals) {
             if (meal.foods && Array.isArray(meal.foods)) {
               for (const food of meal.foods) {
@@ -841,7 +841,7 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
               meal.totalCalories = Math.round(meal.totalCalories * adjustmentFactor);
             }
           }
-          
+
           // Verify final total
           let finalTotal = 0;
           for (const meal of dayPlan.meals) {
@@ -851,13 +851,13 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
               finalTotal += meal.totalCalories;
             }
           }
-          
+
           // If still off, make a small adjustment to the largest meal
           if (Math.abs(finalTotal - targetCalories) > 2) {
             const diff = targetCalories - finalTotal;
             let largestMeal = null;
             let largestCalories = 0;
-            
+
             for (const meal of dayPlan.meals) {
               const mealCal = meal.totalCalories || 0;
               if (mealCal > largestCalories) {
@@ -865,7 +865,7 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
                 largestMeal = meal;
               }
             }
-            
+
             if (largestMeal && largestMeal.foods && Array.isArray(largestMeal.foods) && largestMeal.foods.length > 0) {
               // Distribute the difference across the largest meal's foods
               const perFood = Math.round(diff / largestMeal.foods.length);
@@ -879,7 +879,7 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
               largestMeal.totalCalories = Math.max(1, largestMeal.totalCalories + diff);
             }
           }
-          
+
           // After calorie adjustment, ensure macros are updated proportionally
           for (const meal of dayPlan.meals) {
             if (meal.totalCalories > 0) {
@@ -890,18 +890,18 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
             }
           }
         }
-        
+
         // Ensure ALL meals have complete macros (NEVER zero) - run for all days regardless of calorie match
         for (const meal of dayPlan.meals) {
           if (!meal.macros) {
             meal.macros = { protein_g: 0, carbohydrates_g: 0, fat_g: 0 };
           }
-          
+
           // If any macro is zero, recalculate from calories
           if (meal.macros.protein_g === 0 || meal.macros.carbohydrates_g === 0 || meal.macros.fat_g === 0) {
             const mealCal = meal.totalCalories || 0;
             let estimatedCalories = mealCal;
-            
+
             if (estimatedCalories === 0) {
               // Estimate calories based on meal type
               if (meal.type === "breakfast") estimatedCalories = Math.round(targetCalories * 0.25);
@@ -910,12 +910,12 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
               else if (meal.type === "snack") estimatedCalories = Math.round(targetCalories * 0.10);
               else estimatedCalories = Math.round(targetCalories * 0.30);
             }
-            
+
             // Standard ratios: 30% protein, 40% carbs, 30% fat
             meal.macros.protein_g = Math.max(1, Math.round((estimatedCalories * 0.30) / 4));
             meal.macros.carbohydrates_g = Math.max(1, Math.round((estimatedCalories * 0.40) / 4));
             meal.macros.fat_g = Math.max(1, Math.round((estimatedCalories * 0.30) / 9));
-            
+
             // Update meal calories if it was 0
             if (meal.totalCalories === 0) {
               meal.totalCalories = estimatedCalories;
@@ -931,7 +931,7 @@ Return ONLY valid JSON. Do not include any markdown formatting or code blocks.`;
           }
         }
       }
-      
+
       // Ensure dailyCalorieTarget is set correctly
       mealPlan.dailyCalorieTarget = targetCalories;
     }

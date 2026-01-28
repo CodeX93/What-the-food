@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsonrepair } from "https://esm.sh/jsonrepair@3";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_API_KEY");
-const GEMINI_MODEL = "gemini-2.0-flash-exp"; // Fast and capable enough for text generation
+const GEMINI_MODEL = "gemini-2.0-flash"; // Fast and capable enough for text generation
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -15,59 +15,111 @@ const corsHeaders = {
 // type InsightType = "warning" | "success" | "neutral" | "error";
 // type InsightCategory = "macro_balance" | "timing" | "consistency" | "meal_pattern" | "general";
 
-const INSIGHTS_SCHEMA = {
-    type: "array",
-    items: {
-        type: "object",
-        properties: {
-            id: { type: "string" },
-            title: { type: "string" },
-            copy: { type: "string" }, // 1-2 sentences explaining the insight
-            action: { type: "string" }, // Single specific action item
-            type: { type: "string", enum: ["warning", "success", "neutral"] },
-            category: { type: "string", enum: ["macro_balance", "timing", "consistency", "meal_pattern", "general"] },
-            impactScore: { type: "number" } // 0-100, used for sorting
+const INSIGHTS_RESPONSE_SCHEMA = {
+    type: "object",
+    properties: {
+        insights: {
+            type: "array",
+            items: {
+                type: "object",
+                properties: {
+                    id: { type: "string" },
+                    title: { type: "string" },
+                    copy: { type: "string" },
+                    action: { type: "string" },
+                    type: { type: "string", enum: ["warning", "success", "neutral"] },
+                    category: { type: "string", enum: ["macro_balance", "timing", "consistency", "meal_pattern", "general"] },
+                    impactScore: { type: "number" }
+                },
+                required: ["id", "title", "copy", "action", "type", "category", "impactScore"]
+            }
         },
-        required: ["id", "title", "copy", "action", "type", "category", "impactScore"]
-    }
+        goalProgress: {
+            type: "object",
+            properties: {
+                status: { type: "string", enum: ["on_track", "off_track", "warning"] },
+                message: { type: "string" }, // e.g. "Averaging +220 kcal/day above target"
+                prognosticText: { type: "string" }, // e.g. "At this pace, progress will stall."
+                macroAdherencePercent: { type: "number" } // 0-100
+            },
+            required: ["status", "message", "prognosticText", "macroAdherencePercent"]
+        },
+        eatingPatterns: {
+            type: "object",
+            properties: {
+                repeatedMeals: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: {
+                            name: { type: "string" },
+                            frequency: { type: "string" }, // e.g. "3x this week"
+                            insight: { type: "string" }
+                        },
+                        required: ["name", "frequency", "insight"]
+                    }
+                },
+                calorieDenseMeals: {
+                    type: "array",
+                    items: {
+                        type: "object",
+                        properties: {
+                            name: { type: "string" },
+                            calories: { type: "number" },
+                            insight: { type: "string" }
+                        },
+                        required: ["name", "calories", "insight"]
+                    }
+                },
+                triggerInsights: {
+                    type: "array",
+                    items: { type: "string" } // e.g. "Meals with creamy sauces push you over calories 70% of the time."
+                }
+            },
+            required: ["repeatedMeals", "calorieDenseMeals", "triggerInsights"]
+        },
+        nextBestActions: {
+            type: "array",
+            items: { type: "string" } // e.g. ["Add 20–30g protein to lunch", "Reduce late-night calories"]
+        }
+    },
+    required: ["insights", "goalProgress", "eatingPatterns", "nextBestActions"]
 };
 
 async function callGeminiForInsights(context) {
     if (!GEMINI_API_KEY) throw new Error("Missing Gemini API Key");
 
     const prompt = `
-    Role: You are an expert Nutrition Coach. Your goal is to analyze the user's recent food log and provide 3-4 specific, high-impact insights.
+    Role: You are an expert Nutrition Coach. Your goal is to analyze the user's recent food log and provide 3-4 specific insights, a goal progress assessment, eating pattern analysis, AND 3 specific next best actions.
     
     User Profile:
     - Goal: ${context.goal || "Maintain Weight"}
-    - Daily Calorie Target: ${context.targetCalories || 2000} kcal
-    - Daily Protein Target: ${context.targetProtein || 150}g
+    - Daily Target: ${context.targetCalories || 2000} kcal, ${context.targetProtein || 150}g Protein, ${context.targetCarbs || 200}g Carbs, ${context.targetFat || 70}g Fat
 
     Recent Data (Last 7 Days):
-    - Average Calories: ${Math.round(context.avgCalories)} per day
-    - Average Protein: ${Math.round(context.avgProtein)}g per day
+    - Average Intake: ${Math.round(context.avgCalories)} kcal, ${Math.round(context.avgProtein)}g Protein, ${Math.round(context.avgCarbs || 0)}g Carbs, ${Math.round(context.avgFat || 0)}g Fat
     - Calorie Variance (Consistency): ${context.consistencyScore}/100
-    - Meal Pattern: ${context.mealPatternText || "No specific pattern detected"}
+    - Meal History Summary: ${context.mealSummaryText || "No data"}
     
-    Task:
-    Generate a JSON array of insights. 
-    1. The first insight should be the most important one (highest impactScore).
-    2. Focus on "Big Wins" first: huge calorie deficits/surpluses, low protein, or great consistency.
-    3. If the user is doing well, give them a "Success" insight.
-    4. Be specific. Don't say "Eat better." Say "Your protein is low on weekends." or "Great job hitting your calorie target."
-    5. "copy" should be short and conversational. "action" should be a direct command like "Add a protein shake."
+    Task 1: Generate a JSON array of insights. Focus on "Big Wins".
     
-    Return pure JSON complying with this schema:
-    [{ "id": "unique_id", "title": "...", "copy": "...", "action": "...", "type": "warning|success|neutral", "category": "...", "impactScore": 85 }]
+    Task 2: Generate a "goalProgress" object with status, message, prognosticText, and macroAdherencePercent.
+    
+    Task 3: Generate an "eatingPatterns" object with repeatedMeals, calorieDenseMeals, and triggerInsights (behavioral lessons).
+    
+    Task 4: Generate a "nextBestActions" array of 3 specific, actionable tips.
+    Examples: "Add 20–30g protein to lunch", "Reduce late-night calories", "Try rotating one new meal this week".
+    
+    Return pure JSON matching the response schema.
   `;
 
     const payload = {
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 1000,
+            maxOutputTokens: 1500,
             responseMimeType: "application/json",
-            responseSchema: INSIGHTS_SCHEMA
+            responseSchema: INSIGHTS_RESPONSE_SCHEMA
         }
     };
 
@@ -110,9 +162,9 @@ Deno.serve(async (req) => {
 
         console.log("Analyzing for:", body.goal);
 
-        const insights = await callGeminiForInsights(body);
+        const result = await callGeminiForInsights(body);
 
-        return new Response(JSON.stringify({ insights }), {
+        return new Response(JSON.stringify(result), {
             headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
 

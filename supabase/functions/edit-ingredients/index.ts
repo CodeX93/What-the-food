@@ -7,7 +7,7 @@
 import { jsonrepair } from "https://esm.sh/jsonrepair@3";
 
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_API_KEY");
-const GEMINI_MODEL_ACCURATE = "gemini-2.0-flash-exp";
+const GEMINI_MODEL_ACCURATE = "gemini-2.0-flash";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

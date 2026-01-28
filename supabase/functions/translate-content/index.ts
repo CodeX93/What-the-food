@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
 
     // Build translation prompt based on content type
     let prompt = "";
-    
+
     if (contentType === "meal_plan") {
       prompt = buildMealPlanTranslationPrompt(content, sourceLanguage, targetLanguage);
     } else if (contentType === "food_scan") {
@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
     }
 
     // Call Gemini API
-    const GEMINI_MODEL = "gemini-2.0-flash-exp";
+    const GEMINI_MODEL = "gemini-2.0-flash";
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 
     const response = await fetch(geminiUrl, {

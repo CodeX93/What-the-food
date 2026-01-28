@@ -41,6 +41,14 @@ export type ConsistencyBreakdown = {
     breakdown: string[]; // List of strings explaining the score (e.g. "Logged 4/7 days")
 };
 
+export type GoalProgress = {
+    avgCaloriesDiff: number;
+    macroAdherencePercent: number;
+    status: "on_track" | "off_track" | "warning";
+    message: string;
+    prognosticText: string;
+};
+
 export type DailyStats = {
     date: string;
     calories: number;
@@ -144,7 +152,7 @@ export const calculateDailyRequirements = (profile: UserProfile | null) => {
 
 /**
  * Calculate Consistency Score (0-100)
- * Factors: Days Logged, Calorie Variance
+ * Factors: Days Logged (40%), Calorie Variance (30%), Macro Stability (30%)
  */
 export const calculateConsistencyScore = (
     scans: FoodScan[],
@@ -154,61 +162,104 @@ export const calculateConsistencyScore = (
         return { score: 0, breakdown: ["Start logging to build consistency"] };
     }
 
-    const today = new Date();
-    const dateMap: Record<string, number> = {};
+    const dateMap: Record<string, { calories: number; protein: number; carbs: number; fat: number }> = {};
 
-    // Aggregate calories per day
+    // Aggregate daily stats
     scans.forEach(scan => {
         const day = TIMEZONE_UTILS.formatDay(scan.created_at);
         const nutrients = scan.result_json?.nutrients;
-        const cals = (nutrients?.calories || 0) * (scan.serving || 1);
+        const mult = scan.serving || 1;
+        const cals = (nutrients?.calories || 0) * mult;
+        const protein = (nutrients?.protein_g || 0) * mult;
+        const carbs = (nutrients?.carbohydrates_g || 0) * mult;
+        const fat = (nutrients?.fat_g || 0) * mult;
 
-        if (!dateMap[day]) dateMap[day] = 0;
-        dateMap[day] += cals;
+        if (!dateMap[day]) dateMap[day] = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+        dateMap[day].calories += cals;
+        dateMap[day].protein += protein;
+        dateMap[day].carbs += carbs;
+        dateMap[day].fat += fat;
     });
 
     const loggedDaysCount = Object.keys(dateMap).length;
+    const daysArray = Object.values(dateMap);
 
-    // 1. Frequency Score (50%)
-    // 7 days = 50pts, 4 days = ~28pts
-    const frequencyScore = Math.min(50, (loggedDaysCount / daysToCheck) * 50);
+    // 1. Frequency Score (40%)
+    const frequencyScore = Math.min(40, (loggedDaysCount / daysToCheck) * 40);
 
-    // 2. Variance Score (50%)
-    // Calculate CV (Coefficient of Variation)
-    const calories = Object.values(dateMap);
-    const mean = calories.reduce((a, b) => a + b, 0) / calories.length;
+    // 2. Variance Score (30%)
+    const calories = daysArray.map(d => d.calories);
+    const meanCals = calories.reduce((a, b) => a + b, 0) / calories.length;
 
-    let varianceScore = 50;
+    let varianceScore = 30;
     let varianceMsg = "Calorie intake is stable";
 
-    if (loggedDaysCount > 1 && mean > 0) {
-        const sqDiffs = calories.map(c => Math.pow(c - mean, 2));
+    if (loggedDaysCount > 1 && meanCals > 0) {
+        const sqDiffs = calories.map(c => Math.pow(c - meanCals, 2));
         const avgSqDiff = sqDiffs.reduce((a, b) => a + b, 0) / calories.length;
         const stdDev = Math.sqrt(avgSqDiff);
-        const cv = stdDev / mean; // Coefficient of Variation
+        const cv = stdDev / meanCals;
 
-        // Scoring: CV < 0.15 is great (50pts), CV > 0.40 is bad (0pts)
-        if (cv < 0.15) varianceScore = 50;
+        if (cv < 0.15) varianceScore = 30;
         else if (cv > 0.40) {
-            varianceScore = 10;
+            varianceScore = 5;
             varianceMsg = "Large calorie swings detected";
         } else {
-            // Linear interpolation between 0.15 and 0.40
-            // 0.15 -> 50, 0.40 -> 10
             const ratio = (cv - 0.15) / (0.40 - 0.15);
-            varianceScore = 50 - (ratio * 40);
+            varianceScore = 30 - (ratio * 25);
             varianceMsg = "Some variation in meal sizes";
         }
     } else if (loggedDaysCount <= 1) {
-        varianceScore = 50; // Benefit of doubt
+        varianceScore = 30;
         varianceMsg = "Keep logging to measure stability";
     }
 
-    const finalScore = Math.round(frequencyScore + varianceScore);
+    // 3. Macro Stability Score (30%)
+    // Measure how consistent the P/C/F ratios are across days
+    let macroScore = 30;
+    let macroMsg = "Macro ratios are consistent";
+
+    if (loggedDaysCount > 1) {
+        const dailyRatios = daysArray.map(d => {
+            const total = d.calories || 1;
+            return {
+                p: (d.protein * 4) / total,
+                c: (d.carbs * 4) / total,
+                f: (d.fat * 9) / total
+            };
+        });
+
+        // Calculate average ratios
+        const avgP = dailyRatios.reduce((sum, r) => sum + r.p, 0) / dailyRatios.length;
+        const avgC = dailyRatios.reduce((sum, r) => sum + r.c, 0) / dailyRatios.length;
+        const avgF = dailyRatios.reduce((sum, r) => sum + r.f, 0) / dailyRatios.length;
+
+        // Calculate total deviation across all macros across all days
+        const totalDev = dailyRatios.reduce((sum, r) => {
+            return sum + Math.abs(r.p - avgP) + Math.abs(r.c - avgC) + Math.abs(r.f - avgF);
+        }, 0) / dailyRatios.length;
+
+        // Scoring: totalDev < 0.1 (10% avg swing) is great, > 0.3 is poor
+        if (totalDev < 0.1) macroScore = 30;
+        else if (totalDev > 0.3) {
+            macroScore = 5;
+            macroMsg = "Macro ratios shifting daily";
+        } else {
+            const ratio = (totalDev - 0.1) / (0.3 - 0.1);
+            macroScore = 30 - (ratio * 25);
+            macroMsg = "Minor macro ratio shifts";
+        }
+    } else {
+        macroScore = 30;
+        macroMsg = "Log more to track macro stability";
+    }
+
+    const finalScore = Math.round(frequencyScore + varianceScore + macroScore);
 
     const breakdown = [
         `Logged ${loggedDaysCount}/${daysToCheck} days`,
-        varianceMsg
+        varianceMsg,
+        macroMsg
     ];
 
     return { score: finalScore, breakdown };
@@ -566,6 +617,19 @@ export const analyzeEatingPatterns = (scans: FoodScan[], dailyTargetCalories: nu
     return { repeatedMeals: repeated, triggerMeals: triggers };
 };
 
+export type EatingPatterns = {
+    repeatedMeals: { name: string; frequency: string; insight: string }[];
+    calorieDenseMeals: { name: string; calories: number; insight: string }[];
+    triggerInsights: string[];
+};
+
+export type AnalyticsAIResponse = {
+    insights: Insight[];
+    goalProgress: GoalProgress;
+    eatingPatterns: EatingPatterns;
+    nextBestActions: string[];
+};
+
 export const getConsolidatedAction = (insights: Insight[], consistencyBreakdown: ConsistencyBreakdown): string => {
     // Priority 1: High Impact Insight
     if (insights.length > 0 && insights[0].type !== "success") {
@@ -579,4 +643,95 @@ export const getConsolidatedAction = (insights: Insight[], consistencyBreakdown:
 
     // Priority 3: Fallback
     return "Keep tracking to see more trends.";
+};
+
+/**
+ * Calculate Goal Progress
+ */
+export const calculateGoalProgress = (
+    scans: FoodScan[],
+    profile: UserProfile | null,
+    targets: any
+): GoalProgress => {
+    if (!scans.length || !targets) {
+        return {
+            avgCaloriesDiff: 0,
+            macroAdherencePercent: 0,
+            status: "warning",
+            message: "Not enough data yet",
+            prognosticText: "Log more meals to see your progress."
+        };
+    }
+
+    const dailyStats: Record<string, { calories: number; protein: number; carbs: number; fat: number }> = {};
+    scans.forEach(scan => {
+        const day = TIMEZONE_UTILS.formatDay(scan.created_at);
+        const nutrients = scan.result_json?.nutrients || {};
+        const mult = scan.serving || 1;
+        if (!dailyStats[day]) dailyStats[day] = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+        dailyStats[day].calories += (nutrients.calories || 0) * mult;
+        dailyStats[day].protein += (nutrients.protein_g || 0) * mult;
+        dailyStats[day].carbs += (nutrients.carbohydrates_g || 0) * mult;
+        dailyStats[day].fat += (nutrients.fat_g || 0) * mult;
+    });
+
+    const daysCount = Object.keys(dailyStats).length;
+    const days = Object.values(dailyStats);
+    const avgCals = days.reduce((sum, d) => sum + d.calories, 0) / daysCount;
+    const avgDiff = Math.round(avgCals - targets.calories);
+
+    // Macro adherence (how close are we to P/C/F targets on average)
+    const avgP = days.reduce((sum, d) => sum + d.protein, 0) / daysCount;
+    const avgC = days.reduce((sum, d) => sum + d.carbs, 0) / daysCount;
+    const avgF = days.reduce((sum, d) => sum + d.fat, 0) / daysCount;
+
+    const pDev = Math.abs(avgP - targets.protein) / targets.protein;
+    const cDev = Math.abs(avgC - targets.carbs) / targets.carbs;
+    const fDev = Math.abs(avgF - targets.fat) / targets.fat;
+    const macroAdherence = Math.max(0, Math.round((1 - (pDev + cDev + fDev) / 3) * 100));
+
+    const goal = (profile?.goal || "maintenance").toLowerCase();
+    let status: "on_track" | "off_track" | "warning" = "on_track";
+    let message = "";
+    let prognosticText = "";
+
+    if (goal === "weight_loss" || goal === "cut") {
+        if (avgDiff > 100) {
+            status = "off_track";
+            message = `Averaging +${avgDiff} kcal/day above target`;
+            prognosticText = "At this pace, progress will stall.";
+        } else if (avgDiff < -300) {
+            status = "warning";
+            message = `Averaging ${avgDiff} kcal/day (Large Deficit)`;
+            prognosticText = "Too aggressive. Watch out for muscle loss.";
+        } else {
+            message = "Calorie intake aligns with weight loss.";
+            prognosticText = "You're hitting your deficit consistently.";
+        }
+    } else if (goal.includes("gain")) {
+        if (avgDiff < -50) {
+            status = "off_track";
+            message = `Averaging ${avgDiff} kcal/day (Deficit)`;
+            prognosticText = "Need more calories for muscle growth.";
+        } else if (avgDiff > 400) {
+            status = "warning";
+            message = `Averaging +${avgDiff} kcal/day above target`;
+            prognosticText = "Surplus might lead to excessive fat gain.";
+        } else {
+            message = "Surplus is optimal for muscle gain.";
+            prognosticText = "Keep fueling your workouts.";
+        }
+    } else {
+        // Maintenance
+        if (Math.abs(avgDiff) > 200) {
+            status = "off_track";
+            message = `Calories drifting ${avgDiff > 0 ? "+" : ""}${avgDiff} from maintenance`;
+            prognosticText = "Your weight may start shifting.";
+        } else {
+            message = "Calories strictly hitting maintenance.";
+            prognosticText = "Perfect for weight stability.";
+        }
+    }
+
+    return { avgCaloriesDiff: avgDiff, macroAdherencePercent: macroAdherence, status, message, prognosticText };
 };

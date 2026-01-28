@@ -6,9 +6,9 @@ import { jsonrepair } from "https://esm.sh/jsonrepair@3";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_API_KEY");
-const GEMINI_MODEL_FAST = "gemini-2.0-flash-exp"; // Fast for initial analysis
+const GEMINI_MODEL_FAST = "gemini-2.0-flash"; // Fast for initial analysis
 // ✅ Correct: Points to the specific stable version
-const GEMINI_MODEL_ACCURATE = "gemini-2.0-flash-exp"; // Reliable with structured output
+const GEMINI_MODEL_ACCURATE = "gemini-2.0-flash"; // Reliable with structured output
 const FOOD_CONFIDENCE_THRESHOLD = 0.7;
 
 const corsHeaders = {
