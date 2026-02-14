@@ -2048,7 +2048,8 @@ export function WidgetEmbedClient() {
         const analysisResult = await analyzeFood(imagePreview, servings);
         console.log("✅ Analysis complete:", analysisResult);
 
-        let finalResult = analysisResult;
+        // Extract the actual analysis object
+        let finalAnalysis = analysisResult.analysis;
 
         // Translate if needed
         if (widgetSettings?.language && widgetSettings.language !== 'en') {
@@ -2058,7 +2059,7 @@ export function WidgetEmbedClient() {
           });
 
           try {
-            finalResult = await translateContent(analysisResult, widgetSettings.language);
+            finalAnalysis = await translateContent(analysisResult.analysis, widgetSettings.language);
             loadingToast.dismiss();
           } catch (e) {
             console.error("Translation failed", e);
@@ -2078,9 +2079,9 @@ export function WidgetEmbedClient() {
         // Only set result if ALL checks pass
         console.log("✅ Setting result - all checks passed");
 
-        setResult(finalResult);
+        setResult(finalAnalysis);
         if (typeof window !== 'undefined') {
-          sessionStorage.setItem("last_food_analysis", JSON.stringify(finalResult));
+          sessionStorage.setItem("last_food_analysis", JSON.stringify(finalAnalysis));
         }
 
         // Handle different display modes
@@ -2088,7 +2089,7 @@ export function WidgetEmbedClient() {
           // Store result data in sessionStorage and open new tab
           const resultId = `widget_result_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           sessionStorage.setItem(resultId, JSON.stringify({
-            analysis: finalResult,
+            analysis: finalAnalysis,
             image: imagePreview,
             servings: servings,
             subscriptionType: subscriptionType
