@@ -532,6 +532,7 @@ export function WidgetEmbedClient() {
   const [subscriptionType, setSubscriptionType] = useState<string>("free");
   const [servings, setServings] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
+  const [translatedUi, setTranslatedUi] = useState<{ name?: string; description?: string }>({});
   const previewTrackedRef = useRef(false);
   const isTrackingRef = useRef(false);
   const { toast } = useToast();
@@ -2002,6 +2003,75 @@ export function WidgetEmbedClient() {
     };
   }, [widgetId, checkApiCallLimit, setLanguage]);
 
+  // Effect to translate custom widget text (name, description) when language changes
+  useEffect(() => {
+    const translateCustomText = async () => {
+      // Logic for translation
+      // 1. Check if we have widget settings and a non-English language
+      // 2. Check if we have custom text to translate
+      // 3. Call API to translate
+      // 4. Update state
+
+      if (!widgetSettings || !languageContext?.language || languageContext.language === 'en') {
+        return;
+      }
+
+      const lang = languageContext.language;
+      const nameToTranslate = widgetSettings.widget_name;
+      const descToTranslate = widgetSettings.widget_description;
+
+      if (!nameToTranslate && !descToTranslate) return;
+
+      console.log(`Translating custom widget text to ${lang}...`);
+
+      try {
+        // Translate Name
+        if (nameToTranslate) {
+          const response = await fetch('/api/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: nameToTranslate,
+              targetLanguage: lang,
+              isJson: false,
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.translatedContent) {
+              setTranslatedUi(prev => ({ ...prev, name: data.translatedContent }));
+            }
+          }
+        }
+
+        // Translate Description
+        if (descToTranslate) {
+          const response = await fetch('/api/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              content: descToTranslate,
+              targetLanguage: lang,
+              isJson: false,
+            }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.translatedContent) {
+              setTranslatedUi(prev => ({ ...prev, description: data.translatedContent }));
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error translating custom text:", error);
+      }
+    };
+
+    translateCustomText();
+  }, [widgetSettings, languageContext?.language]);
+
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -2285,10 +2355,10 @@ export function WidgetEmbedClient() {
                     style={{ color: styles.primaryColor }}
                   />
                   <p className="text-lg font-medium mb-2" style={{ color: styles.primaryColor }}>
-                    {widgetSettings?.widget_name || t("upload_food_photo_title", "Upload Your Food Photo")}
+                    {translatedUi.name || widgetSettings?.widget_name || t("hero.uploadfoodphoto", "Upload Your Food Photo")}
                   </p>
                   <p className="text-sm text-muted-foreground mb-4">
-                    {widgetSettings?.widget_description || t("upload_food_photo_description", "Drop an image here or click to browse")}
+                    {translatedUi.description || widgetSettings?.widget_description || t("hero.dropimage", "Drop an image here or click to browse")}
                   </p>
                   <Button
                     style={{
@@ -2296,7 +2366,7 @@ export function WidgetEmbedClient() {
                       borderRadius: styles.borderRadius
                     }}
                   >
-                    {t("choose_file_button", "Choose File")}
+                    {t("hero.choosefile", "Choose File")}
                   </Button>
                 </div>
               ) : (
@@ -2305,7 +2375,7 @@ export function WidgetEmbedClient() {
                     <div className="aspect-video relative">
                       <img
                         src={imagePreview}
-                        alt={t("uploaded_food_alt", "Uploaded food")}
+                        alt={t("hero.uploadfoodphoto", "Uploaded food")}
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
@@ -2328,7 +2398,7 @@ export function WidgetEmbedClient() {
                             input.click();
                           }}
                         >
-                          {t("change_image_button", "Change Image")}
+                          {t("hero.changephoto", "Change Photo")}
                         </Button>
                       </div>
                     </div>
@@ -2341,7 +2411,7 @@ export function WidgetEmbedClient() {
                         setImagePreview(null);
                       }}
                     >
-                      {t("remove_button", "Remove")}
+                      {t("common.delete", "Remove")}
                     </Button>
                     <Button
                       onClick={handleScan}
@@ -2354,10 +2424,10 @@ export function WidgetEmbedClient() {
                     >
                       {scanning ? (
                         <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t("analyzing_button", "Analyzing...")}
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t("hero.analyzing", "Analyzing...")}
                         </>
                       ) : (
-                        t("analyze_food_button", "Analyze Food")
+                        t("hero.analyzefood", "Analyze Food")
                       )}
                     </Button>
                   </div>
