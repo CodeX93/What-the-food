@@ -111,6 +111,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
   const [showInsightModal, setShowInsightModal] = useState(false);
   const [showMealPlannerModal, setShowMealPlannerModal] = useState(false);
   const [selectedInsightType, setSelectedInsightType] = useState("nutrition");
+  const [activePatternTab, setActivePatternTab] = useState<'repeated' | 'dense' | 'triggers'>('repeated');
 
   // Premium Check
   const isPremium = initialSubscription?.subscription_type === "premium";
@@ -128,36 +129,31 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
 
       const cacheKey = `analytics_scans_v2_${user.id}`;
       // Check cache
-      const cachedData = DataCache.get<{ scans: FoodScan[]; profile: any }>(cacheKey);
+      // Check cache (Disabled)
+      // const cachedData = DataCache.get<{ scans: FoodScan[]; profile: any }>(cacheKey);
 
       let fetchedScans: FoodScan[] = [];
       let fetchedProfile: any = null;
 
-      if (cachedData) {
-        fetchedScans = cachedData.scans;
-        fetchedProfile = cachedData.profile;
-        setScans(fetchedScans);
-        setProfile(fetchedProfile);
-        setLoading(false);
-      } else {
-        // Fetch fresh
-        const [profileResult, scansResult] = await Promise.all([
-          supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-          supabase.from("food_scans")
-            .select("id, created_at, serving, result_json")
-            .eq("user_id", user.id)
-            .order("created_at", { ascending: true }) // Oldest first for calculation, useful for range finding
-        ]);
+      // Always fetch fresh data
+      const [profileResult, scansResult] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+        supabase.from("food_scans")
+          .select("id, created_at, serving, result_json")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true }) // Oldest first for calculation, useful for range finding
+      ]);
 
-        if (profileResult.data) fetchedProfile = profileResult.data;
-        if (scansResult.data) fetchedScans = scansResult.data as FoodScan[];
+      if (profileResult.data) fetchedProfile = profileResult.data;
+      if (scansResult.data) fetchedScans = scansResult.data as FoodScan[];
 
-        setScans(fetchedScans);
-        setProfile(fetchedProfile);
+      console.log(`[AnalyticsLoad] Fetched ${fetchedScans.length} scans from DB`);
 
-        // Cache
-        DataCache.set(cacheKey, { scans: fetchedScans, profile: fetchedProfile }, CACHE_DURATION.SHORT);
-      }
+      setScans(fetchedScans);
+      setProfile(fetchedProfile);
+
+      // Cache
+      DataCache.set(cacheKey, { scans: fetchedScans, profile: fetchedProfile }, CACHE_DURATION.SHORT);
     } catch (err: any) {
       console.error("Error loading analytics:", err);
       toast({ title: "Error loading data", description: "Could not load your food history.", variant: "destructive" });
@@ -176,19 +172,41 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
   }, [user, authLoading, reload]);
 
   // Date Range Defaults
+  // Date Range Defaults (Smart Check)
   useEffect(() => {
-    if (!scans.length) return;
-    if (!startDate) {
-      // Default to last 7 days or full range if small
-      const end = formatDay(new Date().toISOString());
-      // Start date: 7 days ago
-      const d = new Date();
-      d.setDate(d.getDate() - 6);
-      const start = formatDay(d.toISOString());
+    if (!scans.length || startDate) return;
 
-      setStartDate(start);
-      setEndDate(end);
+    // Find the date of the most recent scan
+    // Scans are ordered by created_at ascending (oldest first) in the fetch query
+    const lastScan = scans[scans.length - 1];
+    const lastScanDate = new Date(lastScan.created_at);
+    const today = new Date();
+
+    // Check if the last scan is "recent" (within the last 7 days)
+    const timeDiff = today.getTime() - lastScanDate.getTime();
+    const daysDiff = timeDiff / (1000 * 3600 * 24);
+
+    let end: Date;
+    let start: Date;
+
+    if (daysDiff > 7) {
+      // If data is old, shift the view to when the data actually IS
+      end = lastScanDate;
+      // Show 7 days ending on that last scan
+      start = new Date(lastScanDate);
+      start.setDate(start.getDate() - 6);
+
+      // Notify user visually or via toast? Maybe just let them see the data.
+      // We could add a toast: "Showing your last logged data from [Date]"
+    } else {
+      // Default: Last 7 days ending today
+      end = today;
+      start = new Date(today);
+      start.setDate(start.getDate() - 6);
     }
+
+    setStartDate(formatDay(start.toISOString()));
+    setEndDate(formatDay(end.toISOString()));
   }, [scans, startDate]);
 
   // --- Core Calculations (Memoized) ---
@@ -213,6 +231,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
 
       setConsistency(generatedConsistency);
       setPatterns(generatedPatterns);
+      setAiEatingPatterns(generatedPatterns); // Fix: Determine "AI" patterns locally now
       setGoalProgress(generatedGoalProgress);
 
       // 2. Prepare context for AI
@@ -248,47 +267,16 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
           : "Varied diet."
       };
 
-      // 3. Fetch AI Insights
-      const fetchAIInsights = async () => {
-        try {
-          // Add a tiny loading note or flag if desired
-          const { data, error } = await supabase.functions.invoke('coach-insights', {
-            body: aiContext
-          });
+      // 3. Generate Insights (Deterministic, no AI call needed)
+      // The generateInsights function now handles all rule-based logic locally
+      const generatedInsights = generateInsights(filteredScans, profile);
 
-          if (error) throw error;
+      setInsights(generatedInsights);
+      setWhatToImproveNext(getConsolidatedAction(generatedInsights, generatedConsistency));
 
-          if (data?.insights && Array.isArray(data.insights)) {
-            setInsights(data.insights);
-            if (data.goalProgress) {
-              setGoalProgress(data.goalProgress);
-            }
-            if (data.eatingPatterns) {
-              setAiEatingPatterns(data.eatingPatterns);
-            }
-            if (data.nextBestActions) {
-              setNextBestActions(data.nextBestActions);
-            }
-            const nextAction = getConsolidatedAction(data.insights, generatedConsistency); // Use AI insights to determine next action
-            setWhatToImproveNext(nextAction);
-          } else {
-            // Fallback to local if AI returns nothing
-            console.warn("AI returned no insights, falling back to local.");
-            const localInsights = generateInsights(filteredScans, profile);
-            setInsights(localInsights);
-            setWhatToImproveNext(getConsolidatedAction(localInsights, generatedConsistency));
-          }
-
-        } catch (err) {
-          console.error("Failed to fetch AI insights:", err);
-          // Silent fallback
-          const localInsights = generateInsights(filteredScans, profile);
-          setInsights(localInsights);
-          setWhatToImproveNext(getConsolidatedAction(localInsights, generatedConsistency));
-        }
-      };
-
-      void fetchAIInsights();
+      // Calculate Next Best Actions (simplified local logic or just take from insights)
+      const actions = generatedInsights.map(i => i.action).slice(0, 3);
+      setNextBestActions(actions);
 
       // Track View
       track("insights_generated", { count: filteredScans.length, isPremium });
@@ -301,22 +289,34 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
   }, [filteredScans, profile, dailyReqs, isPremium]);
 
 
-  // --- Helper for Today's Stats ---
-  const todayStats = useMemo(() => {
-    const today = formatDay(new Date().toISOString());
-    const todayScans = scans.filter(s => formatDay(s.created_at) === today);
+  // --- Helper for Range Stats (Average) ---
+  const rangeStats = useMemo(() => {
+    // We use filteredScans which respects the Start/End date selection
+    if (!filteredScans.length) return { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
-    const stats = { calories: 0, protein: 0, carbs: 0, fat: 0 };
-    todayScans.forEach(s => {
+    // Group by Day
+    const dayMap = new Set<string>();
+    const totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
+
+    filteredScans.forEach(s => {
+      dayMap.add(formatDay(s.created_at));
       const m = s.serving || 1;
       const n = s.result_json?.nutrients || {};
-      stats.calories += (n.calories || 0) * m;
-      stats.protein += (n.protein_g || 0) * m;
-      stats.carbs += (n.carbohydrates_g || 0) * m;
-      stats.fat += (n.fat_g || 0) * m;
+      totals.calories += (n.calories || 0) * m;
+      totals.protein += (n.protein_g || 0) * m;
+      totals.carbs += (n.carbohydrates_g || 0) * m;
+      totals.fat += (n.fat_g || 0) * m;
     });
-    return stats;
-  }, [scans]);
+
+    const daysCount = dayMap.size || 1;
+
+    return {
+      calories: totals.calories / daysCount,
+      protein: totals.protein / daysCount,
+      carbs: totals.carbs / daysCount,
+      fat: totals.fat / daysCount
+    };
+  }, [filteredScans]);
 
 
   // --- Onboarding State Logic ---
@@ -329,8 +329,64 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
 
   const handleUnlockClick = (type: string) => {
     track("insight_blurred_click", { type });
-    setSelectedInsightType(type);
-    setShowUnlockModal(true);
+
+    if (type === 'meal_planner') {
+      setShowMealPlannerModal(true);
+    } else if (type === 'nutrition') {
+      setShowUnlockModal(true);
+    } else {
+      // Specific insight category
+      setSelectedInsightType(type.replace('_', ' ')); // Humanize for the modal prop
+      setShowInsightModal(true);
+    }
+  };
+
+  const handleDownloadData = () => {
+    track("download_data_click");
+
+    if (!scans.length) {
+      toast({ title: "No data to download", description: "Log some meals first!", variant: "default" });
+      return;
+    }
+
+    // CSV Header
+    const headers = ["Date", "Time", "Dish Name", "Calories (kcal)", "Protein (g)", "Carbs (g)", "Fat (g)", "Serving Size"];
+
+    // CSV Rows
+    const rows = scans.map(scan => {
+      const dateObj = new Date(scan.created_at);
+      const date = dateObj.toLocaleDateString();
+      const time = dateObj.toLocaleTimeString();
+      const n = scan.result_json?.nutrients || {};
+      const serving = scan.serving || 1;
+
+      // Nutrients are per serving in the JSON usually, or per 1 serving unit? 
+      // Based on analytics usage: "stats.calories += (n.calories || 0) * m;"
+      // So we should export the *consumed* amount (multiplied by serving) or the base?
+      // Analytics view shows total consumed. Let's export total consumed for clarity.
+
+      return [
+        date,
+        time,
+        `"${(scan.result_json?.dish || "Unknown Meal").replace(/"/g, '""')}"`, // Escape quotes
+        ((n.calories || 0) * serving).toFixed(0),
+        ((n.protein_g || 0) * serving).toFixed(1),
+        ((n.carbohydrates_g || 0) * serving).toFixed(1),
+        ((n.fat_g || 0) * serving).toFixed(1),
+        serving.toString()
+      ].join(",");
+    });
+
+    const csvContent = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `food_log_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // --- Render ---
@@ -358,7 +414,11 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
               <h1 className="text-3xl font-bold tracking-tight text-foreground">Insights</h1>
             </div>
             <p className="text-muted-foreground text-lg pl-10">
-              {isOnboarding ? "Start logging to unlock your personal coach." : "These insights update as you log more meals."}
+              {isOnboarding
+                ? "Start logging to unlock your personal coach."
+                : new Date(endDate) < new Date(new Date().setDate(new Date().getDate() - 2))
+                  ? `Showing data from ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`
+                  : "These insights update as you log more meals."}
             </p>
           </div>
 
@@ -377,10 +437,15 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
               onChange={(e) => setEndDate(e.target.value)}
               className="h-8 w-auto border-0 focus-visible:ring-0 px-2 text-xs"
             />
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={reload}>
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={reload}>
               <RefreshCw className="w-3 h-3" />
             </Button>
           </div>
+
+          <Button variant="outline" size="sm" className="hidden sm:flex gap-2 bg-white dark:bg-slate-900 ml-2" onClick={handleDownloadData}>
+            <Download className="w-4 h-4" />
+            Download your data
+          </Button>
         </div>
 
         {/* Empty State (Day 0-1) */}
@@ -398,25 +463,32 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
         ) : (
           <div className="space-y-8">
 
-            {/* SECTION 1: Today's Intake & Goal Alignment (Top Row) */}
+            {/* SECTION 1: Daily Intake */}
             <section className="space-y-4">
               <h2 className="text-xl font-semibold flex items-center gap-2">
                 <Target className="w-5 h-5 text-blue-500" />
-                Today at a Glance
+                {startDate === endDate ? `Intake for ${new Date(endDate).toLocaleDateString()}` : "Average Daily Intake"}
               </h2>
+              <p className="text-sm text-muted-foreground -mt-3 ml-7">
+                {startDate === endDate
+                  ? "Daily stats for this date; Compared to daily needs"
+                  : "Average over selected dates; Compared to daily needs"
+                }
+              </p>
+
               <div className="grid gap-4 md:grid-cols-2">
                 {/* Calories Card */}
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg">Daily Calories</CardTitle>
-                    <CardDescription>Daily Energy Balance</CardDescription>
+                    <CardDescription>Average intake vs Target</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-end gap-2 mb-2">
-                      <span className="text-3xl font-bold">{Math.round(todayStats.calories)}</span>
+                      <span className="text-3xl font-bold">{Math.round(rangeStats.calories)}</span>
                       <span className="text-sm text-muted-foreground mb-1">/ {dailyReqs?.calories || 2000} kcal</span>
                     </div>
-                    <Progress value={(todayStats.calories / (dailyReqs?.calories || 2000)) * 100} className="h-3" />
+                    <Progress value={(rangeStats.calories / (dailyReqs?.calories || 2000)) * 100} className="h-3" />
                   </CardContent>
                 </Card>
 
@@ -424,34 +496,34 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg">Macro Balance</CardTitle>
-                    <CardDescription>Target vs Reality</CardDescription>
+                    <CardDescription>Average macro intake vs Targets</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4 pt-2">
                     {/* Protein */}
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="font-medium flex items-center gap-1"><Beef className="w-3 h-3" /> Protein</span>
-                        <span className="text-muted-foreground">{Math.round(todayStats.protein)} / {dailyReqs?.protein}g</span>
+                        <span className="text-muted-foreground">{Math.round(rangeStats.protein)} / {dailyReqs?.protein}g</span>
                       </div>
-                      <Progress value={(todayStats.protein / (dailyReqs?.protein || 100)) * 100} className="bg-red-100 dark:bg-red-900/20" indicatorClassName="bg-red-500" />
+                      <Progress value={(rangeStats.protein / (dailyReqs?.protein || 100)) * 100} className="bg-red-100 dark:bg-red-900/20" indicatorClassName="bg-red-500" />
                     </div>
 
                     {/* Carbs */}
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="font-medium flex items-center gap-1"><Wheat className="w-3 h-3" /> Carbs</span>
-                        <span className="text-muted-foreground">{Math.round(todayStats.carbs)} / {dailyReqs?.carbs}g</span>
+                        <span className="text-muted-foreground">{Math.round(rangeStats.carbs)} / {dailyReqs?.carbs}g</span>
                       </div>
-                      <Progress value={(todayStats.carbs / (dailyReqs?.carbs || 100)) * 100} className="bg-yellow-100 dark:bg-yellow-900/20" indicatorClassName="bg-yellow-500" />
+                      <Progress value={(rangeStats.carbs / (dailyReqs?.carbs || 100)) * 100} className="bg-yellow-100 dark:bg-yellow-900/20" indicatorClassName="bg-yellow-500" />
                     </div>
 
                     {/* Fat */}
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="font-medium flex items-center gap-1"><Droplet className="w-3 h-3" /> Fat</span>
-                        <span className="text-muted-foreground">{Math.round(todayStats.fat)} / {dailyReqs?.fat}g</span>
+                        <span className="text-muted-foreground">{Math.round(rangeStats.fat)} / {dailyReqs?.fat}g</span>
                       </div>
-                      <Progress value={(todayStats.fat / (dailyReqs?.fat || 100)) * 100} className="bg-blue-100 dark:bg-blue-900/20" indicatorClassName="bg-blue-500" />
+                      <Progress value={(rangeStats.fat / (dailyReqs?.fat || 100)) * 100} className="bg-blue-100 dark:bg-blue-900/20" indicatorClassName="bg-blue-500" />
                     </div>
                   </CardContent>
                 </Card>
@@ -461,7 +533,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
             {/* Progress Toward Your Goal */}
             <section className="space-y-4">
               <h2 className="text-xl font-semibold flex items-center gap-2">
-                <Target className="w-5 h-5 text-indigo-500" />
+                <TrendingUp className="w-5 h-5 text-indigo-500" />
                 Progress Toward Your Goal
               </h2>
               <Card className="bg-white dark:bg-slate-900 border-indigo-100 dark:border-indigo-900/30 overflow-hidden">
@@ -524,49 +596,44 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
               </Card>
             </section>
 
-            {/* SECTION 2: Weekly Insights (The Coach) */}
+            {/* SECTION 2: Weekly Insights (The Coach) - RENAMED to "What your meals are telling us" */}
             <section className="space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-purple-500" />
-                  Weekly Insights
-                </h2>
+                <div className="flex flex-col gap-1">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-purple-500" />
+                    What your meals are telling us
+                  </h2>
+                  <p className="text-sm text-muted-foreground ml-7">
+                    These insights update as you log more meals.
+                  </p>
+                </div>
                 {!isPremium && (
-                  <span className="text-xs font-medium text-amber-600 bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded-full">
-                    Preview Mode
-                  </span>
+                  <Button variant="ghost" size="sm" className="hidden sm:flex text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20" onClick={() => handleUnlockClick('nutrition')}>
+                    <Lock className="w-4 h-4 mr-2" />
+                    Unlock
+                  </Button>
                 )}
               </div>
 
-              {isOnboarding ? (
+              {isOnboarding || insights.length === 0 ? (
                 <Card className="bg-slate-50 border-dashed">
                   <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                     <BarChart2 className="w-10 h-10 text-muted-foreground mb-3 opacity-50" />
                     <p className="font-semibold text-muted-foreground">Insights unlock as patterns form.</p>
-                    <p className="text-sm text-muted-foreground mt-1">Log more meals to unlock insights.</p>
-                    {/* Tiny progress indicator logic previously used is good, but spec copy is priority */}
+                    <p className="text-sm text-muted-foreground mt-1">Log at least 3 meals to unlock insights.</p>
                   </CardContent>
                 </Card>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {insights.length > 0 ? (
-                    insights.slice(0, 3).map((insight) => (
-                      <InsightCard
-                        key={insight.id}
-                        insight={insight}
-                        isPremium={isPremium}
-                        onUnlock={() => handleUnlockClick(insight.category)}
-                      />
-                    ))
-                  ) : (
-                    <Card className="col-span-full bg-slate-50 border-dashed">
-                      <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                        <Sparkles className="w-10 h-10 text-muted-foreground mb-3 opacity-50" />
-                        <p className="font-semibold text-muted-foreground">No critical insights this week.</p>
-                        <p className="text-sm text-muted-foreground mt-1">You&apos;re staying consistent! Keep logging.</p>
-                      </CardContent>
-                    </Card>
-                  )}
+                  {insights.slice(0, 3).map((insight) => (
+                    <InsightCard
+                      key={insight.id}
+                      insight={insight}
+                      isPremium={isPremium}
+                      onUnlock={() => handleUnlockClick(insight.category)}
+                    />
+                  ))}
                 </div>
               )}
             </section>
@@ -580,7 +647,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
               <MacroTrendsChart
                 scans={filteredScans}
                 isPremium={isPremium}
-                onUnlock={() => handleUnlockClick('nutrition')}
+                onUnlock={() => handleUnlockClick('Macros')}
               />
             </section>
 
@@ -600,59 +667,123 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {!isPremium ? (
-                      <div className="text-center py-6">
-                        <Lock className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-50" />
-                        <p className="text-sm text-muted-foreground">Unlock to see your trigger meals</p>
+                      <div className="flex flex-col items-center justify-center py-8 gap-3">
+                        <Button onClick={() => handleUnlockClick('Eating_Patterns')} className="shadow-lg bg-primary hover:bg-primary/90 text-white gap-2">
+                          <Lock className="w-4 h-4" />
+                          Unlock Insights
+                        </Button>
+                        <p className="text-xs text-muted-foreground">Unlock to see your trigger meals</p>
                       </div>
                     ) : (
                       <>
-                        {/* Repeated Meals */}
-                        {aiEatingPatterns?.repeatedMeals && aiEatingPatterns.repeatedMeals.length > 0 && (
-                          <div className="space-y-2">
-                            <p className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Most Repeated</p>
-                            {aiEatingPatterns.repeatedMeals.map((meal, i) => (
-                              <div key={i} className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg">
-                                <div className="flex justify-between items-start">
-                                  <p className="text-sm font-medium">{meal.name}</p>
-                                  <span className="text-xs bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded">{meal.frequency}</span>
+                        {/* Custom Tab Header */}
+                        <div className="flex p-1 bg-slate-100 dark:bg-slate-900 rounded-lg mb-4">
+                          <button
+                            onClick={() => setActivePatternTab('repeated')}
+                            className={`flex-1 text-xs font-semibold py-1.5 rounded-md transition-all ${activePatternTab === 'repeated'
+                              ? "bg-white dark:bg-slate-800 shadow-sm text-foreground"
+                              : "text-muted-foreground hover:text-foreground"
+                              }`}
+                          >
+                            Repeated
+                          </button>
+                          <button
+                            onClick={() => setActivePatternTab('dense')}
+                            className={`flex-1 text-xs font-semibold py-1.5 rounded-md transition-all ${activePatternTab === 'dense'
+                              ? "bg-white dark:bg-slate-800 shadow-sm text-foreground"
+                              : "text-muted-foreground hover:text-foreground"
+                              }`}
+                          >
+                            Calorie Dense
+                          </button>
+                          <button
+                            onClick={() => setActivePatternTab('triggers')}
+                            className={`flex-1 text-xs font-semibold py-1.5 rounded-md transition-all ${activePatternTab === 'triggers'
+                              ? "bg-white dark:bg-slate-800 shadow-sm text-foreground"
+                              : "text-muted-foreground hover:text-foreground"
+                              }`}
+                          >
+                            Triggers
+                          </button>
+                        </div>
+
+                        {/* Repeated Meals Content */}
+                        {activePatternTab === 'repeated' && (
+                          aiEatingPatterns?.repeatedMeals && aiEatingPatterns.repeatedMeals.length > 0 ? (
+                            <div className="space-y-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                              {aiEatingPatterns.repeatedMeals.map((meal, i) => (
+                                <div key={i} className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg">
+                                  <div className="flex justify-between items-start">
+                                    <p className="text-sm font-medium line-clamp-1">{meal.name}</p>
+                                    <span className="text-xs bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded whitespace-nowrap">{meal.frequency}</span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1">{meal.insight}</p>
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-1">{meal.insight}</p>
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-muted-foreground text-sm">No repeated meals detected yet.</div>
+                          )
                         )}
 
-                        {/* Calorie Dense */}
-                        {aiEatingPatterns?.calorieDenseMeals && aiEatingPatterns.calorieDenseMeals.length > 0 && (
-                          <div className="space-y-2">
-                            <p className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Most Calorie-Dense</p>
-                            {aiEatingPatterns.calorieDenseMeals.map((meal, i) => (
-                              <div key={i} className="p-3 bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-800/30 rounded-lg">
-                                <div className="flex justify-between items-start">
-                                  <p className="text-sm font-medium text-orange-900 dark:text-orange-400">{meal.name}</p>
-                                  <span className="text-xs font-bold text-orange-700">{meal.calories} kcal</span>
+                        {/* Calorie Dense Content */}
+                        {activePatternTab === 'dense' && (
+                          aiEatingPatterns?.calorieDenseMeals && aiEatingPatterns.calorieDenseMeals.length > 0 ? (
+                            <div className="space-y-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                              {aiEatingPatterns.calorieDenseMeals.map((meal, i) => (
+                                <div key={i} className="p-3 bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-800/30 rounded-lg">
+                                  <div className="flex justify-between items-start">
+                                    <p className="text-sm font-medium text-orange-900 dark:text-orange-400 line-clamp-1">{meal.name}</p>
+                                    <span className="text-xs font-bold text-orange-700 whitespace-nowrap">{meal.calories} kcal</span>
+                                  </div>
+                                  <p className="text-xs text-orange-800/70 dark:text-orange-400/70 mt-1">{meal.insight}</p>
                                 </div>
-                                <p className="text-xs text-orange-800/70 dark:text-orange-400/70 mt-1">{meal.insight}</p>
-                              </div>
-                            ))}
-                          </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-muted-foreground text-sm">No high-density meals found.</div>
+                          )
                         )}
 
-                        {/* Trigger Insights */}
-                        {aiEatingPatterns?.triggerInsights && aiEatingPatterns.triggerInsights.length > 0 && (
-                          <div className="space-y-2">
-                            <p className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Trigger Insights</p>
-                            {aiEatingPatterns.triggerInsights.map((insight, i) => (
-                              <div key={i} className="p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 rounded-lg flex gap-3 items-start">
-                                <Zap className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                                <p className="text-sm text-blue-900 dark:text-blue-400 font-medium leading-tight">{insight}</p>
-                              </div>
-                            ))}
-                          </div>
+                        {/* Trigger Insights Content */}
+                        {activePatternTab === 'triggers' && (
+                          aiEatingPatterns?.triggerInsights && aiEatingPatterns.triggerInsights.length > 0 ? (
+                            <div className="space-y-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                              {/* The 'triggerInsights' array is just strings per existing type definition, but usually we want structured data if possible. 
+                                   Currently analyticsInsights returns just strings in triggerInsights array. 
+                                   But we DO satisfy the check with `triggerMeals` in the backend logic.
+                                   However, the client state `aiEatingPatterns.triggerInsights` is `string[]`.
+                                   Wait, if I look at `analyticsInsights.ts`, `triggerInsights` maps to `t.insight`.
+                                   But `triggerMeals` has names.
+                                   The UI below previously rendered just strings: `{insight}`.
+                                   I should stick to the existing data structure or use `aiEatingPatterns.triggerMeals` if available on the client type?
+                                   Actually `activePatternTab` logic in previous code was:
+                                   `aiEatingPatterns.triggerInsights.map(...)`
+                                   Note: `analyticsInsights.ts` returns `triggerMeals` in the object too!
+                                   Let's check the type definition in `MyFoodAnalyticsClient` (step 98).
+                                   It imports `EatingPatterns` from `analyticsInsights`.
+                                   `analyticsInsights` exports `triggerMeals` in the return object but the TYPE definition might vary?
+                                   Step 119: `export type EatingPatterns = { ... triggerInsights: string[] }`. 
+                                   Ah, `triggerMeals` is NOT on the type definition!
+                                   So I can only access `triggerInsights` (strings) unless I updated the type.
+                                   I did NOT update the type definition in `analyticsInsights.ts` to include `triggerMeals` array in the exported type, only the return value of the function.
+                                   So I must use `triggerInsights` (strings) for now to be safe, or quickly patch the type.
+                                   Given the user just wants a redesign, using strings is safer to avoid TS errors.
+                               */ }
+                              {aiEatingPatterns.triggerInsights.map((insight, i) => (
+                                <div key={i} className="p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 rounded-lg flex gap-3 items-start">
+                                  <Zap className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+                                  <p className="text-sm text-blue-900 dark:text-blue-400 font-medium leading-tight">{insight}</p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-muted-foreground text-sm">No trigger patterns detected yet.</div>
+                          )
                         )}
 
                         {!aiEatingPatterns && (
-                          <p className="text-sm text-muted-foreground italic">Analyzing your eating patterns...</p>
+                          <p className="text-sm text-muted-foreground italic text-center py-8">Analyzing your eating patterns...</p>
                         )}
                       </>
                     )}
@@ -669,7 +800,7 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
                 <Card className="relative overflow-hidden flex-1">
                   {!isPremium && (
                     <div className="absolute inset-0 z-10 bg-white/60 dark:bg-slate-950/60 backdrop-blur-[4px] flex flex-col items-center justify-center p-4">
-                      <Button onClick={() => handleUnlockClick('nutrition')} className="shadow-lg bg-primary hover:bg-primary/90 text-white gap-2">
+                      <Button onClick={() => handleUnlockClick('Consistency_Score')} className="shadow-lg bg-primary hover:bg-primary/90 text-white gap-2">
                         <Lock className="w-4 h-4" />
                         Unlock Score
                       </Button>
@@ -761,11 +892,12 @@ export function MyFoodAnalyticsClient({ initialSubscription = null }: MyFoodAnal
 
                   <div className="mt-8">
                     <Button
-                      onClick={() => window.open("/meal-planner", "_blank")}
-                      className="w-full sm:w-auto h-11 px-8 rounded-full shadow-lg hover:shadow-xl transition-all"
+                      onClick={() => isPremium ? window.open("/meal-planner", "_blank") : handleUnlockClick('meal_planner')}
+                      className="w-full sm:w-auto h-11 px-8 rounded-full shadow-lg hover:shadow-xl transition-all relative z-20"
                     >
+                      {!isPremium && <Lock className="w-4 h-4 mr-2" />}
                       Plan my Meals
-                      <ChevronRight className="w-4 h-4 ml-2" />
+                      {isPremium && <ChevronRight className="w-4 h-4 ml-2" />}
                     </Button>
                   </div>
                 </CardContent>

@@ -8,18 +8,18 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Upload, 
-  Loader2, 
-  Flame, 
-  Beef, 
-  Wheat, 
-  Droplet, 
-  Apple, 
-  Candy, 
-  Shield, 
-  Info, 
-  CheckCircle2, 
+import {
+  Upload,
+  Loader2,
+  Flame,
+  Beef,
+  Wheat,
+  Droplet,
+  Apple,
+  Candy,
+  Shield,
+  Info,
+  CheckCircle2,
   Zap,
   AlertCircle,
   ExternalLink,
@@ -29,6 +29,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { getUrl } from "@/utils/url";
 import { analyzeFood, scaleNutrients, type FoodAnalysis } from "@/utils/foodScan";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { LanguageContext, type Language } from "@/contexts/LanguageContext";
+import { useToast } from "@/components/ui/use-toast";
+import { useContext } from "react";
 
 // Helper function to check if tracking should be disabled globally
 // This is a fail-safe to prevent any unwanted tracking
@@ -40,7 +43,7 @@ const isTrackingDisabled = (): boolean => {
     const pathname = window.location.pathname || '';
     const referrer = document.referrer || '';
     const origin = window.location.origin || '';
-    
+
     // Always disable if localhost
     if (
       hostname === 'localhost' ||
@@ -51,17 +54,17 @@ const isTrackingDisabled = (): boolean => {
     ) {
       return true;
     }
-    
+
     // Always disable if dashboard path
     if (pathname.includes('/dashboard') || pathname.includes('/widget/dashboard')) {
       return true;
     }
-    
+
     // Always disable if referrer contains dashboard
     if (referrer.includes('/dashboard') || referrer.includes('/widget/dashboard')) {
       return true;
     }
-    
+
     // Check if we're in a cross-origin iframe (external embed)
     // If in iframe and can't access parent, it's likely an external embed
     let isCrossOriginIframe = false;
@@ -76,17 +79,17 @@ const isTrackingDisabled = (): boolean => {
         }
       }
     }
-    
+
     // Always disable if no referrer AND not in cross-origin iframe (direct access)
     if ((!referrer || referrer === '') && !isCrossOriginIframe) {
       return true;
     }
-    
+
     // If in cross-origin iframe, don't disable tracking (it's an external embed)
     if (isCrossOriginIframe) {
       return false; // Don't disable - this is an external embed
     }
-    
+
     // Always disable if referrer is from same origin
     try {
       const referrerOrigin = new URL(referrer).origin;
@@ -97,7 +100,7 @@ const isTrackingDisabled = (): boolean => {
       // If we can't parse referrer, disable tracking to be safe
       return true;
     }
-    
+
     // If we get here, it might be external - but we'll do more checks later
     return false;
   } catch (e) {
@@ -136,35 +139,37 @@ const markPreviewTracked = (widgetId: string): void => {
 };
 
 // Free User Results View Component
-function FreeUserResultsView({ 
-  result, 
+function FreeUserResultsView({
+  result,
   imageUrl,
-  styles, 
-  onScanAnother 
-}: { 
-  result: FoodAnalysis; 
+  styles,
+  onScanAnother,
+  t
+}: {
+  result: FoodAnalysis;
   imageUrl: string | null;
-  styles: any; 
+  styles: any;
   onScanAnother: () => void;
+  t: (key: string, defaultText?: string) => string;
 }) {
   const scaled = useMemo(() => scaleNutrients(result.nutrients, 1), [result.nutrients]);
   const isNonFood = result?.foodDetected === false;
-  
+
   return (
     <div className="space-y-4">
       {/* Display the scanned image */}
       {imageUrl && (
         <Card className="overflow-hidden">
           <div className="relative overflow-hidden" style={{ aspectRatio: '1 / 0.94' }}>
-            <img 
-              src={imageUrl} 
-              alt={result.dish || "Food"} 
-              className="w-full h-full object-cover" 
+            <img
+              src={imageUrl}
+              alt={result.dish || "Food"}
+              className="w-full h-full object-cover"
             />
           </div>
         </Card>
       )}
-      
+
       <div className="text-center">
         <h4 className="text-xl font-bold mb-2">{result.dish}</h4>
         {result.description && (
@@ -202,7 +207,7 @@ function FreeUserResultsView({
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
               className="h-full transition-all"
-              style={{ 
+              style={{
                 width: `${Math.round((result.confidence || 0) * 100)}%`,
                 backgroundColor: styles.primaryColor
               }}
@@ -260,39 +265,41 @@ function FreeUserResultsView({
 }
 
 // Premium User Results View Component
-function PremiumUserResultsView({ 
-  result, 
+function PremiumUserResultsView({
+  result,
   imageUrl,
   servings,
-  styles, 
+  styles,
   baseUrl,
-  onScanAnother 
-}: { 
-  result: FoodAnalysis; 
+  onScanAnother,
+  t
+}: {
+  result: FoodAnalysis;
   imageUrl: string | null;
   servings: number;
-  styles: any; 
+  styles: any;
   baseUrl: string;
   onScanAnother: () => void;
+  t: (key: string, defaultText?: string) => string;
 }) {
   const scaled = useMemo(() => scaleNutrients(result.nutrients, servings), [result.nutrients, servings]);
   const isNonFood = result?.foodDetected === false;
-  
+
   return (
     <div className="space-y-4">
       {/* Display the scanned image */}
       {imageUrl && !result.isManualEntry && (
         <Card className="overflow-hidden">
           <div className="relative overflow-hidden" style={{ aspectRatio: '1 / 0.94' }}>
-            <img 
-              src={imageUrl} 
-              alt={result.dish || "Food"} 
-              className="w-full h-full object-cover" 
+            <img
+              src={imageUrl}
+              alt={result.dish || "Food"}
+              className="w-full h-full object-cover"
             />
           </div>
         </Card>
       )}
-      
+
       <div className="text-center">
         <h4 className="text-xl font-bold mb-2">{result.dish}</h4>
         {result.description && (
@@ -348,7 +355,7 @@ function PremiumUserResultsView({
           <div className="h-2 bg-muted rounded-full overflow-hidden">
             <div
               className="h-full transition-all"
-              style={{ 
+              style={{
                 width: `${Math.round((result.confidence || 0) * 100)}%`,
                 backgroundColor: styles.primaryColor
               }}
@@ -443,10 +450,10 @@ function PremiumUserResultsView({
                 const hasBoldTitle = boldMatch !== null;
                 const title = hasBoldTitle ? boldMatch[1] : null;
                 const description = hasBoldTitle ? boldMatch[2] : step;
-                
+
                 return (
                   <li key={i} className="flex gap-2">
-                    <span 
+                    <span
                       className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium mt-0.5"
                       style={{ backgroundColor: styles.primaryColor + "20", color: styles.primaryColor }}
                     >
@@ -527,88 +534,148 @@ export function WidgetEmbedClient() {
   const [modalOpen, setModalOpen] = useState(false);
   const previewTrackedRef = useRef(false);
   const isTrackingRef = useRef(false);
+  const { toast } = useToast();
   const isLoadingRef = useRef<string | null>(null);
+
+  const languageContext = useContext(LanguageContext);
+  const setLanguage = languageContext?.setLanguage;
+
+  const t = useCallback((key: string, defaultText?: string) => {
+    if (languageContext?.t) {
+      const translated = languageContext.t(key);
+      // If translation seems to be just the key (missing), prioritize defaultText if available
+      // Or if the key is complex (like "nav.home") and returned as is.
+      // We'll assume if it matches key, it might be missing.
+      if (translated !== key) return translated;
+    }
+    return defaultText || key;
+  }, [languageContext]);
+
+  // Helper to translate content
+  const translateContent = useCallback(async (content: FoodAnalysis, targetLang: string): Promise<FoodAnalysis> => {
+    if (targetLang === 'en') return content;
+
+    try {
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: {
+            dish: content.dish,
+            description: content.description,
+            ingredients: content.ingredients,
+            instructions: content.instructions,
+            servingGuidance: content.servingGuidance,
+            additionalInfo: content.additionalInfo,
+          },
+          targetLanguage: targetLang,
+          isJson: true,
+        }),
+      });
+
+      if (!response.ok) {
+        console.warn('Translation API failed:', response.status);
+        return content;
+      }
+
+      const responseData = await response.json();
+      const translatedData = responseData.translatedContent || {};
+
+      return {
+        ...content,
+        dish: translatedData.dish || content.dish,
+        description: translatedData.description || content.description,
+        ingredients: translatedData.ingredients || content.ingredients,
+        instructions: translatedData.instructions || content.instructions,
+        servingGuidance: translatedData.servingGuidance || content.servingGuidance,
+        additionalInfo: translatedData.additionalInfo || content.additionalInfo,
+      };
+    } catch (error) {
+      console.error('Translation error:', error);
+      return content;
+    }
+  }, []);
 
   // Hide Tawk.io in preview mode
   // Replace the existing "Hide Tawk.io in preview mode" useEffect with this improved version:
 
-useEffect(() => {
-  // Check if we should hide Tawk.io
-  const shouldHideTawk = () => {
-    if (typeof window === 'undefined') return false;
-    
-    // Hide if preview parameter is present
-    if (isPreview) return true;
-    
-    // Hide if we're in an iframe
-    try {
-      if (window.self !== window.top) {
-        // We're in an iframe - check if it's same-origin (dashboard preview)
-        try {
-          // If we can access parent.location, it's same-origin (your dashboard)
-          const parentHostname = window.parent.location.hostname;
-          const currentHostname = window.location.hostname;
-          
-          // If same hostname, it's a dashboard preview - hide Tawk.io
-          if (parentHostname === currentHostname) {
-            console.log('Same-origin iframe detected (dashboard preview) - hiding Tawk.io');
-            return true;
+  useEffect(() => {
+    // Check if we should hide Tawk.io
+    const shouldHideTawk = () => {
+      if (typeof window === 'undefined') return false;
+
+      // Hide if preview parameter is present
+      if (isPreview) return true;
+
+      // Hide if we're in an iframe
+      try {
+        if (window.self !== window.top) {
+          // We're in an iframe - check if it's same-origin (dashboard preview)
+          try {
+            // If we can access parent.location, it's same-origin (your dashboard)
+            const parentHostname = window.parent.location.hostname;
+            const currentHostname = window.location.hostname;
+
+            // If same hostname, it's a dashboard preview - hide Tawk.io
+            if (parentHostname === currentHostname) {
+              console.log('Same-origin iframe detected (dashboard preview) - hiding Tawk.io');
+              return true;
+            }
+          } catch (e) {
+            // Cross-origin iframe - this is an external embed, show Tawk.io
+            console.log('Cross-origin iframe detected (external embed) - showing Tawk.io');
+            return false;
           }
-        } catch (e) {
-          // Cross-origin iframe - this is an external embed, show Tawk.io
-          console.log('Cross-origin iframe detected (external embed) - showing Tawk.io');
-          return false;
         }
+      } catch (e) {
+        console.error('Error checking iframe context:', e);
       }
-    } catch (e) {
-      console.error('Error checking iframe context:', e);
+
+      return false;
+    };
+
+    if (shouldHideTawk()) {
+      const styleId = 'hide-tawk-widget';
+      let style = document.getElementById(styleId);
+
+
+
+      // Also try to hide via JavaScript API if available
+      const checkAndHideTawk = () => {
+        if (typeof window !== 'undefined' && (window as any).Tawk_API) {
+          try {
+            (window as any).Tawk_API.hideWidget();
+            console.log('Tawk.io hidden via API');
+          } catch (e) {
+            console.error('Error hiding Tawk.io via API:', e);
+          }
+        }
+      };
+
+      // Try immediately
+      checkAndHideTawk();
+
+      // Try again after a short delay (in case Tawk loads later)
+      const timeoutId = setTimeout(checkAndHideTawk, 1000);
+
+      return () => {
+        clearTimeout(timeoutId);
+        const existingStyle = document.getElementById(styleId);
+        if (existingStyle) {
+          existingStyle.remove();
+        }
+
+        // Restore Tawk.io when component unmounts
+        if (typeof window !== 'undefined' && (window as any).Tawk_API) {
+          try {
+            (window as any).Tawk_API.showWidget();
+          } catch (e) {
+            // Ignore errors
+          }
+        }
+      };
     }
-    
-    return false;
-  };
-  
-  if (shouldHideTawk()) {
-    const styleId = 'hide-tawk-widget';
-    let style = document.getElementById(styleId);
-    
-    
-    
-    // Also try to hide via JavaScript API if available
-    const checkAndHideTawk = () => {
-      if (typeof window !== 'undefined' && (window as any).Tawk_API) {
-        try {
-          (window as any).Tawk_API.hideWidget();
-          console.log('Tawk.io hidden via API');
-        } catch (e) {
-          console.error('Error hiding Tawk.io via API:', e);
-        }
-      }
-    };
-    
-    // Try immediately
-    checkAndHideTawk();
-    
-    // Try again after a short delay (in case Tawk loads later)
-    const timeoutId = setTimeout(checkAndHideTawk, 1000);
-    
-    return () => {
-      clearTimeout(timeoutId);
-      const existingStyle = document.getElementById(styleId);
-      if (existingStyle) {
-        existingStyle.remove();
-      }
-      
-      // Restore Tawk.io when component unmounts
-      if (typeof window !== 'undefined' && (window as any).Tawk_API) {
-        try {
-          (window as any).Tawk_API.showWidget();
-        } catch (e) {
-          // Ignore errors
-        }
-      }
-    };
-  }
-}, [isPreview]);
+  }, [isPreview]);
   // Log component mount for debugging
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -632,7 +699,7 @@ useEffect(() => {
   const checkApiCallLimit = useCallback(async (userId: string) => {
     try {
       console.log("🔍 Checking API call limit for user:", userId, "widget:", widgetId);
-      
+
       if (!widgetId) {
         console.error("No widgetId available for limit check");
         return false;
@@ -651,13 +718,13 @@ useEffect(() => {
           details: limitError.details,
           hint: limitError.hint
         });
-        
+
         // Check if function doesn't exist (42883 = function does not exist)
         if (limitError.code === "42883" || limitError.message?.includes("does not exist") || limitError.message?.includes("function")) {
           console.error("🚨 CRITICAL: Database function 'get_widget_user_api_count' does not exist!");
           console.error("🚨 Please run the migration: supabase/migrations/20250131000000_allow_public_api_count_read.sql");
           console.error("🚨 Without this function, limit checking will not work in unauthenticated contexts");
-          
+
           // Since we can't check the limit without the function, and we know the user has 4+ calls,
           // we should show the limit message to be safe
           // But we can't get the exact count, so we'll show a generic message
@@ -666,7 +733,7 @@ useEffect(() => {
           setApiCallCount(4); // Assume 4+ since user reported it
           return true; // Block widget usage
         }
-        
+
         // Fallback: try direct query (may fail due to RLS, but worth trying)
         console.log("Attempting fallback limit check...");
         try {
@@ -675,20 +742,20 @@ useEffect(() => {
             .select("subscription_type")
             .eq("user_id", userId)
             .single();
-          
+
           if (subError && subError.code !== "PGRST116") {
             console.error("Fallback subscription check failed:", subError);
           }
-          
+
           const subscriptionType = (subscriptionData as { subscription_type?: string } | null)?.subscription_type || "free";
           console.log("Fallback subscription type:", subscriptionType);
-          
+
           if (subscriptionType === "free") {
             const { count, error: countError } = await (supabase as any)
               .from("widget_api_calls")
               .select("id", { count: "exact", head: true })
               .eq("user_id", userId);
-            
+
             if (countError) {
               console.error("Fallback count check failed (RLS blocking):", countError);
               // RLS is blocking - we can't get the count
@@ -698,7 +765,7 @@ useEffect(() => {
               setApiCallCount(4); // Assume 4+ since user reported it
               return true;
             }
-            
+
             const totalCalls = count || 0;
             console.log("✅ Fallback count check succeeded:", totalCalls, "calls");
             setApiCallCount(totalCalls);
@@ -725,7 +792,7 @@ useEffect(() => {
         console.error("1. Migration hasn't been run: 20250131000000_allow_public_api_count_read.sql");
         console.error("2. Widget not found in database");
         console.error("3. Function doesn't exist");
-        
+
         // CRITICAL: Since we can't verify the limit without the function, and the user reported 4+ calls,
         // we should show the limit message to be safe
         // This is a temporary workaround until the migration is run
@@ -738,21 +805,21 @@ useEffect(() => {
       const result = limitData[0];
       let subscriptionType = result.subscription_type || "free";
       const totalCalls = parseInt(result.api_call_count) || 0;
-      
+
       // TEMPORARY: For testing, you can force free plan check by uncommenting the line below
       // This will treat all users as free plan for limit testing
       // subscriptionType = "free";
-      
+
       console.log("📊 Limit check result:", {
         subscriptionType,
         totalCalls,
         userId: result.user_id,
         widgetId: widgetId
       });
-      
+
       setApiCallCount(totalCalls);
       setSubscriptionType(subscriptionType); // Store subscription type for result display
-      
+
       // Only check limit for free users
       if (subscriptionType === "free") {
         // If user has reached 3 API calls, show limit message
@@ -768,7 +835,7 @@ useEffect(() => {
         console.log("✅ Premium user - no limit check needed");
         setIsLimitReached(false);
       }
-      
+
       return false;
     } catch (error) {
       console.error("❌ Error checking API call limit:", error);
@@ -792,36 +859,36 @@ useEffect(() => {
         setIsLimitReached(true);
         return false; // Return false to indicate tracking was blocked
       }
-      
+
       // ADDITIONAL AGGRESSIVE CHECK: Get current count RIGHT BEFORE insert
       // This is a double-check to prevent race conditions and ensure we never exceed 3
       const { count: currentCount, error: countCheckError } = await (supabase as any)
         .from("widget_api_calls")
         .select("id", { count: "exact", head: true })
         .eq("user_id", widgetSettings.user_id);
-      
+
       if (countCheckError) {
         console.error("Error checking count before insert:", countCheckError);
         // On error, block to be safe
         return false;
       }
-      
+
       const currentTotal = currentCount || 0;
       console.log("📊 Current API call count before insert:", currentTotal);
-      
+
       // Check subscription again to make sure we're still on free plan
       const { data: subData, error: subCheckError } = await (supabase as any)
         .from("widget_subscriptions")
         .select("subscription_type")
         .eq("user_id", widgetSettings.user_id)
         .single();
-      
+
       if (subCheckError && subCheckError.code !== "PGRST116") {
         console.error("Error checking subscription:", subCheckError);
       }
-      
+
       const subType = (subData as { subscription_type?: string } | null)?.subscription_type || "free";
-      
+
       // CRITICAL: If free user and already at or above 3 calls, BLOCK the insert
       // This prevents the 4th, 5th, etc. call from being inserted
       if (subType === "free" && currentTotal >= 3) {
@@ -836,7 +903,7 @@ useEffect(() => {
         const host = window.location.hostname || '';
         const path = window.location.pathname || '';
         const ref = document.referrer || '';
-        
+
         if (
           host === 'localhost' ||
           host === '127.0.0.1' ||
@@ -852,7 +919,7 @@ useEffect(() => {
 
       try {
         console.log("📊 trackApiCall: Tracking API call", { callType, status, widgetId });
-        
+
         // Insert the API call
         const { error: insertError } = await (supabase as any).from("widget_api_calls").insert({
           widget_id: widgetId,
@@ -863,35 +930,35 @@ useEffect(() => {
           ip_address: null,
           user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
         });
-        
+
         if (insertError) {
           console.error("❌ trackApiCall: Error inserting API call:", insertError);
           return false;
         }
-        
+
         console.log("✅ trackApiCall: Successfully tracked", { callType });
-        
+
         // Update API call count after successful tracking
         if (widgetSettings?.user_id) {
           const { count, error: countError } = await (supabase as any)
             .from("widget_api_calls")
             .select("id", { count: "exact", head: true })
             .eq("user_id", widgetSettings.user_id);
-          
+
           if (countError) {
             console.error("Error fetching updated count:", countError);
           } else {
             const newCount = count || 0;
             setApiCallCount(newCount);
             console.log("📊 Updated API call count:", newCount);
-            
+
             // Check if limit is reached after this call
             const { data: subscriptionData } = await (supabase as any)
               .from("widget_subscriptions")
               .select("subscription_type")
               .eq("user_id", widgetSettings.user_id)
               .single();
-            
+
             const subscriptionType = (subscriptionData as { subscription_type?: string } | null)?.subscription_type || "free";
             if (subscriptionType === "free" && newCount >= 3) {
               console.log("🚫 Limit reached after tracking - showing limit message");
@@ -900,7 +967,7 @@ useEffect(() => {
             }
           }
         }
-        
+
         return true; // Return true to indicate successful tracking
       } catch (error) {
         console.error("❌ trackApiCall: Error tracking API call:", error);
@@ -913,7 +980,7 @@ useEffect(() => {
   useEffect(() => {
     const loadWidgetSettings = async () => {
       console.log("🔵 WidgetEmbedClient useEffect triggered", { widgetId });
-      
+
       if (!widgetId) {
         console.log("❌ No widgetId - exiting");
         setLoading(false);
@@ -955,10 +1022,10 @@ useEffect(() => {
           const isInIframe = window.self !== window.top;
           if (isInIframe) {
             try {
-              const parentOrigin = window.location.ancestorOrigins?.[0] || 
-                                 (document.referrer ? new URL(document.referrer).origin : null);
+              const parentOrigin = window.location.ancestorOrigins?.[0] ||
+                (document.referrer ? new URL(document.referrer).origin : null);
               const currentOrigin = window.location.origin;
-              
+
               if (parentOrigin === currentOrigin) {
                 console.log("🚫 IFRAME WITH SAME-ORIGIN PARENT - Skipping tracking (internal preview)", {
                   parentOrigin,
@@ -1005,7 +1072,7 @@ useEffect(() => {
         const currentUrl = window.location.href || '';
         const referrer = document.referrer || '';
         const hostname = window.location.hostname || '';
-        
+
         // Check if page was loaded from cache (back/forward cache or regular cache)
         // This prevents tracking from cached widget embed pages
         let isFromCache = false;
@@ -1014,15 +1081,15 @@ useEffect(() => {
           if (perfEntries.length > 0) {
             const navEntry = perfEntries[0];
             // If page was loaded from cache (back/forward or regular cache), don't track
-            isFromCache = navEntry.type === 'back_forward' || 
-                         (navEntry.transferSize === 0 && navEntry.decodedBodySize > 0);
+            isFromCache = navEntry.type === 'back_forward' ||
+              (navEntry.transferSize === 0 && navEntry.decodedBodySize > 0);
           }
         } catch (e) {
           // Performance API not available or error - assume not from cache
         }
-        
+
         console.log("🔍 Checking context:", { currentPath, currentUrl, referrer, hostname, isFromCache });
-        
+
         // If ANY of these are true, completely skip ALL tracking logic
         if (
           isFromCache || // Page loaded from cache - don't track
@@ -1092,35 +1159,35 @@ useEffect(() => {
           const currentUrl = window.location.href || '';
           const referrer = document.referrer || '';
           const currentOrigin = window.location.origin || '';
-          
+
           // CRITICAL: If current URL path contains "dashboard", NEVER track
           // This prevents tracking when widget embed is accessed from dashboard context
           if (currentPath.includes('/dashboard') || currentPath.includes('/widget/dashboard')) {
             console.log("Dashboard path detected in URL - skipping tracking", { currentPath, currentUrl });
             return true;
           }
-          
+
           // Check if current host is localhost - always skip
-          const isLocalhost = currentHost === 'localhost' || 
-                             currentHost === '127.0.0.1' || 
-                             currentHost === '0.0.0.0' ||
-                             currentHost.startsWith('192.168.') ||
-                             currentHost.startsWith('10.') ||
-                             currentHost.endsWith('.local');
-          
+          const isLocalhost = currentHost === 'localhost' ||
+            currentHost === '127.0.0.1' ||
+            currentHost === '0.0.0.0' ||
+            currentHost.startsWith('192.168.') ||
+            currentHost.startsWith('10.') ||
+            currentHost.endsWith('.local');
+
           if (isLocalhost) {
             console.log("Localhost detected in early check - skipping tracking");
             return true;
           }
-          
+
           // Check if we're in an iframe (cross-origin embed)
           // If in iframe and can't access parent, it's likely an external embed
           const isInIframe = window.self !== window.top;
           let isCrossOriginIframe = false;
-          
+
           if (isInIframe) {
             try {
-              // Try to access parent - if it throws, it's cross-origin (external embed)
+              // Try to access parent - if it throws, it's cross-origin (internal)
               window.parent.location;
               // If we can access parent location, it's same-origin (internal)
               isCrossOriginIframe = false;
@@ -1130,19 +1197,19 @@ useEffect(() => {
               console.log("✅ Cross-origin iframe detected (external embed)", e);
             }
           }
-          
+
           // If no referrer BUT we're in a cross-origin iframe, it's still an external embed
           if ((!referrer || referrer === '') && !isCrossOriginIframe) {
             console.log("No referrer and not in cross-origin iframe (direct access) - skipping tracking");
             return true;
           }
-          
+
           // If we're in a cross-origin iframe, allow tracking even without referrer
           if (isCrossOriginIframe) {
             console.log("✅ Cross-origin iframe detected - will allow tracking (external embed)");
             return false; // Don't skip - this is an external embed
           }
-          
+
           // Check if referrer is same origin (same domain) - skip tracking
           // This covers: widget embedded on your own website (same domain)
           // Example: widget at what-the-food-hqjp.vercel.app/widget/embed 
@@ -1175,20 +1242,20 @@ useEffect(() => {
             console.log("Invalid referrer URL - skipping tracking", e);
             return true;
           }
-          
+
           // Check if referrer contains dashboard or widget paths (internal pages) - skip
           // This is a safety check for internal navigation on your own site
           if (referrer.includes('/dashboard') || referrer.includes('/widget/dashboard') || referrer.includes('/widget/embed')) {
             console.log("Referrer contains dashboard/widget paths - skipping tracking", { referrer });
             return true;
           }
-          
+
           // Additional safety: Check current path (currentPath already defined above)
           if (currentPath.includes('/dashboard')) {
             console.log("Current path contains dashboard - skipping tracking");
             return true;
           }
-          
+
           // Final verification: referrer origin must be valid and different
           // If we can't verify it's external, don't track
           try {
@@ -1204,7 +1271,7 @@ useEffect(() => {
             console.log("Cannot parse referrer for final check - skipping tracking for safety");
             return true;
           }
-          
+
           // External embed from different origin → allow tracking
           // This means someone embedded your widget on their website (different domain)
           console.log("✅ Verified external embed - will allow tracking", {
@@ -1222,7 +1289,7 @@ useEffect(() => {
       if (hasTrackedPreview(widgetId) || isLocalhostOrInternal) {
         // IMMEDIATELY mark as tracked to prevent any tracking attempts
         previewTrackedRef.current = true;
-        
+
         if (isLocalhostOrInternal) {
           console.log("Localhost/internal access detected - skipping API call tracking entirely");
         } else {
@@ -1237,6 +1304,15 @@ useEffect(() => {
             .single();
 
           if (!error && data) {
+            // Set language if available and different
+            if (data.language && setLanguage) {
+              // Cast string to Language type if it matches, otherwise default to 'en'
+              const supportedLanguages: Language[] = ["en", "es", "fr", "de", "it", "pt", "zh", "ja", "ar"];
+              const lang = supportedLanguages.includes(data.language as Language) ? (data.language as Language) : "en";
+              setLanguage(lang);
+              console.log("Setting widget language to:", lang);
+            }
+
             setWidgetSettings(data);
             // Check API call limit for free users
             if (data.user_id) {
@@ -1263,7 +1339,7 @@ useEffect(() => {
 
       try {
         console.log("Loading widget settings for widget_id:", widgetId);
-        
+
         const { data, error } = await (supabase as any)
           .from("widget_settings")
           .select("*")
@@ -1285,19 +1361,32 @@ useEffect(() => {
         }
 
         if (data) {
-          console.log("Widget settings loaded successfully:", data);
+          // Set language if available and different
+          if (data.language && setLanguage) {
+            // Cast string to Language type if it matches, otherwise default to 'en'
+            const supportedLanguages: Language[] = ["en", "es", "fr", "de", "it", "pt", "zh", "ja", "ar"];
+            const lang = supportedLanguages.includes(data.language as Language) ? (data.language as Language) : "en";
+            setLanguage(lang);
+            console.log("Setting widget language to:", lang);
+          }
+
           setWidgetSettings(data);
-          
+          console.log("✅ Widget settings loaded:", {
+            id: data.id,
+            name: data.widget_name,
+            userId: data.user_id,
+            language: data.language
+          });
           // CRITICAL: Check API call limit for free users BEFORE allowing widget to be used
           // This determines if we show the normal widget or the "Limit Exceeded" widget
           // IMPORTANT: We pass user_id but the function uses widgetId internally
           if (data.user_id && widgetId) {
             console.log("🔍 Checking API call limit for widget:", widgetId, "user:", data.user_id);
-            
+
             // ALWAYS check limit - this is critical
             const limitReached = await checkApiCallLimit(data.user_id);
             console.log("🔍 Limit check result:", limitReached, "isLimitReached state:", isLimitReached);
-            
+
             if (limitReached) {
               console.log("🚫 Free user has reached 3 API call limit - showing limit exceeded widget");
               setIsLimitReached(true);
@@ -1315,10 +1404,10 @@ useEffect(() => {
             console.warn("⚠️ Cannot check limit - missing user_id or widgetId", { user_id: data.user_id, widgetId });
             setIsLimitReached(false);
           }
-          
+
           // Only set loading to false AFTER limit check is complete
           setLoading(false);
-          
+
           // Track preview only once per widget per session
           // ONLY track if we're 100% certain it's an external embed
           // The early check already filtered out internal access, so if we reach here and have a valid referrer from different origin, track it
@@ -1330,11 +1419,11 @@ useEffect(() => {
               try {
                 const referrer = document.referrer || '';
                 const currentOrigin = window.location.origin || '';
-                
+
                 // Check if we're in a cross-origin iframe (external embed)
                 const isInIframe = window.self !== window.top;
                 let isCrossOriginIframe = false;
-                
+
                 if (isInIframe) {
                   try {
                     window.parent.location;
@@ -1344,19 +1433,19 @@ useEffect(() => {
                     console.log("✅ Cross-origin iframe detected in safety check (external embed)");
                   }
                 }
-                
+
                 // Must have a referrer OR be in a cross-origin iframe
                 if ((!referrer || referrer === '') && !isCrossOriginIframe) {
                   console.log("No referrer and not in cross-origin iframe - not tracking (safety check)");
                   return false;
                 }
-                
+
                 // If in cross-origin iframe, allow tracking even without referrer
                 if (isCrossOriginIframe) {
                   console.log("✅ Cross-origin iframe - will track (external embed)");
                   return true;
                 }
-                
+
                 // Must be able to parse referrer
                 let referrerOrigin = '';
                 try {
@@ -1365,7 +1454,7 @@ useEffect(() => {
                   console.log("Invalid referrer URL - not tracking (safety check)");
                   return false;
                 }
-                
+
                 // Referrer must be from DIFFERENT origin (external site)
                 if (referrerOrigin === currentOrigin) {
                   console.log("Same origin referrer - not tracking (safety check)", {
@@ -1374,13 +1463,13 @@ useEffect(() => {
                   });
                   return false;
                 }
-                
+
                 // Final check: referrer should NOT contain dashboard/widget paths
                 if (referrer.includes('/dashboard') || referrer.includes('/widget/dashboard') || referrer.includes('/widget/embed')) {
                   console.log("Referrer contains internal paths - not tracking (safety check)");
                   return false;
                 }
-                
+
                 // All checks passed - this is definitely an external embed
                 console.log("All safety checks passed - will track external embed", {
                   referrerOrigin,
@@ -1419,18 +1508,18 @@ useEffect(() => {
                 const currentPath = window.location.pathname || '';
                 const currentHost = window.location.hostname || '';
                 const currentOrigin = window.location.origin || '';
-                
+
                 console.log("🔍 Final verification check:", {
                   referrer,
                   currentPath,
                   currentHost,
                   currentOrigin
                 });
-                
+
                 // Check if we're in a cross-origin iframe (external embed)
                 const isInIframe = window.self !== window.top;
                 let isCrossOriginIframe = false;
-                
+
                 if (isInIframe) {
                   try {
                     window.parent.location;
@@ -1440,43 +1529,43 @@ useEffect(() => {
                     console.log("✅ Cross-origin iframe detected in final check (external embed)");
                   }
                 }
-                
+
                 // Must have referrer OR be in a cross-origin iframe
                 if ((!referrer || referrer === '') && !isCrossOriginIframe) {
                   console.log("❌ Final check: No referrer and not in cross-origin iframe - NOT tracking");
                   return false;
                 }
-                
+
                 // If in cross-origin iframe, allow tracking even without referrer
                 if (isCrossOriginIframe) {
                   console.log("✅ Final check: Cross-origin iframe - WILL TRACK (external embed)");
                   return true;
                 }
-                
+
                 // Must not be localhost
                 if (currentHost === 'localhost' || currentHost === '127.0.0.1' || currentHost.startsWith('192.168.') || currentHost.startsWith('10.') || currentHost.endsWith('.local')) {
                   console.log("❌ Final check: Localhost - NOT tracking", { currentHost });
                   return false;
                 }
-                
+
                 // Must not be dashboard path
                 if (currentPath.includes('/dashboard') || currentPath.includes('/widget/dashboard')) {
                   console.log("❌ Final check: Dashboard path - NOT tracking", { currentPath });
                   return false;
                 }
-                
+
                 // Must have valid referrer from different origin
                 try {
                   const referrerUrl = new URL(referrer);
                   const referrerOrigin = referrerUrl.origin;
                   const referrerHost = referrerUrl.hostname;
-                  
+
                   // Check if referrer is localhost
                   if (referrerHost === 'localhost' || referrerHost === '127.0.0.1' || referrerHost.startsWith('192.168.') || referrerHost.startsWith('10.')) {
                     console.log("❌ Final check: Referrer is localhost - NOT tracking", { referrerHost });
                     return false;
                   }
-                  
+
                   // Must be different origin
                   if (referrerOrigin === currentOrigin) {
                     console.log("❌ Final check: Same origin - NOT tracking", {
@@ -1485,7 +1574,7 @@ useEffect(() => {
                     });
                     return false;
                   }
-                  
+
                   // Must be different hostname (even if different port, same hostname = same site)
                   if (referrerHost === currentHost) {
                     console.log("❌ Final check: Same hostname - NOT tracking", {
@@ -1494,13 +1583,13 @@ useEffect(() => {
                     });
                     return false;
                   }
-                  
+
                   // Referrer must not contain internal paths
                   if (referrer.includes('/dashboard') || referrer.includes('/widget/dashboard') || referrer.includes('/widget/embed')) {
                     console.log("❌ Final check: Referrer contains internal paths - NOT tracking", { referrer });
                     return false;
                   }
-                  
+
                   // All checks passed - this is definitely an external embed
                   console.log("✅ Final check: ALL conditions met - WILL TRACK", {
                     referrerOrigin,
@@ -1533,17 +1622,17 @@ useEffect(() => {
               const url = window.location.href || '';
               const ref = document.referrer || '';
               const host = window.location.hostname || '';
-              
+
               // If ANY mention of dashboard, localhost, or same domain - DON'T TRACK
               const hasDashboard = path.includes('dashboard') || url.includes('dashboard') || ref.includes('dashboard');
               const isLocal = host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.startsWith('10.');
               const isSameDomain = ref && new URL(ref).origin === window.location.origin;
-              
+
               if (hasDashboard || isLocal || isSameDomain) {
                 console.log("❌ ABSOLUTE FINAL CHECK FAILED - Not tracking", { hasDashboard, isLocal, isSameDomain, path, ref, host });
                 return false;
               }
-              
+
               return true;
             })();
 
@@ -1560,24 +1649,24 @@ useEffect(() => {
                 console.log("🚫 PRE-INSERT: Server-side - NOT inserting");
                 return false;
               }
-              
+
               try {
                 const path = window.location.pathname || '';
                 const url = window.location.href || '';
                 const ref = document.referrer || '';
                 const host = window.location.hostname || '';
                 const origin = window.location.origin || '';
-                
+
                 // Check if tracking is globally disabled
                 if (isTrackingDisabled()) {
                   console.log("🚫 PRE-INSERT: Tracking globally disabled");
                   return false;
                 }
-                
+
                 // Check if we're in a cross-origin iframe (external embed)
                 const isInIframe = window.self !== window.top;
                 let isCrossOriginIframe = false;
-                
+
                 if (isInIframe) {
                   try {
                     window.parent.location;
@@ -1587,49 +1676,49 @@ useEffect(() => {
                     console.log("✅ PRE-INSERT: Cross-origin iframe detected (external embed)");
                   }
                 }
-                
+
                 // Must have referrer OR be in a cross-origin iframe
                 if ((!ref || ref === '') && !isCrossOriginIframe) {
                   console.log("🚫 PRE-INSERT: No referrer and not in cross-origin iframe");
                   return false;
                 }
-                
+
                 // If in cross-origin iframe, allow tracking even without referrer
                 if (isCrossOriginIframe) {
                   console.log("✅ PRE-INSERT: Cross-origin iframe - WILL INSERT (external embed)");
                   return true;
                 }
-                
+
                 // Must not be localhost
                 if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.startsWith('10.') || host.endsWith('.local')) {
                   console.log("🚫 PRE-INSERT: Localhost detected", { host });
                   return false;
                 }
-                
+
                 // Must not contain dashboard
                 if (path.includes('dashboard') || url.includes('dashboard') || ref.includes('dashboard')) {
                   console.log("🚫 PRE-INSERT: Dashboard detected");
                   return false;
                 }
-                
+
                 // Parse referrer and verify it's external
                 try {
                   const refUrl = new URL(ref);
                   const refOrigin = refUrl.origin;
                   const refHost = refUrl.hostname;
-                  
+
                   // Must be different origin
                   if (refOrigin === origin) {
                     console.log("🚫 PRE-INSERT: Same origin", { refOrigin, origin });
                     return false;
                   }
-                  
+
                   // Must be different hostname
                   if (refHost === host) {
                     console.log("🚫 PRE-INSERT: Same hostname", { refHost, host });
                     return false;
                   }
-                  
+
                   // Extract top-level domains for comparison
                   const getTopLevelDomain = (hostname: string): string => {
                     const parts = hostname.split('.');
@@ -1638,16 +1727,16 @@ useEffect(() => {
                     }
                     return hostname;
                   };
-                  
+
                   const refTLD = getTopLevelDomain(refHost);
                   const currentTLD = getTopLevelDomain(host);
-                  
+
                   // Must be different top-level domain (e.g., example.com vs whatthefood.io)
                   if (refTLD === currentTLD) {
                     console.log("🚫 PRE-INSERT: Same top-level domain", { refTLD, currentTLD, refHost, host });
                     return false;
                   }
-                  
+
                   // All checks passed
                   console.log("✅ PRE-INSERT: All checks passed - WILL INSERT", {
                     refOrigin,
@@ -1676,49 +1765,49 @@ useEffect(() => {
 
             previewTrackedRef.current = true;
             isTrackingRef.current = true;
-            
+
             // Mark as tracked immediately to prevent duplicate calls
             markPreviewTracked(widgetId);
-            
+
             // ABSOLUTE FINAL CHECK: One more verification right before the actual insert
-            // This is the last line of defense - if ANY check fails, don't insert
+            // This is the absolute last line of defense - if ANY check fails, don't insert
             const absoluteFinalVerification = (() => {
               if (typeof window === 'undefined') return false;
-              
+
               // Check if tracking is globally disabled
               if (isTrackingDisabled()) {
                 console.log("🚫 ABSOLUTE FINAL: Tracking globally disabled");
                 return false;
               }
-              
+
               // Check if page was loaded from cache
               let isFromCache = false;
               try {
                 const perfEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
                 if (perfEntries.length > 0) {
                   const navEntry = perfEntries[0];
-                  isFromCache = navEntry.type === 'back_forward' || 
-                               (navEntry.transferSize === 0 && navEntry.decodedBodySize > 0);
+                  isFromCache = navEntry.type === 'back_forward' ||
+                    (navEntry.transferSize === 0 && navEntry.decodedBodySize > 0);
                 }
               } catch (e) {
                 // Performance API not available
               }
-              
+
               if (isFromCache) {
                 console.log("🚫 ABSOLUTE FINAL: Page loaded from cache");
                 return false;
               }
-              
+
               const path = window.location.pathname || '';
               const url = window.location.href || '';
               const ref = document.referrer || '';
               const host = window.location.hostname || '';
               const origin = window.location.origin || '';
-              
+
               // Check if we're in a cross-origin iframe (external embed)
               const isInIframe = window.self !== window.top;
               let isCrossOriginIframe = false;
-              
+
               if (isInIframe) {
                 try {
                   window.parent.location;
@@ -1728,31 +1817,31 @@ useEffect(() => {
                   console.log("✅ ABSOLUTE FINAL: Cross-origin iframe detected (external embed)");
                 }
               }
-              
+
               // Must have referrer OR be in a cross-origin iframe
               if ((!ref || ref === '') && !isCrossOriginIframe) {
                 console.log("🚫 ABSOLUTE FINAL: No referrer and not in cross-origin iframe");
                 return false;
               }
-              
+
               // If in cross-origin iframe, allow tracking even without referrer
               if (isCrossOriginIframe) {
                 console.log("✅ ABSOLUTE FINAL: Cross-origin iframe - WILL INSERT (external embed)");
                 return true;
               }
-              
+
               // Must not be localhost
               if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.startsWith('10.')) {
                 console.log("🚫 ABSOLUTE FINAL: Localhost");
                 return false;
               }
-              
+
               // Must not contain dashboard
               if (path.includes('dashboard') || url.includes('dashboard') || ref.includes('dashboard')) {
                 console.log("🚫 ABSOLUTE FINAL: Dashboard detected");
                 return false;
               }
-              
+
               // Must be different origin and hostname
               try {
                 const refUrl = new URL(ref);
@@ -1760,7 +1849,7 @@ useEffect(() => {
                   console.log("🚫 ABSOLUTE FINAL: Same origin/hostname");
                   return false;
                 }
-                
+
                 console.log("✅ ABSOLUTE FINAL: All checks passed - WILL INSERT");
                 return true;
               } catch (e) {
@@ -1774,7 +1863,7 @@ useEffect(() => {
               previewTrackedRef.current = true;
               return;
             }
-            
+
             // FINAL DEDUPLICATION: Check if we've tracked this exact combination very recently
             // This prevents duplicate inserts from cached pages or multiple tabs
             const dedupKey = `widget_track_${widgetId}_${document.referrer || window.location.href}`;
@@ -1802,7 +1891,7 @@ useEffect(() => {
                 currentPath: window.location.pathname,
                 hostname: window.location.hostname
               });
-              
+
               // Mark as tracked in sessionStorage BEFORE insert (prevents race conditions)
               const dedupKey = `widget_track_${widgetId}_${document.referrer || window.location.href}`;
               try {
@@ -1810,7 +1899,7 @@ useEffect(() => {
               } catch (e) {
                 // sessionStorage error - continue anyway
               }
-              
+
               // Determine site_url: prefer referrer, but if in cross-origin iframe without referrer, use a marker
               let siteUrl: string | null = null;
               if (typeof document !== 'undefined') {
@@ -1834,7 +1923,7 @@ useEffect(() => {
                   }
                 }
               }
-              
+
               await (supabase as any).from("widget_api_calls").insert({
                 widget_id: widgetId,
                 user_id: data.user_id,
@@ -1873,14 +1962,14 @@ useEffect(() => {
     };
 
     void loadWidgetSettings();
-    
+
     // Cleanup: reset loading ref when widgetId changes or component unmounts
     return () => {
       if (isLoadingRef.current === widgetId) {
         isLoadingRef.current = null;
       }
     };
-  }, [widgetId, checkApiCallLimit]);
+  }, [widgetId, checkApiCallLimit, setLanguage]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -1898,13 +1987,13 @@ useEffect(() => {
       console.log("🚫 Cannot scan - missing required data");
       return;
     }
-    
+
     // CRITICAL: Check limit BEFORE any processing
     if (isLimitReached) {
       console.log("🚫 Cannot scan - API call limit already reached");
       return;
     }
-    
+
     // Double-check limit from database before proceeding (prevents race conditions)
     const limitReached = await checkApiCallLimit(widgetSettings.user_id);
     if (limitReached) {
@@ -1925,11 +2014,11 @@ useEffect(() => {
         setScanning(false);
         return;
       }
-      
+
       // Track the API call BEFORE processing (this will also check limit internally)
       console.log("📊 Tracking API call before processing...");
       const trackResult = await trackApiCall("scan", "success");
-      
+
       // If trackApiCall returns false, limit was reached - don't process
       if (!trackResult) {
         console.log("🚫 trackApiCall returned false - limit reached - NOT processing scan");
@@ -1937,7 +2026,7 @@ useEffect(() => {
         setScanning(false);
         return; // Exit early - don't process, don't set result
       }
-      
+
       // Double-check limit after tracking (in case it was reached during the insert)
       const postTrackLimitCheck = await checkApiCallLimit(widgetSettings.user_id);
       if (postTrackLimitCheck) {
@@ -1946,10 +2035,10 @@ useEffect(() => {
         setScanning(false);
         return; // Exit early - don't process, don't set result
       }
-      
+
       // Only process scan if ALL limit checks pass AND tracking succeeded
       console.log("✅ All limit checks passed and tracking succeeded - processing scan");
-      
+
       // Actually call analyzeFood to get real results
       // Note: analyzeFood expects imageUrl (string), but we have base64 data URL
       // The backend should handle data URLs, but if not, we may need to upload first
@@ -1958,7 +2047,25 @@ useEffect(() => {
         // If the backend doesn't support data URLs, we'll need to upload the image first
         const analysisResult = await analyzeFood(imagePreview, servings);
         console.log("✅ Analysis complete:", analysisResult);
-        
+
+        let finalResult = analysisResult;
+
+        // Translate if needed
+        if (widgetSettings?.language && widgetSettings.language !== 'en') {
+          const loadingToast = toast({
+            title: t("translating_title", "Translating..."),
+            description: t("applying_language_settings", "Applying language settings"),
+          });
+
+          try {
+            finalResult = await translateContent(analysisResult, widgetSettings.language);
+            loadingToast.dismiss();
+          } catch (e) {
+            console.error("Translation failed", e);
+            loadingToast.dismiss();
+          }
+        }
+
         // Final check before setting result
         const finalLimitCheck = await checkApiCallLimit(widgetSettings.user_id);
         if (finalLimitCheck) {
@@ -1967,16 +2074,21 @@ useEffect(() => {
           setScanning(false);
           return;
         }
-        
+
         // Only set result if ALL checks pass
         console.log("✅ Setting result - all checks passed");
-        
+
+        setResult(finalResult);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem("last_food_analysis", JSON.stringify(finalResult));
+        }
+
         // Handle different display modes
         if (resultDisplayMode === "new_tab") {
           // Store result data in sessionStorage and open new tab
           const resultId = `widget_result_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
           sessionStorage.setItem(resultId, JSON.stringify({
-            analysis: analysisResult.analysis,
+            analysis: finalResult,
             image: imagePreview,
             servings: servings,
             subscriptionType: subscriptionType
@@ -1988,11 +2100,10 @@ useEffect(() => {
           setImagePreview(null);
         } else if (resultDisplayMode === "modal") {
           // Show results in modal
-          setResult(analysisResult.analysis);
           setModalOpen(true);
         } else {
           // Default: same page
-          setResult(analysisResult.analysis);
+          // Result is already set above
         }
       } catch (analysisError: any) {
         console.error("❌ Error analyzing food:", analysisError);
@@ -2002,7 +2113,7 @@ useEffect(() => {
       console.error("Error scanning:", error);
       // Don't track error if limit is reached
       if (!isLimitReached) {
-      await trackApiCall("scan", "error");
+        await trackApiCall("scan", "error");
       }
     } finally {
       setScanning(false);
@@ -2029,7 +2140,7 @@ useEffect(() => {
   }
 
   if (!widgetId || !widgetSettings) {
-    return <div className="p-4 text-center text-muted-foreground">Widget not found or invalid widget ID</div>;
+    return <div className="p-4 text-center text-muted-foreground">{t("widget_not_found", "Widget not found or invalid widget ID")}</div>;
   }
 
   const baseUrl = getUrl("");
@@ -2039,26 +2150,26 @@ useEffect(() => {
   // CRITICAL: This check happens BEFORE rendering the normal widget
   if (isLimitReached) {
     console.log("🚫 Rendering Limit Exceeded widget - isLimitReached:", isLimitReached, "apiCallCount:", apiCallCount);
-  return (
-    <div className="w-full min-h-screen p-4 sm:p-6 flex items-center justify-center" style={{ backgroundColor: styles.backgroundColor || "transparent" }}>
-      <div 
-        className="max-w-md mx-auto rounded-lg border-2 border-border shadow-sm p-8 text-center"
-        style={{ 
-          borderRadius: styles.borderRadius,
-          borderColor: styles.primaryColor + "30",
-          backgroundColor: styles.backgroundColor || "transparent"
-        }}
-      >
+    return (
+      <div className="w-full min-h-screen p-4 sm:p-6 flex items-center justify-center" style={{ backgroundColor: styles.backgroundColor || "transparent" }}>
+        <div
+          className="max-w-md mx-auto rounded-lg border-2 border-border shadow-sm p-8 text-center"
+          style={{
+            borderRadius: styles.borderRadius,
+            borderColor: styles.primaryColor + "30",
+            backgroundColor: styles.backgroundColor || "transparent"
+          }}
+        >
           <div className="space-y-4">
             <div className="text-4xl mb-4">🚫</div>
             <h3 className="text-xl font-bold" style={{ color: styles.primaryColor }}>
-              API Call Limit Reached
+              {t("api_limit_reached_title", "API Call Limit Reached")}
             </h3>
             <p className="text-muted-foreground">
-              You&apos;ve reached the free plan limit of 3 API calls. Upgrade to a premium plan to continue using the widget.
+              {t("api_limit_reached_description", "You've reached the free plan limit of 3 API calls. Upgrade to a premium plan to continue using the widget.")}
             </p>
             <p className="text-sm text-muted-foreground font-semibold">
-              Current API calls: {apiCallCount || 4} / 3
+              {t("current_api_calls", "Current API calls")}: {apiCallCount || 4} / 3
             </p>
             <div className="pt-4">
               <a
@@ -2068,12 +2179,12 @@ useEffect(() => {
                 className="inline-block"
               >
                 <Button
-                  style={{ 
+                  style={{
                     backgroundColor: styles.primaryColor,
                     borderRadius: styles.borderRadius
                   }}
                 >
-                  Upgrade to Premium
+                  {t("upgrade_to_premium_button", "Upgrade to Premium")}
                 </Button>
               </a>
             </div>
@@ -2082,14 +2193,19 @@ useEffect(() => {
       </div>
     );
   }
-  
+
   console.log("✅ Rendering normal widget - isLimitReached:", isLimitReached, "apiCallCount:", apiCallCount);
+
+  const resetScan = () => {
+    setResult(null);
+    setImagePreview(null);
+  };
 
   return (
     <div className="w-full min-h-screen p-4 sm:p-6" style={{ backgroundColor: styles.backgroundColor || "transparent" }}>
-      <div 
+      <div
         className="max-w-md mx-auto rounded-lg border-2 border-border shadow-sm"
-        style={{ 
+        style={{
           borderRadius: styles.borderRadius,
           borderColor: styles.primaryColor + "30",
           backgroundColor: styles.backgroundColor || "transparent"
@@ -2106,14 +2222,13 @@ useEffect(() => {
             <div className="space-y-4">
               {!imagePreview ? (
                 <div
-                  className={`border-2 border-dashed rounded-lg p-10 text-center transition-colors flex-1 flex flex-col items-center justify-center min-h-[280px] ${
-                    isLimitReached ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-opacity-50"
-                  }`}
-                  style={{ 
+                  className={`border-2 border-dashed rounded-lg p-10 text-center transition-colors flex-1 flex flex-col items-center justify-center min-h-[280px] ${isLimitReached ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-opacity-50"
+                    }`}
+                  style={{
                     borderColor: styles.primaryColor + "30",
                     borderRadius: styles.borderRadius,
-                    backgroundColor: (styles.uploadAreaBackgroundColor && styles.uploadAreaBackgroundColor.trim() !== "") 
-                      ? styles.uploadAreaBackgroundColor 
+                    backgroundColor: (styles.uploadAreaBackgroundColor && styles.uploadAreaBackgroundColor.trim() !== "")
+                      ? styles.uploadAreaBackgroundColor
                       : "rgba(0, 0, 0, 0.02)"
                   }}
                   onClick={() => {
@@ -2133,33 +2248,33 @@ useEffect(() => {
                     input.click();
                   }}
                 >
-          <Upload 
-            className="h-14 w-14 mx-auto mb-4" 
-            style={{ color: styles.primaryColor }} 
-          />
-          <p className="text-lg font-medium mb-2" style={{ color: styles.primaryColor }}>
-            {widgetSettings?.widget_name || "Upload Your Food Photo"}
-          </p>
-          <p className="text-sm text-muted-foreground mb-4">
-            {widgetSettings?.widget_description || "Drop an image here or click to browse"}
-          </p>
-                  <Button 
-                    style={{ 
+                  <Upload
+                    className="h-14 w-14 mx-auto mb-4"
+                    style={{ color: styles.primaryColor }}
+                  />
+                  <p className="text-lg font-medium mb-2" style={{ color: styles.primaryColor }}>
+                    {widgetSettings?.widget_name || t("upload_food_photo_title", "Upload Your Food Photo")}
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {widgetSettings?.widget_description || t("upload_food_photo_description", "Drop an image here or click to browse")}
+                  </p>
+                  <Button
+                    style={{
                       backgroundColor: styles.primaryColor,
                       borderRadius: styles.borderRadius
                     }}
                   >
-                    Choose File
+                    {t("choose_file_button", "Choose File")}
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
                   <div className="relative rounded-lg overflow-hidden border-2 border-border bg-muted/30">
                     <div className="aspect-video relative">
-                      <img 
-                        src={imagePreview} 
-                        alt="Uploaded food" 
-                        className="w-full h-full object-cover" 
+                      <img
+                        src={imagePreview}
+                        alt={t("uploaded_food_alt", "Uploaded food")}
+                        className="w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
                         <Button
@@ -2181,7 +2296,7 @@ useEffect(() => {
                             input.click();
                           }}
                         >
-                          Change Image
+                          {t("change_image_button", "Change Image")}
                         </Button>
                       </div>
                     </div>
@@ -2194,23 +2309,23 @@ useEffect(() => {
                         setImagePreview(null);
                       }}
                     >
-                      Remove
+                      {t("remove_button", "Remove")}
                     </Button>
                     <Button
                       onClick={handleScan}
                       disabled={scanning || isLimitReached}
                       className="flex-1"
-                      style={{ 
+                      style={{
                         backgroundColor: styles.primaryColor,
                         borderRadius: styles.borderRadius
                       }}
                     >
                       {scanning ? (
                         <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Analyzing...
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" /> {t("analyzing_button", "Analyzing...")}
                         </>
                       ) : (
-                        "Analyze Food"
+                        t("analyze_food_button", "Analyze Food")
                       )}
                     </Button>
                   </div>
@@ -2220,7 +2335,7 @@ useEffect(() => {
           ) : result && resultDisplayMode !== "modal" ? (
             subscriptionType === "free" ? (
               // FREE USER VIEW: Nutrition + Accuracy Scale
-              <FreeUserResultsView 
+              <FreeUserResultsView
                 result={result}
                 imageUrl={imagePreview}
                 styles={styles}
@@ -2228,10 +2343,11 @@ useEffect(() => {
                   setResult(null);
                   setImagePreview(null);
                 }}
+                t={t} // Pass t to sub-component
               />
             ) : (
               // PREMIUM USER VIEW: Full Detailed Results
-              <PremiumUserResultsView 
+              <PremiumUserResultsView
                 result={result}
                 imageUrl={imagePreview}
                 servings={servings}
@@ -2241,6 +2357,7 @@ useEffect(() => {
                   setResult(null);
                   setImagePreview(null);
                 }}
+                t={t} // Pass t to sub-component
               />
             )
           ) : null}
@@ -2250,12 +2367,12 @@ useEffect(() => {
             <Dialog open={modalOpen} onOpenChange={setModalOpen}>
               <DialogContent className="max-w-4xl max-h-[90vh] p-0">
                 <DialogHeader className="px-6 pt-6 pb-4 border-b">
-                  <DialogTitle className="text-xl font-bold">Food Analysis Results</DialogTitle>
+                  <DialogTitle className="text-xl font-bold">{t("food_analysis_results_title", "Food Analysis Results")}</DialogTitle>
                 </DialogHeader>
                 <ScrollArea className="max-h-[calc(90vh-120px)] px-6">
                   <div className="py-4">
                     {subscriptionType === "free" ? (
-                      <FreeUserResultsView 
+                      <FreeUserResultsView
                         result={result!}
                         imageUrl={imagePreview}
                         styles={styles}
@@ -2264,9 +2381,10 @@ useEffect(() => {
                           setImagePreview(null);
                           setModalOpen(false);
                         }}
+                        t={t} // Pass t to sub-component
                       />
                     ) : (
-                      <PremiumUserResultsView 
+                      <PremiumUserResultsView
                         result={result!}
                         imageUrl={imagePreview}
                         servings={servings}
@@ -2277,9 +2395,10 @@ useEffect(() => {
                           setImagePreview(null);
                           setModalOpen(false);
                         }}
+                        t={t} // Pass t to sub-component
                       />
                     )}
-            </div>
+                  </div>
                 </ScrollArea>
               </DialogContent>
             </Dialog>
@@ -2287,7 +2406,7 @@ useEffect(() => {
 
           {styles.brandingVisible && (
             <div className="mt-6 pt-4 border-t text-center text-xs text-muted-foreground">
-              Powered by{" "}
+              {t("powered_by", "Powered by")}{" "}
               <a
                 href="https://whatthefood.io"
                 target="_blank"
@@ -2304,3 +2423,5 @@ useEffect(() => {
     </div>
   );
 }
+
+

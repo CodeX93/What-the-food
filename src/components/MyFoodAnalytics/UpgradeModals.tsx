@@ -72,7 +72,7 @@ export function InsightSpecificModal({ open, onOpenChange, insightType = "protei
                         See your {insightType} trends
                     </DialogTitle>
                     <DialogDescription className="text-base pt-2">
-                        Understand how your {insightType} intake affects satiety, recovery, and progress over time.
+                        Understand how your {insightType} affects your progress and overall consistency over time.
                     </DialogDescription>
                 </DialogHeader>
                 <DialogFooter className="mt-4">

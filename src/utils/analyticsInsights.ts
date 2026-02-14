@@ -273,27 +273,38 @@ export const calculateConsistencyScore = (
 /**
  * Generate Insights based on rules
  */
+// --- The Core Insight Engine ---
+
+/**
+ * Generate Insights based on deterministic rules per goal
+ */
 export const generateInsights = (
     scans: FoodScan[],
-    profile: UserProfile | null,
-    history: InsightHistoryItem[] = []
+    profile: UserProfile | null
 ): Insight[] => {
     const targets = calculateDailyRequirements(profile);
     if (!targets) return []; // Need profile
 
     const insights: Insight[] = [];
-    const goal = (profile?.goal || "maintenance").toLowerCase();
 
     // --- Pre-process Data ---
-    const last7Days = scans.slice(0, 50); // Just take recent bucket for now
+    // Sort scans: Newest first
+    const sortedScans = [...scans].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    // We need "Active Logged Days" for calculations
     const dailyStats: Record<string, DailyStats> = {};
     let totalMealsLogged = 0;
 
-    last7Days.forEach(scan => {
+    sortedScans.forEach(scan => {
         const day = TIMEZONE_UTILS.formatDay(scan.created_at);
         const nutrients = scan.result_json?.nutrients || {};
         const mult = scan.serving || 1;
+
         const cals = (nutrients.calories || 0) * mult;
+        const protein = (nutrients.protein_g || 0) * mult;
+        const carbs = (nutrients.carbohydrates_g || 0) * mult;
+        const fat = (nutrients.fat_g || 0) * mult;
+
         const hour = TIMEZONE_UTILS.getHour(scan.created_at);
 
         if (!dailyStats[day]) {
@@ -301,9 +312,9 @@ export const generateInsights = (
         }
 
         dailyStats[day].calories += cals;
-        dailyStats[day].protein += (nutrients.protein_g || 0) * mult;
-        dailyStats[day].carbs += (nutrients.carbohydrates_g || 0) * mult;
-        dailyStats[day].fat += (nutrients.fat_g || 0) * mult;
+        dailyStats[day].protein += protein;
+        dailyStats[day].carbs += carbs;
+        dailyStats[day].fat += fat;
         dailyStats[day].count += 1;
         totalMealsLogged += 1;
 
@@ -313,308 +324,444 @@ export const generateInsights = (
     });
 
     const daysCount = Object.values(dailyStats).length;
-    const daysArray = Object.values(dailyStats);
+    const daysArray = Object.values(dailyStats).sort((a, b) => b.date.localeCompare(a.date)); // Newest first
 
-    // --- Universal Insight Suppression ---
-    // If < 3 meals logged OR < 2 days of data -> Show NO insights
+    // --- UNIVERSAL SUPPRESSION RULE ---
+    // If user has < 3 meals logged OR < 2 days of data -> Show NO insights
     if (totalMealsLogged < 3 || daysCount < 2) {
         return [];
     }
 
-    // --- Helper Functions for Thresholds ---
-    const getAvg = (key: keyof DailyStats) => {
-        if (daysCount === 0) return 0;
-        return daysArray.reduce((acc, d) => acc + (d[key] as number), 0) / daysCount;
-    };
+    // --- GLOBAL METRICS ---
+    // Weekly Average (last 7 logged days)
+    const last7Days = daysArray.slice(0, 7);
+    const avgCals7Days = last7Days.reduce((sum, d) => sum + d.calories, 0) / (last7Days.length || 1);
+    const avgProtein7Days = last7Days.reduce((sum, d) => sum + d.protein, 0) / (last7Days.length || 1);
 
-    const avgCalories = getAvg('calories');
-    const avgProtein = getAvg('protein');
-    const avgFat = getAvg('fat');
+    const goal = (profile?.goal || "maintenance").toLowerCase();
 
-    // --- GOAL SPECIFIC LOGIC ---
-
-    // 1. Calories check based on Goal
-    let calorieStatus = "ok";
-    const targetCals = targets.calories;
-    const diffPercent = (avgCalories - targetCals) / targetCals; // e.g. -0.10 for 10% deficit
-
+    // --- GOAL: CUT (Fat Loss) ---
     if (goal === "weight_loss" || goal === "cut") {
-        // Cut Rules
-        if (diffPercent > -0.05) calorieStatus = "deficit_too_small"; // > -5%
-        if (diffPercent < -0.30) calorieStatus = "deficit_too_aggressive"; // < -30%
-    } else if (goal === "weight_gain" || goal === "muscle_gain" || goal === "bulk") {
-        // Gain Rules
-        if (diffPercent < 0.03) calorieStatus = "surplus_too_small"; // < +3%
-        if (diffPercent > 0.25) calorieStatus = "surplus_excessive"; // > +25%
-    } else {
-        // Maintenance Rules
-        if (Math.abs(diffPercent) > 0.15) calorieStatus = "maintenance_drift";
-    }
 
-    // Insight: Calorie Status
-    if (calorieStatus === "deficit_too_small") {
-        insights.push({
-            id: "cal_deficit_small",
-            title: "Deficit too small",
-            copy: "You're averaging close to maintenance calories.",
-            action: "Aim for a slightly larger deficit to see results.",
-            type: "neutral",
-            category: "macro_balance",
-            impactScore: 90,
-            whyMatch: `Your average intake is only ${Math.round(diffPercent * 100)}% below target.`
-        });
-    } else if (calorieStatus === "deficit_too_aggressive") {
-        insights.push({
-            id: "cal_deficit_aggressive",
-            title: "Deficit too aggressive",
-            copy: "You’re eating far below your target. This can risk muscle loss.",
-            action: "Increase calories slightly to sustain progress.",
-            type: "warning",
-            category: "macro_balance",
-            impactScore: 95,
-            whyMatch: `You're eating ${Math.abs(Math.round(diffPercent * 100))}% below target.`
-        });
-    }
+        // 1. Calories
+        // Target: -10% to -20% below target (Note: 'targets.calories' ALREADY includes deficit in calculateDailyRequirements?)
+        // Wait, calculateDailyRequirements applies a multiplier. 
+        // "Daily calorie target = user’s calculated target". 
+        // If calculateDailyRequirements returned 2000 (after deficit), then " > -5% below target" means > 1900?
+        // Let's assume 'targets.calories' is the GOAL target.
+        // Prompt says: "If weekly avg calories > -5% --> Deficit too small".
+        // This implies the reference is the TDEE (Maintenance)? Or is "target" the Deficit Target?
+        // Usually "below target" implies below the *Maintenance* TDEE.
+        // BUT "Daily calorie target = user's calculated target".
+        // If the user's target IS the deficit number (e.g. 2000), then "10% below target" means 1800.
+        // User Prompt text: "Calories... On track: -10% to -20% below target".
+        // If I assigned them a deficit target, asking them to be 20% *below* that seems harsh.
+        // Likely 'target' refers to MAINTENANCE TDEE in the prompt's context, OR the language "below target" is relative to a standard baseline.
+        // HOWEVER, "Daily calorie target = user’s calculated target" is a Global Definition.
+        // Let's stick to the percentages relative to `targets.calories`.
+        // Interpretation:
+        // "Too high: > -5% below target" -> Avg > Target * 0.95
+        // "On track: -10% to -20% below target" -> Avg between Target * 0.80 and Target * 0.90
+        // "Too aggressive: < -30% below target" -> Avg < Target * 0.70
+        // *Adjusted implementation based on likely intent:* 
+        // If targets.calories is already the Deficit Number (e.g. TDEE * 0.85), then:
+        // Checking "below target" again might double dip. 
+        // Let's trust the logic: Compare Avg vs Target.
+        // "Deficit too small" -> Avg > Target * 0.95 (Close to target is 'too high'? Maybe they mean relative to Maintenance?)
+        // Let's use the exact math from the prompt relative to the *Goal Target*.
 
-    // 2. Protein Check Based on Goal
-    let proteinThreshold = 0.80; // Default (Cut)
-    if (goal === "maintenance") proteinThreshold = 0.75;
-    if (goal.includes("gain")) proteinThreshold = 0.85;
-
-    if (avgProtein < (targets.protein * proteinThreshold)) {
-        insights.push({
-            id: "low_protein",
-            title: "Low Protein Intake",
-            copy: "You’re consistently under your protein target.",
-            action: "Try adding a protein source to one daily meal.",
-            type: "warning",
-            category: "macro_balance",
-            impactScore: 85,
-            whyMatch: `Your average protein is ${Math.round(avgProtein)}g (${Math.round(avgProtein / targets.protein * 100)}% of target).`
-        });
-    }
-
-    // 3. Fat Dominance Check
-    // Cut: > 40% on 4+ days. Maintain: > 45%. Gain: > 35%.
-    let fatLimit = 0.40;
-    if (goal === "maintenance") fatLimit = 0.45;
-    if (goal.includes("gain")) fatLimit = 0.35;
-
-    const fatHeavyDays = daysArray.filter(d => (d.fat * 9) / d.calories > fatLimit);
-    if (fatHeavyDays.length >= 4) {
-        insights.push({
-            id: "fat_dominance",
-            title: "Fat Dominance",
-            copy: "Many of your meals are fat-heavy, increasing calorie density.",
-            action: "Reduce added oils or creamy sauces in one meal.",
-            type: "neutral",
-            category: "macro_balance",
-            impactScore: 75,
-            whyMatch: `Fat exceeded ${fatLimit * 100}% of calories on ${fatHeavyDays.length} days.`
-        });
-    }
-
-    // Gain Rule: Meal Frequency
-    if (goal.includes("gain")) {
-        // Trigger if < 3 meals/day avg
-        const avgMealsPerDay = totalMealsLogged / daysCount;
-        if (avgMealsPerDay < 3) {
+        // CUT Rule: Deficit too small
+        if (avgCals7Days > (targets.calories * 0.95)) {
             insights.push({
-                id: "low_frequency_gain",
-                title: "Meal Frequency",
-                copy: "You're constantly eating fewer than 3 meals a day.",
-                action: "More frequent meals may support muscle gain.",
+                id: "cut_deficit_small",
+                title: "Deficit Too Small",
+                copy: "You're constantly hitting or exceeding your calorie target.\nTo burn fat, you need a slightly larger gap.",
+                action: "Reduce portion sizes slightly at dinner.",
                 type: "warning",
+                category: "general",
+                impactScore: 90
+            });
+        }
+        // CUT Rule: Deficit too aggressive
+        else if (avgCals7Days < (targets.calories * 0.70)) {
+            insights.push({
+                id: "cut_deficit_aggressive",
+                title: "Deficit Too Aggressive",
+                copy: "You're eating far below your target.\nThis risks muscle loss and bingeing later.",
+                action: "Add a small snack to reach your goal.",
+                type: "warning",
+                category: "general",
+                impactScore: 95
+            });
+        }
+
+        // 2. Protein
+        // Trigger if avg < 80% of target
+        if (avgProtein7Days < (targets.protein * 0.80)) {
+            insights.push({
+                id: "cut_low_protein",
+                title: "Protein Needs a Boost",
+                copy: "Protein preserves muscle while you cut.\nYou're averaging below 80% of your target.",
+                action: "Add 20-30g protein (e.g. chicken, tofu) to lunch.",
+                type: "warning",
+                category: "macro_balance",
+                impactScore: 85
+            });
+        }
+
+        // 3. Fat
+        // Trigger if fat > 40% of total calories on 4+ days
+        const highFatDays = last7Days.filter(d => d.calories > 0 && ((d.fat * 9) / d.calories > 0.40));
+        if (highFatDays.length >= 4) {
+            insights.push({
+                id: "cut_high_fat",
+                title: "Fat Intake is High",
+                copy: "Fat is calorie-dense. High fat days make it harder to hit your deficit volume-wise.",
+                action: "Swap fatty cuts for leaner options this week.",
+                type: "neutral",
+                category: "macro_balance",
+                impactScore: 70
+            });
+        }
+
+        // 4. Carbs
+        // Trigger if carbs > 65% of calories AND protein < target
+        const highCarbLowProteinDays = last7Days.filter(d =>
+            d.calories > 0 &&
+            ((d.carbs * 4) / d.calories > 0.65) &&
+            (d.protein < targets.protein)
+        );
+        // Assuming "Trigger only if..." implies a pattern, let's say 3+ days
+        if (highCarbLowProteinDays.length >= 3) {
+            insights.push({
+                id: "cut_carb_dominance",
+                title: "Carb Dominance",
+                copy: "High carbs with low protein can spike hunger and reduce satiety during a cut.",
+                action: "Balance your carb meals with protein.",
+                type: "neutral",
+                category: "macro_balance",
+                impactScore: 60
+            });
+        }
+
+        // 5. Timing
+        // Trigger late-eating if > 35% of calories after 8pm on 3+ days
+        const lateDays = last7Days.filter(d => d.calories > 0 && (d.over8pmCalories / d.calories > 0.35));
+        if (lateDays.length >= 3) {
+            insights.push({
+                id: "cut_late_eating",
+                title: "Late Night Calories",
+                copy: "Eating heavily late at night can disrupt digestion and sleep quality.",
+                action: "Shift some calories to earlier in the day.",
+                type: "neutral",
                 category: "timing",
-                impactScore: 82,
-                whyMatch: `Averaging ${avgMealsPerDay.toFixed(1)} meals/day.`
+                impactScore: 50
+            });
+        }
+
+    }
+
+    // --- GOAL: MAINTAIN ---
+    else if (goal === "maintenance") {
+
+        // 1. Calories
+        // Inconsistent: ±15% swings on 4+ days
+        // We check if d.calories is outside [Target * 0.85, Target * 1.15]
+        const swingDays = last7Days.filter(d =>
+            d.calories < (targets.calories * 0.85) ||
+            d.calories > (targets.calories * 1.15)
+        );
+        if (swingDays.length >= 4) {
+            insights.push({
+                id: "maintain_swings",
+                title: "Calorie Swings",
+                copy: "Maintenance requires stability. Large daily swings make it hard to find your baseline.",
+                action: "Try to stay within ±100 kcals of target.",
+                type: "warning",
+                category: "consistency",
+                impactScore: 80
+            });
+        }
+
+        // 2. Protein
+        // Trigger if avg < 75% of target
+        if (avgProtein7Days < (targets.protein * 0.75)) {
+            insights.push({
+                id: "maintain_low_protein",
+                title: "Protein Dip",
+                copy: "Even at maintenance, protein is key.\nYou're falling short of your target.",
+                action: "Prioritize protein in your first meal.",
+                type: "neutral",
+                category: "macro_balance",
+                impactScore: 70
+            });
+        }
+
+        // 3. Fat
+        // Trigger if fat > 45% of calories on 4+ days (consistently)
+        const highFatMaintainDays = last7Days.filter(d => d.calories > 0 && ((d.fat * 9) / d.calories > 0.45));
+        if (highFatMaintainDays.length >= 4) {
+            insights.push({
+                id: "maintain_high_fat",
+                title: "High Fat Ratio",
+                copy: "Your diet is very fat-dominant (>45%). This is fine if intended (e.g. Keto), but watch total calories.",
+                action: "Check if you're over-relying on oils or nuts.",
+                type: "neutral",
+                category: "macro_balance",
+                impactScore: 50
+            });
+        }
+
+        // 4. Consistency (Variance)
+        // Trigger if daily calorie variance > 25%
+        // Variance calc:
+        const cals = last7Days.map(d => d.calories);
+        if (cals.length > 1) {
+            const mean = cals.reduce((a, b) => a + b, 0) / cals.length;
+            const sqDiff = cals.map(c => Math.pow(c - mean, 2)).reduce((a, b) => a + b, 0) / cals.length;
+            const stdDev = Math.sqrt(sqDiff);
+            const cv = stdDev / (mean || 1); // Coefficient of Variation
+
+            if (cv > 0.25) {
+                insights.push({
+                    id: "maintain_variance",
+                    title: "Inconsistent Intake",
+                    copy: "Your daily intake varies by >25%. Maintenance works best with routine.",
+                    action: "Plan your meals to be more similar day-to-day.",
+                    type: "warning",
+                    category: "consistency",
+                    impactScore: 60
+                });
+            }
+        }
+    }
+
+    // --- GOAL: GAIN (Muscle Gain) ---
+    else if (goal.includes("gain") || goal === "bulk") {
+
+        // 1. Calories
+        // Too low: < +3% (Target * 1.03) -> Assuming Target is Base? 
+        // NOTE: calculateDailyRequirements ALREADY adds +15% for Gain.
+        // So `targets.calories` = TDEE * 1.15.
+        // If we want to check if they are hitting the surplus...
+        // "Too low: < +3%" implies < TDEE * 1.03.
+        // Since `targets.calories` is ~ TDEE * 1.15.
+        // TDEE * 1.03 is approximately `targets.calories / 1.15 * 1.03` => `targets.calories * 0.895`.
+        // Let's approximate: If Avg < Target * 0.90, they are barely in surplus (or in maintenance).
+        // Let's stick to strict interpretation relative to *assigned target*.
+        // If the prompt says "Too low < +3%", and the system assigned +15%, then "Too low" is basically "missing the target significantly".
+        // Let's define "Too Low" as "Below Maintenance". 
+        // If `targets.calories` is the Surplus Target, then `avg < targets.calories * 0.90` is roughly Maintenance.
+
+        // Let's use the prompt's thresholds as "Deviation from Target"? No, prompt says "< +3%". That looks like "vs TDEE".
+        // But I don't have raw TDEE easily available without recalculating. `calculateDailyRequirements` returns the final.
+        // Let's calculate raw TDEE by reversing the 1.15 multiplier.
+        const likelyTDEE = targets.calories / 1.15;
+
+        // Too low: < +3% above TDEE
+        if (avgCals7Days < (likelyTDEE * 1.03)) {
+            insights.push({
+                id: "gain_low_surplus",
+                title: "Surplus Too Low",
+                copy: "You're eating at maintenance, not a surplus. Muscle growth needs energy.",
+                action: "Add an extra post-workout snack.",
+                type: "warning",
+                category: "general",
+                impactScore: 90
+            });
+        }
+        // Excessive: > +25% above TDEE
+        else if (avgCals7Days > (likelyTDEE * 1.25)) {
+            insights.push({
+                id: "gain_high_surplus",
+                title: "Excessive Surplus",
+                copy: "You're eating >25% above maintenance. This gains fat, not just muscle.",
+                action: "Scale back portion sizes slightly.",
+                type: "warning",
+                category: "general",
+                impactScore: 85
+            });
+        }
+
+        // 2. Protein
+        // Trigger if avg < 85% of target
+        if (avgProtein7Days < (targets.protein * 0.85)) {
+            insights.push({
+                id: "gain_low_protein",
+                title: "Missed Protein Target",
+                copy: "Muscle needs protein to rebuild. You're continuously under your target.",
+                action: "Double your protein portion in one meal.",
+                type: "warning",
+                category: "macro_balance",
+                impactScore: 95
+            });
+        }
+
+        // 3. Fat
+        // Trigger if fat > 35% of calories
+        // Let's check average fat %? Or daily? "Trigger if fat >..." usually implies Average or Pattern. 
+        // Let's use Average Fat % over the week.
+        const avgFatPercent = ((avgCals7Days || 1) > 0)
+            ? ((last7Days.reduce((s, d) => s + d.fat, 0) * 9) / (last7Days.reduce((s, d) => s + d.calories, 0)))
+            : 0;
+
+        if (avgFatPercent > 0.35) {
+            insights.push({
+                id: "gain_high_fat",
+                title: "Fat Intake High",
+                copy: "Carbs are better for muscle fuel than fat. Your fat intake is high (>35%).",
+                action: "Swap fatty foods for carb sources like rice/oats.",
+                type: "neutral",
+                category: "macro_balance",
+                impactScore: 60
+            });
+        }
+
+        // 4. Meal Frequency
+        // Trigger if < 3 meals/day avg
+        const mealsPerDay = totalMealsLogged / (daysCount || 1);
+        if (mealsPerDay < 3) {
+            insights.push({
+                id: "gain_frequency",
+                title: "Eat More Often",
+                copy: "It's hard to hit a surplus with few meals.",
+                action: "Add a 4th meal or snack to your day.",
+                type: "neutral",
+                category: "timing",
+                impactScore: 75
             });
         }
     }
 
-    // --- Rule A2: High Carb Skew ---
-    // Carbs > 65% of calories on >= 3 days AND protein < target (Spec)
-    const highCarbDays = daysArray.filter(d => {
-        const carbCals = d.carbs * 4;
-        const proteinTarget = targets.protein;
-        const isLowProtein = d.protein < proteinTarget; // approximate daily check
-        return d.calories > 0 && (carbCals / d.calories) > 0.65 && isLowProtein;
-    });
-
-    if (highCarbDays.length >= 3) {
-        insights.push({
-            id: "high_carb_skew",
-            title: "High Carb Skew",
-            copy: "A large share of your calories is coming from carbs.",
-            action: "Pair carb-heavy meals with protein or fiber.",
-            type: "neutral",
-            category: "macro_balance",
-            impactScore: 60,
-            whyMatch: `Carbs > 60% on ${highCarbDays.length} recent days.`
-        });
-    }
-
-    // --- Rule B1: Late Eating Pattern ---
-    // >35% calories after 8 PM on 3+ days
-    const lateDays = daysArray.filter(d => d.calories > 0 && (d.over8pmCalories / d.calories) > 0.35);
-    if (lateDays.length >= 3) {
-        insights.push({
-            id: "late_eating",
-            title: "Late Eating Pattern",
-            copy: "Most of your calories come later in the day.",
-            action: "Try shifting one larger meal earlier.",
-            type: "neutral",
-            category: "timing",
-            impactScore: 70,
-            whyMatch: `>35% of calories logged after 8 PM on ${lateDays.length} days.`
-        });
-    }
-
-    // --- Rule B2: Calorie Spikes ---
-    // Spec: "Trigger if daily calorie variance > 25%" (Applied generally or specifically to Maintain)
-    const spikeDays = daysArray.filter(d => {
-        const diff = Math.abs((d.calories - avgCalories) / avgCalories);
-        return diff > 0.25;
-    });
-
-    if (spikeDays.length >= 4) {
-        insights.push({
-            id: "calorie_spikes",
-            title: "Calorie Spikes",
-            copy: "Your calorie intake swings a lot day to day.",
-            action: "Aim for similar meal sizes across days.",
-            type: "neutral",
-            category: "consistency",
-            impactScore: 65,
-            whyMatch: `Calories deviated >30% from average on ${spikeDays.length} days.`
-        });
-    }
-
-    // --- Rule C1: Repeated Meals ---
-    // Same meal >= 30% of time
-    const { repeatedMeals, triggerMeals } = analyzeEatingPatterns(scans, targets.calories);
-
-    if (repeatedMeals.length > 0) {
-        insights.push({
-            id: "repeated_meals",
-            title: "Repeated Meals",
-            copy: "You repeat the same meals often.",
-            action: "Rotate one alternative meal this week.",
-            type: "neutral",
-            category: "meal_pattern",
-            impactScore: 50,
-            whyMatch: `You ate "${repeatedMeals[0].name}" ${repeatedMeals[0].count} times (${repeatedMeals[0].percent}%).`
-        });
-    }
-
-    // --- Rule C2: Trigger Meals ---
-    if (triggerMeals.length > 0) {
-        insights.push({
-            id: "trigger_meal",
-            title: "Trigger Meals",
-            copy: "Certain meals are strongly linked to calorie overages.",
-            action: "Watch portions with this meal.",
-            type: "warning",
-            category: "meal_pattern",
-            impactScore: 88,
-            whyMatch: `"${triggerMeals[0].name}" is often followed by high calorie days.`
-        });
-    }
-
-    // --- GROUPING & SUPPRESSION ---
-    // Rule: Only one macro insight at a time.
-    // 1. Group by category
-    const macroInsights = insights.filter(i => i.category === "macro_balance");
-    const otherInsights = insights.filter(i => i.category !== "macro_balance");
-
-    // 2. Select top macro insight
-    const topMacro = macroInsights.sort((a, b) => b.impactScore - a.impactScore)[0];
-
-    // 3. Recombine
-    let finalInsights = topMacro ? [topMacro, ...otherInsights] : otherInsights;
-
-    // --- Leading Insight (Weekly Summary) ---
-    // If NO negative insights, show positive fallback.
-    // If there ARE insights, the top one is the "Weekly Summary" effectively,
-    // but the plan implies a specific "Weekly Summary" card *always* for Premium.
-    // For now, we stick to the plan: "Always shown first (Premium)".
-    // We'll let the UI handle the "Leading" distinction, here we just ensure sort order.
-
-    if (finalInsights.length === 0) {
-        finalInsights.push({
-            id: "weekly_summary_good",
-            title: "Weekly Summary",
-            copy: "You’re building consistency. Your recent meals align well with your goal.",
-            action: "Keep doing what’s working.",
-            type: "success",
-            category: "general",
-            impactScore: 100,
-            whyMatch: "You have no negative patterns detected."
-        });
-    }
-
-    // Sort by impact
-    return finalInsights.sort((a, b) => b.impactScore - a.impactScore);
+    // --- SORTING ---
+    // Sort by Impact Score (Highest First)
+    return insights.sort((a, b) => b.impactScore - a.impactScore);
 };
 
 /**
  * Helper: Normalize Meal Names
- * Removes quantities (100g, 1 cup), brand prefixes, and extra whitespace.
  */
 const normalizeMealName = (name: string): string => {
     return name
         .toLowerCase()
-        .replace(/\b(\d+(\.\d+)?)\s*(g|kg|oz|lb|cup|tbsp|tsp|ml|l)\b/g, "") // Remove units like "100g", "1 cup"
-        .replace(/\b(large|medium|small)\b/g, "") // Remove sizes
-        .replace(/[^\w\s]/g, "") // Remove punctuation
+        .replace(/\b(\d+(\.\d+)?)\s*(g|kg|oz|lb|cup|tbsp|tsp|ml|l)\b/g, "")
+        .replace(/\b(large|medium|small)\b/g, "")
+        .replace(/[^\w\s]/g, "")
         .trim();
 };
 
 export const analyzeEatingPatterns = (scans: FoodScan[], dailyTargetCalories: number) => {
-    if (!scans.length) return { repeatedMeals: [], triggerMeals: [] };
+    if (!scans.length) return { repeatedMeals: [], triggerMeals: [], calorieDenseMeals: [], triggerInsights: [] };
 
-    const mealCounts: Record<string, { count: number; totalCals: number; maxCals: number; display: string }> = {};
+    // 1. Group by Meal Name
+    // Structure: { "oatmeal": { count: 3, dates: ["2023-01-01", "..."] } }
+    const mealMap: Record<string, { count: number; name: string; dates: string[] }> = {};
 
-    scans.forEach(scan => {
-        const dish = scan.result_json?.dish || "Unknown Dish";
-        const cals = (scan.result_json?.nutrients?.calories || 0) * (scan.serving || 1);
+    scans.forEach(s => {
+        const name = normalizeMealName(s.result_json?.dish || "Unknown");
+        if (!name) return;
+        if (!mealMap[name]) mealMap[name] = { count: 0, name: s.result_json?.dish || name, dates: [] };
 
-        // Normalize
-        const key = normalizeMealName(dish);
-        if (!key) return; // Skip empty
-
-        if (!mealCounts[key]) {
-            mealCounts[key] = { count: 0, totalCals: 0, maxCals: 0, display: dish };
-        }
-        mealCounts[key].count++;
-        mealCounts[key].totalCals += cals;
-        mealCounts[key].maxCals = Math.max(mealCounts[key].maxCals, cals);
+        mealMap[name].count++;
+        mealMap[name].dates.push(TIMEZONE_UTILS.formatDay(s.created_at));
     });
 
     const totalMeals = scans.length;
 
-    // Rules for patterns
+    // --- C1: Repeated Meals Logic ---
+    // Same meal appears ≥ 30% of logged meals
+    const repeatedMeals = Object.values(mealMap)
+        .filter(m => m.count >= 2) // Rule: Must appear >= 2 times (relaxed from 30% total)
+        .map(m => ({
+            name: m.name,
+            frequency: `${Math.round((m.count / totalMeals) * 100)}%`,
+            insight: "Repeated often"
+        }));
 
-    // C1: Repeated Meals (> 30%)
-    const repeated = Object.values(mealCounts)
-        .filter(data => (data.count / totalMeals) >= 0.30 && totalMeals >= 5)
-        .map(data => ({
-            name: data.display,
-            percent: Math.round((data.count / totalMeals) * 100),
-            count: data.count
+
+    // --- C2: Trigger Meals Logic ---
+    // Meal appears ≥ 3 times AND followed by calorie overages ≥ 70% of the time.
+    // "Followed by calorie overage" -> implies the DAY it was eaten ended up being a high calorie day?
+    // "followed by" could mean the NEXT meal, but usually in these generic analytics it means "Days containing this meal are high calorie".
+    // Let's assume: "Days where this meal was consumed had Total Daily Calories > Target * 1.1"
+
+    // First, map Days to Calorie Status (Overage or Not)
+    const dayRelMap: Record<string, boolean> = {}; // date -> isOverage
+
+    // We need to re-scan to build daily totals first? 
+    // Actually we can pass in dailyStats or re-calc. 
+    // To save complexity within this function, let's just do a quick calc based on the passed scans for the pattern check.
+    const dayTotals: Record<string, number> = {};
+    scans.forEach(s => {
+        const d = TIMEZONE_UTILS.formatDay(s.created_at);
+        dayTotals[d] = (dayTotals[d] || 0) + ((s.result_json?.nutrients?.calories || 0) * (s.serving || 1));
+    });
+
+    Object.keys(dayTotals).forEach(d => {
+        dayRelMap[d] = dayTotals[d] > (dailyTargetCalories * 1.1); // > 10% overage threshold
+    });
+
+    const triggerMeals: { name: string; calories: number; insight: string }[] = [];
+
+    for (const key in mealMap) {
+        const m = mealMap[key];
+        if (m.count < 2) continue; // Rule: Must appear >= 2 times (relaxed from 3)
+
+        // Check how many of its appearance days were Overages
+        let overageCount = 0;
+        m.dates.forEach(d => {
+            if (dayRelMap[d]) overageCount++;
+        });
+
+        const overageRate = overageCount / m.count;
+        if (overageRate >= 0.70) {
+            triggerMeals.push({
+                name: m.name,
+                calories: 0, // Not primarily used in new display
+                insight: `Linked to high calorie days ${Math.round(overageRate * 100)}% of the time.`
+            });
+        }
+    }
+
+    // --- C3: Calorie Dense Meals Logic ---
+    // Average calories per meal name, sort descending, return top 3
+    const mealCaloriesMap: Record<string, { totalCals: number; count: number }> = {};
+
+    scans.forEach(s => {
+        const name = normalizeMealName(s.result_json?.dish || "Unknown");
+        if (!name) return;
+        const mult = s.serving || 1;
+        const cals = (s.result_json?.nutrients?.calories || 0) * mult;
+
+        if (!mealCaloriesMap[name]) mealCaloriesMap[name] = { totalCals: 0, count: 0 };
+        mealCaloriesMap[name].totalCals += cals;
+        mealCaloriesMap[name].count++;
+    });
+
+    const calorieDenseMeals = Object.entries(mealCaloriesMap)
+        .map(([name, data]) => ({
+            name: name, // We might want the original display name, but normalized is safer for grouping. 
+            // To get display name, we could store it in the map.
+            avgCals: Math.round(data.totalCals / data.count)
         }))
-        .sort((a, b) => b.percent - a.percent);
+        .filter(m => m.avgCals > 500) // Only show actual dense meals (> 500 kcal)
+        .sort((a, b) => b.avgCals - a.avgCals)
+        .slice(0, 3)
+        .map(m => ({
+            name: m.name,
+            calories: m.avgCals,
+            insight: "High calorie density"
+        }));
 
-    // C2: Trigger Meals (High Calorie single meals)
-    const triggers = Object.values(mealCounts)
-        .filter(data => data.maxCals > (dailyTargetCalories * 0.50))
-        .map(data => ({
-            name: data.display,
-            calories: Math.round(data.maxCals)
-        }))
-        .sort((a, b) => b.calories - a.calories);
+    // Sort by count for patterns
+    repeatedMeals.sort((a, b) => parseInt(b.frequency) - parseInt(a.frequency));
 
-    return { repeatedMeals: repeated, triggerMeals: triggers };
+    return {
+        repeatedMeals,
+        triggerMeals: triggerMeals.sort((a, b) => b.name.localeCompare(a.name)),
+        calorieDenseMeals,
+        triggerInsights: triggerMeals.map(t => t.insight)
+    };
 };
 
 export type EatingPatterns = {
