@@ -93,10 +93,10 @@ const Footer = () => {
               </li>
               <li>
                 <Link
-                  href="/blog/free-calorie-calculator"
+                  href="https://whatthefood.io/blog/free-calorie-estimator"
                   className="hover:text-primary transition-colors"
                 >
-                  Free Calorie Calculator
+                  Free Calorie Estimator
                 </Link>
               </li>
               <li>

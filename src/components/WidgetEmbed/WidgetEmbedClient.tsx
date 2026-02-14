@@ -25,6 +25,7 @@ import {
   ExternalLink,
   X
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { getUrl } from "@/utils/url";
 import { analyzeFood, scaleNutrients, type FoodAnalysis } from "@/utils/foodScan";
@@ -32,6 +33,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { LanguageContext, type Language } from "@/contexts/LanguageContext";
 import { useToast } from "@/components/ui/use-toast";
 import { useContext } from "react";
+import { compressImage } from "@/utils/imageCompression";
 
 // Helper function to check if tracking should be disabled globally
 // This is a fail-safe to prevent any unwanted tracking
@@ -183,7 +185,7 @@ function FreeUserResultsView({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">Accuracy</CardTitle>
+              <CardTitle className="text-base">{t("widget.accuracy", "Accuracy")}</CardTitle>
             </div>
             <TooltipProvider>
               <Tooltip>
@@ -193,7 +195,7 @@ function FreeUserResultsView({
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="text-xs">Confidence level of the analysis</p>
+                  <p className="text-xs">{t("widget.confidence_level", "Confidence level of the analysis")}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -201,7 +203,7 @@ function FreeUserResultsView({
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">Confidence</span>
+            <span className="text-sm text-muted-foreground">{t("widget.confidence", "Confidence")}</span>
             <span className="font-semibold">{Math.round((result.confidence || 0) * 100)}%</span>
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -219,17 +221,17 @@ function FreeUserResultsView({
       {/* Nutrition Summary */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Nutrition Summary</CardTitle>
+          <CardTitle className="text-base">{t("widget.nutrition_summary", "Nutrition Summary")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
-              { icon: Flame, label: "Calories", value: isNonFood ? "N/A" : (scaled?.calories ?? "-"), suffix: "", style: "bg-orange-100/90 border-orange-200 text-orange-900" },
-              { icon: Beef, label: "Protein", value: isNonFood ? "N/A" : (scaled?.protein_g ?? "-"), suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
-              { icon: Wheat, label: "Carbs", value: isNonFood ? "N/A" : (scaled?.carbohydrates_g ?? "-"), suffix: "g", style: "bg-yellow-100/90 border-yellow-200 text-yellow-900" },
-              { icon: Droplet, label: "Fat", value: isNonFood ? "N/A" : (scaled?.fat_g ?? "-"), suffix: "g", style: "bg-sky-100/90 border-sky-200 text-sky-900" },
-              { icon: Apple, label: "Fiber", value: isNonFood ? "N/A" : (scaled?.fiber_g ?? "-"), suffix: "g", style: "bg-emerald-100/90 border-emerald-200 text-emerald-900" },
-              { icon: Candy, label: "Sugar", value: isNonFood ? "N/A" : (scaled?.sugar_g ?? "-"), suffix: "g", style: "bg-pink-100/90 border-pink-200 text-pink-900" },
+              { icon: Flame, label: t("nutrition.calories", "Calories"), value: isNonFood ? "N/A" : (scaled?.calories ?? "-"), suffix: "", style: "bg-orange-100/90 border-orange-200 text-orange-900" },
+              { icon: Beef, label: t("nutrition.protein", "Protein"), value: isNonFood ? "N/A" : (scaled?.protein_g ?? "-"), suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
+              { icon: Wheat, label: t("nutrition.carbs", "Carbs"), value: isNonFood ? "N/A" : (scaled?.carbohydrates_g ?? "-"), suffix: "g", style: "bg-yellow-100/90 border-yellow-200 text-yellow-900" },
+              { icon: Droplet, label: t("nutrition.fat", "Fat"), value: isNonFood ? "N/A" : (scaled?.fat_g ?? "-"), suffix: "g", style: "bg-sky-100/90 border-sky-200 text-sky-900" },
+              { icon: Apple, label: t("nutrition.fiber", "Fiber"), value: isNonFood ? "N/A" : (scaled?.fiber_g ?? "-"), suffix: "g", style: "bg-emerald-100/90 border-emerald-200 text-emerald-900" },
+              { icon: Candy, label: t("nutrition.sugar", "Sugar"), value: isNonFood ? "N/A" : (scaled?.sugar_g ?? "-"), suffix: "g", style: "bg-pink-100/90 border-pink-200 text-pink-900" },
             ].map((item, index) => {
               const Icon = item.icon;
               return (
@@ -331,7 +333,7 @@ function PremiumUserResultsView({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">Accuracy</CardTitle>
+              <CardTitle className="text-base">{t("widget.accuracy", "Accuracy")}</CardTitle>
             </div>
             <TooltipProvider>
               <Tooltip>
@@ -341,7 +343,7 @@ function PremiumUserResultsView({
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="text-xs">Confidence level of the analysis</p>
+                  <p className="text-xs">{t("widget.confidence_level", "Confidence level of the analysis")}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -349,7 +351,7 @@ function PremiumUserResultsView({
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">Confidence</span>
+            <span className="text-sm text-muted-foreground">{t("widget.confidence", "Confidence")}</span>
             <span className="font-semibold">{Math.round((result.confidence || 0) * 100)}%</span>
           </div>
           <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -367,7 +369,7 @@ function PremiumUserResultsView({
       {/* Nutrition Summary */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Nutrition Summary</CardTitle>
+          <CardTitle className="text-base">{t("widget.nutrition_summary", "Nutrition Summary")}</CardTitle>
           {result.servingGuidance && (
             <CardDescription className="text-xs mt-2">
               {result.servingGuidance}
@@ -382,12 +384,12 @@ function PremiumUserResultsView({
           )}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {[
-              { icon: Flame, label: "Calories", value: isNonFood ? "N/A" : (scaled?.calories ?? "-"), suffix: "", style: "bg-orange-100/90 border-orange-200 text-orange-900" },
-              { icon: Beef, label: "Protein", value: isNonFood ? "N/A" : (scaled?.protein_g ?? "-"), suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
-              { icon: Wheat, label: "Carbs", value: isNonFood ? "N/A" : (scaled?.carbohydrates_g ?? "-"), suffix: "g", style: "bg-yellow-100/90 border-yellow-200 text-yellow-900" },
-              { icon: Droplet, label: "Fat", value: isNonFood ? "N/A" : (scaled?.fat_g ?? "-"), suffix: "g", style: "bg-sky-100/90 border-sky-200 text-sky-900" },
-              { icon: Apple, label: "Fiber", value: isNonFood ? "N/A" : (scaled?.fiber_g ?? "-"), suffix: "g", style: "bg-emerald-100/90 border-emerald-200 text-emerald-900" },
-              { icon: Candy, label: "Sugar", value: isNonFood ? "N/A" : (scaled?.sugar_g ?? "-"), suffix: "g", style: "bg-pink-100/90 border-pink-200 text-pink-900" },
+              { icon: Flame, label: t("nutrition.calories", "Calories"), value: isNonFood ? "N/A" : (scaled?.calories ?? "-"), suffix: "", style: "bg-orange-100/90 border-orange-200 text-orange-900" },
+              { icon: Beef, label: t("nutrition.protein", "Protein"), value: isNonFood ? "N/A" : (scaled?.protein_g ?? "-"), suffix: "g", style: "bg-rose-100/90 border-rose-200 text-rose-900" },
+              { icon: Wheat, label: t("nutrition.carbs", "Carbs"), value: isNonFood ? "N/A" : (scaled?.carbohydrates_g ?? "-"), suffix: "g", style: "bg-yellow-100/90 border-yellow-200 text-yellow-900" },
+              { icon: Droplet, label: t("nutrition.fat", "Fat"), value: isNonFood ? "N/A" : (scaled?.fat_g ?? "-"), suffix: "g", style: "bg-sky-100/90 border-sky-200 text-sky-900" },
+              { icon: Apple, label: t("nutrition.fiber", "Fiber"), value: isNonFood ? "N/A" : (scaled?.fiber_g ?? "-"), suffix: "g", style: "bg-emerald-100/90 border-emerald-200 text-emerald-900" },
+              { icon: Candy, label: t("nutrition.sugar", "Sugar"), value: isNonFood ? "N/A" : (scaled?.sugar_g ?? "-"), suffix: "g", style: "bg-pink-100/90 border-pink-200 text-pink-900" },
             ].map((item, index) => {
               const Icon = item.icon;
               return (
@@ -416,9 +418,9 @@ function PremiumUserResultsView({
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Apple className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">Ingredients</CardTitle>
+              <CardTitle className="text-base">{t("widget.ingredients", "Ingredients")}</CardTitle>
             </div>
-            <CardDescription className="text-xs">Detected/estimated ingredients</CardDescription>
+            <CardDescription className="text-xs">{t("widget.ingredients_desc", "Detected/estimated ingredients")}</CardDescription>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
@@ -439,9 +441,9 @@ function PremiumUserResultsView({
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-primary" />
-              <CardTitle className="text-base">How to Prepare</CardTitle>
+              <CardTitle className="text-base">{t("widget.how_to_prepare", "How to Prepare")}</CardTitle>
             </div>
-            <CardDescription className="text-xs">Step-by-step instructions</CardDescription>
+            <CardDescription className="text-xs">{t("widget.how_to_prepare_desc", "Step-by-step instructions")}</CardDescription>
           </CardHeader>
           <CardContent>
             <ol className="space-y-3">
@@ -488,23 +490,7 @@ function PremiumUserResultsView({
         </Alert>
       )}
 
-      {/* Personalized Context Message */}
-      <Alert className="border-primary/20 bg-primary/5">
-        <Shield className="h-4 w-4 text-primary" />
-        <AlertTitle className="text-sm">Personalized Health Context</AlertTitle>
-        <AlertDescription className="text-xs leading-relaxed mt-1">
-          Get personalized health insights, smart substitutions, and tailored recommendations based on your profile.{" "}
-          <a
-            href={`${baseUrl}/`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 font-semibold underline"
-            style={{ color: styles.primaryColor }}
-          >
-            View on our website <ExternalLink className="h-3 w-3" />
-          </a>
-        </AlertDescription>
-      </Alert>
+
 
       <Button
         onClick={onScanAnother}
@@ -529,10 +515,11 @@ export function WidgetEmbedClient() {
   const [result, setResult] = useState<FoodAnalysis | null>(null);
   const [isLimitReached, setIsLimitReached] = useState(false);
   const [apiCallCount, setApiCallCount] = useState(0);
-  const [subscriptionType, setSubscriptionType] = useState<string>("free");
-  const [servings, setServings] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [translatedUi, setTranslatedUi] = useState<{ name?: string; description?: string }>({});
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [subscriptionType, setSubscriptionType] = useState<string | null>(null);
+  const [servings, setServings] = useState(1);
   const previewTrackedRef = useRef(false);
   const isTrackingRef = useRef(false);
   const { toast } = useToast();
@@ -1403,6 +1390,21 @@ export function WidgetEmbedClient() {
           }
 
           setWidgetSettings(data);
+
+          // Fetch subscription type for the widget owner
+          if (data.user_id) {
+            const { data: profileData } = await (supabase as any)
+              .from("profiles")
+              .select("subscription_type")
+              .eq("id", data.user_id)
+              .single();
+
+            if (profileData) {
+              setSubscriptionType(profileData.subscription_type);
+              console.log("✅ Widget owner subscription:", profileData.subscription_type);
+            }
+          }
+
           console.log("✅ Widget settings loaded:", {
             id: data.id,
             name: data.widget_name,
@@ -2013,6 +2015,16 @@ export function WidgetEmbedClient() {
       // 4. Update state
 
       if (!widgetSettings || !languageContext?.language || languageContext.language === 'en') {
+        setIsTranslating(false);
+        return;
+      }
+
+      // Check if user is allowed to use translation (Premium feature)
+      // If subscriptionType is not yet loaded, we might need to wait or default to allow/block.
+      // Better to block if definitely free.
+      if (subscriptionType === 'free') {
+        console.log("🚫 Translation skipped: Free plan user");
+        setIsTranslating(false);
         return;
       }
 
@@ -2023,64 +2035,100 @@ export function WidgetEmbedClient() {
       if (!nameToTranslate && !descToTranslate) return;
 
       console.log(`Translating custom widget text to ${lang}...`);
+      setIsTranslating(true);
 
       try {
+        const promises: Promise<void>[] = [];
+
         // Translate Name
         if (nameToTranslate) {
-          const response = await fetch('/api/translate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              content: nameToTranslate,
-              targetLanguage: lang,
-              isJson: false,
-            }),
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data.translatedContent) {
-              setTranslatedUi(prev => ({ ...prev, name: data.translatedContent }));
-            }
-          }
+          console.log("Sending translation request for Name:", nameToTranslate, "Lang:", lang);
+          promises.push(
+            fetch('/api/translate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content: nameToTranslate,
+                targetLanguage: lang,
+                isJson: false,
+              }),
+            })
+              .then(res => res.ok ? res.json() : null)
+              .then(data => {
+                if (data?.translatedContent) {
+                  setTranslatedUi(prev => ({ ...prev, name: data.translatedContent }));
+                }
+              })
+              .catch(err => console.error("Error translating name:", err))
+          );
         }
 
         // Translate Description
         if (descToTranslate) {
-          const response = await fetch('/api/translate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              content: descToTranslate,
-              targetLanguage: lang,
-              isJson: false,
-            }),
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data.translatedContent) {
-              setTranslatedUi(prev => ({ ...prev, description: data.translatedContent }));
-            }
-          }
+          console.log("Sending translation request for Description:", descToTranslate, "Lang:", lang);
+          promises.push(
+            fetch('/api/translate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content: descToTranslate,
+                targetLanguage: lang,
+                isJson: false,
+              }),
+            })
+              .then(res => res.ok ? res.json() : null)
+              .then(data => {
+                if (data?.translatedContent) {
+                  setTranslatedUi(prev => ({ ...prev, description: data.translatedContent }));
+                }
+              })
+              .catch(err => console.error("Error translating description:", err))
+          );
         }
+
+        await Promise.all(promises);
+
       } catch (error) {
         console.error("Error translating custom text:", error);
+      } finally {
+        setIsTranslating(false);
       }
     };
 
     translateCustomText();
   }, [widgetSettings, languageContext?.language]);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setLoading(true);
+      // Compress the image before setting preview/analyzing
+      console.log("Compressing widget image...", { originalSize: file.size });
+      const compressedFile = await compressImage(file, {
+        maxWidth: 1200,
+        maxHeight: 1200,
+        quality: 0.8
+      });
+      console.log("Widget image compressed", { compressedSize: compressedFile.size });
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+        setLoading(false);
+      };
+      reader.readAsDataURL(compressedFile);
+    } catch (error) {
+      console.error("Compression failed", error);
+      // Fallback to original
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+        setLoading(false);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleScan = async () => {
@@ -2154,17 +2202,12 @@ export function WidgetEmbedClient() {
 
         // Translate if needed
         if (widgetSettings?.language && widgetSettings.language !== 'en') {
-          const loadingToast = toast({
-            title: t("translating_title", "Translating..."),
-            description: t("applying_language_settings", "Applying language settings"),
-          });
+
 
           try {
             finalAnalysis = await translateContent(analysisResult.analysis, widgetSettings.language);
-            loadingToast.dismiss();
           } catch (e) {
             console.error("Translation failed", e);
-            loadingToast.dismiss();
           }
         }
 
@@ -2354,12 +2397,23 @@ export function WidgetEmbedClient() {
                     className="h-14 w-14 mx-auto mb-4"
                     style={{ color: styles.primaryColor }}
                   />
-                  <p className="text-lg font-medium mb-2" style={{ color: styles.primaryColor }}>
-                    {translatedUi.name || widgetSettings?.widget_name || t("hero.uploadfoodphoto", "Upload Your Food Photo")}
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {translatedUi.description || widgetSettings?.widget_description || t("hero.dropimage", "Drop an image here or click to browse")}
-                  </p>
+                  <div className="w-full flex flex-col items-center">
+                    {isTranslating ? (
+                      <>
+                        <Skeleton className="h-7 w-3/4 mb-2" />
+                        <Skeleton className="h-4 w-1/2 mb-4" />
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-lg font-medium mb-2" style={{ color: styles.primaryColor }}>
+                          {translatedUi.name || widgetSettings?.widget_name || t("upload_photo", "Upload Your Food Photo")}
+                        </p>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          {translatedUi.description || widgetSettings?.widget_description || t("drop_image_here", "Drop an image here or click to browse")}
+                        </p>
+                      </>
+                    )}
+                  </div>
                   <Button
                     style={{
                       backgroundColor: styles.primaryColor,

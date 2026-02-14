@@ -10,7 +10,7 @@ export async function POST(req: Request) {
 
         if (!content || !targetLanguage) {
             return NextResponse.json(
-                { error: "Missing content or targetLanguage" },
+                { error: "Missing content or targetLanguage", received: { content, targetLanguage, isJson } },
                 { status: 400 }
             );
         }
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
             );
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
         let prompt = "";
 

@@ -32,6 +32,7 @@ import { analyzeFood, fetchRecentScans, saveScanHistory, uploadFoodImage } from 
 import { useAuth } from "@/contexts/AuthContext";
 import { queryWithRetry } from "@/utils/supabaseQuery";
 import { DataCache, CACHE_KEYS, CACHE_DURATION } from "@/utils/dataCache";
+import { compressImage, fileToBase64 } from "@/utils/imageCompression";
 import type { User } from "@supabase/supabase-js";
 import type { UserStreak, UserAchievement } from "@/utils/streaks.metadata";
 
@@ -156,9 +157,9 @@ export function DashboardClient({
       const totals = manualData.totals || {};
       const dishName = `Manual Input: ${foods.join(", ")}`.slice(0, 200);
       // Calculate total weight from items or use totals.weight_g
-      const totalWeight = totals.weight_g || 
+      const totalWeight = totals.weight_g ||
         (manualData.items?.reduce((sum: number, item: any) => sum + (item.weight_g || 0), 0) || null);
-      
+
       const manualResult = {
         dish: dishName,
         description: "Manually logged foods",
@@ -705,6 +706,7 @@ export function DashboardClient({
                             console.log('File validated, processing...');
 
                             // Set file and show preview immediately
+                            // We'll store the original file, but we'll compress it before upload
                             setUploadedFile(file);
 
                             // Show preview immediately from file blob
@@ -713,50 +715,34 @@ export function DashboardClient({
                             setPreviewUrl(objectUrl);
                             setImageLoading(true); // Start loading state for image rendering
 
-                            // Upload the image in the background
+                            // Compress the image immediately
                             try {
-                              console.log('Starting upload...');
-                              setUploading(true);
+                              console.log('Compressing image...');
+                              setUploading(true); // Show loading state during compression
 
-                              // Force a session refresh before upload to prevent stale token issues
-                              // This fixes the "stuck uploading" issue after inactivity
-                              const { error: refreshError } = await supabase.auth.refreshSession();
-                              if (refreshError) {
-                                console.warn("Session refresh before upload failed", refreshError);
-                                // Continue anyway, uploadFoodImage has its own retry logic
-                              }
-
-                              // Add a timeout to the upload to prevent infinite hanging
-                              const uploadPromise = uploadFoodImage(file, user.id);
-                              const timeoutPromise = new Promise<{ path: string; publicUrl: string; signedUrl?: string }>((_, reject) => {
-                                setTimeout(() => reject(new Error("Upload timed out. Please check your connection and try again.")), 45000);
+                              const compressedFile = await compressImage(file, {
+                                maxWidth: 1200,
+                                maxHeight: 1200,
+                                quality: 0.8
                               });
 
-                              const { path, publicUrl, signedUrl } = await Promise.race([uploadPromise, timeoutPromise]);
+                              console.log('Compression complete:', {
+                                originalSize: file.size,
+                                compressedSize: compressedFile.size,
+                                ratio: Math.round((compressedFile.size / file.size) * 100) + '%'
+                              });
 
-                              console.log('Upload successful:', { path, publicUrl });
-                              setUploadedImageUrl(signedUrl || publicUrl);
-                              setUploadedImagePath(path);
-                            } catch (e: any) {
-                              console.error("Upload error:", e);
-                              toast({
-                                title: "Upload Failed",
-                                description: e?.message || "Failed to upload image. Please try again.",
-                                variant: "destructive"
-                              });
-                              // Clear file on error
-                              setUploadedFile(null);
-                              setPreviewUrl((prevUrl) => {
-                                if (prevUrl) {
-                                  URL.revokeObjectURL(prevUrl);
-                                }
-                                return null;
-                              });
-                            } finally {
+                              // Store compressed file for later use (in analysis/upload)
+                              setUploadedFile(compressedFile);
+
+                              // We don't auto-upload anymore - we wait for user to click "Analyze"
+                              // But we can generate the base64 preview for the analyze function
                               setUploading(false);
+                            } catch (error) {
+                              console.error("Compression error:", error);
+                              setUploading(false);
+                              // Fallback to original file if compression fails
                             }
-
-                            cleanup();
                           } catch (error: any) {
                             console.error("File processing error:", error);
                             toast({
@@ -935,38 +921,31 @@ export function DashboardClient({
                                   setPreviewUrl(objectUrl);
                                   setImageLoading(true); // Start loading state for image rendering
 
-                                  // Upload the image in the background
+                                  // Compress the image immediately
                                   try {
-                                    console.log('Starting upload...');
-                                    setUploading(true);
+                                    console.log('Compressing image...');
+                                    setUploading(true); // Show loading state during compression
 
-                                    // Ensure we have a valid user (session might have refreshed)
-                                    const currentUser = authUser || user;
-                                    if (!currentUser?.id) {
-                                      throw new Error('Session expired. Please refresh the page.');
-                                    }
+                                    const compressedFile = await compressImage(file, {
+                                      maxWidth: 1200,
+                                      maxHeight: 1200,
+                                      quality: 0.8
+                                    });
 
-                                    const { path, publicUrl, signedUrl } = await uploadFoodImage(file, currentUser.id);
-                                    console.log('Upload successful:', { path, publicUrl });
-                                    setUploadedImageUrl(signedUrl || publicUrl);
-                                    setUploadedImagePath(path);
-                                  } catch (e: any) {
-                                    console.error("Upload error:", e);
-                                    toast({
-                                      title: "Upload Failed",
-                                      description: e?.message || "Failed to upload image. Please try again.",
-                                      variant: "destructive"
+                                    console.log('Compression complete:', {
+                                      originalSize: file.size,
+                                      compressedSize: compressedFile.size,
+                                      ratio: Math.round((compressedFile.size / file.size) * 100) + '%'
                                     });
-                                    // Clear file on error
-                                    setUploadedFile(null);
-                                    setPreviewUrl((prevUrl) => {
-                                      if (prevUrl) {
-                                        URL.revokeObjectURL(prevUrl);
-                                      }
-                                      return null;
-                                    });
-                                  } finally {
+
+                                    // Store compressed file for later use (in analysis/upload)
+                                    setUploadedFile(compressedFile);
+
                                     setUploading(false);
+                                  } catch (error) {
+                                    console.error("Compression error:", error);
+                                    setUploading(false);
+                                    // Fallback to original file
                                   }
 
                                   cleanup();
@@ -1030,9 +1009,10 @@ export function DashboardClient({
                         Change Photo
                       </Button>
                       <Button
-                        disabled={analyzing || uploading || !uploadedImageUrl}
+                        disabled={analyzing || uploading || !uploadedFile}
                         onClick={async () => {
-                          if (!uploadedImageUrl || !user || !uploadedImagePath) return;
+                          if (!uploadedFile || !user) return;
+
                           try {
                             setAnalyzing(true);
                             if (!subscription || subscription.subscription_type !== "premium") {
@@ -1046,15 +1026,53 @@ export function DashboardClient({
                                 return;
                               }
                             }
-                            const result = await analyzeFood(uploadedImageUrl, servings);
+
+                            // PARALLEL EXECUTION: Start Analysis and Upload simultaneously
+                            console.log("Starting parallel analysis and upload...");
+
+                            // Task 1: Analysis (Base64 -> Edge Function)
+                            const analysisPromise = (async () => {
+                              try {
+                                // Convert compressed file to base64
+                                const base64 = await fileToBase64(uploadedFile);
+                                console.log("Sending analysis request with base64 payload");
+                                return await analyzeFood(base64, servings);
+                              } catch (err: any) {
+                                throw new Error(`Analysis failed: ${err.message}`);
+                              }
+                            })();
+
+                            // Task 2: Upload (Compressed File -> Storage)
+                            const uploadPromise = (async () => {
+                              try {
+                                console.log("Starting background upload...");
+                                // Force session refresh
+                                const { error: refreshError } = await supabase.auth.refreshSession();
+                                if (refreshError) console.warn("Session refresh warning:", refreshError);
+
+                                return await uploadFoodImage(uploadedFile, user.id);
+                              } catch (err: any) {
+                                throw new Error(`Upload failed: ${err.message}`);
+                              }
+                            })();
+
+                            // Wait for both to complete
+                            // Note: We prioritize analysis result, but we need upload path for history
+                            const [analysisResult, uploadResult] = await Promise.all([analysisPromise, uploadPromise]);
+
+                            console.log("✅ Parallel tasks complete", {
+                              analysis: !!analysisResult,
+                              uploadPath: uploadResult.path
+                            });
+
                             const scanId = await saveScanHistory({
                               userId: user.id,
-                              imagePath: uploadedImagePath,
-                              imageUrl: uploadedImageUrl,
+                              imagePath: uploadResult.path,
+                              imageUrl: uploadResult.signedUrl || uploadResult.publicUrl,
                               serving: servings,
                               result: {
-                                ...result.analysis,
-                                ...(result.insights ? { insights: result.insights } : {}),
+                                ...analysisResult.analysis,
+                                ...(analysisResult.insights ? { insights: analysisResult.insights } : {}),
                               },
                             });
 

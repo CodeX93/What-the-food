@@ -14,6 +14,7 @@ import { decrementFreeScan, hasFreeScanAvailable, getFreeScanStatus } from "@/ut
 import { hasActivePremiumSubscription } from "@/utils/subscription";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { compressImage, fileToBase64 } from "@/utils/imageCompression";
 
 export default function Hero() {
   const [uploading, setUploading] = useState(false);
@@ -220,6 +221,7 @@ export default function Hero() {
 
     // Use both onchange property and addEventListener for maximum compatibility
     const handleFileChange = async (e: Event) => {
+      setUploading(true);
       try {
         console.log('File change event triggered', e);
         const target = e.target as HTMLInputElement;
@@ -254,6 +256,7 @@ export default function Hero() {
         console.log('File validated, processing...');
 
         // Set selected file and show preview immediately
+        // We'll store the original file temporarily, but compress it asap
         setSelectedFile(file);
 
         // Show preview immediately from file blob
@@ -262,57 +265,66 @@ export default function Hero() {
         setPreviewUrl(objectUrl);
         setImageLoading(true); // Start loading state for image rendering
 
-        // If user is authenticated, upload in the background
-        if (user?.id) {
-          try {
-            console.log('Starting upload for authenticated user...');
-            setUploading(true);
-            const { path, publicUrl, signedUrl } = await uploadFoodImage(file, user.id);
-            console.log('Upload successful:', { path, publicUrl });
-            setUploadedImageUrl(signedUrl || publicUrl);
-            setUploadedImagePath(path);
-          } catch (e: any) {
-            console.error("Upload error:", e);
-            toast({
-              title: "Upload Failed",
-              description: e?.message || "Failed to upload image. Please try again.",
-              variant: "destructive",
-            });
-            // Clear the file if upload fails
-            setSelectedFile(null);
-            setPreviewUrl((prevUrl) => {
-              if (prevUrl) {
-                URL.revokeObjectURL(prevUrl);
-              }
-              return null;
-            });
-          } finally {
-            setUploading(false);
-          }
-        } else {
-          // For non-authenticated users, check free scans availability
-          console.log('Checking free scans for non-authenticated user...');
-          const available = await hasFreeScanAvailable();
-          if (!available) {
-            toast({
-              title: t("common.dailylimitreached"),
-              description: "Please sign up to continue using the service.",
-              variant: "destructive",
-            });
-            setSelectedFile(null);
-            setPreviewUrl((prevUrl) => {
-              if (prevUrl) {
-                URL.revokeObjectURL(prevUrl);
-              }
-              return null;
-            });
-            router.push("/auth");
-            cleanup();
-            return;
-          }
-          console.log('Free scan available, preview shown');
-          // For non-authenticated users, preview is already shown above
+        // Compress the image immediately
+        let compressedFile = file;
+        try {
+          console.log('Compressing image...');
+          // setUploading(true); // Loading state started at function entry
+
+          compressedFile = await compressImage(file, {
+            maxWidth: 1200,
+            maxHeight: 1200,
+            quality: 0.8
+          });
+
+          console.log('Compression complete:', {
+            originalSize: file.size,
+            compressedSize: compressedFile.size,
+            ratio: Math.round((compressedFile.size / file.size) * 100) + '%'
+          });
+
+          // Update selected file to the compressed version
+          setSelectedFile(compressedFile);
+        } catch (error) {
+          console.error("Compression error:", error);
+          // Fallback to original file
         }
+
+        // If user is authenticated, we used to upload immediately.
+        // Now, to prevent the "stuck" state, we DEFER upload until the Analyze button is clicked.
+        // This makes the UI feel instant.
+
+        // We still check free scans for non-auth users to prevent "teasing"
+        if (!user?.id) {
+          console.log('Checking free scans for non-authenticated user...');
+          try {
+            const available = await hasFreeScanAvailable();
+            if (!available) {
+              toast({
+                title: t("common.dailylimitreached"),
+                description: "Please sign up to continue using the service.",
+                variant: "destructive",
+              });
+              setSelectedFile(null);
+              setPreviewUrl((prevUrl) => {
+                if (prevUrl) {
+                  URL.revokeObjectURL(prevUrl);
+                }
+                return null;
+              });
+              router.push("/auth");
+              cleanup();
+              setUploading(false);
+              return;
+            }
+          } catch (err) {
+            console.error("Error checking free scans", err);
+            // Fail safe: allow them to try, handle error in analyze
+          }
+        }
+
+        console.log('Ready to analyze');
+        setUploading(false);
 
         cleanup();
       } catch (error: any) {
@@ -322,6 +334,9 @@ export default function Hero() {
           description: error?.message || "Failed to process the selected image. Please try again.",
           variant: "destructive",
         });
+        cleanup();
+      } finally {
+        setUploading(false);
         cleanup();
       }
 
@@ -371,36 +386,51 @@ export default function Hero() {
       let imageUrl = uploadedImageUrl;
       let imagePath = uploadedImagePath;
 
-      // If not authenticated, check free scan limit
+      // PARALLEL EXECUTION STRATEGY
+      // We start both Analysis (via Base64) and Upload (for history) simultaneously.
+
+      const currentUserId = userId || `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // 1. Prepare Upload Promise
+      // If we already have the URL/Path (from previous attempt?), use it. Otherwise upload.
+      const uploadPromise = (async () => {
+        if (uploadedImageUrl && uploadedImagePath) {
+          return { path: uploadedImagePath, url: uploadedImageUrl };
+        }
+        console.log("Starting background upload...");
+        const uploadResult = await uploadFoodImage(selectedFile, currentUserId);
+        return {
+          path: uploadResult.path,
+          url: uploadResult.signedUrl || uploadResult.publicUrl
+        };
+      })();
+
+      // 2. Prepare Analysis Promise (Base64 -> Edge Function)
+      const analysisPromise = (async () => {
+        // Converting to base64 is fast for compressed images
+        const base64 = await fileToBase64(selectedFile);
+        console.log("Sending analysis request with base64 payload");
+        return await analyzeFood(base64, 1);
+      })();
+
+      // Wait for both results
+      const [uploadResult, analysis] = await Promise.all([uploadPromise, analysisPromise]);
+
+      imagePath = uploadResult.path; // Re-assign to the outer scope variable
+      imageUrl = uploadResult.url; // Re-assign to the outer scope variable
+
+      // Logic for non-authenticated users
       if (!userId) {
-        if (!(await hasFreeScanAvailable())) {
-          router.push("/auth");
-          return;
-        }
-
-        // For non-authenticated users, create a temporary user ID for storage
-        const tempUserId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-        // Upload to Storage with temp ID (only if not already uploaded)
-        if (!imageUrl || !imagePath) {
-          const uploadResult = await uploadFoodImage(selectedFile, tempUserId);
-          imagePath = uploadResult.path;
-          imageUrl = uploadResult.signedUrl || uploadResult.publicUrl;
-        }
-
-        // Analyze via Edge Function (default serving 1)
-        const analysis = await analyzeFood(imageUrl, 1);
-
         // Decrement free scan count
         const newCount = await decrementFreeScan();
         setRemainingScans(newCount);
         setScanStatusType("unregistered");
 
-        // Save history with temp user (won't be retrievable later, just for current session)
+        // Save history with temp user
         const scanId = await saveScanHistory({
-          userId: tempUserId,
-          imagePath: imagePath!,
-          imageUrl: imageUrl!,
+          userId: currentUserId,
+          imagePath: imagePath,
+          imageUrl: imageUrl,
           serving: 1,
           result: {
             ...analysis.analysis,
@@ -426,22 +456,13 @@ export default function Hero() {
           }
         }
 
-        // Authenticated user flow
-        // Upload to Storage (only if not already uploaded)
-        if (!imageUrl || !imagePath) {
-          const uploadResult = await uploadFoodImage(selectedFile, userId);
-          imagePath = uploadResult.path;
-          imageUrl = uploadResult.signedUrl || uploadResult.publicUrl;
-        }
-
-        // Analyze via Edge Function (default serving 1)
-        const analysis = await analyzeFood(imageUrl, 1);
+        // Logic for authenticated users
 
         // Save history and open results page
         const scanId = await saveScanHistory({
           userId,
-          imagePath: imagePath!,
-          imageUrl: imageUrl!,
+          imagePath: imagePath,
+          imageUrl: imageUrl,
           serving: 1,
           result: {
             ...analysis.analysis,
@@ -450,10 +471,13 @@ export default function Hero() {
         });
 
         if (!isPremium) {
+          // ... decrement logic ...
           try {
-            const newCount = await decrementFreeScan();
-            setRemainingScans(newCount);
-            setScanStatusType("registered");
+            // We don't await this to keep UI snappy
+            decrementFreeScan().then(newCount => {
+              setRemainingScans(newCount);
+              setScanStatusType("registered");
+            }).catch(e => console.error("Failed to decrement", e));
           } catch (error) {
             console.error("Failed to decrement daily free scan", error);
           }
@@ -690,7 +714,7 @@ export default function Hero() {
                           : "bg-primary hover:bg-primary-hover"
                           }`}
                         onClick={handleAnalyze}
-                        disabled={analyzing || uploading || (user?.id && !uploadedImageUrl)}
+                        disabled={analyzing || uploading}
                       >
                         {analyzing ? (
                           <>
@@ -984,7 +1008,7 @@ export default function Hero() {
                             : "bg-primary hover:bg-primary-hover"
                             }`}
                           onClick={handleAnalyze}
-                          disabled={analyzing || uploading || (user?.id && !uploadedImageUrl)}
+                          disabled={analyzing || uploading}
                         >
                           {analyzing ? (
                             <>

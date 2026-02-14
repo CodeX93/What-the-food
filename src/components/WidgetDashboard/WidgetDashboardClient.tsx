@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Code, Copy, Check, Trash2, Plus, BarChart3, Zap, Edit, Save, Bookmark, AlertTriangle, ArrowRight, ShieldCheck, Upload, Search } from "lucide-react";
+import { Code, Copy, Check, Trash2, Plus, BarChart3, Zap, Edit, Save, Bookmark, AlertTriangle, ArrowRight, ShieldCheck, Upload, Search, Lock } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getUrl } from "@/utils/url";
 import { useTranslation } from "@/hooks/use-translation";
 import { queryWithRetry } from "@/utils/supabaseQuery";
@@ -130,7 +131,7 @@ type WidgetDashboardClientProps = {
 };
 
 // Widget Preview Component
-function WidgetPreview({ form }: { form: WidgetFormState }) {
+function WidgetPreview({ form, translated, isLoading }: { form: WidgetFormState; translated?: { name?: string; description?: string }; isLoading?: boolean }) {
   return (
     <div
       className="w-full rounded-lg border-2 border-border shadow-sm"
@@ -161,12 +162,23 @@ function WidgetPreview({ form }: { form: WidgetFormState }) {
             className="h-14 w-14 mx-auto mb-4"
             style={{ color: form.primaryColor }}
           />
-          <p className="text-lg font-medium mb-2" style={{ color: form.primaryColor }}>
-            {form.name || "Upload Your Food Photo"}
-          </p>
-          <p className="text-sm text-muted-foreground mb-4">
-            {form.description || "Drop an image here or click to browse"}
-          </p>
+          <div className="w-full flex flex-col items-center">
+            {isLoading ? (
+              <>
+                <Skeleton className="h-7 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-1/2 mb-4" />
+              </>
+            ) : (
+              <>
+                <p className="text-lg font-medium mb-2" style={{ color: form.primaryColor }}>
+                  {translated?.name || form.name || "Upload Your Food Photo"}
+                </p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {translated?.description || form.description || "Drop an image here or click to browse"}
+                </p>
+              </>
+            )}
+          </div>
           <Button
             style={{
               backgroundColor: form.primaryColor,
@@ -214,6 +226,8 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
 
   const [createForm, setCreateForm] = useState<WidgetFormState>(defaultFormState);
   const [editForm, setEditForm] = useState<WidgetFormState>(defaultFormState);
+  const [translatedPreview, setTranslatedPreview] = useState<{ name?: string; description?: string }>({});
+  const [isTranslating, setIsTranslating] = useState(false);
   const [embedSearchQuery, setEmbedSearchQuery] = useState("");
   const [savedWidgetsSearchQuery, setSavedWidgetsSearchQuery] = useState("");
   const [selectedWidgetForEmbed, setSelectedWidgetForEmbed] = useState<string | null>(null);
@@ -317,6 +331,89 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
     currentWidgetRef.current = null;
     setIsCreating(false);
   }, [subscriptionType]);
+
+  // Effect to translate preview text when language changes
+  useEffect(() => {
+    const activeForm = activeTab === "create" ? createForm : (currentWidget ? editForm : null);
+
+    // Reset if English or no active form
+    if (!activeForm || !activeForm.language || activeForm.language === 'en') {
+      setTranslatedPreview({});
+      setIsTranslating(false);
+      return;
+    }
+
+    const translatePreview = async () => {
+      setIsTranslating(true);
+      const lang = activeForm.language;
+      const nameToTranslate = activeForm.name;
+      const descToTranslate = activeForm.description;
+
+      const newTranslations: { name?: string; description?: string } = {};
+      let hasUpdates = false;
+
+      try {
+        const promises: Promise<void>[] = [];
+
+        if (nameToTranslate) {
+          promises.push(
+            fetch('/api/translate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content: nameToTranslate,
+                targetLanguage: lang,
+                isJson: false,
+              }),
+            })
+              .then(res => res.ok ? res.json() : null)
+              .then(data => {
+                if (data?.translatedContent) {
+                  newTranslations.name = data.translatedContent;
+                  hasUpdates = true;
+                }
+              })
+              .catch(err => console.error("Error translating name:", err))
+          );
+        }
+
+        if (descToTranslate) {
+          promises.push(
+            fetch('/api/translate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content: descToTranslate,
+                targetLanguage: lang,
+                isJson: false,
+              }),
+            })
+              .then(res => res.ok ? res.json() : null)
+              .then(data => {
+                if (data?.translatedContent) {
+                  newTranslations.description = data.translatedContent;
+                  hasUpdates = true;
+                }
+              })
+              .catch(err => console.error("Error translating description:", err))
+          );
+        }
+
+        await Promise.all(promises);
+
+        if (hasUpdates) {
+          setTranslatedPreview(newTranslations);
+        }
+      } catch (error) {
+        console.error("Error translating preview:", error);
+      } finally {
+        setIsTranslating(false);
+      }
+    };
+
+    const timer = setTimeout(translatePreview, 800); // Debounce translation
+    return () => clearTimeout(timer);
+  }, [activeTab, createForm.language, createForm.name, createForm.description, editForm.language, editForm.name, editForm.description, currentWidget]);
 
   useEffect(() => {
     // Prevent multiple loads - only load once on mount or when initialSubscription changes
@@ -1271,7 +1368,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
     const form = currentWidget ? editForm : createForm;
     const language = widget?.language || form.language || "en";
 
-    const widgetUrl = baseUrl ? `${baseUrl}/widget/embed?id=${widgetId}&language=${language}` : `/widget/embed?id=${widgetId}&language=${language}`;
+    const widgetUrl = baseUrl ? `${baseUrl}/widget/embed?id=${widgetId}&language=${language}&preview=true` : `/widget/embed?id=${widgetId}&language=${language}&preview=true`;
     const borderRadiusValue =
       widget?.border_radius ?? (currentWidget ? editForm.borderRadius : createForm.borderRadius);
 
@@ -1634,30 +1731,48 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
             </div>
 
             <div>
-              <Label className="text-base font-semibold mb-3 block">{t("widgetdashboard.form.language") || "Language"}</Label>
+              <div className="flex items-center gap-2 mb-3">
+                <Label className="text-base font-semibold block">{t("widgetdashboard.form.language") || "Language"}</Label>
+                {isFreePlan && (
+                  <Badge variant="outline" className="h-5 px-2 text-[10px] bg-amber-100 text-amber-700 border-amber-200 flex items-center gap-1">
+                    <Lock className="h-3 w-3" /> Premium
+                  </Badge>
+                )}
+              </div>
               <div className="space-y-2">
                 <Label htmlFor={`language-${mode}`} className="text-xs">Widget Language</Label>
-                <Select
-                  value={form.language || "en"}
-                  onValueChange={(value) => updateForm("language", value)}
-                >
-                  <SelectTrigger id={`language-${mode}`}>
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="es">Spanish</SelectItem>
-                    <SelectItem value="fr">French</SelectItem>
-                    <SelectItem value="de">German</SelectItem>
-                    <SelectItem value="it">Italian</SelectItem>
-                    <SelectItem value="pt">Portuguese</SelectItem>
-                    <SelectItem value="zh">Chinese</SelectItem>
-                    <SelectItem value="ja">Japanese</SelectItem>
-                    <SelectItem value="ar">Arabic</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Select the language for the widget interface and results.
+                <div className="relative">
+                  <Select
+                    value={isFreePlan ? "en" : (form.language || "en")}
+                    onValueChange={(value) => !isFreePlan && updateForm("language", value)}
+                    disabled={isFreePlan}
+                  >
+                    <SelectTrigger id={`language-${mode}`} className={isFreePlan ? "opacity-70 bg-muted" : ""}>
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="es">Spanish</SelectItem>
+                      <SelectItem value="fr">French</SelectItem>
+                      <SelectItem value="de">German</SelectItem>
+                      <SelectItem value="it">Italian</SelectItem>
+                      <SelectItem value="pt">Portuguese</SelectItem>
+                      <SelectItem value="zh">Chinese</SelectItem>
+                      <SelectItem value="ja">Japanese</SelectItem>
+                      <SelectItem value="ar">Arabic</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {isFreePlan && (
+                    <div className="absolute inset-0 cursor-not-allowed" title="Upgrade to Premium to change language" />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground flex items-center justify-between">
+                  <span>Select the language for the widget interface and results.</span>
+                  {isFreePlan && (
+                    <Button variant="link" className="h-auto p-0 text-xs text-primary" onClick={() => window.location.href = "/plans"}>
+                      Upgrade to unlock
+                    </Button>
+                  )}
                 </p>
               </div>
             </div>
@@ -1876,7 +1991,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
           <div className="lg:hidden border rounded-lg p-4 bg-muted/50">
             <Label className="mb-2 block">{t("widgetdashboard.form.preview")}</Label>
             <div className="w-full max-w-xs mx-auto">
-              <WidgetPreview form={form} />
+              <WidgetPreview form={form} translated={translatedPreview} isLoading={isTranslating} />
             </div>
           </div>
         </CardContent>
@@ -2187,7 +2302,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                     </CardHeader>
                     <CardContent className="flex-1 flex justify-center">
                       <div className="w-full max-w-md mx-auto sticky top-6">
-                        <WidgetPreview form={editForm} />
+                        <WidgetPreview form={editForm} translated={translatedPreview} isLoading={isTranslating} />
                       </div>
                     </CardContent>
                   </Card>
@@ -2227,7 +2342,7 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
                     </CardHeader>
                     <CardContent className="flex-1 flex justify-center">
                       <div className="w-full max-w-md mx-auto sticky top-6">
-                        <WidgetPreview form={createForm} />
+                        <WidgetPreview form={createForm} translated={translatedPreview} isLoading={isTranslating} />
                       </div>
                     </CardContent>
                   </Card>
