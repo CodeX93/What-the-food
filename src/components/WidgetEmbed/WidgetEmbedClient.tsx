@@ -999,6 +999,19 @@ export function WidgetEmbedClient() {
             .eq("widget_id", widgetId)
             .single();
           if (!error && data) {
+            if (setLanguage) {
+              const urlLanguage = searchParams?.get('language');
+              const supportedLanguages: Language[] = ["en", "es", "fr", "de", "it", "pt", "zh", "ja", "ar"];
+
+              if (urlLanguage) {
+                const lang = supportedLanguages.includes(urlLanguage as any) ? (urlLanguage as Language) : "en";
+                setLanguage(lang);
+                data.language = lang;
+              } else if (data.language) {
+                const lang = supportedLanguages.includes(data.language as Language) ? (data.language as Language) : "en";
+                setLanguage(lang);
+              }
+            }
             setWidgetSettings(data);
             // Check API call limit for free users
             if (data.user_id) {
@@ -1305,12 +1318,20 @@ export function WidgetEmbedClient() {
 
           if (!error && data) {
             // Set language if available and different
-            if (data.language && setLanguage) {
-              // Cast string to Language type if it matches, otherwise default to 'en'
+            if (setLanguage) {
+              const urlLanguage = searchParams?.get('language');
               const supportedLanguages: Language[] = ["en", "es", "fr", "de", "it", "pt", "zh", "ja", "ar"];
-              const lang = supportedLanguages.includes(data.language as Language) ? (data.language as Language) : "en";
-              setLanguage(lang);
-              console.log("Setting widget language to:", lang);
+
+              if (urlLanguage) {
+                const lang = supportedLanguages.includes(urlLanguage as any) ? (urlLanguage as Language) : "en";
+                setLanguage(lang);
+                console.log("Setting widget language from URL override to:", lang);
+                data.language = lang;
+              } else if (data.language) {
+                const lang = supportedLanguages.includes(data.language as Language) ? (data.language as Language) : "en";
+                setLanguage(lang);
+                console.log("Setting widget language to:", lang);
+              }
             }
 
             setWidgetSettings(data);
@@ -1362,12 +1383,22 @@ export function WidgetEmbedClient() {
 
         if (data) {
           // Set language if available and different
-          if (data.language && setLanguage) {
-            // Cast string to Language type if it matches, otherwise default to 'en'
+          if (setLanguage) {
+            const urlLanguage = searchParams?.get('language');
             const supportedLanguages: Language[] = ["en", "es", "fr", "de", "it", "pt", "zh", "ja", "ar"];
-            const lang = supportedLanguages.includes(data.language as Language) ? (data.language as Language) : "en";
-            setLanguage(lang);
-            console.log("Setting widget language to:", lang);
+
+            if (urlLanguage) {
+              const lang = supportedLanguages.includes(urlLanguage as any) ? (urlLanguage as Language) : "en";
+              setLanguage(lang);
+              console.log("Setting widget language from URL override to:", lang);
+              // Override data.language so it persists in widgetSettings state too
+              data.language = lang;
+            } else if (data.language) {
+              // Cast string to Language type if it matches, otherwise default to 'en'
+              const lang = supportedLanguages.includes(data.language as Language) ? (data.language as Language) : "en";
+              setLanguage(lang);
+              console.log("Setting widget language to:", lang);
+            }
           }
 
           setWidgetSettings(data);

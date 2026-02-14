@@ -1266,12 +1266,16 @@ export function WidgetDashboardClient({ initialSubscription = null }: WidgetDash
     // Use window.location.origin to get the exact current website URL
     // This ensures the iframe uses the actual production URL, not a preview/staging URL
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const widgetUrl = baseUrl ? `${baseUrl}/widget/embed?id=${widgetId}` : `/widget/embed?id=${widgetId}`;
+
+    // Get language from widget or form state
+    const form = currentWidget ? editForm : createForm;
+    const language = widget?.language || form.language || "en";
+
+    const widgetUrl = baseUrl ? `${baseUrl}/widget/embed?id=${widgetId}&language=${language}` : `/widget/embed?id=${widgetId}&language=${language}`;
     const borderRadiusValue =
       widget?.border_radius ?? (currentWidget ? editForm.borderRadius : createForm.borderRadius);
 
     // Get iframe dimensions from widget or form state
-    const form = currentWidget ? editForm : createForm;
     const iframeWidth = widget?.iframe_width ?? combineValueUnit(form.iframeWidth, form.iframeWidthUnit) ?? "100%";
     const iframeHeight = widget?.iframe_height ?? combineValueUnit(form.iframeHeight, form.iframeHeightUnit) ?? "600";
 
